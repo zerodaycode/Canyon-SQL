@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 
-use tokio_postgres::{ToStatement, types::ToSql};
+use tokio_postgres::{Row, ToStatement, types::ToSql};
 
 use crate::{connector::DatabaseConnection, results::DatabaseResult};
 
@@ -66,11 +66,7 @@ pub trait CrudOperations<T: Debug> {
             query
         };
 
-        self.query(
-            &sql[..], 
-            &[]
-        ).await
-        
+        self.query(&sql[..], &[]).await
     }
 
     /// Queries the database and try to find an item on the most common pk

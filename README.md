@@ -1,10 +1,10 @@
 # CANYON-SQL
-A full written in `Rust` ORM
+A full written in `Rust` ORM for `POSTRESQL` based databases.
 
 ## Early stages
 The library it's still on a `newborn` state. Any contrib via `fork` + `PR` it's really apreciated.
 
-Availiable operations:
+# Availiable operations:
     - find all
     - find by id
 
@@ -13,7 +13,7 @@ Availiable operations:
 Assuming that the main goal of an `ORM` it's perform `SQL queries` based on certain object
 oriented code, in order to map some data-model as an SQL entity...
 
-1 - Due to the async nature of the library, we need to mark the implementation of the 
+1 - It's required to implement the `CrudOperations` for your struct. Due to the async nature of the library, we need to mark the implementation of the 
 `CrudOperations` trait as `#[async_trait]`
 
 2 - Implement the new or the empty constructors. You can also impl the `Default` trait for the standard library if you prefer.
@@ -71,13 +71,23 @@ NOTE: For human-readable result, use the `.as_response::<Foo>()` method.
 #[tokio::main]
 async fn main() {
 
+    // Initialize a new allocated object
     let foo = Foo::empty();
     
+    // Find all
     let all_foo = foo
         .find_all("foo", &[])
         .await
         .as_response::<Foo>();
 
     println!("All foo results from database: {:?}", all_foo);
+
+    
+    // Find by ID, for example, getting the record that matches the ID = 1
+    println!("BAZ on find_by_id: {:?}", 
+        foo.find_by_id("canyon_sql", 1)
+            .await
+            .as_response::<Foo>()[0]
+    );
 }
 ```
