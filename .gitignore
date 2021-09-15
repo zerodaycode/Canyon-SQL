@@ -1,4 +1,4 @@
 target/
 Cargo.lock
 .idea/
-.tester_canyon_sql/
+/tester_canyon_sql/
