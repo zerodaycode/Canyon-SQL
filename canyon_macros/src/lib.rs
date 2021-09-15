@@ -1,9 +1,6 @@
 extern crate proc_macro;
-// extern crate quote;
 
-// #[macro_export] macro_rules! quote
 use proc_macro2::Ident;
-
 use quote::quote;
 use syn::{
     DeriveInput, Fields, Visibility
@@ -26,6 +23,7 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
     let tokens = quote! {
         #[async_trait]
         impl canyon_sql::crud::CrudOperations<#ty> for #ty { }
+        impl canyon_sql::crud::Transaction<#ty> for #ty { }
     };
     tokens.into()
 }
@@ -34,7 +32,7 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
 #[proc_macro_derive(CanyonMapper)]
 pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
-    let (vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
+    let (_vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
 
     let fields = filter_fields(
         match ast.data {
@@ -62,14 +60,17 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         generics.split_for_impl();
 
     let tokens = quote! {
-        use canyon_sql::{self, crud::CrudOperations, mapper::RowMapper};
+        use canyon_sql::{
+            self, crud::CrudOperations, mapper::RowMapper,
+            async_trait::*,
+        };
         use canyon_sql::tokio_postgres::Row;
 
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
 
-            #vis fn get_field_names() -> Vec<String> {
+            fn get_field_names() -> Vec<String> {
                 let mut vec = Vec::new();
 
                 let field_names = stringify!( 

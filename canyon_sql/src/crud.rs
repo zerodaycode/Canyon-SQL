@@ -2,17 +2,15 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 
-use tokio_postgres::{Row, ToStatement, types::ToSql};
+use tokio_postgres::{ToStatement, types::ToSql};
 
 use crate::{connector::DatabaseConnection, results::DatabaseResult};
 
-
 #[async_trait]
-pub trait CrudOperations<T: Debug> {
-    
+pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
-    async fn query<Q>(&self, stmt: &Q, params: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> 
-    where Q: ?Sized + ToStatement + Sync
+    async fn query<Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> 
+        where Q: ?Sized + ToStatement + Sync
     {
         let database_connection = 
             DatabaseConnection::new().await.unwrap();
@@ -36,13 +34,17 @@ pub trait CrudOperations<T: Debug> {
         
         )
     }
+}
+#[async_trait]
+pub trait CrudOperations<T: Debug>: Transaction<T> {
+
 
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
     /// 
     /// If not columns provided, performs a SELECT *, else, will query only the 
     /// desired columns
-    async fn find_all(&self, table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
+    async fn find_all(table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
 
         let sql: String = if columns.len() == 0 { // Care, conditional assignment
             String::from(format!("SELECT * FROM {}", table_name))
@@ -66,15 +68,15 @@ pub trait CrudOperations<T: Debug> {
             query
         };
 
-        self.query(&sql[..], &[]).await
+        Self::query(&sql[..], &[]).await
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn find_by_id(&self, table_name: &str, id: i32) -> DatabaseResult<T> {
+    async fn find_by_id(table_name: &str, id: i32) -> DatabaseResult<T> {
 
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
 
-        self.query(&stmt[..], &[&id]).await
+        Self::query(&stmt[..], &[&id]).await
     }
 }
 
