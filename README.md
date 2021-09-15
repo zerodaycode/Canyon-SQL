@@ -1,93 +1,107 @@
 # CANYON-SQL
-A full written in `Rust` ORM for `POSTRESQL` based databases.
+**A full written in `Rust` ORM for `POSTRESQL` based databases.**
 
-## Early stages
-The library it's still on a `newborn` state. Any contrib via `fork` + `PR` it's really apreciated.
+`ORM` stands for object-relational mapping, where objects are used to connect the programming language on to the database systems, with the facility to work SQL and object-oriented programming concepts.
 
-# Availiable operations:
-    - find all
-    - find by id
+
+## Early stages advice
+The library it's still on a `early stage` state. 
+Any contrib via `fork` + `PR` it's really apreciated, specially if you like concepts like backend development, relational - mapping, low-level code, performance optimizations and, of course, `RUST`.
+
+
+# Availiable query operations:
+    - Find all
+    - Find by ID
+
 
 ## Basic example of usage
 
-Assuming that the main goal of an `ORM` it's perform `SQL queries` based on certain object
-oriented code, in order to map some data-model as an SQL entity...
+- Since the `v 0.3.0`, the unique Rust code requisite in order have access to the database associated functions that will query your database, it's to derive
+the `#[derive(Debug, CanyonCRUD, CanyonMapper)]` elements just above your struct, and `CANYON` will take care about creating all the necessary
+stuff to correctly map your database results into Rust objects.
 
-1 - It's required to implement the `CrudOperations` for your struct. Due to the async nature of the library, we need to mark the implementation of the 
-`CrudOperations` trait as `#[async_trait]`
+- The unique external thing, it's that you will need a pre-constructed database schema that had the same columns that your struct has. The table name it's for now, irrelevant, due to the necessity of pass it as a String on every call.
+(Both things will be solved on future releases, specially soon the fact of have to write the table name). 
 
-2 - Implement the new or the empty constructors. You can also impl the `Default` trait for the standard library if you prefer.
+Warning: Be aware of correctly map your columns with the attributes of your struct.
 
-3 - Implement the `RowMapper` trait. Map all of your struct attributes double ckeching the types on Rust, and what you need to get from database.
+Take this example:
 
 `my_model.rs` file
 ```
-use canyon_sql::async_trait::*;
 use canyon_sql::tokio;
+use canyon_sql::canyon_macros::*;
 
-#[derive(Debug)]
+#[derive(Debug, CanyonCRUD, CanyonMapper)]
 pub struct Foo {
-    field: String
-}
-
-#[async_trait]
-impl canyon_sql::crud::CrudOperations<Foo> for Foo { }
-
-
-impl Foo {
-    pub fn new(field_data: &str) -> Self {
-        Self {
-            field: field_data.to_string()
-        }
-    }
-
-    pub fn empty() -> Self {
-        Self {
-            field: "".to_string()
-        }
-    }
-}
-
-impl RowMapper<Self> for Foo {
-    fn deserialize(row: &Row) -> Self {
-        Self {
-            field: row.try_get("field")
-                .expect("Failed to retrieve the FIELD field"),
-        }
-    }
+    field: String,
+    name: String,
+    just_an_i32: i32
 }
 ```
 
 And now, on your main file, just instanciate a new object of your custom type Foo.
-You will have availiable (thanks to the `CrudOperations` trait) any option designed
-as a member of your type.
+You will have availiable (thanks to the `CrudOperations` trait) any crud operation as an associated function of your type.
 
 NOTE: Remember to `await` the result of any trait's method. 
-NOTE: For human-readable result, use the `.as_response::<Foo>()` method.
+NOTE: For human-readable result, use the `.as_response::<Foo>()` method, where Foo is the type of your struct.
+
+WARNING: You will need an asyncronous runtime in order to use the ORM. This is because the implementation it's based on the `tokio::postgres` library, not in the default one, in order to get an asyncronous client.
+
+By the way, the easiest option availiable it's just add `tokio` to your `Cargo.toml` file, and mark your main function with the `#[tokio::main]` attribute and make it asyncronous, like the example below:
+s
 
 
 `main.rs` file
 ```
+use canyon_sql::canyon_macros::*;
+
+
 #[tokio::main]
 async fn main() {
-
-    // Initialize a new allocated object
-    let foo = Foo::empty();
     
-    // Find all
-    let all_foo = foo
-        .find_all("foo", &[])
+    // The classic **find all** query.
+    let all_foo = Foo::find_all("foo_table_name", &[])  // Where "foo_table_name" it's the name of your table on your database
+
         .await
         .as_response::<Foo>();
-
-    println!("All foo results from database: {:?}", all_foo);
+    
+    println!("BAZ result: {:?}", all_foo);  
+    // Iterate over all the Foo elements on the Vec<Foo>, showing the value of its attrs
+    for result in all_foo {
+        println!("ITEM: field = {:?}, name = {:?}", result.field, result.name);
+    }
 
     
-    // Find by ID, for example, getting the record that matches the ID = 1
+    // The "non-less classic" **find by ID** implementation
     println!("BAZ on find_by_id: {:?}", 
-        foo.find_by_id("canyon_sql", 1)
+        Foo::find_by_id(foo_table, 1)
             .await
             .as_response::<Foo>()[0]
     );
 }
+```
+
+Note: For now, on the `find_by_id` associated function, the result has to be accessed by slice the content of the Vec<Foo>, even if only exists one result. 
+
+This limitation it's due to the DatabaseResult<T> struct. This limitation will be solved soon.
+
+After getting your element on index 0, you can access it's properties by use the dot notation.
+
+
+## Output of the main code
+```
+> Executing task: C:\Users\Alex\.cargo\bin\cargo.exe run --package tester_canyon_sql --bin tester_canyon_sql --all-features <
+
+   Compiling canyon_sql v0.1.0 (D:\MSi 2020-2021\Code\Rust\CANYON\canyon_sql)
+   Compiling tester_canyon_sql v0.1.0 (D:\MSi 2020-2021\Code\Rust\CANYON\tester_canyon_sql)
+    Finished dev [unoptimized + debuginfo] target(s) in 3.77s
+     Running `target\debug\tester_canyon_sql.exe`
+
+BAZ result: [Foo { field: "field_field", name: "nombre_field_prueba" }, Foo { field: "field_de_Canyon", name: "Canyon_SQL" }]
+
+ITEM: field = "field_field", name = "nombre_field_prueba"
+ITEM: field = "field_de_Canyon", name = "Canyon_SQL"     
+
+BAZ on find_by_id: Foo { field: "field_field", name: "nombre_field_prueba" }
 ```
