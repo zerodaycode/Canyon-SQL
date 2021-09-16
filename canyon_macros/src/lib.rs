@@ -32,7 +32,8 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
 #[proc_macro_derive(CanyonMapper)]
 pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
-    let (_vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
+    let (vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
+    let table_name: String = database_table_name_from_struct(ty);
 
     let fields = filter_fields(
         match ast.data {
@@ -59,6 +60,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let (impl_generics, ty_generics, where_clause) = 
         generics.split_for_impl();
 
+
     let tokens = quote! {
         use canyon_sql::{
             self, crud::CrudOperations, mapper::RowMapper,
@@ -69,6 +71,19 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
+            // Find all
+            #vis async fn canyon_find_all() -> Vec<#ty> {
+                #ty::find_all(#table_name, &[])
+                    .await
+                    .as_response::<#ty>()
+            }
+
+            // Find by ID
+            #vis async fn canyon_find_by_id(id: i32) -> #ty {
+                #ty::find_by_id(#table_name, id)
+                    .await
+                    .as_response::<#ty>()[0].clone()
+            }
 
             fn get_field_names() -> Vec<String> {
                 let mut vec = Vec::new();
@@ -103,6 +118,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     tokens.into()
 }
 
+
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()
@@ -110,4 +126,30 @@ fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
             (field.vis.clone(), field.ident.as_ref().unwrap().clone()) 
         )
         .collect::<Vec<_>>()
+}
+
+
+/// Parses a syn::Identifier to get a snake case database name from the type identifier
+fn database_table_name_from_struct(ty: &Ident) -> String {
+
+    let struct_name: String = String::from(ty.to_string());
+    let mut table_name: String = String::new();
+    
+    let mut index = 0;
+    for char in struct_name.chars() {
+        if index < 1 {
+            table_name.push(char.to_ascii_lowercase());
+            index += 1;
+        } else {
+            match char {
+                n if n.is_ascii_uppercase() => {
+                    table_name.push('_');
+                    table_name.push(n.to_ascii_lowercase()); 
+                }
+                _ => table_name.push(char)
+            }
+        }   
+    }
+
+    table_name
 }

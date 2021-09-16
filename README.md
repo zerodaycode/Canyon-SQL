@@ -14,10 +14,18 @@ Any contrib via `fork` + `PR` it's really apreciated, specially if you like conc
     - Find by ID
 
 
-## Basic example of usage
+## Changelog
 
-- Since the `v 0.3.0`, the unique Rust code requisite in order have access to the database associated functions that will query your database, it's to derive
-the `#[derive(Debug, CanyonCRUD, CanyonMapper)]` elements just above your struct, and `CANYON` will take care about creating all the necessary
+- `v0.4.0` Now the name of your table it's automatically derived from Rust at compile time. Note that you still had to manually create the table on the database that satisfies the cryteria of your struct's name
+all in snake_case.
+
+`Rust struct's name: CanyonSql` -> `Database table name: canyon_sql`
+
+Also, you will have to add the `Clone` trait to your derive attribute.
+This it's to afford the user to have to manually index the first element of the Vec<T> after the result.
+
+
+- The unique Rust code requisite in order have access to the database associated functions that will query your database, it's to derive the `#[derive(Debug, Clone, CanyonCRUD, CanyonMapper)]` elements just above your struct, and `CANYON` will take care about creating all the necessary
 stuff to correctly map your database results into Rust objects.
 
 - The unique external thing, it's that you will need a pre-constructed database schema that had the same columns that your struct has. The table name it's for now, irrelevant, due to the necessity of pass it as a String on every call.
@@ -32,8 +40,8 @@ Take this example:
 use canyon_sql::tokio;
 use canyon_sql::canyon_macros::*;
 
-#[derive(Debug, CanyonCRUD, CanyonMapper)]
-pub struct Foo {
+#[derive(Debug, Clone, CanyonCRUD, CanyonMapper)]
+pub struct CanyonSql {
     field: String,
     name: String,
     just_an_i32: i32
@@ -49,40 +57,40 @@ NOTE: For human-readable result, use the `.as_response::<Foo>()` method, where F
 WARNING: You will need an asyncronous runtime in order to use the ORM. This is because the implementation it's based on the `tokio::postgres` library, not in the default one, in order to get an asyncronous client.
 
 By the way, the easiest option availiable it's just add `tokio` to your `Cargo.toml` file, and mark your main function with the `#[tokio::main]` attribute and make it asyncronous, like the example below:
-s
-
 
 `main.rs` file
 ```
+use canyon_sql::tokio;
 use canyon_sql::canyon_macros::*;
 
 
 #[tokio::main]
 async fn main() {
     
-    // The classic **find all** query.
-    let all_foo = Foo::find_all("foo_table_name", &[])  // Where "foo_table_name" it's the name of your table on your database
+    // The classic find all query.
+    let all_foo: Vec<CanyonSql> = CanyonSql::canyon_find_all().await;
+    println!("Result: {:?}", all_foo);
 
-        .await
-        .as_response::<Foo>();
-    
-    println!("BAZ result: {:?}", all_foo);  
     // Iterate over all the Foo elements on the Vec<Foo>, showing the value of its attrs
     for result in all_foo {
-        println!("ITEM: field = {:?}, name = {:?}", result.field, result.name);
+        println!(
+            "ITEM: field = {:?}, name = {:?}", 
+            result.field, 
+            result.name
+        );
     }
 
     
-    // The "non-less classic" **find by ID** implementation
-    println!("BAZ on find_by_id: {:?}", 
-        Foo::find_by_id(foo_table, 1)
-            .await
-            .as_response::<Foo>()[0]
+    // The "non-less classic" find by ID implementation
+    println!(
+        "CanyonSql on find_by_id: {:?}", 
+        CanyonSql::canyon_find_by_id(1).await
     );
+
 }
 ```
 
-Note: For now, on the `find_by_id` associated function, the result has to be accessed by slice the content of the Vec<Foo>, even if only exists one result. 
+Note: For now, on the `find_by_id` associated function, the result has to be accessed by slice the content of the Vec<CanyonSql>, even if only exists one result. 
 
 This limitation it's due to the DatabaseResult<T> struct. This limitation will be solved soon.
 
