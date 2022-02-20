@@ -36,8 +36,8 @@ impl DatabaseCredentials{
             );
 
         let secrets_file_splitted = secrets_file
-            .split_terminator("\r\n");
-        
+            .split_terminator("\n");
+
         for entry in secrets_file_splitted {
             let cleaned_entry = 
                 entry
