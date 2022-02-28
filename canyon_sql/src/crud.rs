@@ -44,7 +44,7 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
     /// 
     /// If not columns provided, performs a SELECT *, else, will query only the 
     /// desired columns
-    async fn find_all(table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
+    async fn __find_all(table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
 
         let sql: String = if columns.len() == 0 { // Care, conditional assignment
             String::from(format!("SELECT * FROM {}", table_name))
@@ -72,7 +72,7 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn find_by_id(table_name: &str, id: i32) -> DatabaseResult<T> {
+    async fn __find_by_id(table_name: &str, id: i32) -> DatabaseResult<T> {
 
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
 
