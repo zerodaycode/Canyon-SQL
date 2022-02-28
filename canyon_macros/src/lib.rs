@@ -1,10 +1,18 @@
 extern crate proc_macro;
 
-use proc_macro2::Ident;
+mod managed;
+
+use proc_macro::TokenStream as CompilerTokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
     DeriveInput, Fields, Visibility
 };
+
+#[proc_macro_attribute]
+pub fn canyon_manager(meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    input.into()
+}
 
 /// Allows the implementors to auto-derive de `crud-operations` trait, which defines the methods
 /// that will perform the database communication and that will query against the db.
