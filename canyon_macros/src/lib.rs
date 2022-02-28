@@ -72,15 +72,15 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             #where_clause
         {
             // Find all
-            #vis async fn canyon_find_all() -> Vec<#ty> {
-                #ty::find_all(#table_name, &[])
+            #vis async fn find_all() -> Vec<#ty> {
+                #ty::__find_all(#table_name, &[])
                     .await
                     .as_response::<#ty>()
             }
 
             // Find by ID
-            #vis async fn canyon_find_by_id(id: i32) -> #ty {
-                #ty::find_by_id(#table_name, id)
+            #vis async fn find_by_id(id: i32) -> #ty {
+                #ty::__find_by_id(#table_name, id)
                     .await
                     .as_response::<#ty>()[0].clone()
             }
