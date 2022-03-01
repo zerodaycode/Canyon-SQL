@@ -1,5 +1,5 @@
 use tokio_postgres::{Client, Connection, Error, NoTls, Socket, tls::NoTlsStream};
-use std::{fs, collections::HashMap};
+use std::{fs, collections::HashMap, marker::PhantomData};
 
 /// Manages to retrieve the credentials to the desired database connection from an
 /// handcoded `Secrets.toml` file, located at the root of the project.
@@ -64,14 +64,18 @@ impl DatabaseCredentials{
 /// Creates a new connection with a database, returning the necessary tools
 /// to query the created link.
 /// TODO: Explain how to use this struct independently from CRUD trait 
-pub struct DatabaseConnection{
+pub struct DatabaseConnection<'a> {
     pub client: Client,
     pub connection: Connection<Socket, NoTlsStream>,
+    pub phantom: &'a PhantomData<DatabaseConnection<'a>>
 }
 
-impl DatabaseConnection{
+unsafe impl Send for DatabaseConnection<'_> {}
+unsafe impl Sync for DatabaseConnection<'_> {}
 
-    pub async fn new() -> Result<DatabaseConnection, Error> {
+impl<'a> DatabaseConnection<'a> {
+
+    pub async fn new() -> Result<DatabaseConnection<'a>, Error> {
 
         let credentials = DatabaseCredentials::new();
 
@@ -89,6 +93,7 @@ impl DatabaseConnection{
         Ok(Self {
             client: new_client,
             connection: new_connection,
+            phantom: &PhantomData
         })
     }
 }
