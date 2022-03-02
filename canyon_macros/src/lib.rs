@@ -1,13 +1,13 @@
 extern crate proc_macro;
 
 mod managed;
-mod macro_utils;
+// mod macro_utils;
 
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
-    DeriveInput, Fields, Visibility, parse_macro_input, ItemFn
+    DeriveInput, Fields, Visibility, parse_macro_input, ItemFn, Type
 };
 
 /// Macro for handling the entry point to the program. 
@@ -47,9 +47,30 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
 
 #[proc_macro_attribute]
-pub fn canyon_manager(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    // TODO
-    todo!()
+pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    let ast: DeriveInput = syn::parse(input).unwrap();
+    let (vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
+    let fields = fields_with_types(
+        match ast.data {
+            syn::Data::Struct(ref s) => &s.fields,
+            _ => panic!("Field names can only be derived for structs"),
+        }
+    );
+
+    // Creates the TokenStream for wire the column names into the 
+    // Canyon RowMapper
+    let field_names_for_row_mapper = fields.iter().map(|(_vis, ident, ty)| {
+        quote! {  
+            #ident: #ty
+        }
+    });
+    let quote = quote! {
+        use::canyon_sql::runtime_data::CANYON_MANAGED;
+        pub struct #ty {
+            #(#field_names_for_row_mapper),*
+        }
+    };
+    quote.into()
 }
 
 
@@ -154,6 +175,19 @@ fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
         .iter()
         .map(|field| 
             (field.vis.clone(), field.ident.as_ref().unwrap().clone()) 
+        )
+        .collect::<Vec<_>>()
+}
+
+
+fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
+    fields
+        .iter()
+        .map(|field| 
+            (field.vis.clone(), 
+            field.ident.as_ref().unwrap().clone(),
+            field.ty.clone()
+        ) 
         )
         .collect::<Vec<_>>()
 }

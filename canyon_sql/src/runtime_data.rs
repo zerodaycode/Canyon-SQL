@@ -12,7 +12,7 @@ use crate::connector::DatabaseConnection;
 /// should be managing
 
 // pub static RUNTIME_DATA: RuntimeData<'static> = RuntimeData::new().await;
-static CANYON_MANAGED: Vec<&'static str> = Vec::new();
+pub static CANYON_MANAGED: Vec<&'static str> = Vec::new();
 // static DATABASE_CREDENTIALS: DatabaseConnection<'static> = DatabaseConnection::new();
 struct RuntimeData<'a> {
     db_credentials: DatabaseConnection<'static>,

@@ -8,6 +8,7 @@ mod connector;
 pub mod crud;
 pub mod mapper;
 mod results;
+pub mod runtime_data;
 
 // Macros crate
 pub extern crate canyon_macros;
