@@ -10,6 +10,8 @@ use syn::{
     DeriveInput, Fields, Visibility, parse_macro_input, ItemFn, Type
 };
 
+use canyon_observer::CANYON_MANAGED;
+
 /// Macro for handling the entry point to the program. 
 /// 
 /// Avoids the user to write the tokio attribute and
@@ -20,6 +22,9 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     let func = parse_macro_input!(input as ItemFn);
     let sign = func.sig;
     let body = func.block.stmts;
+
+    // TODO Mover de aquí
+    unsafe { println!("Register status: {:?}", CANYON_MANAGED) };
 
     let mut tokens = Vec::new();
     for stmt in body {
@@ -57,17 +62,22 @@ pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) ->
         }
     );
 
-    // Creates the TokenStream for wire the column names into the 
-    // Canyon RowMapper
-    let field_names_for_row_mapper = fields.iter().map(|(_vis, ident, ty)| {
+    // Notifies the observer that an observable must be registered on the system
+    unsafe { CANYON_MANAGED.push(ty.to_string()); }
+    println!("Observable <{}> added to the register", ty.to_string());
+
+    
+    let struct_fields = fields.iter().map(|(_vis, ident, ty)| {
         quote! {  
-            #ident: #ty
+            #vis #ident: #ty
         }
     });
+    let (_impl_generics, ty_generics, _where_clause) = 
+        generics.split_for_impl();
+
     let quote = quote! {
-        use::canyon_sql::runtime_data::CANYON_MANAGED;
-        pub struct #ty {
-            #(#field_names_for_row_mapper),*
+        pub struct #ty <#ty_generics> {
+            #(#struct_fields),*
         }
     };
     quote.into()
@@ -132,25 +142,19 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
 
     let tokens = quote! {
-        use canyon_sql::{
-            self, crud::CrudOperations, mapper::RowMapper,
-            async_trait::*,
-        };
-        use canyon_sql::tokio_postgres::Row;
-
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
-            // Find all
+            // Find all  // Select registers by columns not enabled yet
             #vis async fn find_all() -> Vec<#ty> {
-                #ty::__find_all(#table_name, &[])
+                <#ty as CrudOperations<#ty>>::__find_all(#table_name, &[])
                     .await
                     .as_response::<#ty>()
             }
 
             // Find by ID
             #vis async fn find_by_id(id: i32) -> #ty {
-                #ty::__find_by_id(#table_name, id)
+                <#ty as CrudOperations<#ty>>::__find_by_id(#table_name, id)
                     .await
                     .as_response::<#ty>()[0].clone()
             }
