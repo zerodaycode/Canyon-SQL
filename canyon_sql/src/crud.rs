@@ -1,7 +1,5 @@
 use std::fmt::Debug;
-
 use async_trait::async_trait;
-
 use tokio_postgres::{ToStatement, types::ToSql};
 
 use crate::{connector::DatabaseConnection, results::DatabaseResult};

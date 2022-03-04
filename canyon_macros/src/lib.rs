@@ -1,7 +1,8 @@
+#![feature(once_cell)]
+
 extern crate proc_macro;
 
 mod managed;
-// mod macro_utils;
 
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
@@ -10,8 +11,13 @@ use syn::{
     DeriveInput, Fields, Visibility, parse_macro_input, ItemFn, Type
 };
 
-use canyon_observer::CANYON_MANAGED;
+use canyon_observer::{
+    CANYON_MANAGED, 
+    CREDENTIALS, 
+    credentials::DatabaseCredentials
+};
 
+// use futures::executor::block_on;
 /// Macro for handling the entry point to the program. 
 /// 
 /// Avoids the user to write the tokio attribute and
@@ -25,6 +31,9 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
     // TODO Mover de aquí
     unsafe { println!("Register status: {:?}", CANYON_MANAGED) };
+    // Initialize the crdentials
+    unsafe { CREDENTIALS = Some(DatabaseCredentials::new()); }
+    unsafe {println!("CREDENTIALS MACRO: {:?}", CREDENTIALS);}
 
     let mut tokens = Vec::new();
     for stmt in body {
@@ -40,7 +49,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     // TODO Check for the _meta attribute metadata when necessary
 
     let tok = quote! {
-        use::canyon_sql::tokio;
+        use canyon_sql::tokio;
         #[tokio::main]
         async #sign {
             #(#tokens)*
