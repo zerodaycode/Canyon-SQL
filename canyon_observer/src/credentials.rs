@@ -1,4 +1,3 @@
-///! UNIMPLEMENTED
 /// This crate will replace the action of retrieve the database credentials
 /// in order to only wire the once time to the entire program's lifetime
 

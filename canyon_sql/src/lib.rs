@@ -2,7 +2,7 @@
 pub use tokio;
 pub use async_trait;
 pub use tokio_postgres;
-pub use canyon_observer;
+// pub use canyon_observer;
 
 // Core mods
 mod connector;
@@ -14,6 +14,8 @@ pub mod mapper;
 
 // Macros crate
 pub extern crate canyon_macros;
+pub use canyon_observer;
+
 
 /// This reexports allows the users to import all the available
 /// `Canyon-SQL` features in a single statement like:
