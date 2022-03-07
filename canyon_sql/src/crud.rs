@@ -76,6 +76,45 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
 
         Self::query(&stmt[..], &[&id]).await
     }
+
+    /// Inserts the values of structure in the correlative table
+    async fn __insert(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
+
+        let mut field_values = String::new();
+        // Construct the String that holds the '$1' placeholders for the values to insert
+        let total_values = values.len();
+        for num in 1..total_values {
+            if num < total_values - 1 {
+                field_values.push_str(&("$".to_owned() + &num.to_string() + ","));
+            } else {
+                field_values.push_str(&("$".to_owned() + &num.to_string()));
+            }
+        }
+
+        // Removes the id from the insert operation
+        let mut fields_without_id_chars = fields.chars();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+
+        let stmt = format!(
+            "INSERT INTO {} ({}) VALUES ({})", 
+            table_name, fields_without_id_chars.as_str(), field_values
+        );
+
+        println!("\nINSERT STMT: {}", &stmt);
+        println!("\n");
+        
+        Self::query(
+            &stmt[..], 
+            &[
+                &"prueba1", 
+                &"'prueba2", 
+                &3
+            ]
+        ).await
+    }
 }
 
  

@@ -9,6 +9,12 @@ use syn::{
 
 
 mod canyon_macro;
+mod query_operations;
+
+use query_operations::{
+    utils::macro_tokens::MacroTokens, 
+    insert::generate_insert_tokens, select::{generate_find_all_tokens, generate_find_by_id_tokens}
+};
 
 use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
 use canyon_observer::CANYON_REGISTER;
@@ -119,11 +125,16 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
 pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Gets the data from the AST
     let ast: DeriveInput = syn::parse(input).unwrap();
-    let (vis, ty, generics) = (&ast.vis, &ast.ident, &ast.generics);
-    
-    // Retrieves the table name automatically from the Struct identifier
-    // or from the TODO: #table_name = 'user_defined_db_table_name' 
-    let table_name: String = database_table_name_from_struct(ty);
+
+    // Constructs a new instance of the helper that manages the macro data
+    let macro_data = MacroTokens::new(&ast);
+
+    // Build the find_all() query
+    let find_all_tokens = generate_find_all_tokens(&macro_data);
+    // Build the find_by_id() query
+    let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
+    // Build the insert() query
+    let insert_tokens = generate_insert_tokens(&macro_data);
 
     // Recoves the identifiers of the struct's members
     let fields = filter_fields(
@@ -143,28 +154,26 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
+    // The type of the Struct
+    let ty = macro_data.ty;
+    
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
-        generics.split_for_impl();
+        macro_data.generics.split_for_impl();
 
 
     let tokens = quote! {
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
-            // Find all  // Select registers by columns not enabled yet
-            #vis async fn find_all() -> Vec<#ty> {
-                <#ty as CrudOperations<#ty>>::__find_all(#table_name, &[])
-                    .await
-                    .as_response::<#ty>()
-            }
+            // The find_by_id impl
+            #find_all_tokens
 
-            // Find by ID
-            #vis async fn find_by_id(id: i32) -> #ty {
-                <#ty as CrudOperations<#ty>>::__find_by_id(#table_name, id)
-                    .await
-                    .as_response::<#ty>()[0].clone()
-            }
+            // The find_by_id impl
+            #find_by_id_tokens
+
+            // The insert impl
+            #insert_tokens
 
         }
 
@@ -201,30 +210,4 @@ fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
         ) 
         )
         .collect::<Vec<_>>()
-}
-
-
-/// Parses a syn::Identifier to get a snake case database name from the type identifier
-fn database_table_name_from_struct(ty: &Ident) -> String {
-
-    let struct_name: String = String::from(ty.to_string());
-    let mut table_name: String = String::new();
-    
-    let mut index = 0;
-    for char in struct_name.chars() {
-        if index < 1 {
-            table_name.push(char.to_ascii_lowercase());
-            index += 1;
-        } else {
-            match char {
-                n if n.is_ascii_uppercase() => {
-                    table_name.push('_');
-                    table_name.push(n.to_ascii_lowercase()); 
-                }
-                _ => table_name.push(char)
-            }
-        }   
-    }
-
-    table_name
 }
