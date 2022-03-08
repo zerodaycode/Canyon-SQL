@@ -1,7 +1,7 @@
 [package]
 name = "canyon_sql"
 version = "0.4.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 tokio-postgres = { version = "0.7.2" }
@@ -10,9 +10,11 @@ toml = { version = "0.5.8" }
 # Forbidden Rust dark arts
 tokio = { version = "1.9.0", features = ["full"] }
 async-trait = { version = "0.1.50" }
+futures = "0.3.21"
 
 # Serialization/Deserialization
 serde_json = "1.0.59"
 serde = "1.0.90"
 
 canyon_macros = { path = "../canyon_macros" }
+canyon_observer = { path = "../canyon_observer" }

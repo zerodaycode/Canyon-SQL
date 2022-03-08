@@ -1,12 +1,15 @@
-use tokio_postgres::{Client, Connection, Error, NoTls, Socket, tls::NoTlsStream};
-use std::{fs, collections::HashMap, marker::PhantomData};
+/// This crate will replace the action of retrieve the database credentials
+/// in order to only wire the once time to the entire program's lifetime
+
+use std::{fs, collections::HashMap};
 
 /// Manages to retrieve the credentials to the desired database connection from an
 /// handcoded `Secrets.toml` file, located at the root of the project.
+#[derive(Clone, Debug)]
 pub struct DatabaseCredentials {
-    username: String,
-    password: String,
-    db_name: String,
+    pub username: String,
+    pub password: String,
+    pub db_name: String,
 }
 
 impl DatabaseCredentials{
@@ -58,42 +61,5 @@ impl DatabaseCredentials{
         }
         
         credentials_mapper
-    }
-}
-
-/// Creates a new connection with a database, returning the necessary tools
-/// to query the created link.
-/// TODO: Explain how to use this struct independently from CRUD trait 
-pub struct DatabaseConnection<'a> {
-    pub client: Client,
-    pub connection: Connection<Socket, NoTlsStream>,
-    pub phantom: &'a PhantomData<DatabaseConnection<'a>>
-}
-
-unsafe impl Send for DatabaseConnection<'_> {}
-unsafe impl Sync for DatabaseConnection<'_> {}
-
-impl<'a> DatabaseConnection<'a> {
-
-    pub async fn new() -> Result<DatabaseConnection<'a>, Error> {
-
-        let credentials = DatabaseCredentials::new();
-
-        let (new_client, new_connection) =
-            tokio_postgres::connect(
-            &format!(
-                "postgres://{user}:{pswd}@localhost/{db}",
-                    user = credentials.username, 
-                    pswd = credentials.password, 
-                    db = credentials.db_name
-                )[..], 
-            NoTls)
-            .await?;
-
-        Ok(Self {
-            client: new_client,
-            connection: new_connection,
-            phantom: &PhantomData
-        })
     }
 }
