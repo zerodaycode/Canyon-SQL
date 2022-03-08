@@ -17,53 +17,22 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
     let fields = macro_data.get_struct_fields();
 
     // Retrieves the fields of the Struct as continuous String
-    let column_names: String = fields.iter().map( |ident| {
-        ident.to_string()
-    }).collect::<Vec<String>>()
-        .iter()
-        .map( |column| column.to_owned() + ", " )
-        .collect::<String>();
-    
-    let mut column_names_as_chars = column_names.chars();
-    column_names_as_chars.next_back();
-    column_names_as_chars.next_back();
-    
-    let column_names_pretty = column_names_as_chars.as_str();
+    let column_names = macro_data.get_struct_fields_as_strings();
 
-    // Retrieves the actual data on the fields of the Struct
-    let column_names: Vec<String> = fields.iter().map( |ident| {
-        ident.to_string()
-    }).collect::<Vec<String>>();
+    let insert_values = fields.iter().map( |ident| {
+        quote! { &self.#ident }
+    });
 
-    println!("\nCOLUMN NAMES: {:?}", column_names);
-
-    let insert_values: String = fields.iter().map( |ident| {
-        ident.to_string()
-    }).collect::<Vec<String>>()
-        .iter()
-        .map( |column| "&self.".to_owned() + &column.to_owned() + ", " )
-        .collect::<String>();
-    let mut insert_values_as_chars = insert_values.chars();
-    insert_values_as_chars.next_back();
-    insert_values_as_chars.next_back();
-    
-    let insert_values_pretty = column_names_as_chars.as_str();
-
-    println!("\nINSERT VALUES PRETTY: {:?}", insert_values_pretty);
 
     quote! {
-        // Insert into (as method)
         #vis async fn insert(&self) -> () {
             <#ty as CrudOperations<#ty>>::__insert(
                 #table_name, 
-                #column_names_pretty, 
+                #column_names, 
                 &[
-                    // &self.#(#column_names),*
+                    #(#insert_values),*
                 ]
-            )
-                .await;
-                // .as_response::<#ty>()[0].clone()
-            () // TODO
+            ).await;
         }
     }
 }

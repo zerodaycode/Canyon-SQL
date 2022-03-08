@@ -55,7 +55,7 @@ impl<'a> MacroTokens<'a> {
     }
 
 
-    /// Gives a Vec with the fields of a Strut
+    /// Gives a Vec of Ident with the fields of a Struct
     pub fn get_struct_fields(&self) -> Vec<Ident> {
         self.fields
             .iter()
@@ -65,10 +65,31 @@ impl<'a> MacroTokens<'a> {
         .collect::<Vec<_>>()
     }
 
-}
+    /// Gives a Vec populated with the name of the fields of the struct 
+    pub fn _get_struct_fields_as_collection_strings(&self) -> Vec<String> {
+        self.get_struct_fields()
+            .iter()
+            .map( |ident| {
+                ident.to_owned().to_string()
+            }
+        ).collect::<Vec<String>>()
+    }
 
-
-pub trait MacroDataParser {
-    // TODO Implement the common methods that acts over the data
-    // that it's typically needed when build a macro 
+    /// Retrieves the fields of the Struct as continuous String, comma separated
+    pub fn get_struct_fields_as_strings(&self) -> String {
+        let column_names: String = self.get_struct_fields()
+            .iter()
+            .map( |ident| {
+                ident.to_owned().to_string()
+            }).collect::<Vec<String>>()
+                .iter()
+                .map( |column| column.to_owned() + ", ")
+            .collect::<String>();
+        
+        let mut column_names_as_chars = column_names.chars();
+        column_names_as_chars.next_back();
+        column_names_as_chars.next_back();
+        
+        column_names_as_chars.as_str().to_owned()
+    }
 }

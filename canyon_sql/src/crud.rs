@@ -80,6 +80,8 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
     /// Inserts the values of structure in the correlative table
     async fn __insert(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
 
+        println!("\nVALUES EN __INSERT: {:?}", values);
+
         let mut field_values = String::new();
         // Construct the String that holds the '$1' placeholders for the values to insert
         let total_values = values.len();
@@ -104,15 +106,11 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
         );
 
         println!("\nINSERT STMT: {}", &stmt);
-        println!("\n");
+        println!("FIELDS: {}", &fields);
         
         Self::query(
             &stmt[..], 
-            &[
-                &"prueba1", 
-                &"'prueba2", 
-                &3
-            ]
+            &values[1..]
         ).await
     }
 }
