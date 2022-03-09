@@ -80,8 +80,6 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
     /// Inserts the values of structure in the correlative table
     async fn __insert(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
 
-        println!("\nVALUES EN __INSERT: {:?}", values);
-
         let mut field_values = String::new();
         // Construct the String that holds the '$1' placeholders for the values to insert
         let total_values = values.len();
@@ -112,6 +110,15 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
             &stmt[..], 
             &values[1..]
         ).await
+    }
+
+
+    /// Deletes the entrity from the database that belongs to a current instance
+    async fn __delete(table_name: &str, id: i32) -> DatabaseResult<T> {
+        
+        let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
+
+        Self::query(&stmt[..], &[&id]).await
     }
 }
 
