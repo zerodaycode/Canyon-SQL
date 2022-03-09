@@ -13,7 +13,9 @@ mod query_operations;
 
 use query_operations::{
     utils::macro_tokens::MacroTokens, 
-    insert::generate_insert_tokens, select::{generate_find_all_tokens, generate_find_by_id_tokens}
+    insert::generate_insert_tokens, 
+    select::{generate_find_all_tokens, generate_find_by_id_tokens},
+    delete::generate_delete_tokens
 };
 
 use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
@@ -129,12 +131,14 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     // Constructs a new instance of the helper that manages the macro data
     let macro_data = MacroTokens::new(&ast);
 
-    // Build the find_all() query
+    // Builds the find_all() query
     let find_all_tokens = generate_find_all_tokens(&macro_data);
-    // Build the find_by_id() query
+    // Builds the find_by_id() query
     let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
-    // Build the insert() query
+    // Builds the insert() query
     let insert_tokens = generate_insert_tokens(&macro_data);
+    // Builds the delete() query
+    let delete_tokens = generate_delete_tokens(&macro_data);
 
     // Recoves the identifiers of the struct's members
     let fields = filter_fields(
@@ -174,6 +178,9 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
             // The insert impl
             #insert_tokens
+
+            // The delete impl
+            #delete_tokens
 
         }
 
