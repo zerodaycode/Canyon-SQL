@@ -15,7 +15,8 @@ use query_operations::{
     utils::macro_tokens::MacroTokens, 
     insert::generate_insert_tokens, 
     select::{generate_find_all_tokens, generate_find_by_id_tokens},
-    delete::generate_delete_tokens
+    delete::generate_delete_tokens,
+    update::generate_update_tokens
 };
 
 use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
@@ -139,6 +140,8 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let insert_tokens = generate_insert_tokens(&macro_data);
     // Builds the delete() query
     let delete_tokens = generate_delete_tokens(&macro_data);
+    // Builds the update() query
+    let update_tokens = generate_update_tokens(&macro_data);
 
     // Recoves the identifiers of the struct's members
     let fields = filter_fields(
@@ -181,6 +184,9 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
             // The delete impl
             #delete_tokens
+
+            // The update impl
+            #update_tokens
 
         }
 

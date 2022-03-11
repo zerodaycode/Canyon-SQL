@@ -120,6 +120,36 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
 
         Self::query(&stmt[..], &[&id]).await
     }
+
+    async fn __update(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
+
+
+        let mut vec_columns_values:Vec<String> = Vec::new();
+
+        let str_columns_values = vec_columns_values.join(",");
+
+        for (i, column_name) in fields.split(',').enumerate(){
+            let column_equal_value = format!(
+            "{} = ${}",
+            column_name.to_owned(),i
+        );
+        vec_columns_values.push(column_equal_value)
+        }
+
+
+        let stmt = format!(
+            "UPDATE {} SET {}",
+            table_name, str_columns_values
+        );
+
+        println!("\nUPDATE STMT: {}", &stmt);
+
+
+        Self::query(
+            &stmt[..],
+            values
+        ).await
+    }
 }
 
  
