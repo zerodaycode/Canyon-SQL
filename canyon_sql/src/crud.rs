@@ -113,7 +113,7 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
     }
 
 
-    /// Deletes the entrity from the database that belongs to a current instance
+    /// Deletes the entity from the database that belongs to a current instance
     async fn __delete(table_name: &str, id: i32) -> DatabaseResult<T> {
         
         let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
@@ -121,33 +121,29 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
         Self::query(&stmt[..], &[&id]).await
     }
 
+    /// Updates an entity from the database that belongs to a current instance
     async fn __update(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
 
-
         let mut vec_columns_values:Vec<String> = Vec::new();
-
-        let str_columns_values = vec_columns_values.join(",");
-
-        for (i, column_name) in fields.split(',').enumerate(){
+        
+        for (i, column_name) in fields.split(',').enumerate() {
             let column_equal_value = format!(
-            "{} = ${}",
-            column_name.to_owned(),i
-        );
-        vec_columns_values.push(column_equal_value)
+                "{} = ${}", column_name.to_owned(), i
+            );
+            vec_columns_values.push(column_equal_value)
         }
 
+        vec_columns_values.remove(0);
+        let str_columns_values = vec_columns_values.join(",");
 
         let stmt = format!(
-            "UPDATE {} SET {}",
+            "UPDATE {} SET {} ",
             table_name, str_columns_values
         );
 
-        println!("\nUPDATE STMT: {}", &stmt);
-
-
         Self::query(
             &stmt[..],
-            values
+            &values[1..]
         ).await
     }
 }
