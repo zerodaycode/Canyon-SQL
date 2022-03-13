@@ -1,10 +1,14 @@
+use std::collections::HashMap;
+
 /// Provides helpers to build the #[canyon] procedural macro like attribute
 
 use proc_macro2::TokenStream;
 use syn::Block;
 use quote::quote;
 
-use canyon_observer::CANYON_REGISTER;
+use canyon_observer::{CANYON_REGISTER_OLD, CANYON_REGISTER};
+
+use canyon_manager::manager::entity::CanyonEntity;
 
 /// Creates a TokenScream that is used to load the data generated at compile-time
 /// by the `CanyonManaged` macros again on the Canyon register but
@@ -12,14 +16,22 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
     let mut identifiers = String::new();
 
     unsafe {
-        for element in &CANYON_REGISTER {
+        for element in &CANYON_REGISTER_OLD {
             identifiers.push_str(element.as_str());
             identifiers.push(',');
         }
     }
 
+    let mut canyon_entities: Vec<&CanyonEntity> = Vec::new(); 
+    unsafe {
+        for element in &CANYON_REGISTER {
+            canyon_entities.push( element );
+        }
+    }
+
     let tokens = quote! {
         use canyon_sql::canyon_observer::{
+            CANYON_REGISTER_OLD, 
             CANYON_REGISTER, 
             CREDENTIALS, 
             credentials::DatabaseCredentials
@@ -27,7 +39,7 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
         
         unsafe { CREDENTIALS = Some(DatabaseCredentials::new()); }
         unsafe { println!("CREDENTIALS MACRO IN: {:?}", CREDENTIALS); }
-        unsafe { CANYON_REGISTER = #identifiers
+        unsafe { CANYON_REGISTER_OLD = #identifiers
             .split(',')
             .map(str::to_string)
             .collect();
@@ -35,7 +47,14 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
             // from the new assignation
             // CANYON_REGISTER.pop_back();
         }
-        unsafe { println!("Register status IN: {:?}", CANYON_REGISTER) };
+        unsafe { 
+            CANYON_REGISTER = vec![
+                // #(#canyon_entities)*,
+            ];
+        }
+        // unsafe { CANYON_REGISTER = #entities; }
+        unsafe { println!("Register status IN: {:?}", CANYON_REGISTER_OLD) };
+        unsafe { println!("New Register status IN: {:?}", CANYON_REGISTER) };
     };
 
     canyon_manager_tokens.push(tokens);

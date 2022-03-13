@@ -11,7 +11,7 @@ use syn::{
 mod canyon_macro;
 mod query_operations;
 mod utils;
-mod manager;
+
 
 use query_operations::{
     insert::generate_insert_tokens, 
@@ -20,13 +20,13 @@ use query_operations::{
     update::generate_update_tokens
 };
 
-use manager::{manager_builder::{
+use canyon_manager::manager::{manager_builder::{
     generate_data_struct, get_field_attr,
 }, entity::CanyonEntity};
 use utils::macro_tokens::MacroTokens;
 use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
 use canyon_observer::{
-    CANYON_REGISTER,
+     CANYON_REGISTER_OLD, CANYON_REGISTER,
 };
 
 
@@ -84,7 +84,7 @@ pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) ->
 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
-    unsafe { CANYON_REGISTER.push(ty.to_string()); }
+    unsafe { CANYON_REGISTER_OLD.push(ty.to_string()); }
     println!("Observable <{}> added to the register", ty.to_string());
 
     
@@ -113,13 +113,18 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
+    
+    ///! Debug de atributos en miembros
     get_field_attr(&entity);
+
+    // Notifies the observer that an observable must be registered on the system
+    // In other words, adds the data of the structure to the Canyon Register
+    println!("Observable of new register <{}> added to the register", &entity.struct_name.to_string());
+    unsafe { CANYON_REGISTER.push(entity) }
 
     // Assemble everything
     let tokens = quote! {
         #generated_data_struct
-
-        // #generated_try_from_impl
     };
 
     // Pass the result back to the compiler

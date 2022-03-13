@@ -8,20 +8,14 @@ use super::{
 
 /// Builds the TokenStream that contains the struct definition code
 pub fn generate_data_struct(canyon_entity: &CanyonEntity) -> TokenStream {
-    let fields = &canyon_entity
-        .attributes
-        .iter()
-        .map(|f| {
-            let name = &f.name;
-            let ty = &f.ty;
-            quote!{ pub #name: #ty }
-        })
-        .collect::<Vec<_>>();
+    let fields = &canyon_entity.get_attrs_as_token_stream();
 
     let struct_name = &canyon_entity.struct_name;
+    let struct_visibility = &canyon_entity.vis;
+    let struct_generics = &canyon_entity.generics;
 
     quote! {
-        pub struct #struct_name {
+        #struct_visibility struct #struct_name #struct_generics {
             #(#fields),*
         }
     }
@@ -36,13 +30,13 @@ pub fn get_field_attr(metrics_struct: &CanyonEntity) -> () {
         .iter()
         .map(|field| {
             match field.attribute_type {
-                EntityFieldAnnotation::None => {
-                    println!("No annotation found for field: {} in {} entity", 
+                Some(EntityFieldAnnotation::ForeignKey) => {
+                    println!("Annotation ForeignKey found in field: {} for {} entity", 
                         &field.name, &metrics_struct.struct_name
                     );
                 },
-                EntityFieldAnnotation::ForeignKey => {
-                    println!("Annotation ForeignKey found in field: {} for {} entity", 
+                _ => {
+                    println!("No annotation found for field: {} in {} entity", 
                         &field.name, &metrics_struct.struct_name
                     );
                 },
