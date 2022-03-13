@@ -4,12 +4,13 @@
 use std::{fs, collections::HashMap};
 
 /// Manages to retrieve the credentials to the desired database connection from an
-/// handcoded `Secrets.toml` file, located at the root of the project.
+/// handcoded `secrets.toml` file, located at the root of the project.
 #[derive(Clone, Debug)]
 pub struct DatabaseCredentials {
-    pub username: String,
-    pub password: String,
-    pub db_name: String,
+    username: String,
+    password: String,
+    host: String,
+    db_name: String
 }
 
 impl DatabaseCredentials{
@@ -21,13 +22,14 @@ impl DatabaseCredentials{
         Self {
             username: parsed_credentials.get("username").unwrap().to_owned(),
             password: parsed_credentials.get("password").unwrap().to_owned(),
+            host:parsed_credentials.get("host").unwrap_or(&"localhost".to_string()).to_owned(),
             db_name: parsed_credentials.get("db_name").unwrap().to_owned()
         }
     }
 
     pub fn credentials_parser() -> HashMap<String, String> {
     
-        const FILE_NAME: &str = "Secrets.toml";
+        const FILE_NAME: &str = "secrets.toml";
         let mut credentials_mapper: HashMap<_, _> = HashMap::new();
         
         let secrets_file = fs::read_to_string(FILE_NAME)
@@ -39,7 +41,7 @@ impl DatabaseCredentials{
             );
 
         let secrets_file_splitted = secrets_file
-            .split_terminator("\n");
+            .split_terminator('\n');
 
         for entry in secrets_file_splitted {
             let cleaned_entry = 
