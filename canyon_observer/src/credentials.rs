@@ -22,7 +22,7 @@ impl DatabaseCredentials{
         Self {
             username: parsed_credentials.get("username").unwrap().to_owned(),
             password: parsed_credentials.get("password").unwrap().to_owned(),
-            host:parsed_credentials.get("host").unwrap().to_owned(),
+            host:parsed_credentials.get("host").unwrap_or(&"localhost".to_string()).to_owned(),
             db_name: parsed_credentials.get("db_name").unwrap().to_owned()
         }
     }
@@ -41,7 +41,7 @@ impl DatabaseCredentials{
             );
 
         let secrets_file_splitted = secrets_file
-            .split_terminator("\n");
+            .split_terminator('\n');
 
         for entry in secrets_file_splitted {
             let cleaned_entry = 
