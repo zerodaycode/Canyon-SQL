@@ -1,9 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::query_operations::utils::helpers::*;
+use crate::utils::helpers::*;
 
-use crate::query_operations::utils::macro_tokens::MacroTokens;
+use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function

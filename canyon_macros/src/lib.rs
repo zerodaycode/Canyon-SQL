@@ -10,17 +10,24 @@ use syn::{
 
 mod canyon_macro;
 mod query_operations;
+mod utils;
+mod manager;
 
 use query_operations::{
-    utils::macro_tokens::MacroTokens, 
     insert::generate_insert_tokens, 
     select::{generate_find_all_tokens, generate_find_by_id_tokens},
     delete::generate_delete_tokens,
     update::generate_update_tokens
 };
 
+use manager::{manager_builder::{
+    generate_data_struct, get_field_attr,
+}, entity::CanyonEntity};
+use utils::macro_tokens::MacroTokens;
 use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
-use canyon_observer::CANYON_REGISTER;
+use canyon_observer::{
+    CANYON_REGISTER,
+};
 
 
 /// Macro for handling the entry point to the program. 
@@ -99,6 +106,25 @@ pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) ->
     tokens.into()
 }
 
+
+#[proc_macro_attribute]
+pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    let entity = syn::parse_macro_input!(input as CanyonEntity);
+
+    // Generate the bits of code that we should give back to the compiler
+    let generated_data_struct = generate_data_struct(&entity);
+    get_field_attr(&entity);
+
+    // Assemble everything
+    let tokens = quote! {
+        #generated_data_struct
+
+        // #generated_try_from_impl
+    };
+
+    // Pass the result back to the compiler
+    tokens.into()
+}
 
 /// Allows the implementors to auto-derive de `crud-operations` trait, which defines the methods
 /// that will perform the database communication and that will query against the db.

@@ -1,8 +1,8 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::query_operations::utils::helpers::*;
-use crate::query_operations::utils::macro_tokens::MacroTokens;
+use crate::utils::helpers::*;
+use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the __insert() CRUD operation
 pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
