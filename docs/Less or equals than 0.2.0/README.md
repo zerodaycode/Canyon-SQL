@@ -4,23 +4,23 @@
 Legacy docs -> Readme.MD for <= `0.2.0` versions
 
 ## Early stages
-The library it's still on a `early stage` state. Any contrib via `fork` + `PR` it's really apreciated.
+The library it's still on a `early stage` state. Any contrib via `fork` + `PR` it's really appreciated.
 
-# Availiable query operations:
+# Available query operations:
     - Find all
     - Find by ID
 
 
 ## Basic example of usage
 
-Assuming that the main goal of an `ORM` it's perform `SQL queries` based on certain object oriented code, in order to map some data-model as an SQL entity...
+Assuming that the main goal of an `ORM` it's perform `SQL queries` based on certain object-oriented code, in order to map some data-model as an SQL entity...
 
 1 - It's required to implement the `CrudOperations` for your struct. Due to the async nature of the library, we need to mark the implementation of the 
 `CrudOperations` trait as `#[async_trait]`
 
 2 - Implement the new or the empty constructors. You can also impl the `Default` trait for the standard library if you prefer.
 
-3 - Implement the `RowMapper` trait. Map all of your struct attributes double ckeching the types on Rust, and what you need to get from database.
+3 - Implement the `RowMapper` trait. Map all of your struct attributes double-checking the types on Rust, and what you need to get from database.
 
 `my_model.rs` file
 ```
@@ -60,8 +60,8 @@ impl RowMapper<Self> for Foo {
 }
 ```
 
-And now, on your main file, just instanciate a new object of your custom type Foo.
-You will have availiable (thanks to the `CrudOperations` trait) any option designed
+And now, on your main file, just instantiate a new object of your custom type Foo.
+You will have available (thanks to the `CrudOperations` trait) any option designed
 as a member of your type.
 
 NOTE: Remember to `await` the result of any trait's method. 

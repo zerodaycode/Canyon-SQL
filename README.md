@@ -6,17 +6,17 @@
 
 ## Early stages advice
 The library it's still on a `early stage` state. 
-Any contrib via `fork` + `PR` it's really apreciated, specially if you like concepts like backend development, relational - mapping, low-level code, performance optimizations and, of course, `RUST`.
+Any contrib via `fork` + `PR` it's really appreciated, specially if you like concepts like backend development, relational - mapping, low-level code, performance optimizations and, of course, `RUST`.
 
 
-# Availiable query operations:
+# Available query operations:
     - Find all
     - Find by ID
 
 
 ## Changelog
 
-- `v0.4.0` Now the name of your table it's automatically derived from Rust at compile time. Note that you still had to manually create the table on the database that satisfies the cryteria of your struct's name
+- `v0.4.0` Now the name of your table it's automatically derived from Rust at compile time. Note that you still had to manually create the table on the database that satisfies the criteria of your struct's name
 all in snake_case.
 
 `Rust struct's name: CanyonSql` -> `Database table name: canyon_sql`
@@ -48,15 +48,15 @@ pub struct CanyonSql {
 }
 ```
 
-And now, on your main file, just instanciate a new object of your custom type Foo.
-You will have availiable (thanks to the `CrudOperations` trait) any crud operation as an associated function of your type.
+And now, on your main file, just instantiate a new object of your custom type Foo.
+You will have available (thanks to the `CrudOperations` trait) any crud operation as an associated function of your type.
 
 NOTE: Remember to `await` the result of any trait's method. 
 NOTE: For human-readable result, use the `.as_response::<Foo>()` method, where Foo is the type of your struct.
 
-WARNING: You will need an asyncronous runtime in order to use the ORM. This is because the implementation it's based on the `tokio::postgres` library, not in the default one, in order to get an asyncronous client.
+WARNING: You will need an asynchronous runtime in order to use the ORM. This is because the implementation it's based on the `tokio::postgres` library, not in the default one, in order to get an asynchronous client.
 
-By the way, the easiest option availiable it's just add `tokio` to your `Cargo.toml` file, and mark your main function with the `#[tokio::main]` attribute and make it asyncronous, like the example below:
+By the way, the easiest option available it's just add `tokio` to your `Cargo.toml` file, and mark your main function with the `#[tokio::main]` attribute and make it asynchronous, like the example below:
 
 `main.rs` file
 ```
@@ -94,7 +94,7 @@ Note: For now, on the `find_by_id` associated function, the result has to be acc
 
 This limitation it's due to the DatabaseResult<T> struct. This limitation will be solved soon.
 
-After getting your element on index 0, you can access it's properties by use the dot notation.
+After getting your element on index 0, you can access its properties by use the dot notation.
 
 
 ## Output of the main code
