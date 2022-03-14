@@ -128,7 +128,7 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
         
         for (i, column_name) in fields.split(',').enumerate() {
             let column_equal_value = format!(
-                "{} = ${}", column_name.to_owned(), i
+                "{} = ${}", column_name.to_owned(), i + 1
             );
             vec_columns_values.push(column_equal_value)
         }
@@ -137,13 +137,13 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
         let str_columns_values = vec_columns_values.join(",");
 
         let stmt = format!(
-            "UPDATE {} SET {} ",
+            "UPDATE {} SET {} WHERE id = $1",
             table_name, str_columns_values
         );
 
         Self::query(
             &stmt[..],
-            &values[1..]
+            values
         ).await
     }
 }
