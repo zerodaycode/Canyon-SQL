@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, format};
 use async_trait::async_trait;
 use tokio_postgres::{ToStatement, types::ToSql};
 
@@ -44,8 +44,8 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
     /// desired columns
     async fn __find_all(table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
 
-        let sql: String = if columns.len() == 0 { // Care, conditional assignment
-            String::from(format!("SELECT * FROM {}", table_name))
+        let sql: String = if columns.is_empty() { // Care, conditional assignment
+            format!("SELECT * FROM {}", table_name)
         } else {
             let mut table_columns = String::new();
             
@@ -59,14 +59,42 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
 
             table_columns.push_str(columns.get(counter).unwrap());
 
-            let query = String::from(
-                format!("SELECT {} FROM {}", table_columns, table_name
-            ));
+            let query = format!("SELECT {} FROM {}", table_columns, table_name
+            );
 
             query
         };
 
         Self::query(&sql[..], &[]).await
+    }
+
+    /// Queries the database and try to find items with provided ids
+    async fn __find_many_by_ids(table_name: &str, columns: &[&str], ids: &[i32]) -> DatabaseResult<T> {
+
+        let mut sql:String = String::new();
+
+        if columns.is_empty(){
+              let query = format!("SELECT * FROM {} WHERE id = ANY($1)", table_name);
+            sql.push_str(&query)
+        }
+        else {
+            let mut columns_assignement:Vec<String> = Vec::new();
+
+            for n in 1..=columns.len(){
+                columns_assignement.push(
+                    format!("${}",n + 1)
+                );
+            }
+
+            let columns_assignement_as_string = columns_assignement.join(",");
+
+            let query = format!("SELECT {} FROM {} WHERE id = ANY($1)", columns_assignement_as_string, table_name);
+
+            sql.push_str(&query)
+        };
+
+
+        Self::query(&sql[..],&[&ids]).await
     }
 
     /// Queries the database and try to find an item on the most common pk

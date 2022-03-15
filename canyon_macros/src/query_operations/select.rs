@@ -25,6 +25,25 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     }
 }
 
+/// Generates the TokenStream for build the __find_many_by_ids() CRUD
+/// associated function
+pub fn generate_find_many_by_ids_tokens(macro_data: &MacroTokens) -> TokenStream {
+    // Destructure macro_tokens into raw data
+    let (vis,ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis async fn find_many_by_ids(ids:&[i32]) -> Vec<#ty> {
+            <#ty as CrudOperations<#ty>>::__find_many_by_ids(
+                #table_name,
+                &[], // TODO Allow the user to choose the retrieved columns
+                ids)
+                .await
+                .as_response::<#ty>()
+        }
+    }
+}
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function
 pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {

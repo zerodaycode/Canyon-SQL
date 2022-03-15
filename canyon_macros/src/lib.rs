@@ -15,7 +15,7 @@ mod utils;
 
 use query_operations::{
     insert::generate_insert_tokens, 
-    select::{generate_find_all_tokens, generate_find_by_id_tokens},
+    select::{generate_find_all_tokens, generate_find_many_by_ids_tokens, generate_find_by_id_tokens},
     delete::generate_delete_tokens,
     update::generate_update_tokens
 };
@@ -28,7 +28,6 @@ use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
 use canyon_observer::{
      CANYON_REGISTER_OLD, CANYON_REGISTER,
 };
-
 
 /// Macro for handling the entry point to the program. 
 /// 
@@ -165,6 +164,8 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     // Builds the find_all() query
     let find_all_tokens = generate_find_all_tokens(&macro_data);
+    // Builds the find_many_by_ids() query
+    let find_many_by_ids_tokens = generate_find_many_by_ids_tokens(&macro_data);
     // Builds the find_by_id() query
     let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
     // Builds the insert() query
@@ -204,8 +205,11 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
-            // The find_by_id impl
+            // The find_all impl
             #find_all_tokens
+
+            // The find_all impl
+            #find_many_by_ids_tokens
 
             // The find_by_id impl
             #find_by_id_tokens
