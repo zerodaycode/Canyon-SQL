@@ -6,8 +6,8 @@ use proc_macro2::TokenStream;
 use syn::Block;
 use quote::quote;
 
-use canyon_observer::{CANYON_REGISTER_OLD, CANYON_REGISTER};
-
+// use canyon_observer::{CANYON_REGISTER_OLD, CANYON_REGISTER};
+use canyon_observer::{CANYON_REGISTER_OLD};
 use canyon_manager::manager::entity::CanyonEntity;
 
 /// Creates a TokenScream that is used to load the data generated at compile-time
@@ -23,16 +23,16 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
     }
 
     let mut canyon_entities: Vec<&CanyonEntity> = Vec::new(); 
-    unsafe {
-        for element in &CANYON_REGISTER {
-            canyon_entities.push( element );
-        }
-    }
+    // unsafe {
+    //     for element in &CANYON_REGISTER {
+    //         canyon_entities.push( element );
+    //     }
+    // }
 
     let tokens = quote! {
         use canyon_sql::canyon_observer::{
             CANYON_REGISTER_OLD, 
-            CANYON_REGISTER, 
+            // CANYON_REGISTER,
             CREDENTIALS, 
             credentials::DatabaseCredentials
         };
@@ -47,14 +47,14 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
             // from the new assignation
             // CANYON_REGISTER.pop_back();
         }
-        unsafe { 
-            CANYON_REGISTER = vec![
-                // #(#canyon_entities)*,
-            ];
-        }
+        // unsafe {
+        //     CANYON_REGISTER = vec![
+        //         // #(#canyon_entities)*,
+        //     ];
+        // }
         // unsafe { CANYON_REGISTER = #entities; }
         unsafe { println!("Register status IN: {:?}", CANYON_REGISTER_OLD) };
-        unsafe { println!("New Register status IN: {:?}", CANYON_REGISTER) };
+        // unsafe { println!("New Register status IN: {:?}", CANYON_REGISTER) };
     };
 
     canyon_manager_tokens.push(tokens);
