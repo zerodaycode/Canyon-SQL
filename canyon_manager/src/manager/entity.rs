@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
-use quote::quote;
 use proc_macro2::{Ident, TokenStream};
 use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
+use quote::{quote};
 
 use super::entity_fields::EntityField;
 
@@ -14,36 +14,43 @@ pub struct CanyonEntity {
     pub attributes: Vec<EntityField>
 }
 
-use proc_macro2::{Spacing, Punct};
-use quote::{TokenStreamExt, ToTokens};
-
-
-impl ToTokens for CanyonEntity {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        for (i, attribute) in self.attributes.iter().enumerate() {
-            self.struct_name.to_tokens(tokens);
-            self.vis.to_tokens(tokens);
-            self.generics.to_tokens(tokens);
-            if i > 0 {
-                // Double colon `::`
-                tokens.append(Punct::new(':', Spacing::Joint));
-                tokens.append(Punct::new(':', Spacing::Alone));
-            }
-            attribute.to_tokens(tokens);
-        }
-    }
-}
-
 impl CanyonEntity {
+    pub fn get_entity_as_string(&self) -> String {
+        let mut as_string = String::new();
+        as_string.push_str("Identifier: ");
+        as_string.push_str(self.struct_name.to_string().as_str());
+        as_string.push_str(", Columns: ");
+        as_string.push_str(self.get_attrs_as_string().as_str());
+
+        println!("String of register: {:?}", as_string);
+        as_string
+    }
+
+
+    fn get_attrs_as_string(&self) -> String {
+        let mut vec_columns = Vec::new();
+        for attribute in self.attributes.iter(){
+            let name = attribute.name.to_string();
+            let field_type = attribute.get_field_type_as_string();
+            let column_name_type_tuple = format!("({}:{})", name, field_type);
+            vec_columns.push(column_name_type_tuple)
+        }
+
+        let columns_str = vec_columns.join(",");
+
+        println!("vec_columns: {:?}", columns_str);
+        columns_str
+
+    }
+
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {
-        self
-        .attributes
-        .iter()
-        .map(|f| {
-            let name = &f.name;
-            let ty = &f.ty;
-            quote!{ pub #name: #ty }
-        })
+        self.attributes
+            .iter()
+            .map(|f| {
+                let name = &f.name;
+                let ty = &f.field_type;
+                quote!{ pub #name: #ty }
+            })
         .collect::<Vec<_>>()
     }
 }

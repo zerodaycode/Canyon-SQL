@@ -5,23 +5,37 @@ use quote::ToTokens;
 use syn::{Type, Attribute, Field};
 
 use super::field_annotation::EntityFieldAnnotation;
-use proc_macro2::TokenStream;
 /// Represents any of the fields and annotations (if any valid annotation) found for a CanyonEntity
 pub struct EntityField {
     pub name: Ident,
-    pub ty: Type,
-    pub attribute_type: Option<EntityFieldAnnotation>,
+    pub field_type: Type,
+    pub attribute: Option<EntityFieldAnnotation>,
 }
 
-impl ToTokens for EntityField {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        self.name.to_tokens(tokens);
-        self.ty.to_tokens(tokens);
-        self.attribute_type.to_tokens(tokens);
-    }
-}
 
 impl EntityField {
+    pub fn get_field_type_as_string(&self) -> String {
+        match &self.field_type {
+            Type::Array(type_) => type_.to_token_stream().to_string(),
+            Type::BareFn(type_) => type_.to_token_stream().to_string(),
+            Type::Group(type_) => type_.to_token_stream().to_string(),
+            Type::ImplTrait(type_) => type_.to_token_stream().to_string(),
+            Type::Infer(type_) => type_.to_token_stream().to_string(),
+            Type::Macro(type_) => type_.to_token_stream().to_string(),
+            Type::Never(type_) => type_.to_token_stream().to_string(),
+            Type::Paren(type_) => type_.to_token_stream().to_string(),
+            Type::Path(type_) => type_.to_token_stream().to_string(),
+            Type::Ptr(type_) => type_.to_token_stream().to_string(),
+            Type::Reference(type_) => type_.to_token_stream().to_string(),
+            Type::Slice(type_) => type_.to_token_stream().to_string(),
+            Type::TraitObject(type_) => type_.to_token_stream().to_string(),
+            Type::Tuple(type_) => type_.to_token_stream().to_string(),
+            Type::Verbatim(type_) => type_.to_token_stream().to_string(),
+            _ => "".to_owned(),
+        }
+    }
+
+
     pub fn new(name: &Ident, raw_helper_attributes: &[Attribute], ty: &Type) -> syn::Result<Self> {
         // Getting the name of attributes put in front of struct fields
         let helper_attributes = raw_helper_attributes
@@ -53,12 +67,13 @@ impl EntityField {
         Ok(
             Self {
                 name: name.clone(),
-                ty: ty.clone(),
-                attribute_type,
+                field_type: ty.clone(),
+                attribute: attribute_type,
             }
         )
     }
 }
+
 
 impl TryFrom<&Field> for EntityField {
     type Error = syn::Error;

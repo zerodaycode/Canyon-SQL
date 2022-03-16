@@ -12,40 +12,49 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
-
+use utils::macro_tokens::MacroTokens;
 use query_operations::{
     insert::generate_insert_tokens, 
     select::{generate_find_all_tokens, generate_find_by_id_tokens},
     delete::generate_delete_tokens,
     update::generate_update_tokens
 };
-
-use canyon_manager::manager::{manager_builder::{
-    generate_data_struct, get_field_attr,
-}, entity::CanyonEntity};
-use utils::macro_tokens::MacroTokens;
-use canyon_macro::{_user_body_builder, _wire_data_on_canyon_register};
-use canyon_observer::{
-     CANYON_REGISTER_OLD, CANYON_REGISTER,
+use canyon_manager::manager::{
+    manager_builder::{
+        generate_data_struct, 
+        get_field_attr
+    }, 
+    entity::CanyonEntity
 };
+use canyon_macro::{
+    _user_body_builder, 
+    _wire_data_on_canyon_register, 
+    call_canyon_manager
+};
+use canyon_observer::CANYON_REGISTER;
 
 
 /// Macro for handling the entry point to the program. 
 /// 
 /// Avoids the user to write the tokio attribute and
-/// the async modifier to the main fn
+/// the async modifier to the main fn()
+/// 
+/// Also, takes care about wire the necessary code for Canyon in order to 
+/// full achieve it's complete set of features
 /// TODO Check for the _meta attribute metadata when necessary
 #[proc_macro_attribute]
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    // get the function this attribute is attached to
+    // Get the function that this attribute is attached to
     let func = parse_macro_input!(input as ItemFn);
     let sign = func.sig;
     let body = func.block;
 
-    // The code written by the Canyon Manager
+    // The code wired in main() by Canyon, but in it's own scope
     let mut canyon_manager_tokens: Vec<TokenStream> = Vec::new();
     // Builds the code that Canyon needs in it's initialization
     _wire_data_on_canyon_register(&mut canyon_manager_tokens);
+    // Builds the code that Canyon uses to manage the ORM
+    call_canyon_manager(&mut canyon_manager_tokens);
 
     // The code written by the user
     let mut macro_tokens: Vec<TokenStream> = Vec::new();
@@ -53,11 +62,19 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     _user_body_builder(body, &mut macro_tokens);
     
 
-    let tok = quote! {
+    // The final code wired in main()
+    let tokens = quote! {
         use canyon_sql::tokio;
         #[tokio::main]
         async #sign {
             {     
+                use canyon_sql::{
+                    canyon_observer::CANYON_REGISTER,
+                    handler::CanyonHandler
+                };
+                use canyon_sql::tokio_postgres::types::Type;
+                use std::collections::HashMap;
+
                 #(#canyon_manager_tokens)*
             }
 
@@ -65,7 +82,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
         }
     };
     
-    tok.into()
+    tokens.into()
 }
 
 
@@ -84,7 +101,7 @@ pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) ->
 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
-    unsafe { CANYON_REGISTER_OLD.push(ty.to_string()); }
+    unsafe { CANYON_REGISTER.push(ty.to_string()); }
     println!("Observable <{}> added to the register", ty.to_string());
 
     
@@ -120,7 +137,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
     println!("Observable of new register <{}> added to the register", &entity.struct_name.to_string());
-    unsafe { CANYON_REGISTER.push(entity) }
+    unsafe { CANYON_REGISTER.push(entity.get_entity_as_string()) }
 
     // Assemble everything
     let tokens = quote! {

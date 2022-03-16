@@ -1,45 +1,28 @@
-use std::collections::HashMap;
-
 /// Provides helpers to build the #[canyon] procedural macro like attribute
 
 use proc_macro2::TokenStream;
 use syn::Block;
 use quote::quote;
 
-use canyon_observer::{CANYON_REGISTER_OLD, CANYON_REGISTER};
+use canyon_observer::CANYON_REGISTER;
 
-use canyon_manager::manager::entity::CanyonEntity;
 
 /// Creates a TokenScream that is used to load the data generated at compile-time
 /// by the `CanyonManaged` macros again on the Canyon register but
 pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream>) {
-    let mut identifiers = String::new();
+    let mut entities_as_string = String::new();
 
-    unsafe {
-        for element in &CANYON_REGISTER_OLD {
-            identifiers.push_str(element.as_str());
-            identifiers.push(',');
-        }
-    }
-
-    let mut canyon_entities: Vec<&CanyonEntity> = Vec::new(); 
     unsafe {
         for element in &CANYON_REGISTER {
-            canyon_entities.push( element );
+            entities_as_string.push_str(element.as_str());
         }
     }
 
     let tokens = quote! {
-        use canyon_sql::canyon_observer::{
-            CANYON_REGISTER_OLD, 
-            CANYON_REGISTER, 
-            CREDENTIALS, 
-            credentials::DatabaseCredentials
-        };
-        
-        unsafe { CREDENTIALS = Some(DatabaseCredentials::new()); }
-        unsafe { println!("CREDENTIALS MACRO IN: {:?}", CREDENTIALS); }
-        unsafe { CANYON_REGISTER_OLD = #identifiers
+        // TODO wire the credentials from the observer, not from CRUD
+        // unsafe { CREDENTIALS = Some(DatabaseCredentials::new()); }
+        // unsafe { println!("CREDENTIALS MACRO IN: {:?}", CREDENTIALS); }
+        unsafe { CANYON_REGISTER = #entities_as_string
             .split(',')
             .map(str::to_string)
             .collect();
@@ -47,17 +30,11 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
             // from the new assignation
             // CANYON_REGISTER.pop_back();
         }
-        unsafe { 
-            CANYON_REGISTER = vec![
-                // #(#canyon_entities)*,
-            ];
-        }
-        // unsafe { CANYON_REGISTER = #entities; }
-        unsafe { println!("Register status IN: {:?}", CANYON_REGISTER_OLD) };
-        unsafe { println!("New Register status IN: {:?}", CANYON_REGISTER) };
-    };
 
-    canyon_manager_tokens.push(tokens);
+        unsafe { println!("Register status IN: {:?}", CANYON_REGISTER) };
+    };
+    
+    canyon_manager_tokens.push(tokens)    
 }
 
 /// Generates the TokenStream that has the code written by the user
@@ -75,4 +52,14 @@ pub fn _user_body_builder(func_body: Box<Block>, macro_tokens: &mut Vec<TokenStr
 
         macro_tokens.push(quoterino)
     }
+}
+
+/// Handler to activate the Canyon Manager, and wire the tokens into the main fn()
+pub fn call_canyon_manager(canyon_manager_tokens: &mut Vec<TokenStream>) {
+    //*   HANDLER EVENTS */
+    let canyon_manager_actions = quote! {
+        &CanyonHandler::fetch_database_status().await;
+    };
+
+    canyon_manager_tokens.push(canyon_manager_actions);
 }

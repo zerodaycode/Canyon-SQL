@@ -1,6 +1,4 @@
 use std::convert::TryFrom;
-use proc_macro2::{Spacing, Span, Punct, TokenStream};
-use quote::{TokenStreamExt, ToTokens};
 use proc_macro2::Ident;
 
 /// The available annotations for a field that belongs to any struct
@@ -10,18 +8,14 @@ pub enum EntityFieldAnnotation {
     ForeignKey
 }
 
-impl ToTokens for EntityFieldAnnotation {
-    fn to_tokens(&self, tokens: &mut TokenStream) {
-        let enum_ident = Ident::new("EntityFieldAnnotation", Span::call_site());
-        tokens.append(enum_ident.clone());
-        tokens.append(Punct::new(':', Spacing::Joint));
-        tokens.append(Punct::new(':', Spacing::Alone));
-
+impl EntityFieldAnnotation {
+    pub fn get_as_string(&self) -> String {
         match *self {
-            EntityFieldAnnotation::ForeignKey => tokens.append(enum_ident.clone()),
+            Self::ForeignKey => "ForeignKey".to_owned()
         }
     }
 }
+
 
 impl TryFrom<&Ident> for EntityFieldAnnotation {
     type Error = syn::Error;

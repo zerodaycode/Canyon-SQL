@@ -8,7 +8,7 @@ use crate::mapper::RowMapper;
 /// and providing methods to deserialize this result into a **user defined struct**
 #[derive(Debug)]
 pub struct DatabaseResult<T: Debug> {
-    wrapper: Vec<Row>,
+    pub wrapper: Vec<Row>,
     _phantom_data: std::marker::PhantomData<T>
 }
 
@@ -36,9 +36,23 @@ impl<T: Debug> DatabaseResult<T> {
     }
 
     /// Literally returns the same results as the `tokio::postgres` crate would do.
-    pub fn get_results(&self) -> &Vec<Row> {
-        &self.wrapper
+    pub fn get_results(self) -> Vec<Row> {
+        let mut results = Vec::new();
+        
+        self.wrapper.into_iter().for_each( |row| {
+            results.push( row )
+        });
+        results
     }
+
+    // pub fn get_col_results(&'static self) -> (){
+    //     let mut results = Vec::new();
+    //     for (i, e) in self.wrapper.iter().enumerate() {
+    //         results.push(e.get::<'a, usize, &str>(i).to_owned());
+    //     }
+    //     // results
+    //     println!("Result 0: {:?}", results);
+    // }
 
     /// Returns how many rows contains the result of the query
     pub fn get_number_of_results(&self) -> i32 {

@@ -25,11 +25,11 @@ pub fn generate_data_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 /// Builds the tokens for generate the code that implements the TryFrom<&CanyonEntity>
 /// for the macro annotated struct
 pub fn get_field_attr(metrics_struct: &CanyonEntity) -> () {
-    let field_attributes = metrics_struct
+    let _field_attributes = metrics_struct
         .attributes
         .iter()
         .map(|field| {
-            match field.attribute_type {
+            match field.attribute {
                 Some(EntityFieldAnnotation::ForeignKey) => {
                     println!("Annotation ForeignKey found in field: {} for {} entity", 
                         &field.name, &metrics_struct.struct_name

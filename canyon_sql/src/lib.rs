@@ -11,6 +11,7 @@ mod results;
 // Core public mods
 pub mod crud;
 pub mod mapper;
+pub mod handler;
 
 // Macros crate
 pub extern crate canyon_macros;
