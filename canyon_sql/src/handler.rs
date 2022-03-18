@@ -39,36 +39,45 @@ impl CanyonHandler {
         
         let results = Self::query(query_request, &[]).await.wrapper;
 
-        let mut schema_info: Vec<DatabaseDataRows> = Vec::new();
-        
+        let mut schema_info: Vec<Table> = Vec::new();
+
         for (i, res_row) in results.iter().enumerate() {
             
-            let schema_info_row = DatabaseDataRows {
+            // let schema_info_row = DatabaseDataRows {
+            //     table_name: res_row.get::<&str, String>("table_name"),
+            //     columns_types: HashMap::new()
+            // };
+            let mut table = Table { 
                 table_name: res_row.get::<&str, String>("table_name"),
-                columns_types: HashMap::new()
+                columns: Vec::new(),
             };
 
             println!("\nRow INDEX: {:?}", i);
-            let name = res_row.columns()[i].name();
-            let type_ = res_row.columns()[i].type_();
             for (i, column) in res_row.columns().iter().enumerate() {
+
+                let mut new_column = Column {
+                    column_name: column.name().to_string(), 
+                    datatype: column.type_().to_string(), 
+                    value: ColumnTypeValue::NoneValue
+                };
                 
                 println!("Column Index: {}; Column name: {:?}, Column type: {:?}", i, column.name(), column.type_());
                 match *column.type_() {
-                    Type::NAME => {
-                        println!("Value: {:?}", res_row.get::<&str, Option<String>>(column.name()));
-                    },
-                    Type::VARCHAR => {
-                        println!("Value: {:?}", res_row.get::<&str, Option<String>>(column.name()));
+                    Type::NAME | Type::VARCHAR => {
+                        let str_value = res_row.get::<&str, Option<String>>(column.name());
+                        println!("Value: {:?}", str_value);
+                        new_column.value = ColumnTypeValue::ValorString(str_value);
                     },
                     Type::INT4 => {
-                        println!("Value: {:?}", res_row.get::<&str, Option<i32>>(column.name()));
+                        let int_value = res_row.get::<&str, Option<i32>>(column.name());
+                        println!("Value: {:?}", int_value);
+                        new_column.value = ColumnTypeValue::ValorInt(int_value);
                     },
-                    _ => println!("No, primo")
+                    _ => new_column.value = ColumnTypeValue::NoneValue
                 }
+                table.columns.push(new_column)
             }
-            println!("\nTable: {:?}", schema_info_row);
-            schema_info.append(&mut vec![schema_info_row]);
+            schema_info.append(&mut vec![table]);
         }
         println!("\nCollection: {:?}", schema_info);
     }
@@ -87,6 +96,14 @@ pub struct Table {
 
 #[derive(Debug)]
 pub struct  Column {
-    pub name: String,
-    pub datatype: String
+    pub column_name: String,
+    pub datatype: String,
+    pub value: ColumnTypeValue
+}
+
+#[derive(Debug)]
+pub enum ColumnTypeValue {
+    ValorString(Option<String>),
+    ValorInt(Option<i32>),
+    NoneValue
 }
