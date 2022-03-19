@@ -130,8 +130,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
-    
-    ///! Debug de atributos en miembros
     get_field_attr(&entity);
 
     // Notifies the observer that an observable must be registered on the system

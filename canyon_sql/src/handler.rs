@@ -3,7 +3,7 @@
 /// the user and annotated with the `#[canyon_entity]`
 
 use std::collections::HashMap;
-use tokio_postgres::types::Type;
+use tokio_postgres::{types::Type, Row};
 
 use crate::crud::Transaction;
 
@@ -20,16 +20,13 @@ pub struct DatabaseDataRows {
 /// to pass the data retrieved on compile time to runtime
 #[derive(Debug)]
 pub struct CanyonHandler {
-    pub canyon_tables:Vec<Table>,
-    pub database_tables:Vec<Table>
+    pub canyon_tables:Vec<DatabaseTable>,
+    // pub database_tables:Vec<CanyonEntity>  // Canyony
 }
 // Makes this structure able to make queries to the database
 impl Transaction<Self> for CanyonHandler {}
 
 impl CanyonHandler {
-    // pub fn new() -> Self{
-        
-    // }
     pub async fn fetch_database_status() {
         let query_request = 
             "SELECT table_name, column_name, data_type, 
@@ -39,63 +36,107 @@ impl CanyonHandler {
         
         let results = Self::query(query_request, &[]).await.wrapper;
 
-        let mut schema_info: Vec<Table> = Vec::new();
+        let mut schema_info: Vec<RowTable> = Vec::new();
 
-        for (i, res_row) in results.iter().enumerate() {
-            
-            // let schema_info_row = DatabaseDataRows {
-            //     table_name: res_row.get::<&str, String>("table_name"),
-            //     columns_types: HashMap::new()
-            // };
-            let mut table = Table { 
-                table_name: res_row.get::<&str, String>("table_name"),
-                columns: Vec::new(),
-            };
+        for res_row in results.iter() {
+            // println!("\nres_row: {:?}", &res_row);
+            // If already exists a row that belongs to a table, add the founded columns
+            match schema_info.iter_mut().find( |table| {
+                table.table_name == res_row.get::<&str, String>("table_name")
+            }) {
+                unique_table => {
+                    match unique_table {
+                        Some(table) => {
+                            Self::get_row_postgre_columns_for_table(&res_row, table);
+                        }
+                        None => {
+                            let mut new_table = RowTable { 
+                                table_name: res_row.get::<&str, String>("table_name"),
+                                columns: Vec::new(),
+                            };
+                            Self::get_row_postgre_columns_for_table(&res_row, &mut new_table);
+                            schema_info.push(new_table);
+                        }
+                    }
+                }
+            }
+        }
+        println!("FINISHED TABLES TOTAL => {}", &schema_info.len());
+        for table in &schema_info {
+            println!("\nFinal table: {:?}", table.table_name);
+            for column in &table.columns {
+                println!("Column: {:?}, Type: {:?}, Value: {:?}", 
+                    &column.column_name, &column.datatype, &column.value
+                );
+            }
+        }
+    }
 
-            println!("\nRow INDEX: {:?}", i);
-            for (i, column) in res_row.columns().iter().enumerate() {
+    /// Retrieves for every row founded related to one table record, 
+    /// the data and values associated to that row.
+    /// So, for every row, here we have rows containing values related to one table, but
+    /// are columns that, at the end of the function, just represents the data stored in one
+    /// row of results.
+    pub fn get_row_postgre_columns_for_table(res_row: &Row, table: &mut RowTable) {
+        for postgre_column in res_row.columns().iter() {
 
-                let mut new_column = Column {
-                    column_name: column.name().to_string(), 
-                    datatype: column.type_().to_string(), 
+            if postgre_column.name().to_string() != "table_name" { // Discards the column "table_name"
+                let mut new_column = RelatedColumn {
+                    column_name: postgre_column.name().to_string(), 
+                    datatype: postgre_column.type_().to_string(), 
                     value: ColumnTypeValue::NoneValue
                 };
-                
-                println!("Column Index: {}; Column name: {:?}, Column type: {:?}", i, column.name(), column.type_());
-                match *column.type_() {
+    
+                match *postgre_column.type_() {
                     Type::NAME | Type::VARCHAR => {
-                        let str_value = res_row.get::<&str, Option<String>>(column.name());
-                        println!("Value: {:?}", str_value);
-                        new_column.value = ColumnTypeValue::ValorString(str_value);
+                        new_column.value = ColumnTypeValue::StringValue(
+                            res_row.get::<&str, Option<String>>(postgre_column.name())
+                        );
                     },
                     Type::INT4 => {
-                        let int_value = res_row.get::<&str, Option<i32>>(column.name());
-                        println!("Value: {:?}", int_value);
-                        new_column.value = ColumnTypeValue::ValorInt(int_value);
+                        new_column.value = ColumnTypeValue::IntValue(    
+                            res_row.get::<&str, Option<i32>>(postgre_column.name())
+                        );
                     },
                     _ => new_column.value = ColumnTypeValue::NoneValue
                 }
                 table.columns.push(new_column)
             }
-            schema_info.append(&mut vec![table]);
         }
-        println!("\nCollection: {:?}", schema_info);
     }
 }
 
+
+/* Models that represents the database entities that belongs to the current schema */
 #[derive(Debug)]
-pub struct Table {
+pub struct DatabaseTable {
     pub table_name: String,
-    pub columns: Vec<Column>
-} 
-// impl Table {
-//     pub fn new() -> Self{
+    pub columns: Vec<DatabaseTableColumn>
+}
+#[derive(Debug)]
+pub struct DatabaseTableColumn {
+    pub column_name: String,
+    pub postgres_datatype: String,
+    pub character_maximum_length: i32,
+    pub is_nullable: bool,  // Care, postgres type is varchar
+    pub column_default: String,
+    pub numeric_precision: i32,
+    pub numeric_precision_radix: i32,
+    pub datetime_precision: i32,
+    pub interval_type: String
+}
 
-//     }
-// }
+
+/* POSTGRESQL entities for map the multiple rows that are related to one table, and the multiple
+    columns that are nested related to those row table */
 
 #[derive(Debug)]
-pub struct  Column {
+pub struct RowTable {
+    pub table_name: String,
+    pub columns: Vec<RelatedColumn>
+} 
+#[derive(Debug)]
+pub struct RelatedColumn {
     pub column_name: String,
     pub datatype: String,
     pub value: ColumnTypeValue
@@ -103,7 +144,7 @@ pub struct  Column {
 
 #[derive(Debug)]
 pub enum ColumnTypeValue {
-    ValorString(Option<String>),
-    ValorInt(Option<i32>),
+    StringValue(Option<String>),
+    IntValue(Option<i32>),
     NoneValue
 }
