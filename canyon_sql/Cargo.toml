@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 tokio-postgres = { version = "0.7.2" }
 toml = { version = "0.5.8" }
+regex = "1.5"
 
 # Forbidden Rust dark arts
 tokio = { version = "1.9.0", features = ["full"] }
@@ -16,5 +17,9 @@ futures = "0.3.21"
 serde_json = "1.0.59"
 serde = "1.0.90"
 
+# Debug
+partialdebug = "0.2.0"
+
+# Project crates
 canyon_macros = { path = "../canyon_macros" }
 canyon_observer = { path = "../canyon_observer" }

@@ -101,7 +101,7 @@ pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) ->
 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
-    unsafe { CANYON_REGISTER.push(ty.to_string()); }
+    // unsafe { CANYON_REGISTER.push(ty.to_string()); }
     println!("Observable <{}> added to the register", ty.to_string());
 
     
@@ -123,7 +123,7 @@ pub fn canyon_managed(_meta: CompilerTokenStream, input: CompilerTokenStream) ->
     tokens.into()
 }
 
-
+/// TODO Docs
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let entity = syn::parse_macro_input!(input as CanyonEntity);

@@ -2,11 +2,13 @@ use std::convert::TryFrom;
 use proc_macro2::{Ident, TokenStream};
 use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
 use quote::{quote};
+use partialdebug::placeholder::PartialDebug;
 
 use super::entity_fields::EntityField;
 
 /// Provides a convenient way of handling the data on any
 /// `CanyonEntity` struct anntotaded with the macro `#[canyon_entity]`
+#[derive(PartialDebug)]
 pub struct CanyonEntity {
     pub struct_name: Ident,
     pub vis: Visibility,
@@ -17,9 +19,9 @@ pub struct CanyonEntity {
 impl CanyonEntity {
     pub fn get_entity_as_string(&self) -> String {
         let mut as_string = String::new();
-        as_string.push_str("Identifier: ");
+        as_string.push_str("Identifier -> ");
         as_string.push_str(self.struct_name.to_string().as_str());
-        as_string.push_str(", Columns: ");
+        as_string.push_str("; Columns -> ");
         as_string.push_str(self.get_attrs_as_string().as_str());
 
         println!("String of register: {:?}", as_string);
@@ -29,7 +31,7 @@ impl CanyonEntity {
 
     fn get_attrs_as_string(&self) -> String {
         let mut vec_columns = Vec::new();
-        for attribute in self.attributes.iter(){
+        for attribute in self.attributes.iter() {
             let name = attribute.name.to_string();
             let field_type = attribute.get_field_type_as_string();
             let column_name_type_tuple = format!("({}:{})", name, field_type);
@@ -38,7 +40,6 @@ impl CanyonEntity {
 
         let columns_str = vec_columns.join(",");
 
-        println!("vec_columns: {:?}", columns_str);
         columns_str
 
     }
@@ -47,6 +48,8 @@ impl CanyonEntity {
         self.attributes
             .iter()
             .map(|f| {
+                println!("Detected ATTR for {:?}: {:?}", 
+                    self.struct_name.to_string(), f);
                 let name = &f.name;
                 let ty = &f.field_type;
                 quote!{ pub #name: #ty }

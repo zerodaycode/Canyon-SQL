@@ -1,4 +1,4 @@
-/// Provides helpers to build the #[canyon] procedural macro like attribute
+/// Provides helpers to build the #[canyon] procedural like attribute macro
 
 use proc_macro2::TokenStream;
 use syn::Block;
@@ -14,7 +14,10 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
 
     unsafe {
         for element in &CANYON_REGISTER {
-            entities_as_string.push_str(element.as_str());
+            let pattern_entity = format!(
+                "[{}]",element
+            );
+            entities_as_string.push_str(pattern_entity.as_str());
         }
     }
 
@@ -58,7 +61,8 @@ pub fn _user_body_builder(func_body: Box<Block>, macro_tokens: &mut Vec<TokenStr
 pub fn call_canyon_manager(canyon_manager_tokens: &mut Vec<TokenStream>) {
     //*   HANDLER EVENTS */
     let canyon_manager_actions = quote! {
-        &CanyonHandler::fetch_database_status().await;
+        
+        CanyonHandler::new().await;
     };
 
     canyon_manager_tokens.push(canyon_manager_actions);

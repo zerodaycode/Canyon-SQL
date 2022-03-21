@@ -4,23 +4,16 @@
 
 use std::collections::HashMap;
 use tokio_postgres::{types::Type, Row};
+use partialdebug::placeholder::PartialDebug;
+use regex::Regex;
 
 use crate::crud::Transaction;
 
-/// A struct to manages the retrieved rows with the schema info for the
-/// current user's selected database
-#[derive(Debug, Clone)]
-pub struct DatabaseDataRows {
-    pub table_name: String,
-    pub columns_types: HashMap<String, String>
-}
+use canyon_observer::CANYON_REGISTER;
 
-/// TODO This should be the Canyon register after refactor the mut static 
-/// variable on the observer on some complex and convenient data structure
-/// to pass the data retrieved on compile time to runtime
-#[derive(Debug)]
+#[derive(PartialDebug)]
 pub struct CanyonHandler<'a> {
-    // pub canyon_tables: Vec<DatabaseTable>, // Vec<CanyonEntity>
+    pub canyon_tables: Vec<CanyonRegisterEntity>,
     pub database_tables: Vec<DatabaseTable<'a>>
 }
 // Makes this structure able to make queries to the database
@@ -28,11 +21,70 @@ impl<'a> Transaction<Self> for CanyonHandler<'a> {}
 
 impl<'a> CanyonHandler<'a> {
     pub async fn new() -> CanyonHandler<'a> {
+        let a = Self::get_entities_from_string();
+        let b = Self::fetch_database_status().await;
+        println!("Entities: {:?}", &a);
+        println!("Tables: {:?}", &b);
         Self {
-            database_tables: Self::fetch_database_status().await
+            canyon_tables: a,
+            database_tables: b,
         }
     }
-    pub async fn fetch_database_status() -> Vec<DatabaseTable<'a>> {
+
+    /// Queries the Canyon Register and manages to retrieve the String that contains all entities
+    /// as str, and convert its back to a Vec<CanyonEntity>
+    fn get_entities_from_string() -> Vec<CanyonRegisterEntity> {
+        let mut entities: Vec<CanyonRegisterEntity> = Vec::new();
+        let regex_for_register = Regex::new(r"\[(.*?)\]")
+            .unwrap();
+        let reg_entities = regex_for_register
+            .find_iter(unsafe {&CANYON_REGISTER.join(",") })
+            .map( |entity| entity.as_str().to_string() )
+            .collect::<Vec<String>>();
+
+        for element in reg_entities {
+            let mut new_entity = CanyonRegisterEntity::new();
+            let entity_data = element
+                .replace('[', "")
+                .replace(']', "")
+                .replace('"', "")
+                .split(";")
+                .map( |element| element.to_string())
+                .collect::<Vec<String>>();
+            
+            for (i, element) in entity_data.iter().enumerate() {
+                let value = element
+                    .split("-> ")
+                    .nth(1)
+                    .unwrap_or("");
+                if i == 0 {
+                    new_entity.entity_name = value.to_string();
+                } else {
+                    for entity_field in value.split(",") {
+                        let mut new_entity_field: CanyonRegisterEntityField = CanyonRegisterEntityField::new();
+                        let splited = entity_field
+                            .replace('(', "")
+                            .replace(')', "")
+                            .replace(' ', "")
+                            .split(":")
+                            .map(|x|x.to_string())
+                            .collect::<Vec<String>>();
+
+                        new_entity_field.field_name = splited.get(0).unwrap_or(&String::new()).to_owned();
+                        new_entity_field.field_type = splited.get(1).unwrap_or(&String::new()).to_owned();
+
+                        new_entity.entity_fields.push(new_entity_field);
+                    }
+                }
+            }
+            
+            entities.push(new_entity);
+        }
+        // println!("Our entities {:?}",entities);
+        entities
+    }
+    
+    async fn fetch_database_status() -> Vec<DatabaseTable<'a>> {
         let query_request = 
             "SELECT table_name, column_name, data_type, 
                 character_maximum_length,is_nullable,column_default,numeric_precision,
@@ -104,7 +156,6 @@ impl<'a> CanyonHandler<'a> {
                 }
             }
         }
-        println!("\n");
         for db_table in &database_tables {
             println!("\nDatabase table: {:?}", &db_table.table_name);
             for table_column in &db_table.columns {
@@ -123,84 +174,60 @@ impl<'a> CanyonHandler<'a> {
 
         let mut entity_column = DatabaseTableColumn::new();
         for (idx, column) in mapped_table.columns.iter().enumerate() {
-            println!("Column: {:?}, Type: {:?}, Value: {:?}", 
-                &column.column_identifier, &column.datatype, &column.value
-            );
             match &column.column_identifier {
                 column_identifier => {
                     if column_identifier == "column_name" {
-                        println!("--Column name: {:?}", &column_identifier);
                         if let ColumnTypeValue::StringValue(value) = &column.value {
                             entity_column.column_name = value.to_owned().unwrap()
                         }
-                        println!("--Column value: {:?}", &entity_column.column_name);
 
                     } else if column_identifier == "data_type" {
-                        println!("--Column datatype: {:?}", &column_identifier);
                         if let ColumnTypeValue::StringValue(value) = &column.value {
                             entity_column.postgres_datatype = value.to_owned().unwrap()
                         }
-                        println!("--Column value: {:?}", &entity_column.postgres_datatype);
 
                     } else if column_identifier == "character_maximum_length" {
-                        println!("--Column character_maximum_length: {:?}", column_identifier);
                         if let ColumnTypeValue::IntValue(value) = &column.value {
                             entity_column.character_maximum_length = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.character_maximum_length);
 
                     } else if column_identifier == "is_nullable" {
-                        println!("--Column is_nullable: {:?}", column_identifier);
                         if let ColumnTypeValue::StringValue(value) = &column.value {
                             entity_column.is_nullable = match &value.as_ref().unwrap().as_str() {
                                 &"YES" => true,
                                 _ => false
                             }
                         }
-                        println!("--Column value: {:?}", &entity_column.is_nullable);
 
                     } else if column_identifier == "column_default" {
-                        println!("--Column column_default: {:?}", column_identifier);
                         if let ColumnTypeValue::StringValue(value) = &column.value {
                             entity_column.column_default = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.column_default);
 
                     } else if column_identifier == "numeric_precision" {
-                        println!("--Column numeric_precision: {:?}", column_identifier);
                         if let ColumnTypeValue::IntValue(value) = &column.value {
                             entity_column.numeric_precision = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.numeric_precision);
 
                     } else if column_identifier == "numeric_scale" {
-                        println!("--Column numeric_scale: {:?}", column_identifier);
                         if let ColumnTypeValue::IntValue(value) = &column.value {
                             entity_column.numeric_scale = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.numeric_scale);
 
                     } else if column_identifier == "numeric_precision_radix" {
-                        println!("--Column numeric_precision_radix: {:?}", column_identifier);
                         if let ColumnTypeValue::IntValue(value) = &column.value {
                             entity_column.numeric_precision_radix = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.numeric_precision_radix);
 
                     } else if column_identifier == "datetime_precision" {
-                        println!("--Column datetime_precision: {:?}", column_identifier);
                         if let ColumnTypeValue::IntValue(value) = &column.value {
                             entity_column.datetime_precision = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.datetime_precision);
 
                     } else if column_identifier == "interval_type" {
-                        println!("--Column interval_type: {:?}", column_identifier);
                         if let ColumnTypeValue::StringValue(value) = &column.value {
                             entity_column.interval_type = value.to_owned()
                         }
-                        println!("--Column value: {:?}", &entity_column.interval_type);
-
                     }
                 }
             }
@@ -210,7 +237,6 @@ impl<'a> CanyonHandler<'a> {
             // is == "interval_type", we know that we finished to set the values
             // for a new DatabaseTableColumn
             if &column.column_identifier == "interval_type" {
-                println!("\n");
                 table_entity.columns.push(entity_column.clone());
                 if idx == mapped_table.columns.len() - 1 {
                     entity_column = DatabaseTableColumn::new();
@@ -253,6 +279,66 @@ impl<'a> CanyonHandler<'a> {
     }
 }
 
+/// Stores the data for manage the database status after matching the entities on the register
+struct DatabaseSyncOperation<T> {
+    pub table: String,
+    pub target: String,
+    pub operation: T
+}
+
+/// Helper to relate the operations that Canyon should do when it's managing a schema
+enum TableOperation {
+    CreateTable,
+    AlterTableName,
+    AlterColumn(Vec<ColumnOperation>)
+}
+
+/// Helper to relate the operations that Canyon should do when a change on a field should
+enum ColumnOperation {
+    CreateColumn,
+    DeleteColumn,
+    AlterColumnName,
+    AlterColumnType
+}
+
+
+/// TODO Docs
+#[derive(Debug)]
+pub struct CanyonRegisterEntity {
+    pub entity_name: String,
+    pub entity_fields: Vec<CanyonRegisterEntityField>
+}
+impl CanyonRegisterEntity{
+    pub fn new() -> CanyonRegisterEntity {
+        Self {
+            entity_name: String::new(),
+            entity_fields:Vec::new()
+        }
+    }
+}
+
+
+#[derive(Debug)]
+pub struct CanyonRegisterEntityField {
+    pub field_name: String,
+    pub field_type: String
+}
+impl CanyonRegisterEntityField{
+    pub fn new() -> CanyonRegisterEntityField {
+        Self {
+            field_name: String::new(),
+            field_type: String::new()
+        }
+    }
+}
+
+/// A struct to manages the retrieved rows with the schema info for the
+/// current user's selected database
+#[derive(Debug, Clone)]
+pub struct DatabaseDataRows {
+    pub table_name: String,
+    pub columns_types: HashMap<String, String>
+}
 
 /* Models that represents the database entities that belongs to the current schema */
 #[derive(Debug)]
@@ -272,7 +358,7 @@ pub struct DatabaseTableColumn<'a> {
     pub numeric_precision_radix: Option<i32>,
     pub datetime_precision: Option<i32>,
     pub interval_type: Option<String>,
-    pub phantom: &'a str
+    pub phantom: &'a str  // TODO
 }
 impl<'a> DatabaseTableColumn<'a> {
     pub fn new() -> DatabaseTableColumn<'a> {
