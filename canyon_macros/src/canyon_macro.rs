@@ -13,10 +13,12 @@ pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream
     let mut entities_as_string = String::new();
 
     unsafe {
+        // println!("a :{:?}",canyon_manager_tokens);
         for element in &CANYON_REGISTER {
             let pattern_entity = format!(
                 "[{}]",element
             );
+
             entities_as_string.push_str(pattern_entity.as_str());
         }
     }
@@ -63,6 +65,8 @@ pub fn call_canyon_manager(canyon_manager_tokens: &mut Vec<TokenStream>) {
     let canyon_manager_actions = quote! {
         
         CanyonHandler::new().await;
+
+        CanyonHandler::<'_>::compare_tables_register_db().await;
     };
 
     canyon_manager_tokens.push(canyon_manager_actions);
