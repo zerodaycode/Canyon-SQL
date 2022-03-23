@@ -63,10 +63,7 @@ pub fn _user_body_builder(func_body: Box<Block>, macro_tokens: &mut Vec<TokenStr
 pub fn call_canyon_manager(canyon_manager_tokens: &mut Vec<TokenStream>) {
     //*   HANDLER EVENTS */
     let canyon_manager_actions = quote! {
-        
-        // CanyonHandler::new().await;
-
-        CanyonHandler::<'_>::compare_tables_register_db().await;
+        CanyonHandler::run().await;
     };
 
     canyon_manager_tokens.push(canyon_manager_actions);
