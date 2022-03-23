@@ -44,7 +44,11 @@ impl<'a> CanyonHandler<'a> {
         //     .map(|entity| entity.as_str().to_string())
         //     .collect::<Vec<String>>();
 
-        let solotest: Vec<String> = vec!["[\"Identifier -> players\"; \"Columns -> (id:int4), (first_name:text), (age:int4)\"]".to_string()];
+        let solotest: Vec<String> = vec![
+            "[\"Identifier -> players\"; \"Columns -> (id:int4), (first_name:text), (age:int4)\"]".to_string(),
+            "[\"Identifier -> tournaments\"; \"Columns -> (league:int4),(id:int8),(ext_id:int4),(slug:text),(image_url:text)\"]".to_string(),
+            "[\"Identifier -> test\"; \"Columns -> (id:int4), (test_col_text:text), (test_col_int:int4)\"]".to_string()
+        ];
 
         let reg_entities = regex_for_register
             .find_iter(&solotest.join(","))
@@ -282,7 +286,6 @@ impl DatabaseSyncOperations {
         }
     }
     pub async fn fill_operations() -> Vec<DatabaseOperation> {
-
         let mut operations: Vec<DatabaseOperation> = Vec::new();
 
         // Get data about the tables on CANYON_REGISTER and database.
@@ -290,24 +293,21 @@ impl DatabaseSyncOperations {
 
         // For each entity (table) on the register
         for canyon_register_entity in data.canyon_tables {
-
             println!("Current loop table \"{}\":", canyon_register_entity.entity_name.to_owned());
 
             // true if this table on the register is already on the database, else false
             let table_on_database = data.database_tables.iter()
                 .any(|v| v.table_name == canyon_register_entity.entity_name);
 
-            println!("      Table {} already on DB ? => {}", canyon_register_entity.entity_name, table_on_database);
+            println!("      Table \"{}\" already on DB ? => {}", canyon_register_entity.entity_name, table_on_database);
 
             // If the table isn't on the database we push a new operation to the vector
             if table_on_database.not() {
-
                 let database_operation = DatabaseOperation::new(
                     canyon_register_entity.entity_name.to_owned(),
                     TableOperation::CreateTable(canyon_register_entity.entity_name.to_owned())).await;
 
                 operations.push(database_operation)
-
             } else {
                 // We check if each of the columns in this table of the register is in the database table.
                 // We get the names and add them to a vector of strings
@@ -319,6 +319,7 @@ impl DatabaseSyncOperations {
                         .any(|x| x == a.field_name))
                     .map(|a| a.field_name.to_string()).collect();
 
+                println!("      Columns already in table : {:?}", columns_in_table);
 
                 // For each field (name,type) in this table of the register
                 for field in &canyon_register_entity.entity_fields {
@@ -335,14 +336,37 @@ impl DatabaseSyncOperations {
                     }
                     // Case when the column exist on the database
                     else {
-                        let _database_field = data.database_tables.iter()
+                        println!("          Checking datatypes for field \"{}\"",field.field_name);
+                        let database_field = &data.database_tables.iter()
                             .find(|x| x.table_name == canyon_register_entity.entity_name)
                             .unwrap().columns
                             .iter().find(|x| x.column_name == field.field_name).unwrap();
 
-                        /* TODO Compare the "datatype" of each column than already exist on the database the cooresponding column on the register
-                         *  and add the corresponding operation if they do not match
-                        */
+                        let mut database_field_postgres_type: String = String::new();
+                        println!("          Pre-convertion DB column datatype = {}",database_field.postgres_datatype);
+                        match database_field.postgres_datatype.as_str() {
+                            "integer" => {
+                                database_field_postgres_type = "int4".to_string();
+                            }
+                            "bigint" => {
+                                database_field_postgres_type = "int8".to_string();
+                            }
+                            "text" | "varchar" => {
+                                database_field_postgres_type = "text".to_string();
+                            }
+                            _ => {
+                                database_field_postgres_type = "".to_string();
+                            }
+                        }
+                        println!("          Post-convertion field datatype = {} | DB column datatype = {}",field.field_type,database_field_postgres_type);
+                        if field.field_type != database_field_postgres_type {
+                            let database_operation = DatabaseOperation::new(
+                                canyon_register_entity.entity_name.to_owned(),
+                                TableOperation::AlterColumn(ColumnOperation::AlterColumnType(
+                                    field.field_name.to_owned(), field.field_type.to_owned()))).await;
+
+                            operations.push(database_operation)
+                        }
                     }
                 }
 
@@ -356,6 +380,7 @@ impl DatabaseSyncOperations {
                         .collect::<String>().contains(&a.column_name).not())
                     .map(|a| a.column_name.to_string()).collect();
 
+                println!("      Columns only in table (to remove):  {:?}", columns_to_remove);
                 // If we have columns to remove, we push a new operation to the vector for each one
                 if columns_to_remove.is_empty().not() {
                     for column in &columns_to_remove {
@@ -366,8 +391,8 @@ impl DatabaseSyncOperations {
                     }
                 }
 
-                println!("      Columns already in table : {:?}", columns_in_table);
-                println!("      Columns only in table (to remove):  {:?}", columns_to_remove);
+
+
             }
         }
 
@@ -410,7 +435,7 @@ enum ColumnOperation {
     CreateColumn(String, String),
     DeleteColumn(String),
     AlterColumnName,
-    AlterColumnType,
+    AlterColumnType(String, String),
 }
 
 
@@ -466,7 +491,8 @@ pub struct DatabaseTableColumn<'a> {
     pub column_name: String,
     pub postgres_datatype: String,
     pub character_maximum_length: Option<i32>,
-    pub is_nullable: bool,  // Care, postgres type is varchar
+    pub is_nullable: bool,
+    // Care, postgres type is varchar
     pub column_default: Option<String>,
     pub numeric_precision: Option<i32>,
     pub numeric_scale: Option<i32>,
@@ -475,6 +501,7 @@ pub struct DatabaseTableColumn<'a> {
     pub interval_type: Option<String>,
     pub phantom: &'a str,  // TODO
 }
+
 impl<'a> DatabaseTableColumn<'a> {
     pub fn new() -> DatabaseTableColumn<'a> {
         Self {

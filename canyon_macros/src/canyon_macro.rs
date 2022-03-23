@@ -64,7 +64,7 @@ pub fn call_canyon_manager(canyon_manager_tokens: &mut Vec<TokenStream>) {
     //*   HANDLER EVENTS */
     let canyon_manager_actions = quote! {
         
-        CanyonHandler::new().await;
+        // CanyonHandler::new().await;
 
         CanyonHandler::<'_>::compare_tables_register_db().await;
     };
