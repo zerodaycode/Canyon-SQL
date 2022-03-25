@@ -3,6 +3,8 @@
 /// the user and annotated with the `#[canyon_entity]`
 
 use std::collections::HashMap;
+use std::mem::replace;
+use async_trait::async_trait;
 use tokio_postgres::{types::Type, Row};
 use partialdebug::placeholder::PartialDebug;
 use regex::Regex;
@@ -10,7 +12,9 @@ use std::fmt::Debug;
 
 use std::ops::Not;
 
+use crate::connector::DatabaseConnection;
 use crate::crud::Transaction;
+use crate::results::DatabaseResult;
 
 use canyon_observer::CANYON_REGISTER;
 
@@ -275,7 +279,7 @@ impl<'a> CanyonHandler<'a> {
 }
 
 struct DatabaseSyncOperations {
-    operations: Vec<Box<dyn DatabaseOperations>>,
+    operations: Vec<Box<dyn DatabaseOperation>>,
 }
 
 impl DatabaseSyncOperations {
@@ -288,52 +292,50 @@ impl DatabaseSyncOperations {
     pub async fn fill_operations(&mut self, data: CanyonHandler<'_>) {
         // For each entity (table) on the register
         for canyon_register_entity in data.canyon_tables {
-            println!("Current loop table \"{}\":", canyon_register_entity.entity_name.to_owned().to_lowercase());
+            let table_name = canyon_register_entity.entity_name.to_owned().to_lowercase();
+            println!("Current loop table \"{}\":", &table_name);
 
-            // true if this table on the register is already on the database, else false
-            let table_on_database = data.database_tables.iter()
-                .any(|v| v.table_name == canyon_register_entity.entity_name.to_lowercase());
+            // true if this table on the register is already on the database
+            let table_on_database = data.database_tables
+                .iter()
+                .any(|v| &v.table_name == &table_name);
+            println!("      Table \"{}\" already on DB ? => {}", &table_name, table_on_database);
 
-            println!("      Table \"{}\" already on DB ? => {}", canyon_register_entity.entity_name.to_lowercase(), table_on_database);
-
-            // If the table isn't on the database we push a new operation to the vector
+            // If the table isn't on the database we push a new operation to the collection
             if table_on_database.not() {
-                let database_operation = DatabaseOperation::new(
-                    canyon_register_entity.entity_name.to_owned().to_lowercase(),
-                    TableOperation::CreateTable(canyon_register_entity.entity_name.to_owned().to_lowercase())).await;
-
-                self.operations.push(Box::new(database_operation));
+                self.operations.push(Box::new(TableOperation::CreateTable(table_name.clone())));
             } else {
                 // We check if each of the columns in this table of the register is in the database table.
                 // We get the names and add them to a vector of strings
                 let columns_in_table: Vec<String> = canyon_register_entity.entity_fields.iter()
                     .filter(|a| data.database_tables.iter()
-                        .find(|x| x.table_name == canyon_register_entity.entity_name.to_lowercase()).unwrap().columns
+                        .find(|x| &x.table_name == &table_name).unwrap().columns
                         .iter()
                         .map(|x| x.column_name.to_string())
                         .any(|x| x == a.field_name))
                     .map(|a| a.field_name.to_string()).collect();
 
-                println!("      Columns already in table : {:?}", columns_in_table);
+                println!("      Columns already in table : {:?}", &columns_in_table);
 
                 // For each field (name,type) in this table of the register
                 for field in &canyon_register_entity.entity_fields {
 
                     // Case when the column doesnt exist on the database
-                    // We push a new operation to the vector for each one
+                    // We push a new column operation to the collection for each one
                     if columns_in_table.contains(&field.field_name).not() {
-                        let database_operation = DatabaseOperation::new(
-                            canyon_register_entity.entity_name.to_owned().to_lowercase(),
-                            TableOperation::AlterColumn(ColumnOperation::CreateColumn(
-                                field.field_name.to_owned(), field.field_type.to_owned()))).await;
-
-                        self.operations.push(Box::new(database_operation));
+                        self.operations.push(
+                            Box::new(
+                                ColumnOperation::CreateColumn(
+                                    table_name.clone(), field.field_name.to_owned(), field.field_type.to_owned()
+                                )
+                            )
+                        );
                     }
                     // Case when the column exist on the database
                     else {
                         println!("          Checking datatypes for field \"{}\"",field.field_name);
                         let database_field = &data.database_tables.iter()
-                            .find(|x| x.table_name == canyon_register_entity.entity_name.to_lowercase())
+                            .find(|x| &x.table_name == &table_name)
                             .unwrap().columns
                             .iter().find(|x| x.column_name == field.field_name).unwrap();
 
@@ -360,12 +362,13 @@ impl DatabaseSyncOperations {
                         }
                         println!("          Post-convertion field datatype = {} | DB column datatype = {}",field.field_type,database_field_postgres_type);
                         if field.field_type != database_field_postgres_type {
-                            let database_operation = DatabaseOperation::new(
-                                canyon_register_entity.entity_name.to_owned().to_lowercase(),
-                                TableOperation::AlterColumn(ColumnOperation::AlterColumnType(
-                                    field.field_name.to_owned(), field.field_type.to_owned()))).await;
-
-                            self.operations.push(Box::new(database_operation));
+                            self.operations.push(
+                                Box::new(
+                                    ColumnOperation::AlterColumnType(
+                                        table_name.clone(), field.field_name.to_owned(), field.field_type.to_owned()
+                                    )
+                                )
+                            );
                         }
                     }
                 }
@@ -373,7 +376,7 @@ impl DatabaseSyncOperations {
                 // Filter the list of columns in the corresponding table of the database for the current table of the register,
                 // and look for columns that don't exist in the table of the register
                 let columns_to_remove: Vec<String> = data.database_tables.iter()
-                    .find(|x| x.table_name == canyon_register_entity.entity_name.to_lowercase()).unwrap().columns
+                    .find(|x| &x.table_name == &table_name).unwrap().columns
                     .iter()
                     .filter(|a| canyon_register_entity.entity_fields.iter()
                         .map(|x| x.field_name.to_string())
@@ -384,56 +387,87 @@ impl DatabaseSyncOperations {
                 // If we have columns to remove, we push a new operation to the vector for each one
                 if columns_to_remove.is_empty().not() {
                     for column in &columns_to_remove {
-                        let database_operation = DatabaseOperation::new(
-                            canyon_register_entity.entity_name.to_owned().to_lowercase(),
-                            TableOperation::AlterColumn(ColumnOperation::DeleteColumn(column.to_owned()))).await;
-                        self.operations.push(Box::new(database_operation));
+                        self.operations.push(
+                            Box::new(
+                                ColumnOperation::DeleteColumn(table_name.clone(), column.to_owned())
+                            )
+                        );
                     }
                 }
             }
         }
 
         println!("Operations to do on database: {:?}", &self.operations);
+        for operation in &self.operations {
+            println!("Operation: {:?}", operation.execute().await)
+        }
+    }
+}
+
+
+/// TODO Helper
+fn to_postgres_datatype(rust_type: &str) -> &'static str {
+    let rs_type_no_optional = rust_type.replace("Option<", "").replace(">", "");
+    match rs_type_no_optional.as_str() {
+        "i32" => "INTEGER",
+        "i64" => "BIGINT",
+        "String" => "VARCHAR",
+        "bool" => "BOOLEAN",
+        &_ => ""
     }
 }
 
 /// TODO Docs
-trait DatabaseOperations: Debug { }
-
-/// Stores the data for manage the database status after matching the entities on the register
-#[derive(Debug)]
-struct DatabaseOperation<T: Debug + ?Sized> {
-    table: String,
-    operation: T,
-}
-
-impl<T: Debug + ?Sized> DatabaseOperations for DatabaseOperation<T> {}
-
-
-impl<T: Debug> DatabaseOperation<T> {
-    pub async fn new(table_name: String, operation: T) -> DatabaseOperation<T> {
-        Self {
-            table: table_name,
-            operation: operation,
-        }
-    }
+#[async_trait]
+trait DatabaseOperation: Debug { 
+    async fn execute(&self);
 }
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
 #[derive(Debug)]
 enum TableOperation {
     CreateTable(String),
-    // AlterTableName,
-    AlterColumn(ColumnOperation),
+    AlterTableName(String, String)  // TODO Implement
+}
+impl Transaction<Self> for TableOperation { }
+
+#[async_trait]
+impl DatabaseOperation for TableOperation {
+    async fn execute(&self) {
+        let stmt = match &*self {
+            TableOperation::CreateTable(table_name) => format!("CREATE TABLE {table_name};"),
+            TableOperation::AlterTableName(table_name, new_table_name) => 
+                format!("ALTER TABLE {table_name} RENAME TO {new_table_name}; "),
+        };
+        println!("Stamement: {}", stmt);
+        Self::query(&stmt, &[]).await;
+    }
 }
 
 /// Helper to relate the operations that Canyon should do when a change on a field should
 #[derive(Debug)]
 enum ColumnOperation {
-    CreateColumn(String, String),
-    DeleteColumn(String),
+    CreateColumn(String, String, String),
+    DeleteColumn(String, String),
     // AlterColumnName,
-    AlterColumnType(String, String),
+    AlterColumnType(String, String, String),
+}
+impl Transaction<Self> for ColumnOperation { }
+
+#[async_trait]
+impl DatabaseOperation for ColumnOperation {
+    async fn execute(&self) {
+        let stmt = match &*self {
+            ColumnOperation::CreateColumn(table_name, column_name, column_type) => 
+                format!("ALTER TABLE {table_name} ADD {column_name} {};", to_postgres_datatype(column_type)),
+            ColumnOperation::DeleteColumn(table_name, column_name) => 
+                format!("ALTER TABLE {table_name} DROP COLUMN {column_name}; "),
+            ColumnOperation::AlterColumnType(table_name, column_name, column_type) =>
+                format!("ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE {};", to_postgres_datatype(column_type))
+        };
+        println!("Stamement: {}", stmt);
+        Self::query(&stmt, &[]).await;
+    }
 }
 
 

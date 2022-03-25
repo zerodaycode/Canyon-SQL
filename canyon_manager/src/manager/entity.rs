@@ -48,8 +48,6 @@ impl CanyonEntity {
         self.attributes
             .iter()
             .map(|f| {
-                println!("Detected ATTR for {:?}: {:?}", 
-                    self.struct_name.to_string(), f);
                 let name = &f.name;
                 let ty = &f.field_type;
                 quote!{ pub #name: #ty }

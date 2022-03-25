@@ -24,7 +24,7 @@ pub trait Transaction<T: Debug> {
 
         DatabaseResult::new(
             client.query(
-                stmt.into(), 
+                stmt.into(),
                 params
             )
             .await
