@@ -227,10 +227,11 @@ impl<'a> CanyonHandler<'a> {
 
 }
 
-struct DatabaseSyncOperations {
+#[derive(Debug)]
+pub struct DatabaseSyncOperations {
     operations: Vec<Box<dyn DatabaseOperation>>,
 }
-
+impl Transaction<Self> for DatabaseSyncOperations { }
 impl DatabaseSyncOperations {
     pub fn new() -> Self {
         Self {
@@ -334,7 +335,7 @@ impl DatabaseSyncOperations {
                     .iter()
                     .filter(|a| canyon_register_entity.entity_fields.iter()
                         .map(|x| x.field_name.to_string())
-                        .collect::<String>().contains(&a.column_name).not())
+                        .collect::<Vec<String>>().contains(&a.column_name).not())
                     .map(|a| a.column_name.to_string()).collect();
 
                 println!("      Columns only in table (to remove):  {:?}", columns_to_remove);
@@ -353,9 +354,17 @@ impl DatabaseSyncOperations {
 
         println!("\nOperations to do on database: {:?}", &self.operations);
         for operation in &self.operations {
-            println!("Operation: {:?}", operation.execute().await)
+            operation.execute().await
         }
     }
+
+    pub async fn from_query_register() {
+
+        for i in 0..unsafe {&QUERIES_TO_EXECUTE}.len() -1 {
+            Self::query(unsafe{&QUERIES_TO_EXECUTE.get(i).unwrap().to_owned()}, &[]).await;
+        }
+    }
+
 }
 
 
@@ -424,7 +433,7 @@ impl DatabaseOperation for ColumnOperation {
             ColumnOperation::AlterColumnType(table_name, column_name, column_type) =>
                 format!("ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE {};", to_postgres_datatype(column_type))
         };
-        println!("Stamement: {}", stmt);
+        
         unsafe { QUERIES_TO_EXECUTE.push(stmt) }
     }
 }

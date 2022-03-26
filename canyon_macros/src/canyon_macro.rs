@@ -14,19 +14,24 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
 
     unsafe {
         for query in &QUERIES_TO_EXECUTE {
-            queries.push_str(&("[".to_owned() + query + "]"));
+            queries.push_str(&(query.to_owned() + "->"));
         }
     }
-
+    
     let tokens = quote! {
-        use canyon_sql::canyon_observer::QUERIES_TO_EXECUTE;
+        use canyon_sql::canyon_observer::{
+            QUERIES_TO_EXECUTE, handler::DatabaseSyncOperations
+        };
+
         unsafe { QUERIES_TO_EXECUTE = #queries
-            .split(',')
+            .split("->")
             .map(str::to_string)
             .collect();
         }
-
+        
         unsafe { println!("Queries to execute : {:?}", &QUERIES_TO_EXECUTE) };
+
+        DatabaseSyncOperations::from_query_register().await;
     };
     
     canyon_manager_tokens.push(tokens)    
