@@ -1,8 +1,11 @@
 use std::fmt::Debug;
 use async_trait::async_trait;
+use canyon_connection::connection::DatabaseConnection;
 use tokio_postgres::{ToStatement, types::ToSql};
 
-use crate::{connector::DatabaseConnection, results::DatabaseResult};
+use crate::result::DatabaseResult;
+
+
 
 #[async_trait]
 pub trait Transaction<T: Debug> {

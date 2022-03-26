@@ -3,7 +3,7 @@ use proc_macro2::Ident;
 
 /// The available annotations for a field that belongs to any struct
 /// annotaded with `#[canyon_entity]`
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum EntityFieldAnnotation {
     ForeignKey
 }

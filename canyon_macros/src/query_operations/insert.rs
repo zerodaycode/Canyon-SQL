@@ -26,7 +26,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         #vis async fn insert(&self) -> () {
-            <#ty as CrudOperations<#ty>>::__insert(
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name, 
                 #column_names, 
                 &[

@@ -6,7 +6,7 @@ use syn::{Type, Attribute, Field};
 
 use super::field_annotation::EntityFieldAnnotation;
 /// Represents any of the fields and annotations (if any valid annotation) found for a CanyonEntity
-#[derive(PartialDebug)]
+#[derive(PartialDebug, Clone)]
 pub struct EntityField {
     pub name: Ident,
     pub field_type: Type,
