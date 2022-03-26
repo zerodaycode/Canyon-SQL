@@ -26,13 +26,9 @@ use canyon_manager::manager::{
     }, 
     entity::CanyonEntity
 };
-use canyon_macro::{
-    _user_body_builder, 
-    _wire_data_on_canyon_register, 
-    call_canyon_manager
-};
+use canyon_macro::{_user_body_builder, wire_queries_to_execute};
 use canyon_observer::{
-    CANYON_REGISTER, handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
+     handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
 };
 
 
@@ -51,24 +47,16 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     let sign = func.sig;
     let body = func.block;
 
-    // The code wired in main() by Canyon, but in it's own scope
-    // let mut canyon_manager_tokens: Vec<TokenStream> = Vec::new();
-
-    // TODO This is the replacement for make the canyon_managed operations an compile time
-    // instead of wiring them to perform them at runtime
-    
-    
-    // println!("Register status before: {:?}", unsafe { &CANYON_REGISTER });
+    // The code used by Canyon to perform it's managed state
     let rt = tokio::runtime::Runtime::new().unwrap();
-    // // // Builds the code that Canyon needs in it's initialization
-    // _wire_data_on_canyon_register(&mut canyon_manager_tokens);
-    // // Builds the code that Canyon uses to manage the ORM
-    // call_canyon_manager(&mut canyon_manager_tokens);
     rt.block_on(async {
         CanyonHandler::run().await;
     });
-    println!("Register status after: {:?}", unsafe { &CANYON_REGISTER });
 
+    // The queries to execute at runtime in the managed state
+    let mut queries_tokens: Vec<TokenStream> = Vec::new();
+    wire_queries_to_execute(&mut queries_tokens);
+    
     // The code written by the user
     let mut macro_tokens: Vec<TokenStream> = Vec::new();
     // Builds the code that represents the user written code
@@ -80,6 +68,9 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
         use canyon_sql::tokio;
         #[tokio::main]
         async #sign {
+            {
+                #(#queries_tokens)*
+            }
             #(#macro_tokens)*
         }
     };
@@ -102,7 +93,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
     println!("Observable of new register <{}> added to the register", &entity.struct_name.to_string());
-    unsafe { CANYON_REGISTER.push(entity.get_entity_as_string()) }
     let mut new_entity = CanyonRegisterEntity::new();
     new_entity.entity_name = entity.struct_name.to_string().to_lowercase();
     for field in entity.attributes.iter() {

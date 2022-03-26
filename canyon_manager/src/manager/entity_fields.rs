@@ -13,7 +13,6 @@ pub struct EntityField {
     pub attribute: Option<EntityFieldAnnotation>,
 }
 
-
 impl EntityField {
     pub fn get_field_type_as_string(&self) -> String {
         match &self.field_type {
