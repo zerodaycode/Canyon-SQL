@@ -8,13 +8,16 @@ use super::entity_fields::EntityField;
 
 /// Provides a convenient way of handling the data on any
 /// `CanyonEntity` struct anntotaded with the macro `#[canyon_entity]`
-#[derive(PartialDebug)]
+#[derive(PartialDebug, Clone)]
 pub struct CanyonEntity {
     pub struct_name: Ident,
     pub vis: Visibility,
     pub generics: Generics,
     pub attributes: Vec<EntityField>
 }
+
+unsafe impl Send for CanyonEntity {}
+unsafe impl Sync for CanyonEntity {}
 
 impl CanyonEntity {
     pub fn get_entity_as_string(&self) -> String {
@@ -48,8 +51,6 @@ impl CanyonEntity {
         self.attributes
             .iter()
             .map(|f| {
-                println!("Detected ATTR for {:?}: {:?}", 
-                    self.struct_name.to_string(), f);
                 let name = &f.name;
                 let ty = &f.field_type;
                 quote!{ pub #name: #ty }

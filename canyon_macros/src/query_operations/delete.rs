@@ -15,7 +15,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         #vis async fn delete(&self) -> () {
-            <#ty as CrudOperations<#ty>>::__delete(
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name, 
                 self.id
             ).await;

@@ -23,3 +23,4 @@ partialdebug = "0.2.0"
 # Project crates
 canyon_macros = { path = "../canyon_macros" }
 canyon_observer = { path = "../canyon_observer" }
+canyon_crud = { path = "../canyon_crud" }

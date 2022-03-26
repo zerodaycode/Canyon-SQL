@@ -3,20 +3,15 @@
 /// the user and annotated with the `#[canyon_entity]`
 
 use std::collections::HashMap;
-use std::mem::replace;
+use std::fmt::Debug;
+use std::ops::Not;
 use async_trait::async_trait;
 use tokio_postgres::{types::Type, Row};
 use partialdebug::placeholder::PartialDebug;
-use regex::Regex;
-use std::fmt::Debug;
 
-use std::ops::Not;
+use canyon_crud::crud::Transaction;
 
-use crate::connector::DatabaseConnection;
-use crate::crud::Transaction;
-use crate::results::DatabaseResult;
-
-use canyon_observer::CANYON_REGISTER;
+use super::{CANYON_REGISTER_ENTITIES,QUERIES_TO_EXECUTE};
 
 #[derive(PartialDebug)]
 pub struct CanyonHandler<'a> {
@@ -28,12 +23,9 @@ impl<'a> Transaction<Self> for CanyonHandler<'a> {}
 
 impl<'a> CanyonHandler<'a> {
     pub async fn run() {
-        let a = Self::get_entities_from_string();
+        let a = Self::get_info_of_entities();
         let b = Self::fetch_database_status().await;
-        
-        println!("Entities!: {:?}", &a);
-        println!("Tables!: {:?}", &b);
-        
+
         let self_ = Self {
             canyon_tables: a,
             database_tables: b
@@ -42,52 +34,20 @@ impl<'a> CanyonHandler<'a> {
         db_operation.fill_operations(self_).await;
     }
 
-    /// Queries the Canyon Register and manages to retrieve the String that contains all entities
-    /// as str, and convert its back to a Vec<CanyonEntity>
-    fn get_entities_from_string() -> Vec<CanyonRegisterEntity> {
+    // Converts a CanyonEntity into a CanyonRegisterEntity, where the second just contains
+    // raw string info with the identifiers (names) for tables, columns, column types...
+    fn get_info_of_entities() -> Vec<CanyonRegisterEntity> {
         let mut entities: Vec<CanyonRegisterEntity> = Vec::new();
-        let regex_for_register = Regex::new(r"\[(.*?)\]")
-            .unwrap();
-        let reg_entities = regex_for_register
-            .find_iter(unsafe { &CANYON_REGISTER.join(",") })
-            .map(|entity| entity.as_str().to_string())
-            .collect::<Vec<String>>();
-
-        for element in reg_entities {
+        let clone = unsafe { CANYON_REGISTER_ENTITIES.clone() };
+        for i in clone.iter() {
             let mut new_entity = CanyonRegisterEntity::new();
-            let entity_data = element
-                .replace('[', "")
-                .replace(']', "")
-                .replace('"', "")
-                .split(';')
-                .map(|element| element.to_string())
-                .collect::<Vec<String>>();
-
-
-            for (i, element) in entity_data.iter().enumerate() {
-                let value = element
-                    .split("-> ")
-                    .nth(1)
-                    .unwrap_or("");
-                if i == 0 {
-                    new_entity.entity_name = value.to_string();
-                } else {
-                    for entity_field in value.split(',') {
-                        let mut new_entity_field: CanyonRegisterEntityField = CanyonRegisterEntityField::new();
-                        let splited = entity_field
-                            .replace('(', "")
-                            .replace(')', "")
-                            .replace(' ', "")
-                            .split(':')
-                            .map(|x| x.to_string())
-                            .collect::<Vec<String>>();
-
-                        new_entity_field.field_name = splited.get(0).unwrap_or(&String::new()).to_owned();
-                        new_entity_field.field_type = splited.get(1).unwrap_or(&String::new()).to_owned();
-
-                        new_entity.entity_fields.push(new_entity_field);
-                    }
-                }
+            new_entity.entity_name = i.entity_name.clone();
+            
+            for field in i.entity_fields.iter() {
+                let mut new_entity_field = CanyonRegisterEntityField::new();
+                new_entity_field.field_name = field.field_name.clone();
+                new_entity_field.field_type = field.field_type.clone();
+                new_entity.entity_fields.push(new_entity_field);
             }
             entities.push(new_entity);
         }
@@ -232,7 +192,7 @@ impl<'a> CanyonHandler<'a> {
             }
         }
     }
-
+ 
     /// Retrieves for every row founded related to one table record,
     /// the data and values associated to that row.
     /// So, for every row, here we have rows containing values related to one table, but
@@ -267,17 +227,18 @@ impl<'a> CanyonHandler<'a> {
 
 }
 
-struct DatabaseSyncOperations {
+#[derive(Debug)]
+pub struct DatabaseSyncOperations {
     operations: Vec<Box<dyn DatabaseOperation>>,
 }
-
+impl Transaction<Self> for DatabaseSyncOperations { }
 impl DatabaseSyncOperations {
     pub fn new() -> Self {
         Self {
             operations: Vec::new()
         }
     }
-
+    
     pub async fn fill_operations(&mut self, data: CanyonHandler<'_>) {
         // For each entity (table) on the register
         for canyon_register_entity in data.canyon_tables {
@@ -296,7 +257,7 @@ impl DatabaseSyncOperations {
                     Box::new(
                         TableOperation::CreateTable(
                             table_name.clone(), 
-                            canyon_register_entity.entity_fields // TODO 
+                            canyon_register_entity.entity_fields
                         )
                     )
                 );
@@ -339,17 +300,15 @@ impl DatabaseSyncOperations {
                         println!("          Pre-convertion DB column datatype = {}",database_field.postgres_datatype);
                         match database_field.postgres_datatype.as_str() {
                             "integer" => {
-                                database_field_postgres_type = "i32".to_string();
+                                database_field_postgres_type.push_str("i32");
                             }
                             "bigint" => {
-                                database_field_postgres_type = "i64".to_string();
+                                database_field_postgres_type.push_str("i64");
                             }
                             "text" | "character varying" => {
-                                database_field_postgres_type = "String".to_string();
+                                database_field_postgres_type.push_str("String");
                             }
-                            _ => {
-                                database_field_postgres_type = "".to_string();
-                            }
+                            _ => {}
 
                         }
 
@@ -376,7 +335,7 @@ impl DatabaseSyncOperations {
                     .iter()
                     .filter(|a| canyon_register_entity.entity_fields.iter()
                         .map(|x| x.field_name.to_string())
-                        .collect::<String>().contains(&a.column_name).not())
+                        .collect::<Vec<String>>().contains(&a.column_name).not())
                     .map(|a| a.column_name.to_string()).collect();
 
                 println!("      Columns only in table (to remove):  {:?}", columns_to_remove);
@@ -393,17 +352,25 @@ impl DatabaseSyncOperations {
             }
         }
 
-        println!("Operations to do on database: {:?}", &self.operations);
+        println!("\nOperations to do on database: {:?}", &self.operations);
         for operation in &self.operations {
-            println!("Operation: {:?}", operation.execute().await)
+            operation.execute().await
         }
     }
+
+    pub async fn from_query_register() {
+
+        for i in 0..unsafe {&QUERIES_TO_EXECUTE}.len() -1 {
+            Self::query(unsafe{&QUERIES_TO_EXECUTE.get(i).unwrap().to_owned()}, &[]).await;
+        }
+    }
+
 }
 
 
 /// TODO Helper
 fn to_postgres_datatype(rust_type: &str) -> &'static str {
-    let rs_type_no_optional = rust_type.replace("Option<", "").replace(">", "");
+    let rs_type_no_optional = rust_type.replace("Option < ", "").replace(" >", "");
     match rs_type_no_optional.as_str() {
         "i32" => "INTEGER",
         "i64" => "BIGINT",
@@ -423,7 +390,7 @@ trait DatabaseOperation: Debug {
 #[derive(Debug)]
 enum TableOperation {
     CreateTable(String, Vec<CanyonRegisterEntityField>),
-    AlterTableName(String, String)  // TODO Implement
+    // AlterTableName(String, String)  // TODO Implement
 }
 impl Transaction<Self> for TableOperation { }
 
@@ -431,23 +398,17 @@ impl Transaction<Self> for TableOperation { }
 impl DatabaseOperation for TableOperation {
     async fn execute(&self) {
         let stmt = match &*self {
-            TableOperation::CreateTable(table_name, columns) => 
+            TableOperation::CreateTable(table_name, table_fields) => 
                 format!(
-                    "CREATE TABLE {table_name} ({});",
-                    columns.iter()
-                        .map( |col|
-                            match col.field_name.as_str() {
-                                // If user does not have ID field, add one via macro.
-                                "id" => "id integer primary key generated always as identity",
-                                _ => ""
-                            }                            
-                        ).collect::<String>()
-                ),
-            TableOperation::AlterTableName(table_name, new_table_name) => 
-                format!("ALTER TABLE {table_name} RENAME TO {new_table_name}; "),
+                    "CREATE TABLE {table_name} ({:?});", 
+                    table_fields.iter().map( |entity_field| 
+                        format!("{} {}", entity_field.field_name, to_postgres_datatype(&entity_field.field_type))
+                    ).collect::<Vec<String>>()
+                    .join(", ")
+                ).replace("\"", "")
         };
         println!("Stamement: {}", stmt);
-        Self::query(&stmt, &[]).await;
+        unsafe { QUERIES_TO_EXECUTE.push(stmt) }
     }
 }
 
@@ -472,14 +433,15 @@ impl DatabaseOperation for ColumnOperation {
             ColumnOperation::AlterColumnType(table_name, column_name, column_type) =>
                 format!("ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE {};", to_postgres_datatype(column_type))
         };
-        println!("Stamement: {}", stmt);
-        Self::query(&stmt, &[]).await;
+        
+        unsafe { QUERIES_TO_EXECUTE.push(stmt) }
     }
 }
 
 
-/// TODO Docs
-#[derive(Debug)]
+/// Gets the necessary identifiers of a CanyonEntity to make it the comparation
+/// against the database schemas
+#[derive(Debug, Clone)]
 pub struct CanyonRegisterEntity {
     pub entity_name: String,
     pub entity_fields: Vec<CanyonRegisterEntityField>,
@@ -494,8 +456,9 @@ impl CanyonRegisterEntity {
     }
 }
 
-
-#[derive(Debug)]
+/// Complementary type for a field that represents a struct field that maps
+/// some real database column data
+#[derive(Debug, Clone)]
 pub struct CanyonRegisterEntityField {
     pub field_name: String,
     pub field_type: String,

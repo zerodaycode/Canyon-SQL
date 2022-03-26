@@ -4,37 +4,34 @@ use proc_macro2::TokenStream;
 use syn::Block;
 use quote::quote;
 
-use canyon_observer::CANYON_REGISTER;
+use canyon_observer::QUERIES_TO_EXECUTE;
 
 
 /// Creates a TokenScream that is used to load the data generated at compile-time
-/// by the `CanyonManaged` macros again on the Canyon register but
-pub fn _wire_data_on_canyon_register(canyon_manager_tokens: &mut Vec<TokenStream>) {
-    let mut entities_as_string = String::new();
+/// by the `CanyonManaged` macros again on the queries register
+pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
+    let mut queries = String::new();
 
     unsafe {
-        for element in &CANYON_REGISTER {
-            let pattern_entity = format!(
-                "[{}]",element
-            );
-            entities_as_string.push_str(pattern_entity.as_str());
+        for query in &QUERIES_TO_EXECUTE {
+            queries.push_str(&(query.to_owned() + "->"));
         }
     }
-
+    
     let tokens = quote! {
-        // TODO wire the credentials from the observer, not from CRUD
-        // unsafe { CREDENTIALS = Some(DatabaseCredentials::new()); }
-        // unsafe { println!("CREDENTIALS MACRO IN: {:?}", CREDENTIALS); }
-        unsafe { CANYON_REGISTER = #entities_as_string
-            .split(',')
+        use canyon_sql::canyon_observer::{
+            QUERIES_TO_EXECUTE, handler::DatabaseSyncOperations
+        };
+
+        unsafe { QUERIES_TO_EXECUTE = #queries
+            .split("->")
             .map(str::to_string)
             .collect();
-            // TODO Delete (or just pick without it) the last elemement
-            // from the new assignation
-            // CANYON_REGISTER.pop_back();
         }
+        
+        unsafe { println!("Queries to execute : {:?}", &QUERIES_TO_EXECUTE) };
 
-        unsafe { println!("Register status IN: {:?}", CANYON_REGISTER) };
+        DatabaseSyncOperations::from_query_register().await;
     };
     
     canyon_manager_tokens.push(tokens)    
@@ -57,13 +54,3 @@ pub fn _user_body_builder(func_body: Box<Block>, macro_tokens: &mut Vec<TokenStr
     }
 }
 
-/// Handler to activate the Canyon Manager, and wire the tokens into the main fn()
-pub fn call_canyon_manager(canyon_manager_tokens: &mut Vec<TokenStream>) {
-    //*   HANDLER EVENTS */
-    let canyon_manager_actions = quote! {
-        
-        CanyonHandler::new().await;
-    };
-
-    canyon_manager_tokens.push(canyon_manager_actions);
-}

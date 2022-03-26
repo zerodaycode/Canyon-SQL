@@ -15,7 +15,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         #vis async fn find_all() -> Vec<#ty> {
-            <#ty as CrudOperations<#ty>>::__find_all(
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name, 
                 &[] // TODO Let the user retrieves ONLY desired columns?
             )
@@ -35,7 +35,7 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         #vis async fn find_by_id(id: i32) -> #ty {
-            <#ty as CrudOperations<#ty>>::__find_by_id(#table_name, id)
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
                 .await
                 .as_response::<#ty>()[0].clone()
         }
