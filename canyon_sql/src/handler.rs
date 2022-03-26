@@ -51,17 +51,6 @@ impl<'a> CanyonHandler<'a> {
             .map(|entity| entity.as_str().to_string())
             .collect::<Vec<String>>();
 
-        // let solotest: Vec<String> = vec![
-        //     "[\"Identifier -> players\"; \"Columns -> (id:int4), (first_name:text), (age:int4)\"]".to_string(),
-        //     "[\"Identifier -> tournaments\"; \"Columns -> (league:int4),(id:int8),(ext_id:int4),(slug:text),(image_url:text)\"]".to_string(),
-        //     "[\"Identifier -> test\"; \"Columns -> (id:int4), (test_col_text:text), (test_col_int:int4)\"]".to_string()
-        // ];
-
-        // let reg_entities = regex_for_register
-        //     .find_iter(&solotest.join(","))
-        //     .map(|entity| entity.as_str().to_string())
-        //     .collect::<Vec<String>>();
-
         for element in reg_entities {
             let mut new_entity = CanyonRegisterEntity::new();
             let entity_data = element
@@ -98,10 +87,8 @@ impl<'a> CanyonHandler<'a> {
                     }
                 }
             }
-
             entities.push(new_entity);
         }
-        // println!("Our entities {:?}",entities);
         entities
     }
 
@@ -303,7 +290,14 @@ impl DatabaseSyncOperations {
 
             // If the table isn't on the database we push a new operation to the collection
             if table_on_database.not() {
-                self.operations.push(Box::new(TableOperation::CreateTable(table_name.clone())));
+                self.operations.push(
+                    Box::new(
+                        TableOperation::CreateTable(
+                            table_name.clone(), 
+                            canyon_register_entity.entity_fields // TODO 
+                        )
+                    )
+                );
             } else {
                 // We check if each of the columns in this table of the register is in the database table.
                 // We get the names and add them to a vector of strings
@@ -426,7 +420,7 @@ trait DatabaseOperation: Debug {
 /// Helper to relate the operations that Canyon should do when it's managing a schema
 #[derive(Debug)]
 enum TableOperation {
-    CreateTable(String),
+    CreateTable(String, Vec<CanyonRegisterEntityField>),
     AlterTableName(String, String)  // TODO Implement
 }
 impl Transaction<Self> for TableOperation { }
@@ -435,7 +429,18 @@ impl Transaction<Self> for TableOperation { }
 impl DatabaseOperation for TableOperation {
     async fn execute(&self) {
         let stmt = match &*self {
-            TableOperation::CreateTable(table_name) => format!("CREATE TABLE {table_name};"),
+            TableOperation::CreateTable(table_name, columns) => 
+                format!(
+                    "CREATE TABLE {table_name} ({});",
+                    columns.iter()
+                        .map( |col|
+                            match col.field_name.as_str() {
+                                // If user does not have ID field, add one via macro.
+                                "id" => "id integer primary key generated always as identity",
+                                _ => ""
+                            }                            
+                        ).collect::<String>()
+                ),
             TableOperation::AlterTableName(table_name, new_table_name) => 
                 format!("ALTER TABLE {table_name} RENAME TO {new_table_name}; "),
         };
