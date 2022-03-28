@@ -242,7 +242,7 @@ impl DatabaseSyncOperations {
     pub async fn fill_operations(&mut self, data: CanyonHandler<'_>) {
         // For each entity (table) on the register
         for canyon_register_entity in data.canyon_tables {
-            let table_name = canyon_register_entity.entity_name.to_owned().to_lowercase();
+            let table_name = canyon_register_entity.entity_name.to_owned();
             println!("Current loop table \"{}\":", &table_name);
 
             // true if this table on the register is already on the database
