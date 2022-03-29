@@ -203,7 +203,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
 
         impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty {
-            fn deserialize(row: &Row) -> Self {
+            fn deserialize(row: &Row) -> #ty {
                 Self {
                     #(#field_names_for_row_mapper),*
                 }

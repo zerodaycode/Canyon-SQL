@@ -2,7 +2,7 @@ use std::{marker::PhantomData, fmt::Debug};
 
 use tokio_postgres::Row;
 
-use crate::mapper::RowMapper;
+use crate::{mapper::RowMapper, crud::Transaction};
 
 /// Represents a database result after a query, by wrapping the `tokio::postgres` result
 /// and providing methods to deserialize this result into a **user defined struct**
@@ -24,7 +24,8 @@ impl<T: Debug> DatabaseResult<T> {
     /// Returns a Vec<T> full filled with allocated instances of the type T.
     /// Z it's used to constrait the types that can call it to the same generic T type,
     /// and to provide a way to statically call some `Z::deserialize` method.
-    pub fn as_response<Z: RowMapper<T> + Debug>(&self) -> Vec<T> {
+    pub fn as_response<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+        where T: Transaction<T> {
 
         let mut results = Vec::new();
         

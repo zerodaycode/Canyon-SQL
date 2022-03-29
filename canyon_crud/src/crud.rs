@@ -38,16 +38,13 @@ pub trait Transaction<T: Debug> {
         )
     }
 }
-#[async_trait]
-pub trait CrudOperations<T: Debug>: Transaction<T> {
 
+#[async_trait]
+pub trait CrudOperations<T: Debug + CrudOperations<T>>: Transaction<T> {
 
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    /// 
-    /// If not columns provided, performs a SELECT *, else, will query only the 
-    /// desired columns
-    async fn __find_all(table_name: &str) -> QueryBuilder {
+    fn __find_all(table_name: &str) -> QueryBuilder<T> {
         Query::new(format!("SELECT * FROM {}", table_name), &[])
     }
 

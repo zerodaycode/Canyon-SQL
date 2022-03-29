@@ -1,52 +1,55 @@
 use tokio_postgres::types::ToSql;
+use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{crud::Transaction, result::DatabaseResult};
+use crate::{crud::{Transaction, CrudOperations}, result::DatabaseResult};
 
 /// Holds a mut sql sentence
 #[derive(Debug)]
-pub struct Query<'a> {
+pub struct Query<'a, T: Debug + Transaction<T>> {
     sql: String,
-    params: &'a[Box<dyn ToSql>]
+    params: &'a[Box<dyn ToSql + Sync>],
+    marker: PhantomData<T>
 }
 
-impl <'a> Transaction<Self> for Query<'a> {}
+// impl<'a, T: Debug + Transaction<T>> Transaction<Self> for T {}
 
-impl<'a> Query<'a> {
-    pub fn new(sql: String, params: &'a[Box<dyn ToSql>]) -> QueryBuilder<'a> {
+impl<'a,T: Debug + CrudOperations<T> + Transaction<T>> Query<'a, T> {
+    pub fn new(sql: String, params: &'a[Box<dyn ToSql + Sync>]) -> QueryBuilder<'a, T> {
         let self_ = Self {
             sql: sql,
-            params: params
+            params: params,
+            marker: PhantomData
         };
-        QueryBuilder::new(self_)
+        QueryBuilder::<T>::new(self_)
     }
 }
 
 /// Builder for a query while chaining SQL clauses
 #[derive(Debug)]
-pub struct QueryBuilder<'a> {
-    query: Query<'a>,
+pub struct QueryBuilder<'a, T: Debug + Transaction<T>> {
+    query: Query<'a, T>,
     where_clause: &'a str,
     // and_clause: &'a str,
     // in_clause: &'a[Box<dyn ToSql>],
     // order_by_clause: &'a str
 }
-impl<'a> QueryBuilder<'a> {
+impl<'a, T: Debug + Transaction<T>> QueryBuilder<'a, T> {
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(mut self) -> DatabaseResult<Query<'a>> {
+    pub async fn query(mut self) -> DatabaseResult<T> {
         if self.where_clause != "" {
             self.query.sql.push_str(self.where_clause)
         }
-        Query::query(
-            self.query.sql.as_ref(), 
-            self.query.params
-                .iter()
-                .map( |boxed| boxed.try_into() )
-                // Expects dyn ToSql + Sync
-        ).await
+        
+        let mut unboxed_params = Vec::new();
+        for element in self.query.params {
+            unboxed_params.push(&**element);
+        }
+
+        T::query(&self.query.sql[..], &unboxed_params).await
     }
 
-    pub fn new(query: Query<'a>) -> Self {
+    pub fn new(query: Query<'a, T>) -> Self {
         Self {
             query: query,
             where_clause: "",
