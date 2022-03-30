@@ -1,9 +1,13 @@
 use tokio_postgres::types::ToSql;
 use std::{fmt::Debug, marker::PhantomData};
 
-use crate::{crud::{Transaction, CrudOperations}, result::DatabaseResult};
+use crate::{crud::
+    {Transaction, CrudOperations}, 
+    result::DatabaseResult, 
+    bounds::FieldIdentifier
+};
 
-/// Holds a mut sql sentence
+/// Holds a sql sentence details
 #[derive(Debug, Clone)]
 pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T>> {
     sql: String,
@@ -71,8 +75,13 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
         }
     }
 
-    pub fn where_clause(mut self, r#where: &'a str) -> Self {
-        self.where_clause.push_str(&*(String::from(" WHERE ") + r#where));
+    pub fn where_clause<Z: FieldIdentifier>(mut self, r#where: Z) -> Self {
+        self.where_clause.push_str(
+            &*(
+                String::from(" WHERE ") + 
+                r#where.value().to_string().as_str()
+            )
+        );
         self
     } 
 

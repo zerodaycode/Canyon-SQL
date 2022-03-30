@@ -6,9 +6,6 @@ use tokio_postgres::{ToStatement, types::ToSql};
 use crate::result::DatabaseResult;
 use crate::query::{Query, QueryBuilder};
 
-
-
-
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
