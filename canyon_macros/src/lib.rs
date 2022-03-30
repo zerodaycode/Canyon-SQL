@@ -98,7 +98,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     for field in entity.attributes.iter() {
         let mut new_entity_field = CanyonRegisterEntityField::new();
         new_entity_field.field_name = field.name.to_string();
-        new_entity_field.field_type = field.get_field_type_as_string();
+        new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
         new_entity.entity_fields.push(new_entity_field);
     }
     unsafe { CANYON_REGISTER_ENTITIES.push(new_entity) }
@@ -203,7 +203,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
 
         impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty {
-            fn deserialize(row: &Row) -> Self {
+            fn deserialize(row: &Row) -> #ty {
                 Self {
                     #(#field_names_for_row_mapper),*
                 }

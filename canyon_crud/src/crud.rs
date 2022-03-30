@@ -4,6 +4,8 @@ use canyon_connection::connection::DatabaseConnection;
 use tokio_postgres::{ToStatement, types::ToSql};
 
 use crate::result::DatabaseResult;
+use crate::query::{Query, QueryBuilder};
+
 
 
 
@@ -36,40 +38,14 @@ pub trait Transaction<T: Debug> {
         )
     }
 }
-#[async_trait]
-pub trait CrudOperations<T: Debug>: Transaction<T> {
 
+#[async_trait]
+pub trait CrudOperations<T: Debug + CrudOperations<T>>: Transaction<T> {
 
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    /// 
-    /// If not columns provided, performs a SELECT *, else, will query only the 
-    /// desired columns
-    async fn __find_all(table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
-
-        let sql: String = if columns.len() == 0 { // Care, conditional assignment
-            String::from(format!("SELECT * FROM {}", table_name))
-        } else {
-            let mut table_columns = String::new();
-            
-            let mut counter = 0;
-            while counter < columns.len() - 1 {
-                table_columns.push_str(
-                    (columns.get(counter).unwrap().to_string() + ", ").as_str()
-                );
-                counter += 1;
-            }
-
-            table_columns.push_str(columns.get(counter).unwrap());
-
-            let query = String::from(
-                format!("SELECT {} FROM {}", table_columns, table_name
-            ));
-
-            query
-        };
-
-        Self::query(&sql[..], &[]).await
+    fn __find_all(table_name: &str) -> QueryBuilder<T> {
+        Query::new(format!("SELECT * FROM {}", table_name), &[])
     }
 
     /// Queries the database and try to find an item on the most common pk

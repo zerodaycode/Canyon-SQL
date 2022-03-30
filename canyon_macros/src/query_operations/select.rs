@@ -13,17 +13,25 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     let table_name = database_table_name_from_struct(ty);
 
+    // quote! {
+    //     #vis async fn find_all() -> Vec<#ty> {
+    //         <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+    //             #table_name, 
+    //             &[]
+    //         )
+    //             .await
+    //             .as_response::<#ty>()
+    //     }
+    // }
     quote! {
-        #vis async fn find_all() -> Vec<#ty> {
+        #vis fn find_all() -> query::QueryBuilder<'static, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-                #table_name, 
-                &[] // TODO Let the user retrieves ONLY desired columns?
+                #table_name
             )
-                .await
-                .as_response::<#ty>()
         }
     }
 }
+
 
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function
