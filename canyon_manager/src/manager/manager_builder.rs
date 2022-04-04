@@ -36,6 +36,7 @@ pub fn generate_fields_names_for_enum(canyon_entity: &CanyonEntity) -> TokenStre
 
     quote! {
         #[derive(Debug)]
+        #[allow(non_camel_case_types)]
         #visibility enum #enum_name #generics {
             #(#fields_names),*
         }

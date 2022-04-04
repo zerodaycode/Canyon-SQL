@@ -13,23 +13,32 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     let table_name = database_table_name_from_struct(ty);
 
-    // quote! {
-    //     #vis async fn find_all() -> Vec<#ty> {
-    //         <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-    //             #table_name, 
-    //             &[]
-    //         )
-    //             .await
-    //             .as_response::<#ty>()
-    //     }
-    // }
     quote! {
-        #vis fn find_all() -> query::QueryBuilder<'static, #ty> {
+        #vis async fn find_all() -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+                #table_name
+            )
+                .await
+                .as_response::<#ty>()
+        }
+    }
+    
+}
+
+pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
+    // Destructure macro_tokens into raw data
+    let (vis,ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis fn find_all_query() -> query_elements::query_builder::QueryBuilder<'static, #ty> {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
                 #table_name
             )
         }
     }
+   
 }
 
 

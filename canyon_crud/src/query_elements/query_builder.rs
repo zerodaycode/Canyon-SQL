@@ -1,30 +1,13 @@
-use tokio_postgres::types::ToSql;
-use std::{fmt::Debug, marker::PhantomData};
+use std::fmt::Debug;
 
-use crate::{crud::
-    {Transaction, CrudOperations}, 
+use crate::{
+    query_elements::query::Query,
+    query_elements::operators::Comp,
+    crud::{Transaction, CrudOperations}, 
     result::DatabaseResult, 
     bounds::FieldIdentifier
 };
 
-/// Holds a sql sentence details
-#[derive(Debug, Clone)]
-pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T>> {
-    sql: String,
-    params: &'a[Box<dyn ToSql + Sync>],
-    marker: PhantomData<T>
-}
-
-impl<'a, T> Query<'a, T> where T: Debug + CrudOperations<T> + Transaction<T> {
-    pub fn new(sql: String, params: &'a[Box<dyn ToSql + Sync>]) -> QueryBuilder<'a, T> {
-        let self_ = Self {
-            sql: sql,
-            params: params,
-            marker: PhantomData
-        };
-        QueryBuilder::<T>::new(self_)
-    }
-}
 
 /// Builder for a query while chaining SQL clauses
 #[derive(Debug, Clone)]
@@ -75,13 +58,21 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
         }
     }
 
-    pub fn where_clause<Z: FieldIdentifier>(mut self, r#where: Z) -> Self {
+    pub fn where_clause<Z: FieldIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
+        let values = r#where.value()
+            .to_string()
+            .split(" ")
+            .map( |el| String::from(el))
+            .collect::<Vec<String>>();
+
+        let where_ = values.get(0).unwrap().to_string() + 
+            &comp.as_string()[..] + 
+            values.get(1).unwrap(); 
+        
         self.where_clause.push_str(
-            &*(
-                String::from(" WHERE ") + 
-                r#where.value().to_string().as_str()
-            )
+            &*(String::from(" WHERE ") + where_.as_str())
         );
+        
         self
     } 
 

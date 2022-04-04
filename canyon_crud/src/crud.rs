@@ -4,8 +4,9 @@ use canyon_connection::connection::DatabaseConnection;
 use tokio_postgres::{ToStatement, types::ToSql};
 
 use crate::result::DatabaseResult;
-use crate::query::{Query, QueryBuilder};
-
+// use crate::query_elements::{Query, QueryBuilder};
+use crate::query_elements::query::Query;
+use crate::query_elements::query_builder::QueryBuilder;
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
@@ -41,7 +42,14 @@ pub trait CrudOperations<T: Debug + CrudOperations<T>>: Transaction<T> {
 
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    fn __find_all(table_name: &str) -> QueryBuilder<T> {
+    async fn __find_all(table_name: &str) -> DatabaseResult<T> {
+
+        let stmt = format!("SELECT * FROM {}", table_name);
+
+        Self::query(&stmt[..], &[]).await
+    }
+
+    fn __find_all_query(table_name: &str) -> QueryBuilder<T> {
         Query::new(format!("SELECT * FROM {}", table_name), &[])
     }
 
