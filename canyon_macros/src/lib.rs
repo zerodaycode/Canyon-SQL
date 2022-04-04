@@ -22,7 +22,7 @@ use query_operations::{
 use canyon_manager::manager::{
     manager_builder::{
         generate_data_struct, 
-        get_field_attr
+        get_field_attr, generate_fields_names_for_enum
     }, 
     entity::CanyonEntity
 };
@@ -87,7 +87,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let entity = syn::parse_macro_input!(input as CanyonEntity);
 
     // Generate the bits of code that we should give back to the compiler
-    let generated_data_struct = generate_data_struct(&entity);  
+    let generated_data_struct = generate_data_struct(&entity);
+    let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
     get_field_attr(&entity);
 
     // Notifies the observer that an observable must be registered on the system
@@ -95,17 +96,20 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     println!("Observable of new register <{}> added to the register", &entity.struct_name.to_string());
     let mut new_entity = CanyonRegisterEntity::new();
     new_entity.entity_name = entity.struct_name.to_string().to_lowercase();
+
     for field in entity.attributes.iter() {
         let mut new_entity_field = CanyonRegisterEntityField::new();
         new_entity_field.field_name = field.name.to_string();
         new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
         new_entity.entity_fields.push(new_entity_field);
     }
+
     unsafe { CANYON_REGISTER_ENTITIES.push(new_entity) }
 
     // Assemble everything
     let tokens = quote! {
         #generated_data_struct
+        #generated_enum_type_for_fields
     };
 
     // Pass the result back to the compiler

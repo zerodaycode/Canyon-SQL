@@ -1,5 +1,5 @@
 use std::convert::TryFrom;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, TokenStream, Span};
 use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
 use quote::{quote};
 use partialdebug::placeholder::PartialDebug;
@@ -44,7 +44,53 @@ impl CanyonEntity {
         let columns_str = vec_columns.join(",");
 
         columns_str
+    }
 
+    /// Creates an enum with the names of the fields as the variants of the type,
+    /// where the enum type corresponds with the struct's type that belongs
+    /// + a concatenation of "Fields" after it
+    pub fn get_fields_as_enum_variants(&self) -> Vec<TokenStream> {
+        self.attributes
+            .iter()
+            .map(|f| {
+                let field_name = &f.name;
+                let ty = &f.field_type;
+                quote!{ #field_name(#ty) }
+            })
+        .collect::<Vec<_>>()
+    }
+
+    /// Generates an implementation of the match pattern to find whatever variant
+    /// is being requested // TODO Better docs please
+    pub fn create_match_arm_for_relate_field(&self, enum_name: &Ident) -> Vec<TokenStream> {
+        self.attributes
+            .iter()
+            .map(|f| {
+                let field_name = &f.name;
+                let field_name_as_string = f.name.to_string();
+                let field_type_as_string = f.get_field_type_as_string();
+                println!("Currently matching: {:?}, {:?}", &field_name_as_string, &field_type_as_string);
+                let quote = if field_type_as_string.contains("Option") {
+                    println!("Found option");
+                    quote!{ 
+                        #enum_name::#field_name(v) => 
+                            format!("{} {}", #field_name_as_string.to_string(), v.unwrap().to_string())
+                    }
+                } else {
+                    println!("Found Type");
+                    quote!{ 
+                        #enum_name::#field_name(v) => 
+                            format!("{} {}", #field_name_as_string.clone().to_string(), v.to_string())
+                    }
+                    // quote!{ 
+                    //     _ => 
+                    //         format!("{} {}", #field_name_as_string.clone().to_string(), #enum_name::#field_name(_))
+                    // }
+                }; 
+
+                quote
+            })
+        .collect::<Vec<_>>()
     }
 
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {
