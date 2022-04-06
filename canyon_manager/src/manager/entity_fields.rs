@@ -41,20 +41,20 @@ impl EntityField {
         let helper_attributes = raw_helper_attributes
             .iter()
             .map(|attribute| {
-                attribute
-                    .path
-                    .segments
-                    .iter()
-                    .map(|segment| &segment.ident)
-                    .collect::<Vec<_>>()
+                (
+                    attribute.path.segments[0].ident.clone(),
+                    attribute.parse_args::<syn::LitStr>()
+                        .unwrap()
+                        .value()
+                )
             })
-            .flatten()
             .collect::<Vec<_>>();
 
         // Making sense of the attribute(s)
         let attribute_type = if helper_attributes.len() == 1 {
-            let helper_attribute = helper_attributes[0];
+            let helper_attribute = &helper_attributes[0];
             Some(EntityFieldAnnotation::try_from(helper_attribute)?)
+
         } else if helper_attributes.len() > 1 {
             return Err(
                 syn::Error::new_spanned(

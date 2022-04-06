@@ -462,6 +462,7 @@ impl CanyonRegisterEntity {
 pub struct CanyonRegisterEntityField {
     pub field_name: String,
     pub field_type: String,
+    pub annotation: Option<String>
 }
 
 impl CanyonRegisterEntityField {
@@ -469,6 +470,7 @@ impl CanyonRegisterEntityField {
         Self {
             field_name: String::new(),
             field_type: String::new(),
+            annotation: None
         }
     }
 }

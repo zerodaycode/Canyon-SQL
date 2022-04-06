@@ -17,19 +17,18 @@ impl EntityFieldAnnotation {
 }
 
 
-impl TryFrom<&Ident> for EntityFieldAnnotation {
+impl TryFrom<&(Ident, String)> for EntityFieldAnnotation {
     type Error = syn::Error;
 
-    fn try_from(ident: &Ident) -> Result<Self, Self::Error> {
+    fn try_from(ident: &(Ident, String)) -> Result<Self, Self::Error> {
         Ok(
-            // Idents have a string representation we can use
-            match ident.to_string().as_str() {
+            match ident.0.to_string().as_str() {
                 "foreign_key" => EntityFieldAnnotation::ForeignKey,
                 _ => {
                     return Err(
                         syn::Error::new_spanned(
-                            ident, 
-                            format!("Unknown attribute `{}`", ident)
+                            ident.0.clone(), 
+                            format!("Unknown attribute `{}`", ident.0)
                         )
                     )
                 }
