@@ -40,16 +40,9 @@ impl EntityField {
         // Getting the name of attributes put in front of struct fields
         let helper_attributes = raw_helper_attributes
             .iter()
-            .map(|attribute| {
-                (
-                    attribute.path.segments[0].ident.clone(),
-                    attribute.parse_args::<syn::LitStr>()
-                        .unwrap()
-                        .value()
-                )
-            })
+            .map(|attribute| { attribute })
             .collect::<Vec<_>>();
-
+            
         // Making sense of the attribute(s)
         let attribute_type = if helper_attributes.len() == 1 {
             let helper_attribute = &helper_attributes[0];

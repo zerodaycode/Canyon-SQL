@@ -66,7 +66,7 @@ pub fn get_field_attr(metrics_struct: &CanyonEntity) -> () {
         .iter()
         .map(|field| {
             match field.attribute {
-                Some(EntityFieldAnnotation::ForeignKey) => {
+                Some(EntityFieldAnnotation::ForeignKey(_, _)) => {
                     println!("Annotation ForeignKey found in field: {} for {} entity", 
                         &field.name, &metrics_struct.struct_name
                     );
