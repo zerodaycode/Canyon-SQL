@@ -308,6 +308,9 @@ impl DatabaseSyncOperations {
                             "text" | "character varying" => {
                                 database_field_postgres_type.push_str("String");
                             }
+                            "date" => {
+                                database_field_postgres_type.push_str("NaiveDate");
+                            }
                             _ => {}
 
                         }
