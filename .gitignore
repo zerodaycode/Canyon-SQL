@@ -4,3 +4,4 @@ Cargo.lock
 /tester_canyon_sql/
 canyon_tester/
 macro_utils.rs
+canyon_examples/
