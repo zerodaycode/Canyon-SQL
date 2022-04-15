@@ -1,27 +1,28 @@
 use std::fmt::Debug;
 
+use tokio_postgres::types::ToSql;
+
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
-    crud::{Transaction, CrudOperations}, 
-    result::DatabaseResult, 
-    bounds::FieldIdentifier
+    crud::{Transaction, CrudOperations},
+    bounds::FieldIdentifier, mapper::RowMapper
 };
 
 
 /// Builder for a query while chaining SQL clauses
 #[derive(Debug, Clone)]
-pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T>> {
+pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
     query: Query<'a, T>,
     where_clause: String,
     and_clause: String,
-    // in_clause: &'a[Box<dyn ToSql>],
+    in_clause: &'a[Box<dyn InClauseValues>],
     order_by_clause: String
 }
-impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
+impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self) -> DatabaseResult<T> {
+    pub async fn query(&mut self) -> Vec<T> {
         self.query.sql.retain(|c| !r#";"#.contains(c));
         
         if self.where_clause != "" {
@@ -29,6 +30,11 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
         }
         if self.and_clause != "" {
             self.query.sql.push_str(&self.and_clause)
+        }
+        if self.in_clause.is_empty() {
+            for value in self.in_clause {
+                self.query.sql.push_str(&value.to_string())
+            }
         }
         if self.order_by_clause != "" {
             self.query.sql.push_str(&self.order_by_clause)
@@ -45,7 +51,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
 
         println!("Executing query: {:?}", &self.query.sql);
 
-        T::query(&self.query.sql[..], &unboxed_params).await
+        T::query(&self.query.sql[..], &unboxed_params).await.as_response::<T>()
     }
 
     pub fn new(query: Query<'a, T>) -> Self {
@@ -53,7 +59,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
             query: query,
             where_clause: String::new(),
             and_clause: String::new(),
-            // in_clause: &[],
+            in_clause: &[],
             order_by_clause: String::new()
         }
     }
@@ -81,13 +87,16 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T>> QueryBuilder<'a, T> {
         self
     } 
 
-    // pub fn r#in(mut self, in_values: &'a[Box<dyn ToSql>]) -> Self {
-    //     self.in_clause = in_values;
-    //     self
-    // } 
+    pub fn r#in(mut self, in_values: &'a[Box<dyn InClauseValues>]) -> Self {
+        self.in_clause = in_values;
+        self
+    } 
 
     pub fn order_by(mut self, order_by: &'a str) -> Self {
         self.order_by_clause.push_str(&*(String::from(" ORDER BY ") + order_by));
         self
     }
 }
+
+/// To define trait objects that helps to relates the necessary bounds n the 'in_clause`
+pub trait InClauseValues: ToSql + ToString {}

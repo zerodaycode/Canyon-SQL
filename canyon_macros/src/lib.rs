@@ -31,6 +31,8 @@ use canyon_observer::{
      handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
 };
 
+use crate::query_operations::select::generate_find_by_fk_tokens;
+
 
 /// Macro for handling the entry point to the program. 
 /// 
@@ -137,19 +139,30 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let delete_tokens = generate_delete_tokens(&macro_data);
     // Builds the update() query
     let update_tokens = generate_update_tokens(&macro_data);
-    // Search by foreign key
-    // Check if the struct contains some field with the fk attribute
-    let struct_name = &ast.ident;
-    println!("Elements on the register: {}", unsafe { &CANYON_REGISTER_ENTITIES.len() });
+    // Search by foreign key as Vec, cause Canyon supports multiple fields having FK annotation
+    let mut search_by_fk_tokens: Vec<TokenStream> = Vec::new();
+
     for element in unsafe { &CANYON_REGISTER_ENTITIES } {
         for field in &element.entity_fields {
             if field.annotation.is_some() {
-                println!("Entity {} contains FK attribute", struct_name.to_string());
                 println!("Attribute: {}", &field.annotation.as_ref().unwrap());
+            }
+            match field.annotation.as_ref() {
+                Some(annotation) => {
+                    if annotation.starts_with("Annotation: ForeignKey") {
+                        search_by_fk_tokens.push(
+                            generate_find_by_fk_tokens(&macro_data, annotation.to_owned())
+                        )
+                    }
+                }
+                None => (),
             }
         }
     }
-        // Get the generics identifiers
+
+    // The ident of the struct
+    let struct_name = &ast.ident;
+    // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
     macro_data.generics.split_for_impl();
         
@@ -176,6 +189,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
             // The update impl
             #update_tokens
+
+            // The search by FK impl
+            #(#search_by_fk_tokens),*
 
         }
 
@@ -209,13 +225,44 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
     tokens.into()
 }
 
+#[proc_macro_derive(ForeignKeyable)]
+pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Gets the data from the AST
+    let ast: DeriveInput = syn::parse(input).unwrap();
+    let ty = ast.ident;
+
+    // Recovers the identifiers of the struct's members
+    let fields = filter_fields(
+        match ast.data {
+            syn::Data::Struct(ref s) => &s.fields,
+            _ => panic!("Field names can only be derived for structs"),
+        }
+    );
+
+    let field_idents = fields.iter().map(|(_vis, ident)| ident);
+    let field_names = fields.iter().map(|(_vis, ident)| ident.to_string());
+    
+    quote!{
+        impl canyon_sql::canyon_crud::bounds::ForeignKeyable for #ty {
+            fn get_fk_column(&self, column: &str) -> Option<String> {
+                Some(match column {
+                    #(
+                        #field_names => self.#field_idents.to_string()
+                    ),*
+                    // #(#field_names_for_row_mapper),*
+                    _ => return None,
+                })
+            }
+        }
+    }.into()
+}
 
 #[proc_macro_derive(CanyonMapper)]
 pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Gets the data from the AST
     let ast: DeriveInput = syn::parse(input).unwrap();
 
-    // Recoves the identifiers of the struct's members
+    // Recovers the identifiers of the struct's members
     let fields = filter_fields(
         match ast.data {
             syn::Data::Struct(ref s) => &s.fields,
@@ -242,7 +289,8 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
 
     let tokens = quote! {
-        impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty {
+        impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty
+        {
             fn deserialize(row: &Row) -> #ty {
                 Self {
                     #(#field_names_for_row_mapper),*
