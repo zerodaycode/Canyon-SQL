@@ -65,18 +65,18 @@ impl CanyonEntity {
     pub fn create_match_arm_for_relate_field(&self, enum_name: &Ident) -> Vec<TokenStream> {
         self.attributes
             .iter()
-            .map(|f| {
+            .map( |f| {
                 let field_name = &f.name;
                 let field_name_as_string = f.name.to_string();
                 let field_type_as_string = f.get_field_type_as_string();
 
                 let quote = if field_type_as_string.contains("Option") {
-                    quote!{ 
+                    quote! { 
                         #enum_name::#field_name(v) => 
                             format!("{} {}", #field_name_as_string.to_string(), v.unwrap().to_string())
                     }
                 } else {
-                    quote!{ 
+                    quote! { 
                         #enum_name::#field_name(v) => 
                             format!("{} {}", #field_name_as_string.clone().to_string(), v.to_string())
                     }
