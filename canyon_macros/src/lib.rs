@@ -160,8 +160,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         }
     }
 
-    // The ident of the struct
-    let struct_name = &ast.ident;
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
     macro_data.generics.split_for_impl();
@@ -239,19 +237,23 @@ pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc
         }
     );
 
-    let field_idents = fields.iter().map(|(_vis, ident)| ident);
-    let field_names = fields.iter().map(|(_vis, ident)| ident.to_string());
+    let field_idents = fields.iter()
+        .map( |(_vis, ident)|
+            {
+                let i = ident.to_string();
+                quote! {
+                    #i => Some(self.#ident.to_string())
+                }
+            }
+    );
     
     quote!{
         impl canyon_sql::canyon_crud::bounds::ForeignKeyable for #ty {
             fn get_fk_column(&self, column: &str) -> Option<String> {
-                Some(match column {
-                    #(
-                        #field_names => self.#field_idents.to_string()
-                    ),*
-                    // #(#field_names_for_row_mapper),*
-                    _ => return None,
-                })
+                match column {
+                    #(#field_idents),*,
+                    _ => None
+                }
             }
         }
     }.into()

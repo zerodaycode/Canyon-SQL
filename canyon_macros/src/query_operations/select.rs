@@ -74,22 +74,14 @@ pub fn generate_find_by_fk_tokens(macro_data: &MacroTokens, fk_data: String) -> 
         fk_table_column.get(0).unwrap().trim()
     );
     let fk_column = fk_table_column.get(1).unwrap().trim();
-    // let fk_column_as_ident = Ident::new(
-    //     fk_column, Span::call_site()
-    // );
-
-    // println!("FK_table: {:?}", &fk_table_column);
-    println!("Table IN: {}", fk_table);
-    println!("Column IN: {}", fk_column);
 
     quote! {
         #vis async fn search_by_fk<T>(value: &T) -> Vec<#ty> 
             where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
         {
             let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
-            println!("\nLOOKAGE VALUE: {}\n", &lookage_value);
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __search_by_foreign_key(#table_name, #fk_table, #fk_column, lookage_value)
+            __search_by_foreign_key(#fk_table, #fk_column, lookage_value)
                 .await
                 .as_response::<#ty>()
         }

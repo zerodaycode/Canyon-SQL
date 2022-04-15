@@ -134,7 +134,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
     /// Performs a search over some table pointed with a ForeignKey annotation
     async fn __search_by_foreign_key(
-        table: &str, 
         related_table: &str, 
         related_column: &str,
         lookage_value: String
@@ -142,7 +141,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
         let stmt = format!(
             "SELECT * FROM {} WHERE {} = {}", 
-            table,
+            related_table,
             related_table.to_owned() + "." + related_column,
             lookage_value
         );

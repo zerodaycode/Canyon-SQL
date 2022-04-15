@@ -49,8 +49,6 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
             unboxed_params.push(&**element);
         }
 
-        println!("Executing query: {:?}", &self.query.sql);
-
         T::query(&self.query.sql[..], &unboxed_params).await.as_response::<T>()
     }
 
