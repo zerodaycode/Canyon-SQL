@@ -1,4 +1,4 @@
-use proc_macro2::{TokenStream, Ident, Span};
+use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::utils::helpers::*;
@@ -63,7 +63,6 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
 pub fn generate_find_by_fk_tokens(macro_data: &MacroTokens, fk_data: String) -> TokenStream {
 
     let (vis,ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
 
     let fk_table_column = &fk_data.split(",")
         .map( 
