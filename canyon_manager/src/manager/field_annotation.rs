@@ -18,7 +18,7 @@ impl EntityFieldAnnotation {
     pub fn get_as_string(&self) -> String {
         match &*self {
             Self::ForeignKey(table, column) => 
-                format!("Table: {}, Column: {}", table, column)
+                format!("Annotation: ForeignKey, Table: {}, Column: {}", table, column)
         }
     }
 

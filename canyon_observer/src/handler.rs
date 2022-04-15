@@ -304,23 +304,37 @@ impl DatabaseSyncOperations {
                         )
                     )
                 );
-                for field in canyon_register_entity.entity_fields.clone().iter().filter(|column| column.annotation.is_none().not()) {
-                    let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
+                for field in canyon_register_entity.entity_fields
+                    .clone()
+                    .iter()
+                    .filter(|column| column.annotation.is_some()) 
+                {
+                    if field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                        let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
 
-                    // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
-                    let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
-                        .split(',')
-                        .map(|x| x.split(':').collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                        // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
+                        let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
+                            .split(',')
+                            // Deletes the first element of the field annotation String identifier
+                            .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                            .map( |x| 
+                                x.split(':').collect::<Vec<&str>>()
+                                .get(1)
+                                .unwrap()
+                                .trim()
+                                .to_string()
+                            ).collect();
 
-                    self.constrains_operations.push(
-                        Box::new(
-                            TableOperation::AddTableForeignKey(
-                                // table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
-                                table_name.clone(), foreign_key_name, field.field_name.clone(),
-                                annotation_data.get(0).unwrap().to_string(), annotation_data.get(1).unwrap().to_string(),
+                        self.constrains_operations.push(
+                            Box::new(
+                                TableOperation::AddTableForeignKey(
+                                    // table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
+                                    table_name.clone(), foreign_key_name, field.field_name.clone(),
+                                    annotation_data.get(0).unwrap().to_string(), annotation_data.get(1).unwrap().to_string(),
+                                )
                             )
-                        )
-                    );
+                        );
+                    }
                 }
             } else {
                 // We check if each of the columns in this table of the register is in the database table.
@@ -350,13 +364,21 @@ Box::new(
                         );
 
                         // If field contains a foreign key annotation, add it to constrains_operations
-                        if field.annotation.is_none().not() {
+                        if field.annotation.is_some() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
                             let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
-
+    
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                             let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
                                 .split(',')
-                                .map(|x| x.split(':').collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                                // Deletes the first element of the field annotation String identifier
+                                .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                                .map( |x| 
+                                    x.split(':').collect::<Vec<&str>>()
+                                    .get(1)
+                                    .unwrap()
+                                    .trim()
+                                    .to_string()
+                                ).collect();
 
                             self.constrains_operations.push(
                                 Box::new(
@@ -411,14 +433,22 @@ Box::new(
 
                         println!("          Annotation: {:?}, FK_name:{:?} FK: {:?}", field.annotation, database_field.foreign_key_name, database_field.foreign_key_info);
                         // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
-                        if field.annotation.is_none().not() && database_field.foreign_key_name.is_none() {
-
+                    
+                        if field.annotation.is_some() && database_field.foreign_key_name.is_none() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
                             let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
-
+    
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                             let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
                                 .split(',')
-                                .map(|x| x.split(':').collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                                // Deletes the first element of the field annotation String identifier
+                                .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                                .map( |x| 
+                                    x.split(':').collect::<Vec<&str>>()
+                                    .get(1)
+                                    .unwrap()
+                                    .trim()
+                                    .to_string()
+                                ).collect();
 
                             self.constrains_operations.push(
                                 Box::new(
@@ -431,13 +461,21 @@ Box::new(
                             );
                         }
                         // Case when field contains a foreign key annotation, and there is already one in the database
-                        else if field.annotation.is_none().not() && database_field.foreign_key_name.is_none().not() {
-                            let foreign_key_name = format!("{}_{}_fkey", table_name, field.field_name);
-
+                        else if field.annotation.is_some() && database_field.foreign_key_name.is_some() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                            let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
+    
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                             let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
                                 .split(',')
-                                .map(|x| x.split(':').collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                                // Deletes the first element of the field annotation String identifier
+                                .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                                .map( |x| 
+                                    x.split(':').collect::<Vec<&str>>()
+                                    .get(1)
+                                    .unwrap()
+                                    .trim()
+                                    .to_string()
+                                ).collect();
 
                             // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
                             let references_regex = Regex::new(r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)").unwrap();
