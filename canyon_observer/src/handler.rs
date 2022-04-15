@@ -762,9 +762,6 @@ impl CanyonRegisterEntityField {
             &_ => postgres_type.push_str("DATE")
         }
 
-        if rs_type_is_optional.not() {
-            postgres_type.push_str(" NOT NULL")
-        }
         postgres_type
     }
 
