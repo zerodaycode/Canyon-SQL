@@ -51,29 +51,28 @@ pub fn generate_fields_names_for_enum(canyon_entity: &CanyonEntity) -> TokenStre
 
         impl #generics std::fmt::Display for #enum_name #generics {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "") // Pa ir tirando
+                write!(f, "") // TODO 
             }
         }
     }
 }
 
 
-/// Builds the tokens for generate the code that implements the TryFrom<&CanyonEntity>
-/// for the macro annotated struct
-pub fn get_field_attr(metrics_struct: &CanyonEntity) -> () {
-    let _field_attributes = metrics_struct
+/// Helper to debug the attached attributes to a field
+pub fn get_field_attr(entity: &CanyonEntity) -> () {
+    let _field_attributes = entity
         .attributes
         .iter()
         .map(|field| {
             match field.attribute {
                 Some(EntityFieldAnnotation::ForeignKey(_, _)) => {
                     println!("Annotation ForeignKey found in field: {} for {} entity", 
-                        &field.name, &metrics_struct.struct_name
+                        &field.name, &entity.struct_name
                     );
                 },
                 _ => {
                     println!("No annotation found for field: {} in {} entity", 
-                        &field.name, &metrics_struct.struct_name
+                        &field.name, &entity.struct_name
                     );
                 },
             };

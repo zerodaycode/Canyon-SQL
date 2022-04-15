@@ -84,6 +84,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 /// where lives the data that Canyon needs to work in `managed mode`
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    let input_cloned = input.clone();
     let entity = syn::parse_macro_input!(input as CanyonEntity);
 
     // Generate the bits of code that we should give back to the compiler
@@ -113,12 +114,71 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         new_entity.entity_fields.push(new_entity_field);
     }
 
+    // Fill the register with the data of the attached struct
     unsafe { CANYON_REGISTER_ENTITIES.push(new_entity) }
-    println!("Elements on the register: {:?}", unsafe {&CANYON_REGISTER_ENTITIES});
+    println!("Elements on the register: {:?}", unsafe { &CANYON_REGISTER_ENTITIES });
 
+    // Struct name as Ident for wire in the macro
+    let ty = entity.struct_name;
+
+    // Calls the helper struct to build the tokens that generates the final CRUD methos
+    let ast: DeriveInput = syn::parse(input_cloned).unwrap();
+    let macro_data = MacroTokens::new(&ast);
+
+    // Builds the find_all() query
+    let find_all_tokens = generate_find_all_tokens(&macro_data);
+    // Builds the find_all_query() query
+    let find_all_query_tokens = generate_find_all_query_tokens(&macro_data);
+    // Builds the find_by_id() query
+    let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
+    // Builds the insert() query
+    let insert_tokens = generate_insert_tokens(&macro_data);
+    // Builds the delete() query
+    let delete_tokens = generate_delete_tokens(&macro_data);
+    // Builds the update() query
+    let update_tokens = generate_update_tokens(&macro_data);
+    // Search by foreign key
+    // Check if the struct contains some field with the fk attribute
+    let struct_name = &ast.ident;
+    println!("Elements on the register: {}", unsafe { &CANYON_REGISTER_ENTITIES.len() });
+    for element in unsafe { &CANYON_REGISTER_ENTITIES } {
+        for field in &element.entity_fields {
+            if field.annotation.is_some() {
+                println!("Entity {} contains FK attribute", struct_name.to_string());
+                println!("Attribute: {}", &field.annotation.as_ref().unwrap());
+            }
+        }
+    }
+        // Get the generics identifiers
+    let (impl_generics, ty_generics, where_clause) = 
+    macro_data.generics.split_for_impl();
+        
     // Assemble everything
     let tokens = quote! {
         #generated_data_struct
+        impl #impl_generics #ty #ty_generics
+            #where_clause
+        {
+            // The find_all impl
+            #find_all_tokens
+
+            // The find_all_query impl
+            #find_all_query_tokens
+
+            // The find_by_id impl
+            #find_by_id_tokens
+
+            // The insert impl
+            #insert_tokens
+
+            // The delete impl
+            #delete_tokens
+
+            // The update impl
+            #update_tokens
+
+        }
+
         #generated_enum_type_for_fields
     };
 
@@ -155,22 +215,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     // Gets the data from the AST
     let ast: DeriveInput = syn::parse(input).unwrap();
 
-    // Constructs a new instance of the helper that manages the macro data
-    let macro_data = MacroTokens::new(&ast);
-
-    // Builds the find_all() query
-    let find_all_tokens = generate_find_all_tokens(&macro_data);
-    // Builds the find_all_query() query
-    let find_all_query_tokens = generate_find_all_query_tokens(&macro_data);
-    // Builds the find_by_id() query
-    let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
-    // Builds the insert() query
-    let insert_tokens = generate_insert_tokens(&macro_data);
-    // Builds the delete() query
-    let delete_tokens = generate_delete_tokens(&macro_data);
-    // Builds the update() query
-    let update_tokens = generate_update_tokens(&macro_data);
-
     // Recoves the identifiers of the struct's members
     let fields = filter_fields(
         match ast.data {
@@ -190,37 +234,14 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     });
 
     // The type of the Struct
-    let ty = macro_data.ty;
+    let ty = ast.ident;
     
-    // Get the generics identifiers
+    // Get the generics identifiers // TODO Implement them for the mapper
     let (impl_generics, ty_generics, where_clause) = 
-        macro_data.generics.split_for_impl();
+        ast.generics.split_for_impl();
 
 
     let tokens = quote! {
-        impl #impl_generics #ty #ty_generics
-            #where_clause
-        {
-            // The find_all impl
-            #find_all_tokens
-
-            // The find_all_query impl
-            #find_all_query_tokens
-
-            // The find_by_id impl
-            #find_by_id_tokens
-
-            // The insert impl
-            #insert_tokens
-
-            // The delete impl
-            #delete_tokens
-
-            // The update impl
-            #update_tokens
-
-        }
-
         impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty {
             fn deserialize(row: &Row) -> #ty {
                 Self {
@@ -233,7 +254,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     tokens.into()
 }
 
-
+/// Helper for generate the field data for the Crud-Mapper macro
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()
