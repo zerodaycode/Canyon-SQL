@@ -284,11 +284,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     // The type of the Struct
     let ty = ast.ident;
-    
-    // Get the generics identifiers // TODO Implement them for the mapper
-    let (impl_generics, ty_generics, where_clause) = 
-        ast.generics.split_for_impl();
-
 
     let tokens = quote! {
         impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty
