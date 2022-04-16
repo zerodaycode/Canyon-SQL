@@ -31,6 +31,8 @@ use canyon_observer::{
      handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
 };
 
+use crate::query_operations::select::generate_find_by_fk_tokens;
+
 
 /// Macro for handling the entry point to the program. 
 /// 
@@ -84,12 +86,13 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 /// where lives the data that Canyon needs to work in `managed mode`
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    let input_cloned = input.clone();
     let entity = syn::parse_macro_input!(input as CanyonEntity);
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
     let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
-    get_field_attr(&entity);
+    get_field_attr(&entity); // TODO Just for debug attached annotations
 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
@@ -113,49 +116,15 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         new_entity.entity_fields.push(new_entity_field);
     }
 
+    // Fill the register with the data of the attached struct
     unsafe { CANYON_REGISTER_ENTITIES.push(new_entity) }
-    println!("Elements on the register: {:?}", unsafe {&CANYON_REGISTER_ENTITIES});
+    println!("Elements on the register: {:?}", unsafe { &CANYON_REGISTER_ENTITIES });
 
-    // Assemble everything
-    let tokens = quote! {
-        #generated_data_struct
-        #generated_enum_type_for_fields
-    };
+    // Struct name as Ident for wire in the macro
+    let ty = entity.struct_name;
 
-    // Pass the result back to the compiler
-    tokens.into()
-}
-
-/// Allows the implementors to auto-derive de `crud-operations` trait, which defines the methods
-/// that will perform the database communication and that will query against the db.
-#[proc_macro_derive(CanyonCRUD)]
-pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Construct a representation of Rust code as a syntax tree
-    // that we can manipulate
-    let ast = syn::parse(input).unwrap();
-
-    // Build the trait implementation
-    impl_crud_operations_trait_for_struct(&ast)
-}
-
-
-fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
-    let ty = &ast.ident;
-    let tokens = quote! {
-        #[async_trait]
-        impl canyon_crud::crud::CrudOperations<#ty> for #ty { }
-        impl canyon_crud::crud::Transaction<#ty> for #ty { }
-    };
-    tokens.into()
-}
-
-
-#[proc_macro_derive(CanyonMapper)]
-pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Gets the data from the AST
-    let ast: DeriveInput = syn::parse(input).unwrap();
-
-    // Constructs a new instance of the helper that manages the macro data
+    // Calls the helper struct to build the tokens that generates the final CRUD methos
+    let ast: DeriveInput = syn::parse(input_cloned).unwrap();
     let macro_data = MacroTokens::new(&ast);
 
     // Builds the find_all() query
@@ -170,34 +139,37 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let delete_tokens = generate_delete_tokens(&macro_data);
     // Builds the update() query
     let update_tokens = generate_update_tokens(&macro_data);
-
-    // Recoves the identifiers of the struct's members
-    let fields = filter_fields(
-        match ast.data {
-            syn::Data::Struct(ref s) => &s.fields,
-            _ => panic!("Field names can only be derived for structs"),
-        }
-    );
-
-    // Creates the TokenStream for wire the column names into the 
-    // Canyon RowMapper
-    let field_names_for_row_mapper = fields.iter().map(|(_vis, ident)| {
-        let ident_name = ident.to_string();
-        quote! {  
-            #ident: row.try_get(#ident_name)
-                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
-        }
-    });
-
-    // The type of the Struct
-    let ty = macro_data.ty;
     
+
+    // Search by foreign key as Vec, cause Canyon supports multiple fields having FK annotation
+    let mut search_by_fk_tokens: Vec<TokenStream> = Vec::new();
+
+    for element in unsafe { &CANYON_REGISTER_ENTITIES } {
+        for field in &element.entity_fields {
+            if field.annotation.is_some() {
+                println!("Attribute: {}", &field.annotation.as_ref().unwrap());
+            }
+            match field.annotation.as_ref() {
+                Some(annotation) => {
+                    if annotation.starts_with("Annotation: ForeignKey") {
+                        search_by_fk_tokens.push(
+                            generate_find_by_fk_tokens(&macro_data, annotation.to_owned())
+                        )
+                    }
+                }
+                None => (),
+            }
+        }
+    }
+
+
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
-        macro_data.generics.split_for_impl();
-
-
+    macro_data.generics.split_for_impl();
+        
+    // Assemble everything
     let tokens = quote! {
+        #generated_data_struct
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
@@ -219,9 +191,121 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             // The update impl
             #update_tokens
 
+            // The search by FK impl
+            #(#search_by_fk_tokens),*
+
         }
 
-        impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty {
+        #generated_enum_type_for_fields
+    };
+
+    // Pass the result back to the compiler
+    tokens.into()
+}
+
+/// Allows the implementors to auto-derive de `crud-operations` trait, which defines the methods
+/// that will perform the database communication and that will query against the db.
+#[proc_macro_derive(CanyonCRUD)]
+pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Construct a representation of Rust code as a syntax tree
+    // that we can manipulate
+    let ast: DeriveInput = syn::parse(input).unwrap();
+
+    // Checks that this macro is on a struct
+    match ast.data {
+        syn::Data::Struct(ref _s) => (),
+        _ => return syn::Error::new(
+            ast.ident.span(), 
+            "CanyonCRUD only works with Structs"
+        ).to_compile_error().into()
+    }
+
+    // Build the trait implementation
+    impl_crud_operations_trait_for_struct(&ast)
+}
+
+
+fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
+    let ty = &ast.ident;
+    let tokens = quote! {
+        #[async_trait]
+        impl canyon_crud::crud::CrudOperations<#ty> for #ty { }
+        impl canyon_crud::crud::Transaction<#ty> for #ty { }
+    };
+    tokens.into()
+}
+
+#[proc_macro_derive(ForeignKeyable)]
+pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Gets the data from the AST
+    let ast: DeriveInput = syn::parse(input).unwrap();
+    let ty = ast.ident;
+
+    // Recovers the identifiers of the struct's members
+    let fields = filter_fields(
+        match ast.data {
+            syn::Data::Struct(ref s) => &s.fields,
+            _ => return syn::Error::new(
+                ty.span(), 
+                "ForeignKeyable only works with Structs"
+            ).to_compile_error().into()
+        }
+    );
+
+    let field_idents = fields.iter()
+        .map( |(_vis, ident)|
+            {
+                let i = ident.to_string();
+                quote! {
+                    #i => Some(self.#ident.to_string())
+                }
+            }
+    );
+    
+    quote!{
+        impl canyon_sql::canyon_crud::bounds::ForeignKeyable for #ty {
+            fn get_fk_column(&self, column: &str) -> Option<String> {
+                match column {
+                    #(#field_idents),*,
+                    _ => None
+                }
+            }
+        }
+    }.into()
+}
+
+#[proc_macro_derive(CanyonMapper)]
+pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Gets the data from the AST
+    let ast: DeriveInput = syn::parse(input).unwrap();
+
+    // Recovers the identifiers of the struct's members
+    let fields = filter_fields(
+        match ast.data {
+            syn::Data::Struct(ref s) => &s.fields,
+            _ => return syn::Error::new(
+                ast.ident.span(), 
+                "CanyonMapper only works with Structs"
+            ).to_compile_error().into(),
+        }
+    );
+
+    // Creates the TokenStream for wire the column names into the 
+    // Canyon RowMapper
+    let field_names_for_row_mapper = fields.iter().map(|(_vis, ident)| {
+        let ident_name = ident.to_string();
+        quote! {  
+            #ident: row.try_get(#ident_name)
+                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+        }
+    });
+
+    // The type of the Struct
+    let ty = ast.ident;
+
+    let tokens = quote! {
+        impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty
+        {
             fn deserialize(row: &Row) -> #ty {
                 Self {
                     #(#field_names_for_row_mapper),*
@@ -233,7 +317,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     tokens.into()
 }
 
-
+/// Helper for generate the field data for the Crud-Mapper macro
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()

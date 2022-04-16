@@ -149,7 +149,7 @@ impl<'a> CanyonHandler<'a> {
         database_tables
     }
 
-    /// Gets the N rows that contais the info about a concrete table column and maps
+    /// Gets the N rows that contains the info about a concrete table column and maps
     /// them into a single entity
     fn map_splitted_column_info_into_entity(mapped_table: &RowTable,
                                             table_entity: &mut DatabaseTable) {
@@ -268,15 +268,30 @@ impl DatabaseSyncOperations {
     }
 
     pub async fn fill_operations(&mut self, data: CanyonHandler<'_>) {
+
         // For each entity (table) on the register
-        for canyon_register_entity in data.canyon_tables {
+        for mut canyon_register_entity in data.canyon_tables {
+
+            // Check if the table contains an ID column
+            let entity_contains_id = canyon_register_entity.entity_fields.iter()
+                .any(|x|x.field_name.to_uppercase() == "ID");
+
+            if entity_contains_id.not(){
+                let id_entity = CanyonRegisterEntityField {
+                    field_name: "id".to_string(),
+                    field_type: "i32".to_string(),
+                    annotation: None };
+
+                canyon_register_entity.entity_fields.insert(0,id_entity);
+            }
+
             let table_name = canyon_register_entity.entity_name.to_owned();
             println!("Current loop table \"{}\":", &table_name);
 
             // true if this table on the register is already on the database
             let table_on_database = data.database_tables
                 .iter()
-                .any(|v| &v.table_name == &table_name);
+                .any(|v| v.table_name == table_name);
             println!("      Table \"{}\" already on DB ? => {}", &table_name, table_on_database);
 
             // If the table isn't on the database we push a new operation to the collection
@@ -289,30 +304,44 @@ impl DatabaseSyncOperations {
                         )
                     )
                 );
-                for field in canyon_register_entity.entity_fields.clone().iter().filter(|column| column.annotation.is_none().not()) {
-                    let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
+                for field in canyon_register_entity.entity_fields
+                    .clone()
+                    .iter()
+                    .filter(|column| column.annotation.is_some()) 
+                {
+                    if field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                        let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
 
-                    // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
-                    let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
-                        .split(",")
-                        .map(|x| x.split(":").collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                        // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
+                        let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
+                            .split(',')
+                            // Deletes the first element of the field annotation String identifier
+                            .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                            .map( |x| 
+                                x.split(':').collect::<Vec<&str>>()
+                                .get(1)
+                                .unwrap()
+                                .trim()
+                                .to_string()
+                            ).collect();
 
-                    self.constrains_operations.push(
-                        Box::new(
-                            TableOperation::AddTableForeignKey(
-                                // table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
-                                table_name.clone(), foreign_key_name, field.field_name.clone(),
-                                annotation_data.get(0).unwrap().to_string(), annotation_data.get(1).unwrap().to_string(),
+                        self.constrains_operations.push(
+                            Box::new(
+                                TableOperation::AddTableForeignKey(
+                                    // table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
+                                    table_name.clone(), foreign_key_name, field.field_name.clone(),
+                                    annotation_data.get(0).unwrap().to_string(), annotation_data.get(1).unwrap().to_string(),
+                                )
                             )
-                        )
-                    );
+                        );
+                    }
                 }
             } else {
                 // We check if each of the columns in this table of the register is in the database table.
                 // We get the names and add them to a vector of strings
                 let columns_in_table: Vec<String> = canyon_register_entity.entity_fields.iter()
                     .filter(|a| data.database_tables.iter()
-                        .find(|x| &x.table_name == &table_name).unwrap().columns
+                        .find(|x| x.table_name == table_name).unwrap().columns
                         .iter()
                         .map(|x| x.column_name.to_string())
                         .any(|x| x == a.field_name))
@@ -327,21 +356,29 @@ impl DatabaseSyncOperations {
                     // We push a new column operation to the collection for each one
                     if columns_in_table.contains(&field.field_name).not() {
                         self.operations.push(
-                            Box::new(
+Box::new(
                                 ColumnOperation::CreateColumn(
-                                    table_name.clone(), field.field_name.to_owned(), field.field_type.to_owned(),
+                                    table_name.clone(), field.clone(),
                                 )
                             )
                         );
 
                         // If field contains a foreign key annotation, add it to constrains_operations
-                        if field.annotation.is_none().not() {
+                        if field.annotation.is_some() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
                             let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
-
+    
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                             let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
-                                .split(",")
-                                .map(|x| x.split(":").collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                                .split(',')
+                                // Deletes the first element of the field annotation String identifier
+                                .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                                .map( |x| 
+                                    x.split(':').collect::<Vec<&str>>()
+                                    .get(1)
+                                    .unwrap()
+                                    .trim()
+                                    .to_string()
+                                ).collect();
 
                             self.constrains_operations.push(
                                 Box::new(
@@ -358,7 +395,7 @@ impl DatabaseSyncOperations {
                     else {
                         println!("          Checking datatypes for field \"{}\"", field.field_name);
                         let database_field = &data.database_tables.iter()
-                            .find(|x| &x.table_name == &table_name)
+                            .find(|x| x.table_name == table_name)
                             .unwrap().columns
                             .iter().find(|x| x.column_name == field.field_name).unwrap();
 
@@ -380,7 +417,7 @@ impl DatabaseSyncOperations {
                             _ => {}
                         }
 
-                        if database_field.is_nullable && field.field_type.contains("Option") {
+                        if database_field.is_nullable && field.field_type.to_uppercase().starts_with("OPTION") {
                             database_field_postgres_type = format!("Option<{}>", database_field_postgres_type);
                         }
                         println!("          Post-convertion field datatype = {} | DB column datatype = {}", field.field_type, database_field_postgres_type);
@@ -388,7 +425,7 @@ impl DatabaseSyncOperations {
                             self.operations.push(
                                 Box::new(
                                     ColumnOperation::AlterColumnType(
-                                        table_name.clone(), field.field_name.to_owned(), field.field_type.to_owned(),
+                                        table_name.clone(), field.clone(),
                                     )
                                 )
                             );
@@ -396,14 +433,22 @@ impl DatabaseSyncOperations {
 
                         println!("          Annotation: {:?}, FK_name:{:?} FK: {:?}", field.annotation, database_field.foreign_key_name, database_field.foreign_key_info);
                         // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
-                        if field.annotation.is_none().not() && database_field.foreign_key_name.is_none() {
-                            println!("B");
+                    
+                        if field.annotation.is_some() && database_field.foreign_key_name.is_none() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
                             let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
-
+    
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                             let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
-                                .split(",")
-                                .map(|x| x.split(":").collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                                .split(',')
+                                // Deletes the first element of the field annotation String identifier
+                                .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                                .map( |x| 
+                                    x.split(':').collect::<Vec<&str>>()
+                                    .get(1)
+                                    .unwrap()
+                                    .trim()
+                                    .to_string()
+                                ).collect();
 
                             self.constrains_operations.push(
                                 Box::new(
@@ -416,25 +461,33 @@ impl DatabaseSyncOperations {
                             );
                         }
                         // Case when field contains a foreign key annotation, and there is already one in the database
-                        else if field.annotation.is_none().not() && database_field.foreign_key_name.is_none().not() {
-                            let foreign_key_name = format!("{}_{}_fkey", table_name, field.field_name);
-
+                        else if field.annotation.is_some() && database_field.foreign_key_name.is_some() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                            let foreign_key_name = format!("{}_{}_fkey", &table_name, &field.field_name);
+    
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                             let annotation_data: Vec<String> = field.annotation.as_ref().unwrap()
-                                .split(",")
-                                .map(|x| x.split(":").collect::<Vec<&str>>().get(1).unwrap().trim().to_string()).collect();
+                                .split(',')
+                                // Deletes the first element of the field annotation String identifier
+                                .filter( |x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                                .map( |x| 
+                                    x.split(':').collect::<Vec<&str>>()
+                                    .get(1)
+                                    .unwrap()
+                                    .trim()
+                                    .to_string()
+                                ).collect();
 
                             // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
                             let references_regex = Regex::new(r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)").unwrap();
 
-                            let captures_references = references_regex.captures(&database_field.foreign_key_info.as_ref().unwrap()).unwrap();
+                            let captures_references = references_regex.captures(database_field.foreign_key_info.as_ref().unwrap()).unwrap();
 
                             let current_column = captures_references.name("current_column").unwrap().as_str().to_string();
                             let ref_table = captures_references.name("ref_table").unwrap().as_str().to_string();
                             let ref_column = captures_references.name("ref_column").unwrap().as_str().to_string();
 
                             // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
-                            if field.field_name != current_column || annotation_data.get(0).unwrap().to_string() != ref_table || annotation_data.get(1).unwrap().to_string() != ref_column {
+                            if field.field_name != current_column || *annotation_data.get(0).unwrap() != ref_table || *annotation_data.get(1).unwrap() != ref_column {
                                 self.constrains_operations.push(
                                     Box::new(
                                         TableOperation::DeleteTableForeignKey(
@@ -472,11 +525,11 @@ impl DatabaseSyncOperations {
                 // Filter the list of columns in the corresponding table of the database for the current table of the register,
                 // and look for columns that don't exist in the table of the register
                 let columns_to_remove: Vec<String> = data.database_tables.iter()
-                    .find(|x| &x.table_name == &table_name).unwrap().columns
+                    .find(|x| x.table_name == table_name).unwrap().columns
                     .iter()
                     .filter(|a| canyon_register_entity.entity_fields.iter()
                         .map(|x| x.field_name.to_string())
-                        .collect::<Vec<String>>().contains(&a.column_name).not())
+                        .any(|x| x == a.column_name).not())
                     .map(|a| a.column_name.to_string()).collect();
 
                 println!("      Columns only in table (to remove):  {:?}", columns_to_remove);
@@ -505,23 +558,8 @@ impl DatabaseSyncOperations {
 
     pub async fn from_query_register() {
         for i in 0..unsafe { &QUERIES_TO_EXECUTE }.len() - 1 {
-            Self::query(unsafe { &QUERIES_TO_EXECUTE.get(i).unwrap().to_owned() }, &[]).await;
+            Self::query(unsafe { QUERIES_TO_EXECUTE.get(i).unwrap() }, &[]).await;
         }
-    }
-}
-
-
-/// TODO Helper
-/// TODO Support optional
-fn to_postgres_datatype(rust_type: &str) -> &'static str {
-    let rs_type_no_optional = rust_type.replace(" ","").replace("Option<", "").replace(">", "");
-    match rs_type_no_optional.as_str() {
-        "i32" => "INTEGER",
-        "i64" => "BIGINT",
-        "String" => "VARCHAR",
-        "bool" => "BOOLEAN",
-        "NaiveDate" => "DATE",
-        &_ => ""
     }
 }
 
@@ -549,10 +587,10 @@ impl DatabaseOperation for TableOperation {
                 format!(
                     "CREATE TABLE {table_name} ({:?});",
                     table_fields.iter().map(|entity_field|
-                        format!("{} {}", entity_field.field_name, to_postgres_datatype(&entity_field.field_type))
+                        format!("{} {}", entity_field.field_name, entity_field.field_type_to_postgres())
                     ).collect::<Vec<String>>()
                         .join(", ")
-                ).replace("\"", ""),
+                ).replace('"', ""),
             TableOperation::AddTableForeignKey(table_name, foreign_key_name,
                                                column_foreign_key, table_to_reference,
                                                column_to_reference) =>
@@ -572,10 +610,10 @@ impl DatabaseOperation for TableOperation {
 /// Helper to relate the operations that Canyon should do when a change on a field should
 #[derive(Debug)]
 enum ColumnOperation {
-    CreateColumn(String, String, String),
+    CreateColumn(String, CanyonRegisterEntityField),
     DeleteColumn(String, String),
     // AlterColumnName,
-    AlterColumnType(String, String, String),
+    AlterColumnType(String, CanyonRegisterEntityField),
 }
 
 impl Transaction<Self> for ColumnOperation { }
@@ -584,12 +622,12 @@ impl Transaction<Self> for ColumnOperation { }
 impl DatabaseOperation for ColumnOperation {
     async fn execute(&self) {
         let stmt = match &*self {
-            ColumnOperation::CreateColumn(table_name, column_name, column_type) =>
-                format!("ALTER TABLE {table_name} ADD {column_name} {};", to_postgres_datatype(column_type)),
+            ColumnOperation::CreateColumn(table_name, entity_field) =>
+                format!("ALTER TABLE {table_name} ADD {} {};",entity_field.field_name, entity_field.field_type_to_postgres()),
             ColumnOperation::DeleteColumn(table_name, column_name) =>
-                format!("ALTER TABLE {table_name} DROP COLUMN {column_name}; "),
-            ColumnOperation::AlterColumnType(table_name, column_name, column_type) =>
-                format!("ALTER TABLE {table_name} ALTER COLUMN {column_name} TYPE {};", to_postgres_datatype(column_type))
+                format!("ALTER TABLE {table_name} DROP COLUMN {column_name};"),
+            ColumnOperation::AlterColumnType(table_name, entity_field) =>
+                format!("ALTER TABLE {table_name} ALTER COLUMN {} TYPE {};", entity_field.field_name, entity_field.field_type_to_postgres())
         };
 
         unsafe { QUERIES_TO_EXECUTE.push(stmt) }
@@ -597,7 +635,7 @@ impl DatabaseOperation for ColumnOperation {
 }
 
 
-/// Gets the necessary identifiers of a CanyonEntity to make it the comparation
+/// Gets the necessary identifiers of a CanyonEntity to make it the comparative
 /// against the database schemas
 #[derive(Debug, Clone)]
 pub struct CanyonRegisterEntity {
@@ -611,6 +649,50 @@ impl CanyonRegisterEntity {
             entity_name: String::new(),
             entity_fields: Vec::new(),
         }
+    }
+
+    /// Returns the String representation for the current "CanyonRegisterEntity" instance.
+    /// Being "CanyonRegisterEntity" the representation of a table, the String will be formed by each of its "CanyonRegisterEntityField",
+    /// formatting each as "name of the column" "postgres representation of the type" "parameters for the column"
+    ///
+    ///
+    /// ```
+    /// let my_id_field =  CanyonRegisterEntityField {
+    ///                     field_name: "id".to_string(),
+    ///                     field_type: "i32".to_string(),
+    ///                     annotation: None
+    ///                     };
+    ///
+    /// let my_name_field =  CanyonRegisterEntityField {
+    ///                     field_name: "name".to_string(),
+    ///                     field_type: "String".to_string(),
+    ///                     annotation: None
+    ///                     };
+    ///
+    /// let my_canyon_register_entity = CanyonRegisterEntity {
+    ///                                 entity_name: String,
+    ///                                 entity_fields: vec![my_id_field,my_name_field]
+    ///                                 };
+    ///
+    ///
+    /// let expected_result = "id INTEGER NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY, name TEXT NOT NULL";
+    ///
+    /// assert_eq!(expected_result, my_canyon_register_entity.entity_fields_as_string());
+    pub fn entity_fields_as_string(&self) -> String {
+
+    let mut fields_strings:Vec<String> = Vec::new();
+
+    for field in &self.entity_fields {
+
+        let column_postgres_syntax = field.field_type_to_postgres();
+
+        let field_as_string = format!("{} {}", field.field_name, column_postgres_syntax);
+
+       fields_strings.push(field_as_string);
+    }
+
+    fields_strings.join(" ")
+
     }
 }
 
@@ -630,6 +712,75 @@ impl CanyonRegisterEntityField {
             field_type: String::new(),
             annotation: None
         }
+    }
+
+    /// Return the postgres datatype and parameters to create a column for a given rust type
+    /// # Examples:
+    ///
+    /// Basic use:
+    /// ```
+    /// let my_name_field =  CanyonRegisterEntityField {
+    ///                     field_name: "name".to_string(),
+    ///                     field_type: "String".to_string(),
+    ///                     annotation: None
+    ///                     };
+    ///
+    /// assert_eq!("TEXT NOT NULL", to_postgres_syntax.field_type_to_postgres());
+    /// ```
+    /// Also support Option:
+    /// ```
+    /// let my_age_field =  CanyonRegisterEntityField {
+    ///                     field_name: "age".to_string(),
+    ///                     field_type: "Option<i32>".to_string(),
+    ///                     annotation: None
+    ///                     };
+    ///
+    /// assert_eq!("INTEGER", to_postgres_syntax.field_type_to_postgres());
+    /// ```
+    fn to_postgres_syntax(&self) -> String {
+        let mut rust_type_clean = self.field_type.replace(' ',"");
+
+        let rs_type_is_optional =  self.field_type.to_uppercase().starts_with("OPTION");
+
+        if rs_type_is_optional{
+
+            let type_regex = Regex::new(r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>").unwrap();
+
+            let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
+
+            rust_type_clean = capture_rust_type.name("rust_type").unwrap().as_str().to_string();
+        }
+
+        let mut postgres_type = String::new();
+
+        match rust_type_clean.as_str() {
+            "i32" => postgres_type.push_str("INTEGER"),
+            "i64" =>  postgres_type.push_str("BIGINT"),
+            "String" =>  postgres_type.push_str("TEXT"),
+            "bool" =>  postgres_type.push_str("BOOLEAN"),
+            "NaiveDate" =>  postgres_type.push_str("DATE"),
+            &_ => postgres_type.push_str("DATE")
+        }
+
+        postgres_type
+    }
+
+    /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
+    fn to_postgres_id_syntax(&self) -> String {
+
+        let postgres_datatype_syntax = Self::to_postgres_syntax(self);
+
+        format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)
+    }
+
+    pub fn field_type_to_postgres(&self) -> String {
+
+        let column_postgres_syntax = match self.field_name.as_str() {
+            "id" => Self::to_postgres_id_syntax(self),
+            _ => Self::to_postgres_syntax(self),
+        };
+
+       column_postgres_syntax
     }
 }
 
