@@ -92,7 +92,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
     let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
-    get_field_attr(&entity);
+    get_field_attr(&entity); // TODO Just for debug attached annotations
 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register
@@ -139,6 +139,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let delete_tokens = generate_delete_tokens(&macro_data);
     // Builds the update() query
     let update_tokens = generate_update_tokens(&macro_data);
+    
+
     // Search by foreign key as Vec, cause Canyon supports multiple fields having FK annotation
     let mut search_by_fk_tokens: Vec<TokenStream> = Vec::new();
 
@@ -159,6 +161,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             }
         }
     }
+
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
@@ -206,7 +209,16 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
-    let ast = syn::parse(input).unwrap();
+    let ast: DeriveInput = syn::parse(input).unwrap();
+
+    // Checks that this macro is on a struct
+    match ast.data {
+        syn::Data::Struct(ref _s) => (),
+        _ => return syn::Error::new(
+            ast.ident.span(), 
+            "CanyonCRUD only works with Structs"
+        ).to_compile_error().into()
+    }
 
     // Build the trait implementation
     impl_crud_operations_trait_for_struct(&ast)
@@ -233,7 +245,10 @@ pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc
     let fields = filter_fields(
         match ast.data {
             syn::Data::Struct(ref s) => &s.fields,
-            _ => panic!("Field names can only be derived for structs"),
+            _ => return syn::Error::new(
+                ty.span(), 
+                "ForeignKeyable only works with Structs"
+            ).to_compile_error().into()
         }
     );
 
@@ -268,7 +283,10 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let fields = filter_fields(
         match ast.data {
             syn::Data::Struct(ref s) => &s.fields,
-            _ => panic!("Field names can only be derived for structs"),
+            _ => return syn::Error::new(
+                ast.ident.span(), 
+                "CanyonMapper only works with Structs"
+            ).to_compile_error().into(),
         }
     );
 
