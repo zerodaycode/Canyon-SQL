@@ -46,14 +46,15 @@ use crate::query_operations::select::generate_find_by_fk_tokens;
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     // Get the function that this attribute is attached to
     let func = parse_macro_input!(input as ItemFn);
-    let sign = func.sig;
-    let body = func.block;
+    let sign = func.clone().sig;
+    
 
     // The code used by Canyon to perform it's managed state
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         CanyonHandler::run().await;
     });
+    println!("\nHandler operations completed");
 
     // The queries to execute at runtime in the managed state
     let mut queries_tokens: Vec<TokenStream> = Vec::new();
@@ -62,20 +63,39 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     // The code written by the user
     let mut macro_tokens: Vec<TokenStream> = Vec::new();
     // Builds the code that represents the user written code
-    _user_body_builder(body, &mut macro_tokens);
+    let res: Result<(), TokenStream> = match _user_body_builder(func.clone(), &mut macro_tokens) {
+        Ok(ok) => {
+            macro_tokens.clear();
+            Ok(ok)
+        },
+        Err(e) => Err(e.into()),
+    };
     
 
     // The final code wired in main()
-    let tokens = quote! {
-        use canyon_sql::tokio;
-        #[tokio::main]
-        async #sign {
-            {
-                #(#queries_tokens)*
+    let tokens = if res.is_ok() {
+        quote! {
+            use canyon_sql::tokio;
+            #[tokio::main]
+            async #sign {
+                {
+                    #(#queries_tokens)*
+                }
+                // #(#macro_tokens)*
             }
-            #(#macro_tokens)*
+        }
+    } else {
+        quote! {
+            use canyon_sql::tokio;
+            #[tokio::main]
+            async #sign {
+                {
+                    #(#queries_tokens)*
+                }
+            }
         }
     };
+    
     
     tokens.into()
 }
@@ -92,7 +112,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
     let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
-    get_field_attr(&entity); // TODO Just for debug attached annotations
+    // get_field_attr(&entity); // TODO Just for debug attached annotations
 
     // Notifies the observer that an observable must be registered on the system
     // In other words, adds the data of the structure to the Canyon Register

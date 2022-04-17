@@ -22,12 +22,12 @@ fn main() {
         Remember that all operation with CanyonCrud must be awaited,
         due to it's inherent async nature
     */
-    // wire_data_on_schema().await;
-
+    // _wire_data_on_schema().await;
+terujtyrryt
 
     let all_leagues: Vec<Leagues> = Leagues::find_all().await;
     // println!("Leagues elements: {:?}", &all_leagues);
-
+adsfadsf
     let all_leagues_as_querybuilder = Leagues::find_all_query()
         .where_clause(LeaguesFields::id(1), Comp::Eq)
         .query()
@@ -60,7 +60,7 @@ fn main() {
 /// Leagues { id: 45, ext_id: 1, slug: "LEC", name: "League Europe Champions", region: "EU West", image_url: "https://lec.eu" }, 
 /// Leagues { id: 46, ext_id: 2, slug: "LCK", name: "League Champions Korea", region: "South Korea", image_url: "https://korean_lck.kr" } ...
 /// ``` 
-async fn wire_data_on_schema() {
+async fn _wire_data_on_schema() {
     // Data for the examples
     let lec: Leagues = Leagues {
         id: 1,
@@ -100,7 +100,7 @@ async fn wire_data_on_schema() {
 
 /// Example of usage of a search by a given Foreign Key
 /// TODO Example not ready yet
-async fn search_data_by_fk_example() {
+async fn _search_data_by_fk_example() {
     // Data for the examples
     // let lec: Leagues = Leagues {
     //     id: 1,
