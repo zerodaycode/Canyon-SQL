@@ -1,9 +1,13 @@
 use std::fmt::Debug;
 use async_trait::async_trait;
+use canyon_connection::connection::DatabaseConnection;
 use tokio_postgres::{ToStatement, types::ToSql};
 
-use crate::{connector::DatabaseConnection, results::DatabaseResult};
-
+use crate::mapper::RowMapper;
+use crate::result::DatabaseResult;
+// use crate::query_elements::{Query, QueryBuilder};
+use crate::query_elements::query::Query;
+use crate::query_elements::query_builder::QueryBuilder;
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
@@ -24,7 +28,7 @@ pub trait Transaction<T: Debug> {
 
         DatabaseResult::new(
             client.query(
-                stmt.into(), 
+                stmt.into(),
                 params
             )
             .await
@@ -33,40 +37,21 @@ pub trait Transaction<T: Debug> {
         )
     }
 }
-#[async_trait]
-pub trait CrudOperations<T: Debug>: Transaction<T> {
 
+#[async_trait]
+pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transaction<T> {
 
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    /// 
-    /// If not columns provided, performs a SELECT *, else, will query only the 
-    /// desired columns
-    async fn __find_all(table_name: &str, columns: &[&str]) -> DatabaseResult<T> {
+    async fn __find_all(table_name: &str) -> DatabaseResult<T> {
 
-        let sql: String = if columns.len() == 0 { // Care, conditional assignment
-            String::from(format!("SELECT * FROM {}", table_name))
-        } else {
-            let mut table_columns = String::new();
-            
-            let mut counter = 0;
-            while counter < columns.len() - 1 {
-                table_columns.push_str(
-                    (columns.get(counter).unwrap().to_string() + ", ").as_str()
-                );
-                counter += 1;
-            }
+        let stmt = format!("SELECT * FROM {}", table_name);
 
-            table_columns.push_str(columns.get(counter).unwrap());
+        Self::query(&stmt[..], &[]).await
+    }
 
-            let query = String::from(
-                format!("SELECT {} FROM {}", table_columns, table_name
-            ));
-
-            query
-        };
-
-        Self::query(&sql[..], &[]).await
+    fn __find_all_query(table_name: &str) -> QueryBuilder<T> {
+        Query::new(format!("SELECT * FROM {}", table_name), &[])
     }
 
     /// Queries the database and try to find an item on the most common pk
@@ -144,6 +129,26 @@ pub trait CrudOperations<T: Debug>: Transaction<T> {
         Self::query(
             &stmt[..],
             values
+        ).await
+    }
+
+    /// Performs a search over some table pointed with a ForeignKey annotation
+    async fn __search_by_foreign_key(
+        related_table: &str, 
+        related_column: &str,
+        lookage_value: String
+    ) -> DatabaseResult<T> {
+
+        let stmt = format!(
+            "SELECT * FROM {} WHERE {} = {}", 
+            related_table,
+            related_table.to_owned() + "." + related_column,
+            lookage_value
+        );
+
+        Self::query(
+            &stmt[..],
+            &[]
         ).await
     }
 }

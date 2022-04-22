@@ -8,9 +8,11 @@ syn = { version = "1.0.86", features = ["full"] }
 quote = "1.0.9"
 proc-macro2 = "1.0.27"
 futures = "0.3.21"
+tokio = { version = "1.9.0", features = ["full"] }
 
 canyon_observer = { path = "../canyon_observer" }
 canyon_manager = { path = "../canyon_manager" }
+canyon_crud = { path = "../canyon_crud" }
 
 [lib]
 proc-macro = true

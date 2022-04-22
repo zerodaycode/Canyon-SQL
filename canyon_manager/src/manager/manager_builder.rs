@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{TokenStream, Ident, Span};
 use quote::quote;
 
 use super::{
@@ -21,23 +21,58 @@ pub fn generate_data_struct(canyon_entity: &CanyonEntity) -> TokenStream {
     }
 }
 
+pub fn generate_fields_names_for_enum(canyon_entity: &CanyonEntity) -> TokenStream {
+    let enum_name = Ident::new(
+        // TODO Convert it to CamelCase
+        (canyon_entity.struct_name.to_string() + "Fields").as_str(),
+        Span::call_site()
+    );
 
-/// Builds the tokens for generate the code that implements the TryFrom<&CanyonEntity>
-/// for the macro annotated struct
-pub fn get_field_attr(metrics_struct: &CanyonEntity) -> () {
-    let _field_attributes = metrics_struct
+    let fields_names = &canyon_entity.get_fields_as_enum_variants();
+    let match_arms = &canyon_entity.create_match_arm_for_relate_field(&enum_name);
+
+    let visibility = &canyon_entity.vis;
+    let generics = &canyon_entity.generics;
+
+    quote! {
+        #[derive(Debug)]
+        #[allow(non_camel_case_types)]
+        #visibility enum #enum_name #generics {
+            #(#fields_names),*
+        }
+
+        impl canyon_sql::bounds::FieldIdentifier for #generics #enum_name #generics {
+            fn value(self) -> String {
+                match self {
+                    #(#match_arms),*
+                }
+            }
+        }
+
+        impl #generics std::fmt::Display for #enum_name #generics {
+            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                write!(f, "") // TODO 
+            }
+        }
+    }
+}
+
+
+/// Helper to debug the attached attributes to a field
+pub fn get_field_attr(entity: &CanyonEntity) -> () {
+    let _field_attributes = entity
         .attributes
         .iter()
         .map(|field| {
             match field.attribute {
-                Some(EntityFieldAnnotation::ForeignKey) => {
+                Some(EntityFieldAnnotation::ForeignKey(_, _)) => {
                     println!("Annotation ForeignKey found in field: {} for {} entity", 
-                        &field.name, &metrics_struct.struct_name
+                        &field.name, &entity.struct_name
                     );
                 },
                 _ => {
                     println!("No annotation found for field: {} in {} entity", 
-                        &field.name, &metrics_struct.struct_name
+                        &field.name, &entity.struct_name
                     );
                 },
             };

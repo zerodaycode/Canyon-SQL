@@ -1,5 +1,5 @@
 [package]
-name = "canyon_observer"
+name = "canyon_crud"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,13 +7,7 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.9.0", features = ["full"] }
-tokio-postgres = { version = "0.7.2" , features=["with-chrono-0_4"] }
+tokio-postgres = { version = "0.7.2",  features=["with-chrono-0_4"] }
 async-trait = { version = "0.1.50" }
-regex = "1.5"
 
-# Debug
-partialdebug = "0.2.0"
-
-canyon_crud = { path = "../canyon_crud" }
-canyon_manager = { path = "../canyon_manager" }
 canyon_connection = { path = "../canyon_connection" }

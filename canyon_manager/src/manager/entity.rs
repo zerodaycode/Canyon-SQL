@@ -8,7 +8,7 @@ use super::entity_fields::EntityField;
 
 /// Provides a convenient way of handling the data on any
 /// `CanyonEntity` struct anntotaded with the macro `#[canyon_entity]`
-#[derive(PartialDebug)]
+#[derive(PartialDebug, Clone)]
 pub struct CanyonEntity {
     pub struct_name: Ident,
     pub vis: Visibility,
@@ -16,40 +16,55 @@ pub struct CanyonEntity {
     pub attributes: Vec<EntityField>
 }
 
-impl CanyonEntity {
-    pub fn get_entity_as_string(&self) -> String {
-        let mut as_string = String::new();
-        as_string.push_str("Identifier -> ");
-        as_string.push_str(self.struct_name.to_string().as_str());
-        as_string.push_str("; Columns -> ");
-        as_string.push_str(self.get_attrs_as_string().as_str());
+unsafe impl Send for CanyonEntity {}
+unsafe impl Sync for CanyonEntity {}
 
-        println!("String of register: {:?}", as_string);
-        as_string
+impl CanyonEntity {
+    /// Creates an enum with the names of the fields as the variants of the type,
+    /// where the enum type corresponds with the struct's type that belongs
+    /// + a concatenation of "Fields" after it
+    pub fn get_fields_as_enum_variants(&self) -> Vec<TokenStream> {
+        self.attributes
+            .iter()
+            .map(|f| {
+                let field_name = &f.name;
+                let ty = &f.field_type;
+                quote!{ #field_name(#ty) }
+            })
+        .collect::<Vec<_>>()
     }
 
+    /// Generates an implementation of the match pattern to find whatever variant
+    /// is being requested // TODO Better docs please
+    pub fn create_match_arm_for_relate_field(&self, enum_name: &Ident) -> Vec<TokenStream> {
+        self.attributes
+            .iter()
+            .map( |f| {
+                let field_name = &f.name;
+                let field_name_as_string = f.name.to_string();
+                let field_type_as_string = f.get_field_type_as_string();
 
-    fn get_attrs_as_string(&self) -> String {
-        let mut vec_columns = Vec::new();
-        for attribute in self.attributes.iter() {
-            let name = attribute.name.to_string();
-            let field_type = attribute.get_field_type_as_string();
-            let column_name_type_tuple = format!("({}:{})", name, field_type);
-            vec_columns.push(column_name_type_tuple)
-        }
+                let quote = if field_type_as_string.contains("Option") {
+                    quote! { 
+                        #enum_name::#field_name(v) => 
+                            format!("{} {}", #field_name_as_string.to_string(), v.unwrap().to_string())
+                    }
+                } else {
+                    quote! { 
+                        #enum_name::#field_name(v) => 
+                            format!("{} {}", #field_name_as_string.clone().to_string(), v.to_string())
+                    }
+                }; 
 
-        let columns_str = vec_columns.join(",");
-
-        columns_str
-
+                quote
+            })
+        .collect::<Vec<_>>()
     }
 
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {
         self.attributes
             .iter()
             .map(|f| {
-                println!("Detected ATTR for {:?}: {:?}", 
-                    self.struct_name.to_string(), f);
                 let name = &f.name;
                 let ty = &f.field_type;
                 quote!{ pub #name: #ty }

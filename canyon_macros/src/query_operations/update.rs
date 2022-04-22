@@ -26,7 +26,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         #vis async fn update(&self) -> () {
-            <#ty as CrudOperations<#ty>>::__update(
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
                 #table_name,
                 #column_names,
                 &[
