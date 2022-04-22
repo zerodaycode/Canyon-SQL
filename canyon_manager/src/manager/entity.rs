@@ -20,32 +20,6 @@ unsafe impl Send for CanyonEntity {}
 unsafe impl Sync for CanyonEntity {}
 
 impl CanyonEntity {
-    pub fn get_entity_as_string(&self) -> String {
-        let mut as_string = String::new();
-        as_string.push_str("Identifier -> ");
-        as_string.push_str(self.struct_name.to_string().as_str());
-        as_string.push_str("; Columns -> ");
-        as_string.push_str(self.get_attrs_as_string().as_str());
-
-        println!("String of register: {:?}", as_string);
-        as_string
-    }
-
-
-    fn get_attrs_as_string(&self) -> String {
-        let mut vec_columns = Vec::new();
-        for attribute in self.attributes.iter() {
-            let name = attribute.name.to_string();
-            let field_type = attribute.get_field_type_as_string();
-            let column_name_type_tuple = format!("({}:{})", name, field_type);
-            vec_columns.push(column_name_type_tuple)
-        }
-
-        let columns_str = vec_columns.join(",");
-
-        columns_str
-    }
-
     /// Creates an enum with the names of the fields as the variants of the type,
     /// where the enum type corresponds with the struct's type that belongs
     /// + a concatenation of "Fields" after it
