@@ -1,37 +1,40 @@
 extern crate proc_macro;
 
-use proc_macro::TokenStream as CompilerTokenStream;
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-use syn::{
-    DeriveInput, Fields, Visibility, parse_macro_input, ItemFn
-};
-
-
 mod canyon_macro;
 mod query_operations;
 mod utils;
 
+use proc_macro::TokenStream as CompilerTokenStream;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
+use syn::{
+    DeriveInput, Fields, Visibility
+};
 use utils::macro_tokens::MacroTokens;
 use query_operations::{
     insert::generate_insert_tokens, 
-    select::{generate_find_all_tokens, generate_find_all_query_tokens, generate_find_by_id_tokens},
+    select::{
+        generate_find_all_tokens, 
+        generate_find_all_query_tokens, 
+        generate_find_by_id_tokens
+    },
     delete::generate_delete_tokens,
     update::generate_update_tokens
 };
 use canyon_manager::manager::{
     manager_builder::{
         generate_data_struct, 
-        get_field_attr, generate_fields_names_for_enum
+        // get_field_attr, 
+        generate_fields_names_for_enum
     }, 
     entity::CanyonEntity
 };
-use canyon_macro::{_user_body_builder, wire_queries_to_execute};
+use canyon_macro::wire_queries_to_execute;
 use canyon_observer::{
      handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
 };
 
-use crate::query_operations::select::generate_find_by_fk_tokens;
+use crate::{query_operations::select::generate_find_by_fk_tokens, utils::function_parser::FunctionParser};
 
 
 /// Macro for handling the entry point to the program. 
@@ -44,9 +47,16 @@ use crate::query_operations::select::generate_find_by_fk_tokens;
 /// TODO Check for the _meta attribute metadata when necessary
 #[proc_macro_attribute]
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    // Get the function that this attribute is attached to
-    let func = parse_macro_input!(input as ItemFn);
+    // Parses the function that this attribute is attached to
+    let func_res = syn::parse::<FunctionParser>(input);
+
+    if func_res.is_err() {
+        return quote! {fn main() {}}.into()
+    }
+    
+    let func = func_res.ok().unwrap();
     let sign = func.clone().sig;
+    let body = func.clone().block.stmts;
     
 
     // The code used by Canyon to perform it's managed state
@@ -54,50 +64,23 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     rt.block_on(async {
         CanyonHandler::run().await;
     });
-    println!("\nHandler operations completed");
 
     // The queries to execute at runtime in the managed state
     let mut queries_tokens: Vec<TokenStream> = Vec::new();
     wire_queries_to_execute(&mut queries_tokens);
     
-    // The code written by the user
-    let mut macro_tokens: Vec<TokenStream> = Vec::new();
-    // Builds the code that represents the user written code
-    let res: Result<(), TokenStream> = match _user_body_builder(func.clone(), &mut macro_tokens) {
-        Ok(ok) => {
-            macro_tokens.clear();
-            Ok(ok)
-        },
-        Err(e) => Err(e.into()),
-    };
-    
-
     // The final code wired in main()
-    let tokens = if res.is_ok() {
-        quote! {
-            use canyon_sql::tokio;
-            #[tokio::main]
-            async #sign {
-                {
-                    #(#queries_tokens)*
-                }
-                // #(#macro_tokens)*
+    quote! {
+        use canyon_sql::tokio;
+        #[tokio::main]
+        async #sign {
+            {
+                #(#queries_tokens)*
             }
+            #(#body)*
         }
-    } else {
-        quote! {
-            use canyon_sql::tokio;
-            #[tokio::main]
-            async #sign {
-                {
-                    #(#queries_tokens)*
-                }
-            }
-        }
-    };
-    
-    
-    tokens.into()
+    }.into()
+
 }
 
 

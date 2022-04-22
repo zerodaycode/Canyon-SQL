@@ -23,11 +23,10 @@ fn main() {
         due to it's inherent async nature
     */
     // _wire_data_on_schema().await;
-terujtyrryt
 
     let all_leagues: Vec<Leagues> = Leagues::find_all().await;
     // println!("Leagues elements: {:?}", &all_leagues);
-adsfadsf
+
     let all_leagues_as_querybuilder = Leagues::find_all_query()
         .where_clause(LeaguesFields::id(1), Comp::Eq)
         .query()
