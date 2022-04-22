@@ -90,7 +90,17 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let input_cloned = input.clone();
-    let entity = syn::parse_macro_input!(input as CanyonEntity);
+    let entity_res = syn::parse::<CanyonEntity>(input);
+    
+    if entity_res.is_err() {
+        // let struct_name = syn::parse_macro_input!(input_cloned);
+        println!("Leaving parsing WITH error");
+        return entity_res.err().unwrap().into_compile_error().into()
+    }
+
+    // No errors detected on the parsing, so we can safely unwrap the parse result
+    let entity = entity_res.ok().unwrap();
+    println!("Parse continues");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
@@ -220,7 +230,7 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         syn::Data::Struct(ref _s) => (),
         _ => return syn::Error::new(
             ast.ident.span(), 
-            "CanyonCRUD only works with Structs"
+            "CanyonCrud only works with Structs"
         ).to_compile_error().into()
     }
 
@@ -239,7 +249,11 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
     tokens.into()
 }
 
-/// proc-macro for annotate struct fields that holds a foreign key relation
+/// proc-macro for annotate struct fields that holds a foreign key relation.
+/// 
+/// So basically, if you have some `ForeignKey` attribute, annotate the parent
+/// struct (where the ForeignKey table property points) with this macro
+/// to make it able to work with compound table relations
 #[proc_macro_derive(ForeignKeyable)]
 pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Gets the data from the AST
@@ -322,7 +336,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     tokens.into()
 }
 
-/// Helper for generate the field data for the Custom Derives Macros
+/// Helper for generate the fields data for the Custom Derives Macros
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()

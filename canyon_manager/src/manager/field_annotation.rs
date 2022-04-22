@@ -33,6 +33,7 @@ impl EntityFieldAnnotation {
                     // The value after the Token[=]
                     let attr_value = match nv.lit {
                         // Error if the token is not a string literal
+                        // TODO Implement the option (or change it to) to use a Rust Ident instead a Str Lit
                         syn::Lit::Str(v) => v.value(),
                         _ => {
                             return Err(

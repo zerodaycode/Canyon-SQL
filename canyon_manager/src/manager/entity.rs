@@ -84,10 +84,19 @@ impl Parse for CanyonEntity {
         let _generics = _struct.generics;
 
         // Retrive the struct fields
-        let mut parsed_fields = Vec::new();
+        let mut parsed_fields: Vec<EntityField> = Vec::new();
         for field in _struct.fields {
-            let struct_attribute = EntityField::try_from(&field)?;
-            parsed_fields.push(struct_attribute);
+            let struct_attribute = EntityField::try_from(&field);
+            match struct_attribute {
+                Ok(attribute) => {
+                    println!("Parsing correctly field: {:?}", attribute.name.to_string());
+                    parsed_fields.push(attribute)
+                },
+                Err(e) => {
+                    println!("Error parsing field");
+                    return Err(e)
+                },
+            }
         }
 
         Ok(
