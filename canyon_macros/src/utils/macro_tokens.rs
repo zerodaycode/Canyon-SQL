@@ -11,7 +11,6 @@ pub struct MacroTokens<'a> {
 }
 
 impl<'a> MacroTokens<'a> {
-    // Constructor
     pub fn new(ast: &'a DeriveInput) -> Self {
         Self {
             vis: &ast.vis,
@@ -19,7 +18,7 @@ impl<'a> MacroTokens<'a> {
             generics: &ast.generics,
             fields: match &ast.data {
                 syn::Data::Struct(ref s) => &s.fields,
-                _ => panic!("Field names can only be derived for structs"),
+                _ => panic!("This derive macro can only be automatically derived for structs"),
             }
         }
     }

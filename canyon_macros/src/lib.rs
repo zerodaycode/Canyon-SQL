@@ -208,11 +208,12 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
 /// Allows the implementors to auto-derive de `crud-operations` trait, which defines the methods
 /// that will perform the database communication and that will query against the db.
-#[proc_macro_derive(CanyonCRUD)]
+#[proc_macro_derive(CanyonCrud)]
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
     let ast: DeriveInput = syn::parse(input).unwrap();
+    
 
     // Checks that this macro is on a struct
     match ast.data {
@@ -238,6 +239,7 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
     tokens.into()
 }
 
+/// proc-macro for annotate struct fields that holds a foreign key relation
 #[proc_macro_derive(ForeignKeyable)]
 pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Gets the data from the AST
@@ -320,7 +322,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     tokens.into()
 }
 
-/// Helper for generate the field data for the Crud-Mapper macro
+/// Helper for generate the field data for the Custom Derives Macros
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()

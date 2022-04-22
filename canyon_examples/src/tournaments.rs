@@ -2,7 +2,7 @@ use canyon_sql::*;
 // use chrono::NaiveDate;
 
 /// TODO Some Rust documentation here
-#[derive(Debug, Clone, CanyonCRUD, CanyonMapper)]
+#[derive(Debug, Clone, CanyonCrud, CanyonMapper)]
 #[canyon_macros::canyon_entity]
 pub struct Tournaments {
     pub id: i32,

@@ -113,7 +113,6 @@ impl<'a> CanyonHandler<'a> {
     /// them into a collection of "Table" entities that represents the a real database
     /// table
     fn generate_mapped_table_entities(schema_info: Vec<RowTable>) -> Vec<DatabaseTable<'a>> {
-        println!("FINISHED TABLES TOTAL => {}", &schema_info.len());
         let mut database_tables = Vec::new();
 
         for mapped_table in &schema_info {
@@ -356,7 +355,7 @@ impl DatabaseSyncOperations {
                     // We push a new column operation to the collection for each one
                     if columns_in_table.contains(&field.field_name).not() {
                         self.operations.push(
-Box::new(
+                            Box::new(
                                 ColumnOperation::CreateColumn(
                                     table_name.clone(), field.clone(),
                                 )
@@ -513,7 +512,6 @@ Box::new(
                             self.constrains_operations.push(
                                 Box::new(
                                     TableOperation::DeleteTableForeignKey(
-                                        // // table_with_foreign_key,constrain_name
                                         table_name.clone(), database_field.foreign_key_name.as_ref().unwrap().to_string(),
                                     )
                                 )
@@ -546,7 +544,6 @@ Box::new(
             }
         }
 
-        // println!("\nOperations to do on database: {:?}", &self.operations);
         println!("\nOperations to do on database: {:?}, follow by contrain operations {:?}", &self.operations, &self.constrains_operations);
         for operation in &self.operations {
             operation.execute().await
@@ -658,20 +655,20 @@ impl CanyonRegisterEntity {
     ///
     /// ```
     /// let my_id_field =  CanyonRegisterEntityField {
-    ///                     field_name: "id".to_string(),
-    ///                     field_type: "i32".to_string(),
-    ///                     annotation: None
-    ///                     };
+    ///                         field_name: "id".to_string(),
+    ///                         field_type: "i32".to_string(),
+    ///                         annotation: None
+    ///                      };
     ///
     /// let my_name_field =  CanyonRegisterEntityField {
-    ///                     field_name: "name".to_string(),
-    ///                     field_type: "String".to_string(),
-    ///                     annotation: None
-    ///                     };
+    ///                          field_name: "name".to_string(),
+    ///                          field_type: "String".to_string(),
+    ///                          annotation: None
+    ///                      };
     ///
     /// let my_canyon_register_entity = CanyonRegisterEntity {
-    ///                                 entity_name: String,
-    ///                                 entity_fields: vec![my_id_field,my_name_field]
+    ///                                    entity_name: String,
+    ///                                    entity_fields: vec![my_id_field,my_name_field]
     ///                                 };
     ///
     ///
@@ -720,19 +717,19 @@ impl CanyonRegisterEntityField {
     /// Basic use:
     /// ```
     /// let my_name_field =  CanyonRegisterEntityField {
-    ///                     field_name: "name".to_string(),
-    ///                     field_type: "String".to_string(),
-    ///                     annotation: None
-    ///                     };
+    ///                          field_name: "name".to_string(),
+    ///                          field_type: "String".to_string(),
+    ///                          annotation: None
+    ///                      };
     ///
     /// assert_eq!("TEXT NOT NULL", to_postgres_syntax.field_type_to_postgres());
     /// ```
     /// Also support Option:
     /// ```
     /// let my_age_field =  CanyonRegisterEntityField {
-    ///                     field_name: "age".to_string(),
-    ///                     field_type: "Option<i32>".to_string(),
-    ///                     annotation: None
+    ///                        field_name: "age".to_string(),
+///                            field_type: "Option<i32>".to_string(),
+    ///                        annotation: None
     ///                     };
     ///
     /// assert_eq!("INTEGER", to_postgres_syntax.field_type_to_postgres());
@@ -767,14 +764,12 @@ impl CanyonRegisterEntityField {
 
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
     fn to_postgres_id_syntax(&self) -> String {
-
         let postgres_datatype_syntax = Self::to_postgres_syntax(self);
 
         format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)
     }
 
     pub fn field_type_to_postgres(&self) -> String {
-
         let column_postgres_syntax = match self.field_name.as_str() {
             "id" => Self::to_postgres_id_syntax(self),
             _ => Self::to_postgres_syntax(self),
@@ -792,7 +787,7 @@ pub struct DatabaseDataRows {
     pub columns_types: HashMap<String, String>,
 }
 
-/* Models that represents the database entities that belongs to the current schema */
+/// Models that represents the database entities that belongs to the current schema
 #[derive(Debug)]
 pub struct DatabaseTable<'a> {
     pub table_name: String,

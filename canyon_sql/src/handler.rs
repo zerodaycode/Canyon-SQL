@@ -135,7 +135,6 @@ impl<'a> CanyonHandler<'a> {
     /// them into a collection of "Table" entities that represents the a real database
     /// table
     fn generate_mapped_table_entities(schema_info: Vec<RowTable>) -> Vec<DatabaseTable<'a>> {
-        println!("FINISHED TABLES TOTAL => {}", &schema_info.len());
         let mut database_tables = Vec::new();
 
         for mapped_table in &schema_info {
