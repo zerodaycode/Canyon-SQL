@@ -1,7 +1,6 @@
 /// Provides helpers to build the #[canyon] procedural like attribute macro
 
 use proc_macro2::TokenStream;
-use syn::Block;
 use quote::quote;
 
 use canyon_observer::QUERIES_TO_EXECUTE;
@@ -36,21 +35,3 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     
     canyon_manager_tokens.push(tokens)    
 }
-
-/// Generates the TokenStream that has the code written by the user
-/// in the `fn main()`
-pub fn _user_body_builder(func_body: Box<Block>, macro_tokens: &mut Vec<TokenStream>) {
-    // Gets a Vec<Stmt> with all the staments in the body of the fn
-    let function_statements = func_body.stmts;
-    
-    for stmt in function_statements {
-        let quote = quote! {#stmt};
-        let quoterino: TokenStream = quote
-            .to_string()
-            .parse()
-            .unwrap();
-
-        macro_tokens.push(quoterino)
-    }
-}
-
