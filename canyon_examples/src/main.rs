@@ -6,9 +6,9 @@ pub mod tournaments;
 use leagues::*;
 use tournaments::*;
 
-/// The entry point of a Canyon managed program.
+/// The `#[canyon]` macro represents the entry point of a Canyon managed program.
 /// 
-/// Go read the oficial docs for more info about the `#[canyon]` annotation (not ready doc yet)
+/// Go read the oficial docs for more info about the `#[canyon]` annotation (not docs yet)
 /// 
 /// TODO Docs explaining the virtues of `#[canyon]`, the `full managed state`
 /// and the `just Crud operations` option
@@ -24,14 +24,49 @@ fn main() {
     */
     // _wire_data_on_schema().await;
 
-    let all_leagues: Vec<Leagues> = Leagues::find_all().await;
-    // println!("Leagues elements: {:?}", &all_leagues);
+    /*
+        The most basic usage pattern.
+        Finds all elements on a type T, if the type its annotated with the
+        #[derive(Debug, Clone, CanyonCrud, CanyonMapper)] derive macro
 
-    let all_leagues_as_querybuilder = Leagues::find_all_query()
-        .where_clause(LeaguesFields::id(1), Comp::Eq)
+        This automatically returns a collection (Vector) of elements found
+        after query the database, automatically desearializating the returning
+        rows into elements of type T
+    */
+    let _all_leagues: Vec<League> = League::find_all().await;
+    // println!("Leagues elements: {:?}", &_all_leagues);
+
+    /*
+        Canyon also has a powerful querybuilder.
+        Every associated function or method provided through the macro implementations
+        that returns a QueryBuilder type can be used as a raw builder to construct
+        the query that Canyon will use to retrive data from the database.
+
+        One really important thing to note it's that any struct annotated with the
+        `[#canyon_entity]` annotation will generate and enumeration following the 
+        convention: Type identifier + Fields holding variants to identify every
+        field that the type has.
+
+        So for a -> 
+            pub struct League { /* fields */ }
+        an enum with the fields as variants its generated ->
+            pub enum LeagueFields { /* variants */ }
+
+        So you must bring into scope `use::/* path to my type .rs file */::TypeFields`
+        or simply `use::/* path to my type .rs file */::*` with a wildcard import.
+        
+        The querybuilder methods usually accept one of the variants of the enum to make a filter
+        for the SQL clause, and a variant of the Canyon's `Comp` enum type, which indicates
+        how the comparation element on the filter clauses will be 
+    */
+    let _all_leagues_as_querybuilder = League::find_all_query()
+        .where_clause(
+            LeagueFields::id(1), // This will create a filter -> `WHERE type.id = 1`
+            Comp::Eq // where the `=` symbol it's given by this variant
+        )
         .query()
         .await;
-    // println!("Leagues elements QUERYBUILDER: {:?}", &all_leagues_as_querybuilder);
+    // println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
     // Uncomment to see the example of find by a Fk relation
     _search_data_by_fk_example().await;
@@ -63,7 +98,7 @@ fn main() {
 /// ``` 
 async fn _wire_data_on_schema() {
     // Data for the examples
-    let lec: Leagues = Leagues {
+    let lec: League = League {
         id: 1,
         ext_id: 1,
         slug: "LEC".to_string(),
@@ -72,7 +107,7 @@ async fn _wire_data_on_schema() {
         image_url: "https://lec.eu".to_string(),
     };
 
-    let lck: Leagues = Leagues {
+    let lck: League = League {
         id: 2,
         ext_id: 2,
         slug: "LCK".to_string(),
@@ -108,10 +143,11 @@ async fn _wire_data_on_schema() {
 /// 
 /// So, in the example, the struct `Tournament` has a `ForeignKey` annotation
 /// in it's `league` field, which holds a value relating the data on the `id` column
-/// on the table `League` 
+/// on the table `League`, so Canyon will generate an associated function following the convenction
+/// `Type::search_by__name_of_the_related_table` 
 async fn _search_data_by_fk_example() {
     // Data for the examples
-    let lec: Leagues = Leagues {
+    let lec: League = League {
         id: 1,
         ext_id: 1,
         slug: "LEC".to_string(),
@@ -120,6 +156,15 @@ async fn _search_data_by_fk_example() {
         image_url: "https://lec.eu".to_string(),
     };
 
-    let tournamens_by_foreign = Tournaments::search_by__leagues(&lec).await;
-    println!("Tournament elements FK: {:?}", &tournamens_by_foreign);
+    // TODO The direct FK should be an instance method, as tournament.search_league
+    // TODO Should not be a Vec<League>. This search should return an unique record.
+    let related_tournaments_league: Vec<League> = Tournament::search_leagues(&lec).await;
+    println!("The related League: {:?}", &related_tournaments_league);
+
+    // TODO The reverse side of the FK should be implemented on League, not in tournament
+    // EX: League::search_related__tournaments(&lec)
+    // TODO Should be also an instance method? The lookage query w'd be based on the ID
+    // like -> SELECT * FROM TOURNAMENT t WHERE t.league = (value of the field)
+    let tournaments_by_reverse_foreign: Vec<Tournament> = Tournament::search_by__league(&lec).await;
+    println!("Tournament elements by reverse FK: {:?}", &tournaments_by_reverse_foreign);
 }

@@ -132,30 +132,9 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         ).await
     }
 
+
     /// Performs a search over some table pointed with a ForeignKey annotation
     async fn __search_by_foreign_key(
-        table: &str, 
-        column: &str,
-        lookage_value: String
-    ) -> DatabaseResult<T> {
-
-        let stmt = format!(
-            "SELECT * FROM {} WHERE {} = {}", 
-            table,
-            column,
-            lookage_value
-        );
-
-        println!("Foreign Key query: {:?}", &stmt);
-
-        Self::query(
-            &stmt[..],
-            &[]
-        ).await
-    }
-
-    /// Performs a search over some table pointed with a ForeignKey annotation
-    async fn __search_by_reverse_side_foreign_key(
         related_table: &str, 
         related_column: &str,
         lookage_value: String
@@ -169,6 +148,28 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         );
 
         println!("Foreign Key query: {:?}", &stmt);
+
+        Self::query(
+            &stmt[..],
+            &[]
+        ).await
+    }
+
+    /// Performs a search over the side that contains the ForeignKey annotation
+    async fn __search_by_reverse_side_foreign_key(
+        table: &str, 
+        column: &str,
+        lookage_value: String
+    ) -> DatabaseResult<T> {
+
+        let stmt = format!(
+            "SELECT * FROM {} WHERE {} = {}", 
+            table,
+            column,
+            lookage_value
+        );
+
+        println!("Reverse Foreign Key query: {:?}", &stmt);
 
         Self::query(
             &stmt[..],

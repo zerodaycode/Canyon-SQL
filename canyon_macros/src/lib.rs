@@ -34,7 +34,13 @@ use canyon_observer::{
      handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
 };
 
-use crate::{query_operations::select::generate_find_by_fk_tokens, utils::function_parser::FunctionParser};
+use crate::{
+    query_operations::select::{
+        generate_find_by_foreign_key_tokens,
+        generate_find_by_reverse_foreign_key_tokens
+    }, 
+    utils::function_parser::FunctionParser
+};
 
 
 /// Macro for handling the entry point to the program. 
@@ -154,8 +160,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let update_tokens = generate_update_tokens(&macro_data);
     
 
-    // Search by foreign key as Vec, cause Canyon supports multiple fields having FK annotation
-    let search_by_fk_tokens: Vec<TokenStream> = generate_find_by_fk_tokens(&macro_data);
+    // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
+    let search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens();
+    let search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
@@ -188,6 +195,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The search by FK impl
             #(#search_by_fk_tokens),*
 
+            // The search by reverse side of the FK impl
+            #(#search_by_revese_fk_tokens),*
         }
 
         #generated_enum_type_for_fields

@@ -1,7 +1,3 @@
-/// Provides the necessary entities to let Canyon perform and develop
-/// it's full potential, completly managing all the entities written by
-/// the user and annotated with the `#[canyon_entity]`
-
 use std::collections::HashMap;
 use std::mem::replace;
 use async_trait::async_trait;
@@ -18,6 +14,9 @@ use crate::results::DatabaseResult;
 
 use canyon_observer::CANYON_REGISTER;
 
+/// Provides the necessary entities to let Canyon perform and develop
+/// it's full potential, completly managing all the entities written by
+/// the user and annotated with the `#[canyon_entity]`
 #[derive(PartialDebug)]
 pub struct CanyonHandler<'a> {
     pub canyon_tables: Vec<CanyonRegisterEntity>,
