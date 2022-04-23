@@ -155,26 +155,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     
 
     // Search by foreign key as Vec, cause Canyon supports multiple fields having FK annotation
-    let mut search_by_fk_tokens: Vec<TokenStream> = Vec::new();
-
-    for element in unsafe { &CANYON_REGISTER_ENTITIES } {
-        for field in &element.entity_fields {
-            if field.annotation.is_some() {
-                println!("Attribute: {}", &field.annotation.as_ref().unwrap());
-            }
-            match field.annotation.as_ref() {
-                Some(annotation) => {
-                    if annotation.starts_with("Annotation: ForeignKey") {
-                        search_by_fk_tokens.push(
-                            generate_find_by_fk_tokens(&macro_data, annotation.to_owned())
-                        )
-                    }
-                }
-                None => (),
-            }
-        }
-    }
-
+    let search_by_fk_tokens: Vec<TokenStream> = generate_find_by_fk_tokens(&macro_data);
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 

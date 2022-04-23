@@ -4,7 +4,7 @@ pub mod leagues;
 pub mod tournaments;
 
 use leagues::*;
-// use tournaments::*;
+use tournaments::*;
 
 /// The entry point of a Canyon managed program.
 /// 
@@ -33,6 +33,7 @@ fn main() {
         .await;
     // println!("Leagues elements QUERYBUILDER: {:?}", &all_leagues_as_querybuilder);
 
+    _search_data_by_fk_example().await;
 }
 
 /// Example of usage of the `.insert()` Crud operation. Also, allows you
@@ -101,24 +102,24 @@ async fn _wire_data_on_schema() {
 /// TODO Example not ready yet
 async fn _search_data_by_fk_example() {
     // Data for the examples
-    // let lec: Leagues = Leagues {
-    //     id: 1,
-    //     ext_id: 1,
-    //     slug: "LEC".to_string(),
-    //     name: "League Europe Champions".to_string(),
-    //     region: "EU West".to_string(),
-    //     image_url: "https://lec.eu".to_string(),
-    // };
+    let lec: Leagues = Leagues {
+        id: 1,
+        ext_id: 1,
+        slug: "LEC".to_string(),
+        name: "League Europe Champions".to_string(),
+        region: "EU West".to_string(),
+        image_url: "https://lec.eu".to_string(),
+    };
 
-    // let tournament_test = Tournaments {
-    //         id: 1,
-    //         ext_id: 1, 
-    //         slug: "slug".to_string(),
-    //         // start_date: NaiveDate::from_ymd(2015, 3, 14), 
-    //         // end_date: NaiveDate::from_ymd(2015, 3, 14),
-    //         league: 1
-    // };
+    let tournament_test = Tournaments {
+            id: 1,
+            ext_id: 1, 
+            slug: "slug".to_string(),
+            // start_date: NaiveDate::from_ymd(2015, 3, 14), 
+            // end_date: NaiveDate::from_ymd(2015, 3, 14),
+            league: 1
+    };
 
-    // let tests_foreign = Tournaments::search_by_fk(&league_test).await;
-    // println!("TestForeign elements FK: {:?}", &tests_foreign);
+    let tournamens_by_foreign = Tournaments::search_by__leagues(&lec).await;
+    println!("Tournament elements FK: {:?}", &tournamens_by_foreign);
 }
