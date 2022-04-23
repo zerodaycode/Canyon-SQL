@@ -96,11 +96,14 @@ pub fn generate_find_by_fk_tokens(macro_data: &MacroTokens) -> Vec<TokenStream> 
                     // Generate and identifier for the method based on the convention of "search_by__" (note the double underscore)
                     // plus the 'table_name' property of the ForeignKey annotation
                     // TODO Implement the method_name_generator
-                    let quoted_method_name: TokenStream = quote! { #method_name }.into();
+                    let method_name_ident = proc_macro2::Ident::new(
+                        &method_name, proc_macro2::Span::call_site()
+                    );
+                    let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
 
                     foreign_keys_tokens.push(
                         quote! {
-                            #vis async fn search_by__leagues<T>(value: &T) -> Vec<#ty> 
+                            #vis async fn #quoted_method_name<T>(value: &T) -> Vec<#ty> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
