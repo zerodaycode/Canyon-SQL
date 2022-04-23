@@ -728,7 +728,7 @@ impl CanyonRegisterEntityField {
     /// ```
     /// let my_age_field =  CanyonRegisterEntityField {
     ///                        field_name: "age".to_string(),
-///                            field_type: "Option<i32>".to_string(),
+    ///                        field_type: "Option<i32>".to_string(),
     ///                        annotation: None
     ///                     };
     ///

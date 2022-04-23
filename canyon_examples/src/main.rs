@@ -33,6 +33,7 @@ fn main() {
         .await;
     // println!("Leagues elements QUERYBUILDER: {:?}", &all_leagues_as_querybuilder);
 
+    // Uncomment to see the example of find by a Fk relation
     _search_data_by_fk_example().await;
 }
 
@@ -98,8 +99,16 @@ async fn _wire_data_on_schema() {
     */
 }
 
-/// Example of usage of a search by a given Foreign Key
-/// TODO Example not ready yet
+/// Example of usage for a search given an entity related throught the 
+/// `ForeignKey` annotation
+/// 
+/// Every struct that contains a `ForeignKey` annotation will have automatically
+/// implemented a method to find data by an entity that it's related
+/// through a foreign key relation.
+/// 
+/// So, in the example, the struct `Tournament` has a `ForeignKey` annotation
+/// in it's `league` field, which holds a value relating the data on the `id` column
+/// on the table `League` 
 async fn _search_data_by_fk_example() {
     // Data for the examples
     let lec: Leagues = Leagues {
@@ -109,15 +118,6 @@ async fn _search_data_by_fk_example() {
         name: "League Europe Champions".to_string(),
         region: "EU West".to_string(),
         image_url: "https://lec.eu".to_string(),
-    };
-
-    let tournament_test = Tournaments {
-            id: 1,
-            ext_id: 1, 
-            slug: "slug".to_string(),
-            // start_date: NaiveDate::from_ymd(2015, 3, 14), 
-            // end_date: NaiveDate::from_ymd(2015, 3, 14),
-            league: 1
     };
 
     let tournamens_by_foreign = Tournaments::search_by__leagues(&lec).await;
