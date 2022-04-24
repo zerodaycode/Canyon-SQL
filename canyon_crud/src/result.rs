@@ -43,17 +43,9 @@ impl<T: Debug> DatabaseResult<T> {
         self.wrapper.into_iter().for_each( |row| {
             results.push( row )
         });
+
         results
     }
-
-    // pub fn get_col_results(&'static self) -> (){
-    //     let mut results = Vec::new();
-    //     for (i, e) in self.wrapper.iter().enumerate() {
-    //         results.push(e.get::<'a, usize, &str>(i).to_owned());
-    //     }
-    //     // results
-    //     println!("Result 0: {:?}", results);
-    // }
 
     /// Returns how many rows contains the result of the query
     pub fn get_number_of_results(&self) -> i32 {

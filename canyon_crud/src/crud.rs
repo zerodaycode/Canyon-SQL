@@ -8,6 +8,8 @@ use crate::result::DatabaseResult;
 // use crate::query_elements::{Query, QueryBuilder};
 use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
+
+///! TODO DOCS
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
@@ -38,6 +40,7 @@ pub trait Transaction<T: Debug> {
     }
 }
 
+///! TODO DOCS
 #[async_trait]
 pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transaction<T> {
 

@@ -54,7 +54,8 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
         #vis async fn find_by_id(id: i32) -> #ty {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
                 .await
-                .as_response::<#ty>()[0].clone()
+                .as_response::<#ty>()
+                [0].clone()
         }
     }
 }
@@ -102,14 +103,19 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
 
                     foreign_keys_tokens.push(
                         quote! {
-                            pub async fn #quoted_method_name<T>(value: &T) -> Vec<#fk_ty> 
+                            pub async fn #quoted_method_name<T>(value: &T) -> Option<#fk_ty> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
-                                <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, lookage_value)
                                         .await
-                                        .as_response::<#fk_ty>()
+                                        .as_response::<#fk_ty>();
+                                
+                                match response {
+                                    n if n.len() == 0 => None,
+                                    _ => Some(response[0].clone())
+                                }
                             }
                         }
                     );
