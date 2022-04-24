@@ -60,6 +60,8 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     }
 }
 
+/// TODO Generate the remaining methods that should be available through the QueryBuilder
+
 
 /// Generates the TokenStream for build the __search_by_foreign_key() 
 /// CRUD associated function
@@ -87,8 +89,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
             
                     let fk_table = fk_table_column.get(0).unwrap().trim();
                     let fk_column = fk_table_column.get(1).unwrap().trim();
-                    let method_name = "search_".to_owned() + 
-                        &make_related_table_plural(fk_table_column.get(0).unwrap().trim());
+                    let method_name = "search_".to_owned() + fk_table_column.get(0).unwrap().trim();
 
                     // Generate and identifier for the method based on the convention of "search_related_types" 
                     // where types is a placeholder for the plural name of the type referenced
@@ -190,7 +191,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
 
 
 /// Helper to get the plural noun of a given table identifier
-fn make_related_table_plural(singular: &str) -> String {
+fn _make_related_table_plural(singular: &str) -> String {
     // TODO Generate the correct forms of the plural for a given identifier
     // For brevity, and for now, just adds an 's' to the end of the noun
     singular.to_owned() + "s"

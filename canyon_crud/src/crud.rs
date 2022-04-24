@@ -65,6 +65,8 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         Self::query(&stmt[..], &[&id]).await
     }
 
+    /// TODO Generate the remaining methods that should be available through the QueryBuilder
+
     /// Inserts the values of structure in the correlative table
     async fn __insert(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
 
@@ -100,18 +102,9 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         ).await
     }
 
-
-    /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete(table_name: &str, id: i32) -> DatabaseResult<T> {
-        
-        let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
-
-        Self::query(&stmt[..], &[&id]).await
-    }
-
     /// Updates an entity from the database that belongs to a current instance
     async fn __update(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
-
+        
         let mut vec_columns_values:Vec<String> = Vec::new();
         
         for (i, column_name) in fields.split(',').enumerate() {
@@ -134,8 +127,15 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             values
         ).await
     }
+    
+    /// Deletes the entity from the database that belongs to a current instance
+    async fn __delete(table_name: &str, id: i32) -> DatabaseResult<T> {
+        
+        let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
 
-
+        Self::query(&stmt[..], &[&id]).await
+    }
+    
     /// Performs a search over some table pointed with a ForeignKey annotation
     async fn __search_by_foreign_key(
         related_table: &str, 

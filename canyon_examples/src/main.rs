@@ -158,7 +158,6 @@ async fn _search_data_by_fk_example() {
     // TODO Care with the docs. Split in two examples the two fk ways
 
     // TODO The direct FK should be an instance method, as tournament.search_league
-    // TODO Should not be a Vec<League>. This search should return an unique record.
     // TODO ::search_leagues should not be plural
     let related_tournaments_league: Option<League> = Tournament::search_leagues(&lec).await;
     println!("The related League: {:?}", &related_tournaments_league);
