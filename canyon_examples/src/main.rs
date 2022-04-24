@@ -157,9 +157,23 @@ async fn _search_data_by_fk_example() {
     };
     // TODO Care with the docs. Split in two examples the two fk ways
 
+    // Explain that Canyon let's you annotate an entity with a FK but until a query, we 
+    // can't no secure that the parent really exists
+    // TODO Generate the inserts, updates and deletes with Foreign keys
+
     // TODO The direct FK should be an instance method, as tournament.search_league
-    // TODO ::search_leagues should not be plural
-    let related_tournaments_league: Option<League> = Tournament::search_leagues(&lec).await;
+    /// TODO Explain the two alteratives of having access to the method
+    let tournament_itce = Tournament {
+        id: 1,
+        ext_id: 4126494859789,
+        slug: "Slugaso".to_string(),
+        league: 1,
+    };
+    let tournament = Tournament::find_by_id(1).await;
+    let related_tournaments_league_method: Option<League> = tournament_itce.search_league().await;
+    println!("The related League: {:?}", &related_tournaments_league_method);
+    // As an associated function
+    let related_tournaments_league: Option<League> = Tournament::belongs_to(&lec).await;
     println!("The related League: {:?}", &related_tournaments_league);
 
     // TODO The reverse side of the FK should be implemented on League, not in tournament

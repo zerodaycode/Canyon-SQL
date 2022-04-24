@@ -140,7 +140,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     async fn __search_by_foreign_key(
         related_table: &str, 
         related_column: &str,
-        lookage_value: String
+        lookage_value: &str
     ) -> DatabaseResult<T> {
 
         let stmt = format!(

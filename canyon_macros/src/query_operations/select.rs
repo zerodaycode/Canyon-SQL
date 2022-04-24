@@ -62,9 +62,8 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 /// TODO Generate the remaining methods that should be available through the QueryBuilder
 
-
-/// Generates the TokenStream for build the __search_by_foreign_key() 
-/// CRUD associated function
+/// Generates the TokenStream for build the search by foreign key feature also as a method instance
+/// of a T type of as an associated function of the same T type
 pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
 
     let mut foreign_keys_tokens = Vec::new();
@@ -102,14 +101,35 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                     // convenction database table name
                     let fk_ty = database_table_name_to_struct_ident(fk_table);
 
+                    // The ident for the field that holds the FK relation
+                    let field_ident = proc_macro2::Ident::new(
+                        &field.field_name, proc_macro2::Span::call_site()
+                    );
+                    let field_value = quote! { &self.#field_ident }.to_string();
+
                     foreign_keys_tokens.push(
                         quote! {
-                            pub async fn #quoted_method_name<T>(value: &T) -> Option<#fk_ty> 
+                            /// The implementation of the search by a Foreign Key as a method instance
+                            pub async fn #quoted_method_name(&self) -> Option<#fk_ty> {
+                                let lookage_value = #field_value;
+                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                        .await
+                                        .as_response::<#fk_ty>();
+                                
+                                match response {
+                                    n if n.len() == 0 => None,
+                                    _ => Some(response[0].clone())
+                                }
+                            }
+                            
+                            /// The implementation of the search by a Foreign Key as an associated function
+                            pub async fn belongs_to<T>(value: &T) -> Option<#fk_ty> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
                                         .await
                                         .as_response::<#fk_ty>();
                                 
