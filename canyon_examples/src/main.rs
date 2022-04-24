@@ -145,36 +145,44 @@ async fn _wire_data_on_schema() {
 /// in it's `league` field, which holds a value relating the data on the `id` column
 /// on the table `League`, so Canyon will generate an associated function following the convenction
 /// `Type::search_by__name_of_the_related_table` 
+/// 
+/// TODO Upgrade DOCS according the two new ways of perform the fk search
 async fn _search_data_by_fk_example() {
-    // Data for the examples
-    let lec: League = League {
-        id: 1,
-        ext_id: 1,
-        slug: "LEC".to_string(),
-        name: "League Europe Champions".to_string(),
-        region: "EU West".to_string(),
-        image_url: "https://lec.eu".to_string(),
-    };
     // TODO Care with the docs. Split in two examples the two fk ways
 
-    // Explain that Canyon let's you annotate an entity with a FK but until a query, we 
+    // TODO Explain that Canyon let's you annotate an entity with a FK but until a query, we 
     // can't no secure that the parent really exists
     // TODO Generate the inserts, updates and deletes with Foreign keys
 
-    // TODO The direct FK should be an instance method, as tournament.search_league
-    /// TODO Explain the two alteratives of having access to the method
     let tournament_itce = Tournament {
         id: 1,
         ext_id: 4126494859789,
         slug: "Slugaso".to_string(),
         league: 1,
     };
-    let tournament = Tournament::find_by_id(1).await;
     let related_tournaments_league_method: Option<League> = tournament_itce.search_league().await;
-    println!("The related League: {:?}", &related_tournaments_league_method);
-    // As an associated function
+    println!("The related League as method: {:?}", &related_tournaments_league_method);
+
+    // Also, the common usage w'd be operating on data retrieve from the database, `but find_by_id`
+    // returns an Option<T>, so an Option destructurement should be necessary
+    let tournament: Option<Tournament> = Tournament::find_by_id(1).await;
+    if let Some(trnmt) = tournament {
+        let result: Option<League> = trnmt.search_league().await;
+        println!("The related League as method if tournament is some: {:?}", &result);
+    } else { println!("`tournament` variable contains a None value") }
+    
+    // The alternative as an associated function, passing as argument a type <K: ForeignKeyable> 
+    // Data for the examples
+    let lec: League = League {
+        id: 4,
+        ext_id: 1,
+        slug: "LEC".to_string(),
+        name: "League Europe Champions".to_string(),
+        region: "EU West".to_string(),
+        image_url: "https://lec.eu".to_string(),
+    };
     let related_tournaments_league: Option<League> = Tournament::belongs_to(&lec).await;
-    println!("The related League: {:?}", &related_tournaments_league);
+    println!("The related League as associated function: {:?}", &related_tournaments_league);
 
     // TODO The reverse side of the FK should be implemented on League, not in tournament
     // EX: League::search_related__tournaments(&lec)

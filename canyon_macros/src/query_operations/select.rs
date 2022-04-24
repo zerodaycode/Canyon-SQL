@@ -51,11 +51,15 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_by_id(id: i32) -> #ty {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
+        #vis async fn find_by_id(id: i32) -> Option<#ty> {
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
                 .await
-                .as_response::<#ty>()
-                [0].clone()
+                .as_response::<#ty>();
+                
+            match response {
+                n if n.len() == 0 => None,
+                _ => Some(response[0].clone())
+            }
         }
     }
 }
@@ -105,13 +109,13 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                     let field_ident = proc_macro2::Ident::new(
                         &field.field_name, proc_macro2::Span::call_site()
                     );
-                    let field_value = quote! { &self.#field_ident }.to_string();
+                    let field_value = quote! { &self.#field_ident };
 
                     foreign_keys_tokens.push(
                         quote! {
                             /// The implementation of the search by a Foreign Key as a method instance
                             pub async fn #quoted_method_name(&self) -> Option<#fk_ty> {
-                                let lookage_value = #field_value;
+                                let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
                                         .await
