@@ -172,7 +172,7 @@ async fn _search_data_by_fk_example() {
     } else { println!("`tournament` variable contains a None value") }
     
     // The alternative as an associated function, passing as argument a type <K: ForeignKeyable> 
-    // Data for the examples
+    // Data for the examples. Obviously will also work passing the above `tournament` variable as argument
     let lec: League = League {
         id: 4,
         ext_id: 1,
@@ -188,6 +188,10 @@ async fn _search_data_by_fk_example() {
     // EX: League::search_related__tournaments(&lec)
     // TODO Should be also an instance method? The lookage query w'd be based on the ID
     // like -> SELECT * FROM TOURNAMENT t WHERE t.league = (value of the field)
+    let tournaments_belongs_to_league: Vec<Tournament> = Tournament::search_by__league(&lec).await;
+    println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
+
+    // Method implementation over a League instance (prefered one)
     let tournaments_by_reverse_foreign: Vec<Tournament> = Tournament::search_by__league(&lec).await;
     println!("Tournament elements by reverse FK: {:?}", &tournaments_by_reverse_foreign);
 }

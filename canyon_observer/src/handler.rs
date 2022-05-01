@@ -12,10 +12,15 @@ use regex::Regex;
 
 use canyon_crud::crud::Transaction;
 
-use super::{CANYON_REGISTER_ENTITIES, QUERIES_TO_EXECUTE};
+use super::{
+    CANYON_REGISTER_ENTITIES, 
+    QUERIES_TO_EXECUTE,
+    memory::CanyonMemory
+};
 
 #[derive(PartialDebug)]
 pub struct CanyonHandler<'a> {
+    pub canyon_memory: CanyonMemory,
     pub canyon_tables: Vec<CanyonRegisterEntity>,
     pub database_tables: Vec<DatabaseTable<'a>>,
 }
@@ -28,6 +33,7 @@ impl<'a> CanyonHandler<'a> {
         let b = Self::fetch_database_status().await;
 
         let self_ = Self {
+            canyon_memory: CanyonMemory::remember().await,
             canyon_tables: a,
             database_tables: b,
         };

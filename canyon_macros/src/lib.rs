@@ -55,10 +55,10 @@ use crate::{
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     // Parses the function that this attribute is attached to
     let func_res = syn::parse::<FunctionParser>(input);
-
     if func_res.is_err() {
-        return quote! {fn main() {}}.into()
+        return quote! { fn main() {} }.into()
     }
+
     
     let func = func_res.ok().unwrap();
     let sign = func.clone().sig;
@@ -99,14 +99,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let entity_res = syn::parse::<CanyonEntity>(input);
     
     if entity_res.is_err() {
-        // let struct_name = syn::parse_macro_input!(input_cloned);
-        println!("Leaving parsing WITH error");
         return entity_res.err().unwrap().into_compile_error().into()
     }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
     let entity = entity_res.ok().unwrap();
-    println!("Parse continues");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
