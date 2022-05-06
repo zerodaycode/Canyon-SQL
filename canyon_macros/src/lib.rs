@@ -108,11 +108,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
     let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
-    // get_field_attr(&entity); // TODO Just for debug attached annotations
-
-    // Notifies the observer that an observable must be registered on the system
-    // In other words, adds the data of the structure to the Canyon Register
-    println!("Observable of new register <{}> added to the register", &entity.struct_name.to_string());
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
@@ -134,7 +129,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Fill the register with the data of the attached struct
     unsafe { CANYON_REGISTER_ENTITIES.push(new_entity) }
-    println!("Elements on the register: {:?}", unsafe { &CANYON_REGISTER_ENTITIES });
 
     // Struct name as Ident for wire in the macro
     let ty = entity.struct_name;

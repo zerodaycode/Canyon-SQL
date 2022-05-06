@@ -92,9 +92,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             "INSERT INTO {} ({}) VALUES ({})", 
             table_name, fields_without_id_chars.as_str(), field_values
         );
-
-        println!("\nINSERT STMT: {}", &stmt);
-        println!("FIELDS: {}", &fields);
         
         Self::query(
             &stmt[..], 
@@ -150,8 +147,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             lookage_value
         );
 
-        println!("Foreign Key query: {:?}", &stmt);
-
         Self::query(
             &stmt[..],
             &[]
@@ -171,8 +166,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             column,
             lookage_value
         );
-
-        println!("Reverse Foreign Key query: {:?}", &stmt);
 
         Self::query(
             &stmt[..],

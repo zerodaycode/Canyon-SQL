@@ -3,6 +3,8 @@ use walkdir::WalkDir;
 use std::fs;
 use canyon_crud::crud::Transaction;
 
+use crate::QUERIES_TO_EXECUTE;
+
 /// Convenient struct that contains the necessary data and operations to implement
 /// the `Canyon Memory`.
 /// 
@@ -61,21 +63,115 @@ impl CanyonMemory {
         ).await
         .wrapper;
 
+        // Manually maps the results
+        let mut memory_db_rows = Vec::new();
+        // let mut memory_rows_to_delete = Vec::new();
+        // Cando non a encontres no parseo de archivos, acumulas no array
+        // Tremendísima query con WHERE IN (45)
         for row in mem_results {
-            println!();
-            println!("Mem Row: {:?}", row)
+            let db_row =  CanyonMemoryDatabaseRow {
+                id: row.get::<&str, i32>("id"),
+                filename: row.get::<&str, String>("filename"),
+                struct_name: row.get::<&str, String>("struct_name"),
+            };
+            memory_db_rows.push(db_row);
         }
         
 
+        // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
             memory: HashMap::new()
         };
+        Self::find_canyon_entity_annotated_structs(&mut mem).await;
 
+
+        // Insert into the memory table the new discovered entities
+        // Care, insert the new ones, delete the olds
+        // Also, updates the registry when the fields changes
+        let mut values_to_insert = String::new();
+        let mut updates = Vec::new();
+
+        for (filename, struct_name) in &mem.memory {
+            // When the filename and the struct hasn't been modified and are already on db
+            let already_in_db = memory_db_rows
+                .iter()
+                .any( |el| 
+                    {
+                        (el.filename == *filename && el.struct_name == *struct_name) ||
+                        (
+                            (el.filename != *filename && el.struct_name == *struct_name) ||
+                            (el.filename == *filename && el.struct_name != *struct_name)
+                        )
+                    }
+                );
+            if !already_in_db {
+                values_to_insert.push_str(
+                    format!("('{}', '{}'),", filename, struct_name).as_str()
+                );
+            }
+            // When the struct or the filename it's already on db but one of the two has been modified
+            let need_to_update = memory_db_rows
+                .iter()
+                .filter( |el| 
+                    {
+                        (el.filename == *filename || el.struct_name == *struct_name) &&
+                        !(el.filename == *filename && el.struct_name == *struct_name)
+                    }
+                ).next();
+
+            if let Some(update) = need_to_update {
+                updates.push(struct_name);
+                unsafe { QUERIES_TO_EXECUTE.push(
+                    format!(
+                        "UPDATE canyon_memory SET filename = '{}', struct_name = '{}'\
+                            WHERE id = {}", 
+                        filename, struct_name, update.id
+                    )
+                )};
+            }
+        }
+        
+
+        if values_to_insert != String::new() {
+            values_to_insert.pop();
+            values_to_insert.push_str(";");
+            unsafe { QUERIES_TO_EXECUTE.push(
+                format!(
+                    "INSERT INTO canyon_memory (filename, struct_name) VALUES {}", 
+                    values_to_insert
+                )
+            )};
+        }
+
+        // Deletes the records when a table is dropped on the previous Canyon run
+        let in_memory = mem.memory.values()
+            .collect::<Vec<&String>>();
+        memory_db_rows.into_iter()
+            .for_each( |db_row|  
+                {
+                    if !in_memory.contains(&&db_row.struct_name) &&
+                        !updates.contains(&&db_row.struct_name)
+                    {
+                        unsafe { QUERIES_TO_EXECUTE.push(
+                            format!(
+                                "DELETE FROM canyon_memory WHERE struct_name = '{}'", 
+                                db_row.struct_name
+                            )
+                        )};
+                    }
+                }
+            );
+
+        mem
+    }
+
+    /// Parses the Rust source code files to find the one who contains Canyon entities
+    /// ie -> annotated with `#{canyon_entity}`
+    async fn find_canyon_entity_annotated_structs(&mut self) {
         for file in WalkDir::new("./src").into_iter().filter_map(|file| file.ok()) {
             if file.metadata().unwrap().is_file() 
                 && file.path().display().to_string().ends_with(".rs") 
             {
-                // println!("{} -> RS source file", file.path().display());
                 // Opening the source code file
                 let contents = fs::read_to_string(file.path())
                     .expect("Something went wrong reading the file");
@@ -92,9 +188,8 @@ impl CanyonMemory {
                         )
                     }
                     if line.contains("#[") && line.contains("canyon_entity]") 
-                        && !line.starts_with("//")
+                        && !line.starts_with("//") 
                     {
-                        // println!("Line:{}", line);
                         canyon_entity_macro_counter += 1;
                     }
                 }
@@ -103,7 +198,7 @@ impl CanyonMemory {
                 if canyon_entity_macro_counter > 1 {
                     // compile_error!(...)
                 } else if canyon_entity_macro_counter == 1 {
-                    mem.memory.insert(
+                    self.memory.insert(
                         file.path()
                             .display()
                             .to_string()
@@ -118,34 +213,6 @@ impl CanyonMemory {
                 }
             }
         }
-
-        println!("MEM: {:?}", &mem);
-
-        // Insert into the memory table the new discovered entities
-        // Care, insert the new ones, delete the old
-        let mut values_to_insert = String::new();
-        for (filename, struct_name) in &mem.memory {
-            values_to_insert.push_str(
-                format!("('{}', '{}'),", filename, struct_name).as_str()
-            );
-        }
-        // Replace the last ',' for a ';'
-        values_to_insert.pop();
-        values_to_insert.push_str(";");
-        println!("Values to insert: \n{:?}", &values_to_insert);
-
-        let insert_memory_result = Self::query(
-            format!(
-                "INSERT INTO canyon_memory (filename, struct_name) VALUES {}", 
-                values_to_insert
-            ).as_str(), 
-            &[]
-        ).await
-        .wrapper;
-
-        println!("Insert memory result: {:?}", &insert_memory_result);
-
-        mem
     }
 
     /// Generates, if not exists the `canyon_memory` table
@@ -158,4 +225,13 @@ impl CanyonMemory {
             &[]
         ).await.wrapper;
     }
+}
+
+
+/// Represents a single row from the `canyon_memory` table
+#[derive(Debug)]
+struct CanyonMemoryDatabaseRow {
+    id: i32,
+    filename: String,
+    struct_name: String
 }

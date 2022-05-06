@@ -59,7 +59,7 @@ pub fn generate_fields_names_for_enum(canyon_entity: &CanyonEntity) -> TokenStre
 
 
 /// Helper to debug the attached attributes to a field
-pub fn get_field_attr(entity: &CanyonEntity) -> () {
+pub fn _get_field_attr(entity: &CanyonEntity) -> () {
     let _field_attributes = entity
         .attributes
         .iter()

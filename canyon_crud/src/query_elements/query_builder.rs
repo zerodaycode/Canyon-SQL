@@ -1,12 +1,10 @@
 use std::fmt::Debug;
 
-use tokio_postgres::types::ToSql;
-
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
     crud::{Transaction, CrudOperations},
-    bounds::FieldIdentifier, mapper::RowMapper
+    bounds::{FieldIdentifier, InClauseValues}, mapper::RowMapper
 };
 
 
@@ -70,8 +68,8 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
             .collect::<Vec<String>>();
 
         let where_ = values.get(0).unwrap().to_string() + 
-            &comp.as_string()[..] + 
-            values.get(1).unwrap(); 
+            &comp.as_string()[..] + "'" +
+            values.get(1).unwrap() + "'"; 
         
         self.where_clause.push_str(
             &*(String::from(" WHERE ") + where_.as_str())
@@ -95,6 +93,3 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         self
     }
 }
-
-/// To define trait objects that helps to relates the necessary bounds n the 'in_clause`
-pub trait InClauseValues: ToSql + ToString {}
