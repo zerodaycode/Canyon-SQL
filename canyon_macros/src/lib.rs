@@ -34,7 +34,13 @@ use canyon_observer::{
      handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
 };
 
-use crate::{query_operations::select::generate_find_by_fk_tokens, utils::function_parser::FunctionParser};
+use crate::{
+    query_operations::select::{
+        generate_find_by_foreign_key_tokens,
+        generate_find_by_reverse_foreign_key_tokens
+    }, 
+    utils::function_parser::FunctionParser
+};
 
 
 /// Macro for handling the entry point to the program. 
@@ -49,10 +55,10 @@ use crate::{query_operations::select::generate_find_by_fk_tokens, utils::functio
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     // Parses the function that this attribute is attached to
     let func_res = syn::parse::<FunctionParser>(input);
-
     if func_res.is_err() {
-        return quote! {fn main() {}}.into()
+        return quote! { fn main() {} }.into()
     }
+
     
     let func = func_res.ok().unwrap();
     let sign = func.clone().sig;
@@ -90,16 +96,18 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let input_cloned = input.clone();
-    let entity = syn::parse_macro_input!(input as CanyonEntity);
+    let entity_res = syn::parse::<CanyonEntity>(input);
+    
+    if entity_res.is_err() {
+        return entity_res.err().unwrap().into_compile_error().into()
+    }
+
+    // No errors detected on the parsing, so we can safely unwrap the parse result
+    let entity = entity_res.ok().unwrap();
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
     let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
-    // get_field_attr(&entity); // TODO Just for debug attached annotations
-
-    // Notifies the observer that an observable must be registered on the system
-    // In other words, adds the data of the structure to the Canyon Register
-    println!("Observable of new register <{}> added to the register", &entity.struct_name.to_string());
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
@@ -121,7 +129,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Fill the register with the data of the attached struct
     unsafe { CANYON_REGISTER_ENTITIES.push(new_entity) }
-    println!("Elements on the register: {:?}", unsafe { &CANYON_REGISTER_ENTITIES });
 
     // Struct name as Ident for wire in the macro
     let ty = entity.struct_name;
@@ -144,27 +151,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let update_tokens = generate_update_tokens(&macro_data);
     
 
-    // Search by foreign key as Vec, cause Canyon supports multiple fields having FK annotation
-    let mut search_by_fk_tokens: Vec<TokenStream> = Vec::new();
-
-    for element in unsafe { &CANYON_REGISTER_ENTITIES } {
-        for field in &element.entity_fields {
-            if field.annotation.is_some() {
-                println!("Attribute: {}", &field.annotation.as_ref().unwrap());
-            }
-            match field.annotation.as_ref() {
-                Some(annotation) => {
-                    if annotation.starts_with("Annotation: ForeignKey") {
-                        search_by_fk_tokens.push(
-                            generate_find_by_fk_tokens(&macro_data, annotation.to_owned())
-                        )
-                    }
-                }
-                None => (),
-            }
-        }
-    }
-
+    // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
+    let search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens();
+    let search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
@@ -197,6 +186,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The search by FK impl
             #(#search_by_fk_tokens),*
 
+            // The search by reverse side of the FK impl
+            #(#search_by_revese_fk_tokens),*
         }
 
         #generated_enum_type_for_fields
@@ -220,7 +211,7 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         syn::Data::Struct(ref _s) => (),
         _ => return syn::Error::new(
             ast.ident.span(), 
-            "CanyonCRUD only works with Structs"
+            "CanyonCrud only works with Structs"
         ).to_compile_error().into()
     }
 
@@ -239,7 +230,11 @@ fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::
     tokens.into()
 }
 
-/// proc-macro for annotate struct fields that holds a foreign key relation
+/// proc-macro for annotate struct fields that holds a foreign key relation.
+/// 
+/// So basically, if you have some `ForeignKey` attribute, annotate the parent
+/// struct (where the ForeignKey table property points) with this macro
+/// to make it able to work with compound table relations
 #[proc_macro_derive(ForeignKeyable)]
 pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Gets the data from the AST
@@ -322,7 +317,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     tokens.into()
 }
 
-/// Helper for generate the field data for the Custom Derives Macros
+/// Helper for generate the fields data for the Custom Derives Macros
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()

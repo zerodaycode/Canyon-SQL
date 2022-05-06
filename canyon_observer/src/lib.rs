@@ -1,5 +1,6 @@
 pub mod credentials;
 pub mod handler;
+mod memory;
 
 extern crate canyon_crud;
 

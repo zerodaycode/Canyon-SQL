@@ -26,3 +26,36 @@ pub fn database_table_name_from_struct(ty: &Ident) -> String {
 
     table_name
 }
+
+/// Parses the content of an &str to get the related identifier of a type
+pub fn database_table_name_to_struct_ident(name: &str) -> Ident {
+
+    let mut struct_name: String = String::new();
+    
+    let mut first_iteration = true;
+    let mut previous_was_underscore = false;
+
+    for char in name.chars() {
+        if first_iteration {
+            struct_name.push(char.to_ascii_uppercase());
+            first_iteration = false;
+        } else {
+            match char {
+                n if n == '_' => {
+                    previous_was_underscore = true;
+                },
+                char if char.is_ascii_lowercase() => {
+                    if previous_was_underscore {
+                        struct_name.push(char.to_ascii_lowercase())
+                    } else { struct_name.push(char) }
+                },
+                _ => panic!("Detected wrong format or broken convention for database table names")
+            }
+        }   
+    }
+
+    Ident::new(
+        &struct_name,
+        proc_macro2::Span::call_site()
+    )
+}

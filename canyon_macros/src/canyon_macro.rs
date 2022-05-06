@@ -28,7 +28,13 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
             .collect();
         }
         
-        unsafe { println!("Queries to execute : {:?}", &QUERIES_TO_EXECUTE) };
+        if unsafe { QUERIES_TO_EXECUTE.len() > 1 } {
+            // > 1 beacuase there's an [""] entry
+            println!("Queries to execute -> {}:", unsafe { QUERIES_TO_EXECUTE.len() });
+            for element in unsafe { &QUERIES_TO_EXECUTE } {
+                println!("\t{}", element)
+            }
+        }
 
         DatabaseSyncOperations::from_query_register().await;
     };
