@@ -20,7 +20,7 @@ jobs:
       run: |
         cd canyon-book
         mdbook build
-        git worktree add gh-pages gh-pages
+        git worktree add gh-pageses gh-pageses
         git config user.name "Deploy from CI"
         git config user.email "zerodaycode@tutanota.com"
         # cd gh-pages
