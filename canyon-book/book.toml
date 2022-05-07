@@ -1,0 +1,6 @@
+[book]
+authors = ["Pylyv", "Pyzyryab", "Gbm25"]
+language = "en"
+multilingual = false
+src = "src"
+title = "The Canyon Book"
