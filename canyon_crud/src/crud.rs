@@ -1,13 +1,18 @@
 use std::fmt::Debug;
+
 use async_trait::async_trait;
-use canyon_connection::connection::DatabaseConnection;
 use tokio_postgres::{ToStatement, types::ToSql};
 
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
-// use crate::query_elements::{Query, QueryBuilder};
 use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
+
+use canyon_connection::{
+    CREDENTIALS,
+    postgresql_connector::DatabaseConnection
+};
+
 
 ///! TODO DOCS
 #[async_trait]
@@ -17,7 +22,7 @@ pub trait Transaction<T: Debug> {
         where Q: ?Sized + ToStatement + Sync
     {
         let database_connection = 
-            DatabaseConnection::new().await.unwrap();
+            DatabaseConnection::new(&(*CREDENTIALS)).await.unwrap();
 
         let (client, connection) =
             (database_connection.client, database_connection.connection);

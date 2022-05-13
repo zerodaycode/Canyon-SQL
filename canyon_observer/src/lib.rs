@@ -1,4 +1,3 @@
-pub mod credentials;
 pub mod handler;
 mod memory;
 mod constants;
@@ -8,10 +7,11 @@ pub mod postgresql;
 
 extern crate canyon_crud;
 
-use postgresql::register_types::CanyonRegisterEntity;
-// use credentials::DatabaseCredentials;
+// use lazy_static::lazy_static;
 
-/// Holds the data needed by Canyon when the host
+use crate::postgresql::register_types::CanyonRegisterEntity;
+
+/// Holds the data needed by Canyon when the user
 /// application it's running.
 /// 
 /// Takes care about provide a namespace where retrieve the
@@ -21,5 +21,9 @@ use postgresql::register_types::CanyonRegisterEntity;
 /// should be managing
 pub static mut QUERIES_TO_EXECUTE: Vec<String> = Vec::new();
 pub static mut CANYON_REGISTER_ENTITIES: Vec<CanyonRegisterEntity> = Vec::new();
+
+// lazy_static! {
+    // static ref CREDENTIALS: DatabaseCredentials = DatabaseCredentials::new();
+// }
 
 // TODO Change it for lazy_static! elements

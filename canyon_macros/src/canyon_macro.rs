@@ -19,14 +19,15 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     
     let tokens = quote! {
         use canyon_sql::canyon_observer::{
-            QUERIES_TO_EXECUTE, 
+            QUERIES_TO_EXECUTE,
             postgresql::migrations::DatabaseSyncOperations
         };
 
-        unsafe { QUERIES_TO_EXECUTE = #queries
-            .split("->")
-            .map(str::to_string)
-            .collect();
+        unsafe { 
+            QUERIES_TO_EXECUTE = #queries
+                .split("->")
+                .map(str::to_string)
+                .collect();
         }
         
         if unsafe { QUERIES_TO_EXECUTE.len() > 1 } {
