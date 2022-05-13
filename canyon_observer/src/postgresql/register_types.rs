@@ -1,5 +1,10 @@
 use regex::Regex;
 
+use crate::constants::{
+    rust_type,
+    postgresql_type
+};
+
 /// This file contains `Rust` types that represents an entry of the [`CanyonRegister`]
 /// where `Canyon` tracks the user types that has to manage for him
 
@@ -53,10 +58,8 @@ impl CanyonRegisterEntity {
     for field in &self.entity_fields {
 
         let column_postgres_syntax = field.field_type_to_postgres();
-
         let field_as_string = format!("{} {}", field.field_name, column_postgres_syntax);
-
-       fields_strings.push(field_as_string);
+        fields_strings.push(field_as_string);
     }
 
         fields_strings.join(" ")
@@ -118,11 +121,11 @@ impl CanyonRegisterEntityField {
         let mut postgres_type = String::new();
 
         match rust_type_clean.as_str() {
-            "i32" => postgres_type.push_str("INTEGER"),
-            "i64" =>  postgres_type.push_str("BIGINT"),
-            "String" =>  postgres_type.push_str("TEXT"),
-            "bool" =>  postgres_type.push_str("BOOLEAN"),
-            "NaiveDate" =>  postgres_type.push_str("DATE"),
+            rust_type::I32 => postgres_type.push_str("INTEGER"),
+            rust_type::I64 =>  postgres_type.push_str("BIGINT"),
+            rust_type::STRING =>  postgres_type.push_str("TEXT"),
+            rust_type::BOOL =>  postgres_type.push_str("BOOLEAN"),
+            rust_type::NAIVE_DATE =>  postgres_type.push_str("DATE"),
             &_ => postgres_type.push_str("DATE")
         }
 
@@ -132,7 +135,6 @@ impl CanyonRegisterEntityField {
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
     fn to_postgres_id_syntax(&self) -> String {
         let postgres_datatype_syntax = Self::to_postgres_syntax(self);
-
         format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)
     }
 

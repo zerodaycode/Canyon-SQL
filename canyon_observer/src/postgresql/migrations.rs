@@ -15,6 +15,8 @@ use crate::{
 use super::register_types::CanyonRegisterEntityField;
 
 
+
+/// TODO Document, refactor and clarify the code @gbm25
 #[derive(Debug)]
 pub struct DatabaseSyncOperations {
     operations: Vec<Box<dyn DatabaseOperation>>,
