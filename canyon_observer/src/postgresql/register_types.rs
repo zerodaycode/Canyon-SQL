@@ -2,7 +2,7 @@ use regex::Regex;
 
 use crate::constants::{
     rust_type,
-    postgresql_type
+    // postgresql_type
 };
 
 /// This file contains `Rust` types that represents an entry of the [`CanyonRegister`]

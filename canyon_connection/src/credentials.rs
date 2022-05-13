@@ -1,6 +1,5 @@
 use std::{fs, collections::HashMap};
 
-
 /// Manages to retrieve the credentials to the desired database connection from an
 /// handcoded `secrets.toml` file, located at the root of the project.
 pub struct DatabaseCredentials {
@@ -23,7 +22,6 @@ impl DatabaseCredentials {
     }
 
     pub fn credentials_parser() -> HashMap<String, String> {
-
         const FILE_NAME: &str = "secrets.toml";
         let mut credentials_mapper: HashMap<_, _> = HashMap::new();
 

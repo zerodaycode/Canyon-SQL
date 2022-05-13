@@ -11,6 +11,7 @@ tokio-postgres = { version = "0.7.2" , features=["with-chrono-0_4"] }
 async-trait = { version = "0.1.50" }
 regex = "1.5"
 walkdir = "2"
+lazy_static = "1.4.0"
 
 # Debug
 partialdebug = "0.2.0"

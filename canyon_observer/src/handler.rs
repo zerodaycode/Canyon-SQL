@@ -60,7 +60,7 @@ impl<'a> CanyonHandler<'a> {
     /// Converts a [`CanyonEntity`](canyon_manager::manager::entity::CanyonEntity) into a [`CanyonRegisterEntity`]
     fn get_info_of_entities() -> Vec<CanyonRegisterEntity> {
         let mut entities: Vec<CanyonRegisterEntity> = Vec::new();
-        let clone = unsafe { CANYON_REGISTER_ENTITIES.clone() };
+        let clone = (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone();
         for i in clone.iter() {
             let mut new_entity = CanyonRegisterEntity::new();
             new_entity.entity_name = i.entity_name.clone();

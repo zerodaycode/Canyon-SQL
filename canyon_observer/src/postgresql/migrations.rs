@@ -332,8 +332,11 @@ impl DatabaseSyncOperations {
     }
 
     pub async fn from_query_register() {
-        for i in 0..unsafe { &QUERIES_TO_EXECUTE }.len() - 1 {
-            Self::query(unsafe { QUERIES_TO_EXECUTE.get(i).unwrap() }, &[]).await;
+        for i in 0.. &QUERIES_TO_EXECUTE.lock().unwrap().len() - 1 {
+            Self::query(
+                QUERIES_TO_EXECUTE.lock().unwrap().get(i).unwrap() , 
+                &[]
+            ).await;
         }
     }
 }
@@ -381,10 +384,8 @@ impl DatabaseOperation for TableOperation {
                 format!("ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constrain_name};"),
         };
 
-        unsafe { QUERIES_TO_EXECUTE.push(stmt) }
+        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
     }
-
-    
 }
 
 /// Helper to relate the operations that Canyon should do when a change on a field should
@@ -410,6 +411,6 @@ impl DatabaseOperation for ColumnOperation {
                 format!("ALTER TABLE {table_name} ALTER COLUMN {} TYPE {};", entity_field.field_name, entity_field.field_type_to_postgres())
         };
 
-        unsafe { QUERIES_TO_EXECUTE.push(stmt) }
+        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
     }
 }
