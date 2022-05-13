@@ -11,12 +11,12 @@ ALTER DATABASE triforce OWNER TO triforce;
 \c triforce
 
 CREATE TABLE public.league (
-     id					INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	 ext_id				BIGINT NOT NULL,
-     slug				TEXT NOT NULL,
-	 name				TEXT NOT NULL,
-	 region				TEXT NOT NULL,
-	 image_url			TEXT NOT NULL
+	id					INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+	ext_id				BIGINT NOT NULL,
+	slug				TEXT NOT NULL,
+	name				TEXT NOT NULL,
+	region				TEXT NOT NULL,
+	image_url			TEXT NOT NULL
 );
 CREATE TABLE public.tournament (
 	id					INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

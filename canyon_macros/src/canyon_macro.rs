@@ -19,7 +19,8 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     
     let tokens = quote! {
         use canyon_sql::canyon_observer::{
-            QUERIES_TO_EXECUTE, handler::DatabaseSyncOperations
+            QUERIES_TO_EXECUTE, 
+            postgresql::migrations::DatabaseSyncOperations
         };
 
         unsafe { QUERIES_TO_EXECUTE = #queries

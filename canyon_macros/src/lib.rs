@@ -10,6 +10,7 @@ use quote::quote;
 use syn::{
     DeriveInput, Fields, Visibility
 };
+
 use utils::macro_tokens::MacroTokens;
 use query_operations::{
     insert::generate_insert_tokens, 
@@ -31,9 +32,13 @@ use canyon_manager::manager::{
 };
 use canyon_macro::wire_queries_to_execute;
 use canyon_observer::{
-     handler::{CanyonHandler, CanyonRegisterEntity, CanyonRegisterEntityField}, CANYON_REGISTER_ENTITIES,
+    CANYON_REGISTER_ENTITIES,
+    handler::CanyonHandler, 
+    postgresql::register_types::{
+        CanyonRegisterEntity, 
+        CanyonRegisterEntityField
+    }, 
 };
-
 use crate::{
     query_operations::select::{
         generate_find_by_foreign_key_tokens,
@@ -58,12 +63,10 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     if func_res.is_err() {
         return quote! { fn main() {} }.into()
     }
-
     
     let func = func_res.ok().unwrap();
     let sign = func.clone().sig;
     let body = func.clone().block.stmts;
-    
 
     // The code used by Canyon to perform it's managed state
     let rt = tokio::runtime::Runtime::new().unwrap();
