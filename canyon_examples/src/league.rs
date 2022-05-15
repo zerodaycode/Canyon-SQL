@@ -1,8 +1,12 @@
 use canyon_sql::*;
 
-/// TODO Some Rust documentation here
-/// TODO Also, explain how `#[canyon_macros::canyon_entity]`
-// / it's able to manage the whole operations for you
+/// Represents a @LeagueOfLegends official League from some
+/// region
+/// 
+/// Leagues are like the parent relation for [`Tournament`], where a
+/// [`League`] can have multiple tournaments pointing one only league
+/// 
+/// Ex: LEC Spring Split + LEC Summer Split of 202X year
 #[derive(Debug, Clone, CanyonCrud, CanyonMapper, ForeignKeyable)]
 #[canyon_macros::canyon_entity]
 pub struct League {

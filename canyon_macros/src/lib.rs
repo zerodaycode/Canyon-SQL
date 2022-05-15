@@ -11,17 +11,28 @@ use syn::{
     DeriveInput, Fields, Visibility
 };
 
-use utils::macro_tokens::MacroTokens;
 use query_operations::{
-    insert::generate_insert_tokens, 
     select::{
         generate_find_all_tokens, 
         generate_find_all_query_tokens, 
-        generate_find_by_id_tokens
+        generate_find_by_id_tokens,
+        generate_find_by_foreign_key_tokens,
+        generate_find_by_reverse_foreign_key_tokens
     },
-    delete::generate_delete_tokens,
-    update::generate_update_tokens
+    insert::{
+        generate_insert_tokens, 
+        generate_insert_querybuider_tokens
+    }, 
+    update::generate_update_tokens,
+    delete::generate_delete_tokens
 };
+
+use utils::{
+    function_parser::FunctionParser,
+    macro_tokens::MacroTokens 
+};
+use canyon_macro::wire_queries_to_execute;
+
 use canyon_manager::manager::{
     manager_builder::{
         generate_data_struct, 
@@ -30,7 +41,7 @@ use canyon_manager::manager::{
     }, 
     entity::CanyonEntity
 };
-use canyon_macro::wire_queries_to_execute;
+
 use canyon_observer::{
     CANYON_REGISTER_ENTITIES,
     handler::CanyonHandler, 
@@ -39,27 +50,21 @@ use canyon_observer::{
         CanyonRegisterEntityField
     }, 
 };
-use crate::{
-    query_operations::select::{
-        generate_find_by_foreign_key_tokens,
-        generate_find_by_reverse_foreign_key_tokens
-    }, 
-    utils::function_parser::FunctionParser
-};
 
 
 /// Macro for handling the entry point to the program. 
 /// 
-/// Avoids the user to write the tokio attribute and
+/// Avoids the user to write the tokio proc_attribute and
 /// the async modifier to the main fn()
 /// 
-/// Also, takes care about wire the necessary code for Canyon in order to 
-/// full achieve it's complete set of features
-/// TODO Check for the _meta attribute metadata when necessary
+/// Also, takes care about wire the necessary code that Canyon's need
+/// to run in order to check the provided code and in order to perform
+/// the necessary operations for the migrations
 #[proc_macro_attribute]
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     // Parses the function that this attribute is attached to
     let func_res = syn::parse::<FunctionParser>(input);
+    
     if func_res.is_err() {
         return quote! { fn main() {} }.into()
     }
@@ -147,11 +152,13 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Builds the find_by_id() query
     let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
     // Builds the insert() query
+    let insert_queryb_tokens = generate_insert_querybuider_tokens(&macro_data);
+    // Builds the insert() query as a querybuilder
     let insert_tokens = generate_insert_tokens(&macro_data);
-    // Builds the delete() query
-    let delete_tokens = generate_delete_tokens(&macro_data);
     // Builds the update() query
     let update_tokens = generate_update_tokens(&macro_data);
+    // Builds the delete() query
+    let delete_tokens = generate_delete_tokens(&macro_data);
     
 
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
@@ -179,6 +186,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
             // The insert impl
             #insert_tokens
+
+            // The insert as querybuilder impl
+            #insert_queryb_tokens
 
             // The delete impl
             #delete_tokens
