@@ -1,23 +1,32 @@
-pub mod credentials;
-pub mod handler;
-mod memory;
-
-extern crate canyon_crud;
-
-use handler::CanyonRegisterEntity;
-
-// use credentials::DatabaseCredentials;
-
-/// Holds the data needed by Canyon when the host
+/// Holds the data needed by Canyon when the user
 /// application it's running.
 /// 
 /// Takes care about provide a namespace where retrieve the
 /// database credentials in only one place
 /// 
-/// Also takes care about track what data structures Canyon
+/// Takes care about track what data structures Canyon
 /// should be managing
-pub static mut QUERIES_TO_EXECUTE: Vec<String> = Vec::new();
-// pub static mut CANYON_REGISTER_ENTITIES: Vec<CanyonEntity> = Vec::new();
-pub static mut CANYON_REGISTER_ENTITIES: Vec<CanyonRegisterEntity> = Vec::new();
-// pub static REGISTER: *const Vec<CanyonEntity> = unsafe { &CANYON_REGISTER_ENTITIES as *const Vec<CanyonEntity> };
-// pub static mut CREDENTIALS: Option<DatabaseCredentials> = None;
+/// 
+/// Takes care about the queries that Canyon has to execute
+/// in order to perform the migrations
+
+
+pub mod handler;
+mod memory;
+mod constants;
+
+// Database Engine related
+pub mod postgresql;
+
+extern crate canyon_crud;
+
+use std::sync::Mutex;
+use lazy_static::lazy_static;
+
+use crate::postgresql::register_types::CanyonRegisterEntity;
+
+
+lazy_static! {
+    pub static ref CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity>> = Mutex::new(Vec::new());
+    pub static ref QUERIES_TO_EXECUTE: Mutex<Vec<String>> = Mutex::new(Vec::new());
+}

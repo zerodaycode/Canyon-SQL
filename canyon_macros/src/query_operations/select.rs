@@ -74,7 +74,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
     let mut column_name = String::new();
 
     // Find what relation belongs to the data passed in
-    for element in unsafe { &CANYON_REGISTER_ENTITIES } {
+    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations
             if field.annotation.is_some() {
@@ -165,7 +165,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
     let mut lookage_value_column = String::new();
 
     // Find what relation belongs to the data passed in
-    for element in unsafe { &CANYON_REGISTER_ENTITIES } {
+    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations
             if field.annotation.is_some() {

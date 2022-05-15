@@ -121,13 +121,13 @@ impl CanyonMemory {
 
             if let Some(update) = need_to_update {
                 updates.push(struct_name);
-                unsafe { QUERIES_TO_EXECUTE.push(
+                QUERIES_TO_EXECUTE.lock().unwrap().push(
                     format!(
                         "UPDATE canyon_memory SET filename = '{}', struct_name = '{}'\
                             WHERE id = {}", 
                         filename, struct_name, update.id
                     )
-                )};
+                );
             }
         }
         
@@ -135,12 +135,13 @@ impl CanyonMemory {
         if values_to_insert != String::new() {
             values_to_insert.pop();
             values_to_insert.push_str(";");
-            unsafe { QUERIES_TO_EXECUTE.push(
+            
+            QUERIES_TO_EXECUTE.lock().unwrap().push(
                 format!(
                     "INSERT INTO canyon_memory (filename, struct_name) VALUES {}", 
                     values_to_insert
                 )
-            )};
+            );
         }
 
         // Deletes the records when a table is dropped on the previous Canyon run
@@ -152,12 +153,12 @@ impl CanyonMemory {
                     if !in_memory.contains(&&db_row.struct_name) &&
                         !updates.contains(&&db_row.struct_name)
                     {
-                        unsafe { QUERIES_TO_EXECUTE.push(
+                        QUERIES_TO_EXECUTE.lock().unwrap().push(
                             format!(
                                 "DELETE FROM canyon_memory WHERE struct_name = '{}'", 
                                 db_row.struct_name
                             )
-                        )};
+                        );
                     }
                 }
             );
@@ -196,7 +197,7 @@ impl CanyonMemory {
 
                 // If more than two, we panic!
                 if canyon_entity_macro_counter > 1 {
-                    // compile_error!(...)
+                    // TODO compile_error!(...)
                 } else if canyon_entity_macro_counter == 1 {
                     self.memory.insert(
                         file.path()
