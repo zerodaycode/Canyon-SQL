@@ -14,7 +14,8 @@ use syn::{
 use query_operations::{
     select::{
         generate_find_all_tokens, 
-        generate_find_all_query_tokens, 
+        generate_find_all_query_tokens,
+        generate_count_tokens, 
         generate_find_by_id_tokens,
         generate_find_by_foreign_key_tokens,
         generate_find_by_reverse_foreign_key_tokens
@@ -148,6 +149,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let find_all_tokens = generate_find_all_tokens(&macro_data);
     // Builds the find_all_query() query
     let find_all_query_tokens = generate_find_all_query_tokens(&macro_data);
+    // Builds a COUNT(*) query over some table
+    let count_tokens = generate_count_tokens(&macro_data);
     // Builds the find_by_id() query
     let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
     // Builds the insert() query
@@ -179,6 +182,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
             // The find_all_query impl
             #find_all_query_tokens
+
+            // The COUNT(*) impl
+            #count_tokens
 
             // The find_by_id impl
             #find_by_id_tokens

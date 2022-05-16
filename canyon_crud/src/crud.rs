@@ -76,7 +76,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             &[]
         ).await;
         
-        // TODO Continue with the impl
         count.wrapper.get(0).unwrap().get("count")
     }
 
@@ -169,8 +168,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             "INSERT INTO {} ({}) VALUES {}", table_name, fields_without_id_chars.as_str(), fields_values
         );
 
-        println!("\nTremenda chambonada: {:?}\n", &stmt);
-
         // Converts the array of array of values in an array of correlated values
         // with it's correspondents $X
         let mut values: Vec<&(dyn ToSql + Sync)> = Vec::new();
@@ -180,8 +177,6 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             }
         };
 
-        println!("\nValues: {:?}\n", &values);
-        
         Self::query(
             &stmt[..], 
             &values[..]

@@ -10,7 +10,7 @@ use crate::utils::macro_tokens::MacroTokens;
 /// associated function
 pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
-    let (vis,ty) = (macro_data.vis, macro_data.ty);
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
 
     let table_name = database_table_name_from_struct(ty);
 
@@ -29,7 +29,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
 /// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
 pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
-    let (vis,ty) = (macro_data.vis, macro_data.ty);
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
 
     let table_name = database_table_name_from_struct(ty);
 
@@ -38,6 +38,22 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
                 #table_name
             )
+        }
+    }
+}
+
+/// Performs a COUNT(*) query over some table
+pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis async fn count() -> i64 {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
+                #table_name
+            ).await
         }
     }
 }
@@ -63,8 +79,6 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
         }
     }
 }
-
-/// TODO Generate the remaining methods that should be available through the QueryBuilder
 
 /// Generates the TokenStream for build the search by foreign key feature also as a method instance
 /// of a T type of as an associated function of the same T type
