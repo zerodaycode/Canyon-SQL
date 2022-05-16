@@ -7,14 +7,12 @@ use chrono::NaiveDate;
 use league::*;
 use tournament::*;
 
-/// The `#[canyon]` macro represents the entry point of a Canyon managed program.
+/// The `#[canyon]` macro represents the entry point of a Canyon program.
 /// 
-/// Go read the oficial docs for more info about the `#[canyon]` annotation (not docs yet)
-/// 
-/// TODO Docs explaining the virtues of `#[canyon]`, the `full managed state`
-/// and the `just Crud operations` option
-///  
-#[canyon]  // TODO Add a log level argument
+/// When this annotation it's present, Canyon it's able to take care about everything
+/// for you related to mantain the database that you provide in the `secrets.toml` file,
+/// being the most obvious and important the migrations control.
+#[canyon]
 fn main() {
     /*  
         The insert example.
@@ -23,7 +21,7 @@ fn main() {
         Remember that all operation with CanyonCrud must be awaited,
         due to it's inherent async nature
     */
-    _wire_data_on_schema().await;
+    // _wire_data_on_schema().await;
 
     /*
         The most basic usage pattern.
@@ -36,6 +34,35 @@ fn main() {
     */
     let _all_leagues: Vec<League> = League::find_all().await;
     println!("Leagues elements: {:?}", &_all_leagues);
+
+    let new_league = League {
+        id: 10,
+        ext_id: 392489032,
+        slug: "League10".to_owned(),
+        name: "League10also".to_owned(),
+        region: "Turkey".to_owned(),
+        image_url: "https://www.sdklafjsd.com".to_owned()
+    };
+    let new_league2 = League {
+        id: 0,
+        ext_id: 392489032,
+        slug: "League11".to_owned(),
+        name: "League11also".to_owned(),
+        region: "LDASKJF".to_owned(),
+        image_url: "https://www.sdklafjsd.com".to_owned()
+    };
+    let new_league3 = League {
+        id: 3,
+        ext_id: 9687392489032,
+        slug: "League3".to_owned(),
+        name: "3League".to_owned(),
+        region: "EU".to_owned(),
+        image_url: "https://www.lag.com".to_owned()
+    };
+
+    League::insert_into(
+        &[new_league, new_league2, new_league3]
+    ).await;
 
     /*
         Canyon also has a powerful querybuilder.

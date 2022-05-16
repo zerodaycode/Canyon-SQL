@@ -70,9 +70,23 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         Self::query(&stmt[..], &[&id]).await
     }
 
-    /// TODO Generate the remaining methods that should be available through the QueryBuilder
+    async fn __count(table_name: &str) -> i64 {
+        let count = Self::query(
+            &format!("SELECT COUNT (*) FROM {}", table_name)[..], 
+            &[]
+        ).await;
+        
+        // TODO Continue with the impl
+        count.wrapper.get(0).unwrap().get("count")
+    }
 
-    /// Inserts the values of structure in the correlative table
+    /// Inserts the values of an structure in the desired table
+    /// 
+    /// The insert operation over some type it's id agnostic. So, when it's called
+    /// over T, gets all data on every field that T has but removing the id field,
+    /// because the insert operation by default in Canyon leads to a place 
+    /// where the ID it's created by the database as a unique element being
+    /// autoincremental for every new record inserted on the table.
     async fn __insert(table_name: &str, fields: &str, values: &[&(dyn ToSql + Sync)]) -> DatabaseResult<T> {
 
         let mut field_values = String::new();
@@ -101,6 +115,76 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         Self::query(
             &stmt[..], 
             &values[1..]
+        ).await
+    }
+
+    /// Same as the [`fn@__insert`], but as an associated function of some T type.
+    async fn __insert_multi(
+        table_name: &str, 
+        fields: &str, 
+        values_arr: &mut Vec<Vec<Box<&(dyn ToSql + Sync)>>>
+    ) -> DatabaseResult<T> {
+
+        // Removes the id from the insert operation
+        let mut fields_without_id_chars = fields.chars();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+
+        let mut fields_values = String::new();
+
+        let mut elements_counter = 0;
+        let mut values_counter = 1;
+        let values_arr_len = values_arr.len();
+
+        for vector in values_arr.iter_mut() {
+            
+            let mut inner_counter = 0;
+            fields_values.push('(');
+            vector.remove(0); // Removes the $ID value in the container
+            
+            for _value in vector.iter() {
+                if inner_counter < vector.len() - 1 {
+                    fields_values.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
+                } else {
+                    fields_values.push_str(&("$".to_owned() + &values_counter.to_string()));
+                }
+
+                inner_counter += 1;
+                values_counter += 1;
+            }
+
+            elements_counter += 1;
+
+            if elements_counter < values_arr_len {
+                fields_values.push_str("), ");
+            } else {
+                fields_values.push(')');
+            }
+        }
+
+
+        let stmt = format!(
+            "INSERT INTO {} ({}) VALUES {}", table_name, fields_without_id_chars.as_str(), fields_values
+        );
+
+        println!("\nTremenda chambonada: {:?}\n", &stmt);
+
+        // Converts the array of array of values in an array of correlated values
+        // with it's correspondents $X
+        let mut values: Vec<&(dyn ToSql + Sync)> = Vec::new();
+        for arr in values_arr.into_iter() { 
+            for value in arr.into_iter() {
+                values.push(*(*value).to_owned());
+            }
+        };
+
+        println!("\nValues: {:?}\n", &values);
+        
+        Self::query(
+            &stmt[..], 
+            &values[..]
         ).await
     }
 

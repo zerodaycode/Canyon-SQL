@@ -26,6 +26,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     
 }
 
+/// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
 pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
     let (vis,ty) = (macro_data.vis, macro_data.ty);
@@ -39,14 +40,13 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
             )
         }
     }
-   
 }
 
 
 /// Generates the TokenStream for build the __find_by_id() CRUD operation
 pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
-    let (vis,ty) = (macro_data.vis, macro_data.ty);
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
 
     let table_name = database_table_name_from_struct(ty);
 
