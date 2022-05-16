@@ -44,7 +44,7 @@ fn main() {
         image_url: "https://www.sdklafjsd.com".to_owned()
     };
     let new_league2 = League {
-        id: 11,
+        id: 0,
         ext_id: 392489032,
         slug: "League11".to_owned(),
         name: "League11also".to_owned(),

@@ -43,7 +43,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
 /// 
 /// This, also lets the user to have the option to be able to insert multiple
 /// [`T`] objects in only one query
-pub fn generate_insert_querybuider_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
@@ -80,10 +80,10 @@ pub fn generate_insert_querybuider_tokens(macro_data: &MacroTokens) -> TokenStre
                 final_values.push(longer_lived)
             }
             
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert_querybuilder(
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert_multi(
                 #table_name, 
                 #column_names, 
-                &final_values
+                &mut final_values
             ).await;
         }
     }

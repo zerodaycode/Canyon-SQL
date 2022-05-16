@@ -119,25 +119,32 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     }
 
     /// Same as the [`fn@__insert`], but as an associated function of some T type.
-    async fn __insert_querybuilder(
+    async fn __insert_multi(
         table_name: &str, 
         fields: &str, 
-        values_arr: &Vec<Vec<Box<&(dyn ToSql + Sync)>>>
+        values_arr: &mut Vec<Vec<Box<&(dyn ToSql + Sync)>>>
     ) -> DatabaseResult<T> {
 
-        let last_insert_id = Self::__count(&table_name).await;
-        println!("\nCOUNT (*) {}\n", last_insert_id);
+        // Removes the id from the insert operation
+        let mut fields_without_id_chars = fields.chars();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
+        fields_without_id_chars.next();
 
         let mut fields_values = String::new();
 
         let mut elements_counter = 0;
         let mut values_counter = 1;
+        let values_arr_len = values_arr.len();
 
-        for vector in values_arr {
-            fields_values.push('(');
+        for vector in values_arr.iter_mut() {
+            
             let mut inner_counter = 0;
-
-            for _value in vector {
+            fields_values.push('(');
+            vector.remove(0); // Removes the $ID value in the container
+            
+            for _value in vector.iter() {
                 if inner_counter < vector.len() - 1 {
                     fields_values.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
                 } else {
@@ -150,10 +157,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
             elements_counter += 1;
 
-            println!("\nVector len: {:?}", &values_arr.len());
-            println!("Elements counter: {:?}\n", &elements_counter);
-
-            if elements_counter < values_arr.len() {
+            if elements_counter < values_arr_len {
                 fields_values.push_str("), ");
             } else {
                 fields_values.push(')');
@@ -162,14 +166,14 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
 
         let stmt = format!(
-            "INSERT INTO {} ({}) VALUES {}", table_name, fields, fields_values
+            "INSERT INTO {} ({}) VALUES {}", table_name, fields_without_id_chars.as_str(), fields_values
         );
 
         println!("\nTremenda chambonada: {:?}\n", &stmt);
 
         // Converts the array of array of values in an array of correlated values
         // with it's correspondents $X
-        let mut values = Vec::new();
+        let mut values: Vec<&(dyn ToSql + Sync)> = Vec::new();
         for arr in values_arr.into_iter() { 
             for value in arr.into_iter() {
                 values.push(*(*value).to_owned());

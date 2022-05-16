@@ -21,7 +21,7 @@ use query_operations::{
     },
     insert::{
         generate_insert_tokens, 
-        generate_insert_querybuider_tokens
+        generate_multiple_insert_tokens
     }, 
     update::generate_update_tokens,
     delete::generate_delete_tokens
@@ -98,7 +98,6 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 }
 
 
-
 /// Takes data from the struct annotated with macro to fill the Canyon Register
 /// where lives the data that Canyon needs to work in `managed mode`
 #[proc_macro_attribute]
@@ -152,7 +151,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Builds the find_by_id() query
     let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
     // Builds the insert() query
-    let insert_queryb_tokens = generate_insert_querybuider_tokens(&macro_data);
+    let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
     // Builds the insert() query as a querybuilder
     let insert_tokens = generate_insert_tokens(&macro_data);
     // Builds the update() query
@@ -187,8 +186,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The insert impl
             #insert_tokens
 
-            // The insert as querybuilder impl
-            #insert_queryb_tokens
+            // The insert of multiple entities impl
+            #insert_multi_tokens
 
             // The delete impl
             #delete_tokens
