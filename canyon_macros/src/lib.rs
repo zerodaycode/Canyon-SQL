@@ -41,7 +41,7 @@ use canyon_manager::manager::{
     manager_builder::{
         generate_data_struct, 
         // get_field_attr, 
-        generate_fields_names_for_enum
+        generate_enum_with_fields_values
     }, 
     entity::CanyonEntity
 };
@@ -118,7 +118,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Generate the bits of code that we should give back to the compiler
     let generated_data_struct = generate_data_struct(&entity);
-    let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
+    let generated_enum_type_for_fields = generate_enum_with_fields_values(&entity);
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();

@@ -74,15 +74,15 @@ fn main() {
 
         One really important thing to note it's that any struct annotated with the
         `[#canyon_entity]` annotation will generate and enumeration following the 
-        convention: Type identifier + Fields holding variants to identify every
+        convention: Type identifier + FieldValuep holding variants to identify every
         field that the type has.
 
         So for a -> 
             pub struct League { /* fields */ }
         an enum with the fields as variants its generated ->
-            pub enum LeagueFields { /* variants */ }
+            pub enum LeagueFieldValue { /* variants */ }
 
-        So you must bring into scope `use::/* path to my type .rs file */::TypeFields`
+        So you must bring into scope `use::/* path to my type .rs file */::TypeFieldValue`
         or simply `use::/* path to my type .rs file */::*` with a wildcard import.
         
         The querybuilder methods usually accept one of the variants of the enum to make a filter
@@ -91,7 +91,7 @@ fn main() {
     */
     let _all_leagues_as_querybuilder: Vec<League> = League::find_all_query()
         .where_clause(
-            LeagueFields::id(1), // This will create a filter -> `WHERE type.id = 1`
+            LeagueFieldValue::id(1), // This will create a filter -> `WHERE type.id = 1`
             Comp::Eq // where the `=` symbol it's given by this variant
         )
         .query()
@@ -200,7 +200,7 @@ async fn _search_data_by_fk_example() {
     // we can make a query by some other field and get the ID
     let some_lpl: Vec<League> = League::find_all_query()
         .where_clause(
-            LeagueFields::slug("LPL".to_string()),  // This will create a filter -> `WHERE type.slug = "LPL"`
+            LeagueFieldValue::slug("LPL".to_string()),  // This will create a filter -> `WHERE type.slug = "LPL"`
             Comp::Eq  // where the `=` symbol it's given by this variant
         )
         .query()

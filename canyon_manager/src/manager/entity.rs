@@ -20,13 +20,16 @@ unsafe impl Send for CanyonEntity {}
 unsafe impl Sync for CanyonEntity {}
 
 impl CanyonEntity {
-    /// Creates an enum with the names of the fields as the variants of the type,
-    /// where the enum type corresponds with the struct's type that belongs
-    /// + a concatenation of "Fields" after it
-    pub fn get_fields_as_enum_variants(&self) -> Vec<TokenStream> {
+    /// Generates as many variants for the enum as fields has the type
+    /// which this enum is related to, and that type it's the entity
+    /// stored in [`CanyonEntity`]
+    /// 
+    /// Makes a variant `#field_name(#ty)` where `#ty` it's the type
+    /// of the corresponding field
+    pub fn get_fields_as_enum_variants_with_type(&self) -> Vec<TokenStream> {
         self.attributes
             .iter()
-            .map(|f| {
+            .map( |f| {
                 let field_name = &f.name;
                 let ty = &f.field_type;
                 quote!{ #field_name(#ty) }
@@ -35,7 +38,8 @@ impl CanyonEntity {
     }
 
     /// Generates an implementation of the match pattern to find whatever variant
-    /// is being requested // TODO Better docs please
+    /// is being requested when the method `.value()` it's invoked over some
+    /// instance that implements the `canyon_sql::bounds::FieldIdentifier` trait
     pub fn create_match_arm_for_relate_field(&self, enum_name: &Ident) -> Vec<TokenStream> {
         self.attributes
             .iter()
