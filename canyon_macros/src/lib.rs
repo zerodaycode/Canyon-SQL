@@ -25,7 +25,10 @@ use query_operations::{
         generate_multiple_insert_tokens
     }, 
     update::generate_update_tokens,
-    delete::generate_delete_tokens
+    delete::{
+        generate_delete_tokens,
+        generate_delete_query_tokens
+    }
 };
 
 use utils::{
@@ -161,6 +164,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let update_tokens = generate_update_tokens(&macro_data);
     // Builds the delete() query
     let delete_tokens = generate_delete_tokens(&macro_data);
+    // Builds the delete() query as a querybuilder
+    let delete_query_tokens = generate_delete_query_tokens(&macro_data);
     
 
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
@@ -197,6 +202,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
             // The delete impl
             #delete_tokens
+
+            // The delete as querybuilder impl
+            #delete_query_tokens
 
             // The update impl
             #update_tokens
