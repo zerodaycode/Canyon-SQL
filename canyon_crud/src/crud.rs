@@ -52,9 +52,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
     async fn __find_all(table_name: &str) -> DatabaseResult<T> {
-
         let stmt = format!("SELECT * FROM {}", table_name);
-
         Self::query(&stmt[..], &[]).await
     }
 
@@ -64,9 +62,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
     /// Queries the database and try to find an item on the most common pk
     async fn __find_by_id(table_name: &str, id: i32) -> DatabaseResult<T> {
-
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
-
         Self::query(&stmt[..], &[&id]).await
     }
 
@@ -211,10 +207,17 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     
     /// Deletes the entity from the database that belongs to a current instance
     async fn __delete(table_name: &str, id: i32) -> DatabaseResult<T> {
-        
         let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
-
         Self::query(&stmt[..], &[&id]).await
+    }
+
+    /// Performns a delete CRUD operation over some table. It is constructed
+    /// as a [QueryBuilder], so the conditions will be appended with the builder
+    /// if the user desires
+    /// 
+    /// Implemented as an associated function, not dependent on an instance
+    fn __delete_query(table_name: &str) -> QueryBuilder<T> {
+        Query::new(format!("DELETE FROM {}", table_name), &[])
     }
     
     /// Performs a search over some table pointed with a ForeignKey annotation

@@ -32,6 +32,8 @@ fn main() {
         after query the database, automatically desearializating the returning
         rows into elements of type T
     */
+
+    // Move into example of multi_insert()
     let _all_leagues: Vec<League> = League::find_all().await;
     println!("Leagues elements: {:?}", &_all_leagues);
 

@@ -3,8 +3,15 @@ use std::fmt::Debug;
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
-    crud::{Transaction, CrudOperations},
-    bounds::{FieldIdentifier, InClauseValues}, mapper::RowMapper
+    crud::{
+        Transaction, 
+        CrudOperations
+    },
+    bounds::{
+        FieldIdentifier, 
+        InClauseValues
+    }, 
+    mapper::RowMapper
 };
 
 

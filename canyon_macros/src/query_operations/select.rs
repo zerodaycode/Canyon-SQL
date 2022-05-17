@@ -58,7 +58,6 @@ pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     }
 }
 
-
 /// Generates the TokenStream for build the __find_by_id() CRUD operation
 pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
