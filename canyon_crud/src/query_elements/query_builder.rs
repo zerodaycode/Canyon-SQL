@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use tokio_postgres::types::ToSql;
+
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
@@ -8,7 +10,8 @@ use crate::{
         CrudOperations
     },
     bounds::{
-        FieldIdentifier, 
+        FieldIdentifier,
+        FieldValueIdentifier, 
         InClauseValues
     }, 
     mapper::RowMapper
@@ -22,29 +25,36 @@ pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowM
     where_clause: String,
     and_clause: String,
     in_clause: &'a[Box<dyn InClauseValues>],
-    order_by_clause: String
+    order_by_clause: String,
+    set_clause: String
 }
 impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
 
     // Generates a Query object that contains the necessary data to performn a query
     pub async fn query(&mut self) -> Vec<T> {
         self.query.sql.retain(|c| !r#";"#.contains(c));
+
+        if self.query.sql.contains("UPDATE") && self.set_clause != "" {
+            self.query.sql.push_str(&self.set_clause)
+        }
         
         if self.where_clause != "" {
             self.query.sql.push_str(&self.where_clause)
         }
+
         if self.and_clause != "" {
             self.query.sql.push_str(&self.and_clause)
         }
+
         if self.in_clause.is_empty() {
             for value in self.in_clause {
                 self.query.sql.push_str(&value.to_string())
             }
         }
+
         if self.order_by_clause != "" {
             self.query.sql.push_str(&self.order_by_clause)
         }
-        // ... rest of statements
 
         self.query.sql.push(';');
 
@@ -63,11 +73,12 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
             where_clause: String::new(),
             and_clause: String::new(),
             in_clause: &[],
-            order_by_clause: String::new()
+            order_by_clause: String::new(),
+            set_clause: String::new()
         }
     }
 
-    pub fn where_clause<Z: FieldIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
+    pub fn where_clause<Z: FieldValueIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
         let values = r#where.value()
             .to_string()
             .split(" ")
@@ -97,6 +108,30 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
 
     pub fn order_by(mut self, order_by: &'a str) -> Self {
         self.order_by_clause.push_str(&*(String::from(" ORDER BY ") + order_by));
+        self
+    }
+
+    /// The SQL `SET` clause to especify the columns that must be updated in the sentence
+    pub fn set_clause<Z, S>(mut self, columns: &'a[(Z, S)]) -> Self 
+        where Z: FieldIdentifier + Clone, S: ToString 
+    {
+        if columns.len() == 0 {
+            return self;
+        } else if columns.len() > 0 {
+            self.set_clause.push_str(" SET ")
+        }
+
+        for (idx, column) in columns.iter().enumerate() {
+            if idx + 1 == columns.len() {
+                self.set_clause.push_str(
+                    &(column.0.clone().field_name_as_str().to_owned() + "=" + "'" + column.1.to_string().as_str() + "'")
+                )
+            } else {
+                self.set_clause.push_str(
+                    &(column.0.clone().field_name_as_str().to_owned() + "=" + "'" + column.1.to_string().as_str() + "', ")
+                )
+            }
+        }
         self
     }
 }

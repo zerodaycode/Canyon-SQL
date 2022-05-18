@@ -8,7 +8,7 @@ use crate::utils::macro_tokens::MacroTokens;
 pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     // Destructure macro_tokens into raw data
-    let (vis,ty) = (macro_data.vis, macro_data.ty);
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
 
     // Gets the name of the table in the database that maps the annotated Struct
     let table_name = database_table_name_from_struct(ty);
