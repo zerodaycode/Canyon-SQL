@@ -1,7 +1,7 @@
 /// File that contains all the datatypes and logic to perform the migrations
 /// over a `PostgreSQL` database
 
-use std::ops::Not;
+use std::{ops::Not, sync::MutexGuard};
 use std::fmt::Debug;
 use async_trait::async_trait;
 
@@ -332,9 +332,10 @@ impl DatabaseSyncOperations {
     }
 
     pub async fn from_query_register() {
-        for i in 0.. &QUERIES_TO_EXECUTE.lock().unwrap().len() - 1 {
+        let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
+        for i in 0..queries.len() - 1 {
             Self::query(
-                QUERIES_TO_EXECUTE.lock().unwrap().get(i).unwrap() , 
+                queries.get(i).unwrap(), 
                 &[]
             ).await;
         }

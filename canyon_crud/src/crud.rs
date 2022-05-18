@@ -14,7 +14,12 @@ use canyon_connection::{
 };
 
 
-///! TODO DOCS
+/// This traits defines and implements a query against a database given
+/// an statemt `stmt` and the params to pass the to the client.
+/// 
+/// It returns a [`DatabaseResult`], which is the core Canyon type to wrap
+/// the result of the query and, if the user desires,
+/// automatically map it to an struct.
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
@@ -45,7 +50,22 @@ pub trait Transaction<T: Debug> {
     }
 }
 
-///! TODO DOCS
+/// [`CrudOperations`] it's one of the core parts of Canyon.
+/// 
+/// Here it's defined and implemented every CRUD operation that Canyon
+/// makes available to the user, directly derived with a `CanyonCrud`
+/// derive macro when a struct contains the annotation.
+/// 
+/// Also, this traits needs that the type T over what it's generified 
+/// to implement certain types in order to work correctly.
+/// 
+/// The most notorious one it's the [`RowMapper<T>`] one, which allows
+/// Canyon to directly maps database results into structs.
+/// 
+/// See it's definition and docs to see the real implications.
+/// Also, you can find the written macro-code that performs the auto-mapping
+/// in the [`canyon_macros`] crates, on the root of this project. 
+
 #[async_trait]
 pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transaction<T> {
 
@@ -204,6 +224,15 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             values
         ).await
     }
+
+    /// Performns an UPDATE CRUD operation over some table. It is constructed
+    /// as a [QueryBuilder], so the conditions will be appended with the builder
+    /// if the user desires
+    /// 
+    /// Implemented as an associated function, not dependent on an instance
+    fn __update_query(table_name: &str) -> QueryBuilder<T> {
+        Query::new(format!("UPDATE {}", table_name), &[])
+    }
     
     /// Deletes the entity from the database that belongs to a current instance
     async fn __delete(table_name: &str, id: i32) -> DatabaseResult<T> {
@@ -211,7 +240,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         Self::query(&stmt[..], &[&id]).await
     }
 
-    /// Performns a delete CRUD operation over some table. It is constructed
+    /// Performns a DELETE CRUD operation over some table. It is constructed
     /// as a [QueryBuilder], so the conditions will be appended with the builder
     /// if the user desires
     /// 

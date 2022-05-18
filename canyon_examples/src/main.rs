@@ -73,14 +73,26 @@ fn main() {
         the query that Canyon will use to retrive data from the database.
 
         One really important thing to note it's that any struct annotated with the
-        `[#canyon_entity]` annotation will generate and enumeration following the 
-        convention: Type identifier + FieldValuep holding variants to identify every
-        field that the type has.
+        `[#canyon_entity]` annotation will automatically generates two enumerations
+        for the curren type, following the convention: 
+        
+        Type identifier + Field, holding variants to identify every
+        field that the type has. You can recover the field name by writting:
+        `Type::variant.field_name_as_str()`
+
+        Type identifier + FieldValue, holding variants to identify every
+        field that the type has and let the user attach them data of the same
+        data type that the field is bounded.
+        You can recover the passed in value when created by writting:
+        `Type::variant(some_value).value()` that will gives you access to the
+        some value inside the variant.
 
         So for a -> 
             pub struct League { /* fields */ }
         an enum with the fields as variants its generated ->
-            pub enum LeagueFieldValue { /* variants */ }
+            pub enum LeagueField { /* variants */ }
+        an enum with the fields as variants its generated ->
+            pub enum LeagueFieldValue { /* variants(data_type) */ }
 
         So you must bring into scope `use::/* path to my type .rs file */::TypeFieldValue`
         or simply `use::/* path to my type .rs file */::*` with a wildcard import.
@@ -97,6 +109,23 @@ fn main() {
         .query()
         .await;
     println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
+
+    // Quick example on how to update multiple columns on a table
+    // This concrete example will update the columns slug and image_url with
+    // the provided values to all the entries on the League table which ID
+    // is greater than 3
+    League::update_query()
+        .set_clause(
+            &[
+                (LeagueField::slug, "Updated slug"),
+                (LeagueField::image_url, "https://random_updated_url.up")
+            ]
+        ).where_clause(
+            LeagueFieldValue::id(3), Comp::Gt
+        );
+        // Remove the semicolon and add the lines below if you want to try the update
+        // .query()
+        // .await;
 
     // Uncomment to see the example of find by a Fk relation
     _search_data_by_fk_example().await;
@@ -249,14 +278,6 @@ async fn _search_data_by_fk_example() {
     let related_tournaments_league: Option<League> = Tournament::belongs_to(&lec).await;
     println!("The related League as associated function: {:?}", &related_tournaments_league);
 
-    // TODO The reverse side of the FK should be implemented on League, not in tournament
-    // EX: League::search_related__tournaments(&lec)
-    // TODO Should be also an instance method? The lookage query w'd be based on the ID
-    // like -> SELECT * FROM TOURNAMENT t WHERE t.league = (value of the field)
     let tournaments_belongs_to_league: Vec<Tournament> = Tournament::search_by__league(&lec).await;
     println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
-
-    // Method implementation over a League instance (prefered one)
-    // let tournaments_by_reverse_foreign: Vec<Tournament> = Tournament::search_by__league(&lec).await;
-    // println!("Tournament elements by reverse FK: {:?}", &tournaments_by_reverse_foreign);
 }

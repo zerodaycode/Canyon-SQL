@@ -36,3 +36,22 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
         }
     }
 }
+
+/// Generates the TokenStream for the __update() CRUD operation
+/// being the query generated with the [`QueryBuilder`]
+pub fn generate_update_query_tokens(macro_data: &MacroTokens) -> TokenStream {
+
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    // Gets the name of the table in the database that maps the annotated Struct
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis fn update_query() -> query_elements::query_builder::QueryBuilder<'static, #ty> {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update_query(
+                #table_name
+            )
+        }
+    }
+}

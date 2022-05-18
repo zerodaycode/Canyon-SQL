@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use tokio_postgres::types::ToSql;
-
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
@@ -36,6 +34,10 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
 
         if self.query.sql.contains("UPDATE") && self.set_clause != "" {
             self.query.sql.push_str(&self.set_clause)
+        } else if !self.query.sql.contains("UPDATE") && self.set_clause != "" {
+            panic!(
+                "'SET' SQL statement only must be used in `Type::update_query() associated functions`"
+            );
         }
         
         if self.where_clause != "" {

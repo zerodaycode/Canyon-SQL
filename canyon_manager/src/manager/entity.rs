@@ -23,6 +23,20 @@ impl CanyonEntity {
     /// Generates as many variants for the enum as fields has the type
     /// which this enum is related to, and that type it's the entity
     /// stored in [`CanyonEntity`]
+    /// of the corresponding field
+    pub fn get_fields_as_enum_variants(&self) -> Vec<TokenStream> {
+        self.attributes
+            .iter()
+            .map( |f| {
+                let field_name = &f.name;
+                quote!{ #field_name }
+            })
+        .collect::<Vec<_>>()
+    }
+
+    /// Generates as many variants for the enum as fields has the type
+    /// which this enum is related to, and that type it's the entity
+    /// stored in [`CanyonEntity`]
     /// 
     /// Makes a variant `#field_name(#ty)` where `#ty` it's the type
     /// of the corresponding field
@@ -38,9 +52,26 @@ impl CanyonEntity {
     }
 
     /// Generates an implementation of the match pattern to find whatever variant
-    /// is being requested when the method `.value()` it's invoked over some
+    /// is being requested when the method `.field_name_as_str(self)` it's invoked over some
     /// instance that implements the `canyon_sql::bounds::FieldIdentifier` trait
-    pub fn create_match_arm_for_relate_field(&self, enum_name: &Ident) -> Vec<TokenStream> {
+    pub fn create_match_arm_for_get_variant_as_string(&self, enum_name: &Ident) -> Vec<TokenStream> {
+        self.attributes
+            .iter()
+            .map( |f| {
+                let field_name = &f.name;
+                let field_name_as_string = f.name.to_string();
+
+                quote! { 
+                    #enum_name::#field_name => #field_name_as_string.to_string()
+                }
+            })
+        .collect::<Vec<_>>()
+    }
+
+    /// Generates an implementation of the match pattern to find whatever variant
+    /// is being requested when the method `.value()` it's invoked over some
+    /// instance that implements the `canyon_sql::bounds::FieldValueIdentifier` trait
+    pub fn create_match_arm_for_relate_fields_with_values(&self, enum_name: &Ident) -> Vec<TokenStream> {
         self.attributes
             .iter()
             .map( |f| {
