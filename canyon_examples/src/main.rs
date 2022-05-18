@@ -32,39 +32,10 @@ fn main() {
         after query the database, automatically desearializating the returning
         rows into elements of type T
     */
-
-    // Move into example of multi_insert()
     let _all_leagues: Vec<League> = League::find_all().await;
     println!("Leagues elements: {:?}", &_all_leagues);
 
-    let new_league = League {
-        id: 10,
-        ext_id: 392489032,
-        slug: "League10".to_owned(),
-        name: "League10also".to_owned(),
-        region: "Turkey".to_owned(),
-        image_url: "https://www.sdklafjsd.com".to_owned()
-    };
-    let new_league2 = League {
-        id: 0,
-        ext_id: 392489032,
-        slug: "League11".to_owned(),
-        name: "League11also".to_owned(),
-        region: "LDASKJF".to_owned(),
-        image_url: "https://www.sdklafjsd.com".to_owned()
-    };
-    let new_league3 = League {
-        id: 3,
-        ext_id: 9687392489032,
-        slug: "League3".to_owned(),
-        name: "3League".to_owned(),
-        region: "EU".to_owned(),
-        image_url: "https://www.lag.com".to_owned()
-    };
-
-    League::insert_into(
-        &[new_league, new_league2, new_league3]
-    ).await;
+    
 
     /*
         Canyon also has a powerful querybuilder.
@@ -109,23 +80,6 @@ fn main() {
         .query()
         .await;
     println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
-
-    // Quick example on how to update multiple columns on a table
-    // This concrete example will update the columns slug and image_url with
-    // the provided values to all the entries on the League table which ID
-    // is greater than 3
-    League::update_query()
-        .set_clause(
-            &[
-                (LeagueField::slug, "Updated slug"),
-                (LeagueField::image_url, "https://random_updated_url.up")
-            ]
-        ).where_clause(
-            LeagueFieldValue::id(3), Comp::Gt
-        );
-        // Remove the semicolon and add the lines below if you want to try the update
-        // .query()
-        // .await;
 
     // Uncomment to see the example of find by a Fk relation
     _search_data_by_fk_example().await;
@@ -175,22 +129,21 @@ async fn _wire_data_on_schema() {
         image_url: "https://korean_lck.kr".to_string(),
     };
 
+    let lpl: League = League {
+        id: 2,
+        ext_id: 3,
+        slug: "LPL".to_string(),
+        name: "League PRO China".to_string(),
+        region: "China".to_string(),
+        image_url: "https://chinese_lpl.ch".to_string(),
+    };
+
     // Now, the insert operations in Canyon is designed as a method over
     // the object, so the data of the instance is automatically parsed
     // into it's correct types and formats and inserted into the table
     lec.insert().await;
     lck.insert().await;
-
-    /*  At some point on the console, if the operation it's successful, 
-        you must see something similar to this, depending on the logging
-        level choosed on Canyon
-        
-        INSERT STMT: INSERT INTO leagues (ext_id, slug, name, region, image_url) VALUES ($1,$2,$3,$4,$5)
-        FIELDS: id, ext_id, slug, name, region, image_url
-
-        INSERT STMT: INSERT INTO leagues (ext_id, slug, name, region, image_url) VALUES ($1,$2,$3,$4,$5)
-        FIELDS: id, ext_id, slug, name, region, image_url
-    */
+    lpl.insert().await;
 }
 
 /// Example of usage for a search given an entity related throught the 
@@ -275,9 +228,64 @@ async fn _search_data_by_fk_example() {
         region: "EU West".to_string(),
         image_url: "https://lec.eu".to_string(),
     };
+
     let related_tournaments_league: Option<League> = Tournament::belongs_to(&lec).await;
     println!("The related League as associated function: {:?}", &related_tournaments_league);
 
     let tournaments_belongs_to_league: Vec<Tournament> = Tournament::search_by__league(&lec).await;
     println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
+}
+
+/// Demonstration on how to perform an insert of multiple items on a table
+async fn _multi_insert_example() {
+    let new_league = League {
+        id: 10,
+        ext_id: 392489032,
+        slug: "League10".to_owned(),
+        name: "League10also".to_owned(),
+        region: "Turkey".to_owned(),
+        image_url: "https://www.sdklafjsd.com".to_owned()
+    };
+    let new_league2 = League {
+        id: 0,
+        ext_id: 392489032,
+        slug: "League11".to_owned(),
+        name: "League11also".to_owned(),
+        region: "LDASKJF".to_owned(),
+        image_url: "https://www.sdklafjsd.com".to_owned()
+    };
+    let new_league3 = League {
+        id: 3,
+        ext_id: 9687392489032,
+        slug: "League3".to_owned(),
+        name: "3League".to_owned(),
+        region: "EU".to_owned(),
+        image_url: "https://www.lag.com".to_owned()
+    };
+
+    League::insert_into(
+        &[new_league, new_league2, new_league3]
+    ).await;
+}
+
+
+/// Example on how to update one or more columns with the associated function
+/// Type::update_query()
+/// 
+/// In this particular one, we update multiple columns on a table
+/// It will update the columns slug and image_url with
+/// the provided values to all the entries on the League table which ID
+/// is greater than 3
+async fn _update_columns_associated_fn() {
+    
+    League::update_query()
+        .set_clause(
+            &[
+                (LeagueField::slug, "Updated slug"),
+                (LeagueField::image_url, "https://random_updated_url.up")
+            ]
+        ).where_clause(
+            LeagueFieldValue::id(3), Comp::Gt
+        ).query()
+        .await;
 }
