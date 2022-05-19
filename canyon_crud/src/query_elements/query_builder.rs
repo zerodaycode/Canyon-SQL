@@ -66,7 +66,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
             unboxed_params.push(&**element);
         }
 
-        T::query(&self.query.sql[..], &unboxed_params).await.as_response::<T>()
+        T::query(&self.query.sql[..], &unboxed_params).await.to_entity::<T>()
     }
 
     pub fn new(query: Query<'a, T>) -> Self {

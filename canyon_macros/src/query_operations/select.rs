@@ -20,7 +20,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                 #table_name
             )
             .await
-            .as_response::<#ty>()
+            .to_entity::<#ty>()
         }
     }
     
@@ -69,7 +69,7 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
         #vis async fn find_by_id(id: i32) -> Option<#ty> {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
                 .await
-                .as_response::<#ty>();
+                .to_entity::<#ty>();
                 
             match response {
                 n if n.len() == 0 => None,
@@ -131,7 +131,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
                                         .await
-                                        .as_response::<#fk_ty>();
+                                        .to_entity::<#fk_ty>();
                                 
                                 match response {
                                     n if n.len() == 0 => None,
@@ -151,7 +151,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
                                         .await
-                                        .as_response::<#fk_ty>();
+                                        .to_entity::<#fk_ty>();
                                 
                                 match response {
                                     n if n.len() == 0 => None,
@@ -216,7 +216,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                                 <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
                                         .await
-                                        .as_response::<#ty>()
+                                        .to_entity::<#ty>()
                             }
                         }
                     );
