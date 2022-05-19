@@ -110,7 +110,7 @@ fn main() {
 async fn _wire_data_on_schema() {
     // Data for the examples
     let lec: League = League {
-        id: 1,
+        id: Default::default(),
         ext_id: 1,
         slug: "LEC".to_string(),
         name: "League Europe Champions".to_string(),
@@ -119,7 +119,7 @@ async fn _wire_data_on_schema() {
     };
 
     let lck: League = League {
-        id: 2,
+        id: Default::default(),
         ext_id: 2,
         slug: "LCK".to_string(),
         name: "League Champions Korea".to_string(),
@@ -128,7 +128,7 @@ async fn _wire_data_on_schema() {
     };
 
     let lpl: League = League {
-        id: 2,
+        id: Default::default(),
         ext_id: 3,
         slug: "LPL".to_string(),
         name: "League PRO China".to_string(),

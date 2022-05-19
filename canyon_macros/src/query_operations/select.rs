@@ -66,7 +66,9 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_by_id(id: i32) -> Option<#ty> {
+        #vis async fn find_by_id<N>(id: N) -> Option<#ty> 
+            where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
                 .await
                 .to_entity::<#ty>();

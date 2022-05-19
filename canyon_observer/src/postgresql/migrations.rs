@@ -337,7 +337,9 @@ impl DatabaseSyncOperations {
             Self::query(
                 queries.get(i).unwrap(), 
                 &[]
-            ).await;
+            ).await
+            .ok()
+            .unwrap();
         }
     }
 }
