@@ -5,6 +5,7 @@ use tokio_postgres::{ToStatement, types::ToSql};
 
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
+use crate::bounds::IntegralNumber;
 use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
 
@@ -81,7 +82,9 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_id(table_name: &str, id: i32) -> DatabaseResult<T> {
+    async fn __find_by_id<N>(table_name: &str, id: N) -> DatabaseResult<T> 
+        where N: IntegralNumber
+    {
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
         Self::query(&stmt[..], &[&id]).await
     }

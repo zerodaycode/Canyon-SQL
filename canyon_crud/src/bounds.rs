@@ -72,3 +72,11 @@ pub trait ForeignKeyable {
 
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
 pub trait InClauseValues: ToSql + ToString {}
+
+
+/// Definition and implementation for relating integral numbers in Rust
+/// in concrete, to make certain methods and functions accept both
+/// `i32` or `i64`types interchangeably
+pub trait IntegralNumber: ToSql + Sync + Send {}
+impl IntegralNumber for i32 {}
+impl IntegralNumber for i64 {}
