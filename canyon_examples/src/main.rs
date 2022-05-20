@@ -32,7 +32,7 @@ fn main() {
         after query the database, automatically desearializating the returning
         rows into elements of type T
     */
-    let _all_leagues: Vec<League> = League::find_all().await;
+    let _all_leagues: Vec<League> = League::find_all().await.ok().unwrap().to_entity::<League>();
     println!("Leagues elements: {:?}", &_all_leagues);
 
     /*
@@ -139,9 +139,9 @@ async fn _wire_data_on_schema() {
     // Now, the insert operations in Canyon is designed as a method over
     // the object, so the data of the instance is automatically parsed
     // into it's correct types and formats and inserted into the table
-    lec.insert().await;
-    lck.insert().await;
-    lpl.insert().await;
+    // lec.insert().await;
+    // lck.insert().await;
+    // lpl.insert().await;
 }
 
 /// Example of usage for a search given an entity related throught the 
@@ -173,7 +173,9 @@ async fn _search_data_by_fk_example() {
             Comp::Eq  // where the `=` symbol it's given by this variant
         )
         .query()
-        .await;
+        .await
+        .ok()
+        .unwrap();
     println!("LPL QUERYBUILDER: {:?}", &some_lpl);
         
 
@@ -189,7 +191,7 @@ async fn _search_data_by_fk_example() {
             .unwrap()
             .id,  // The Foreign Key, pointing to the table 'League' and the 'id' column
     };
-    tournament_itce.insert().await;
+    // tournament_itce.insert().await.ok().unwrap();
 
     // You can search the 'League' that it's the parent of 'Tournament'
     let related_tournaments_league_method: Option<League> = 
@@ -243,8 +245,9 @@ async fn _search_data_by_fk_example() {
     // Finds all the tournaments that it's pointing to a concrete `League` record
     // This is usually known as the reverse side of a foreign key, but being a
     // many-to-one relation on this side
-    let tournaments_belongs_to_league: Vec<Tournament> = Tournament::search_by__league(&lec).await;
-    println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
+    // let tournaments_belongs_to_league: Vec<Tournament> = 
+    //     Tournament::search_by__league(&lec).await.ok().unwrap();
+    // println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
 }
 
 
@@ -275,9 +278,9 @@ async fn _multi_insert_example() {
         image_url: "https://www.lag.com".to_owned()
     };
 
-    League::insert_into(
-        &[new_league, new_league2, new_league3]
-    ).await;
+    // League::insert_into(
+    //     &[new_league, new_league2, new_league3]
+    // ).await;
 }
 
 

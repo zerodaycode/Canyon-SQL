@@ -14,11 +14,13 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn delete(&self) -> () {
+        #vis async fn delete(&self) -> 
+            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error>
+        {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name, 
                 self.id
-            ).await;
+            ).await
         }
     }
 }

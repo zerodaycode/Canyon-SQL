@@ -15,12 +15,12 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_all() -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> {
+        #vis async fn find_all() -> Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+        {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name
             )
             .await
-            .to_entity::<#ty>()
         }
     }
     
@@ -70,13 +70,18 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
             where N: canyon_sql::canyon_crud::bounds::IntegralNumber
         {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
-                .await
-                .to_entity::<#ty>();
+                .await;
                 
-            if response.is_ok() {
-                match response {
-                    n if n.len() == 0 => None,
-                    _ => Some(response[0].clone())
+            if response.as_ref().is_ok() {
+                match response.as_ref().ok().unwrap() {
+                    n if n.wrapper.len() == 0 => None,
+                    _ => Some(
+                        response
+                            .ok()
+                            .unwrap()
+                            .to_entity::<#ty>()[0]
+                            .clone()
+                    )
                 }
             } else { None }
         }
@@ -134,13 +139,18 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
-                                        .await
-                                        .to_entity::<#fk_ty>();
+                                        .await;
                                 
-                                if response.is_ok() {
-                                    match response {
-                                        n if n.len() == 0 => None,
-                                        _ => Some(response[0].clone())
+                                if response.as_ref().is_ok() {
+                                    match response.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => None,
+                                        _ => Some(
+                                            response
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        )
                                     }
                                 } else { None }
                             }
@@ -156,13 +166,18 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
-                                        .await
-                                        .to_entity::<#fk_ty>();
+                                        .await;
                                 
-                                if response.is_ok() {
-                                    match response {
-                                        n if n.len() == 0 => None,
-                                        _ => Some(response[0].clone())
+                                if response.as_ref().is_ok() {
+                                    match response.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => None,
+                                        _ => Some(
+                                            response
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        )
                                     }
                                 } else { None }
                             }
@@ -217,14 +232,13 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
 
                     foreign_keys_tokens.push(
                         quote! {
-                            #vis async fn #quoted_method_name<T>(value: &T) -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+                            #vis async fn #quoted_method_name<T>(value: &T) -> Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
                                 <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
                                         .await
-                                        .to_entity::<#ty>()
                             }
                         }
                     );

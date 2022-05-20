@@ -25,14 +25,16 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 
     quote! {
-        #vis async fn insert(&self) -> () {
+        #vis async fn insert(&self) -> 
+            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+        {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name, 
                 #column_names, 
                 &[
                     #(#insert_values),*
                 ]
-            ).await;
+            ).await
         }
     }
 }
@@ -65,7 +67,9 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
 
 
     quote! {
-        #vis async fn insert_into(values: &[#ty]) -> () {
+        #vis async fn insert_into(values: &[#ty]) -> 
+            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+        {
             use crate::tokio_postgres::types::ToSql;
             
             let mut final_values: Vec<Vec<Box<&(dyn ToSql + Sync)>>> = Vec::new();
@@ -84,7 +88,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
                 #table_name, 
                 #column_names, 
                 &mut final_values
-            ).await;
+            ).await
         }
     }
 }

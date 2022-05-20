@@ -25,14 +25,16 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 
     quote! {
-        #vis async fn update(&self) -> () {
+        #vis async fn update(&self) ->
+            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error>
+        {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
                 #table_name,
                 #column_names,
                 &[
                     #(#update_values),*
                 ]
-            ).await;
+            ).await
         }
     }
 }
