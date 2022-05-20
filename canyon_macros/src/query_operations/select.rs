@@ -133,6 +133,39 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     }
 }
 
+/// Generates the TokenStream for build the __find_by_id() CRUD operation
+pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis async fn find_by_id_result<N>(id: N) -> 
+            Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
+                where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
+                .await;
+                
+            if let Err(error) = result {
+                Err(error)
+            } else { 
+                match result.as_ref().ok().unwrap() {
+                    n if n.wrapper.len() == 0 => Ok(None),
+                    _ => Ok(Some(
+                        result
+                            .ok()
+                            .unwrap()
+                            .to_entity::<#ty>()[0]
+                            .clone()
+                    ))
+                } 
+            }
+        }
+    }
+}
+
 /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
 /// of a T type of as an associated function of same T type
 pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {

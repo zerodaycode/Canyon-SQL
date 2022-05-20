@@ -32,7 +32,7 @@ fn main() {
         after query the database, automatically desearializating the returning
         rows into elements of type T
     */
-    let _all_leagues: Vec<League> = League::find_all_result().await.ok().unwrap().to_entity::<League>();
+    let _all_leagues: Vec<League> = League::find_all_result().await.ok().unwrap();
     println!("Leagues elements: {:?}", &_all_leagues);
 
     /*
