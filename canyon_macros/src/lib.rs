@@ -21,7 +21,8 @@ use query_operations::{
         generate_find_by_id_tokens,
         generate_find_by_id_result_tokens,
         generate_find_by_foreign_key_tokens,
-        generate_find_by_reverse_foreign_key_tokens
+        generate_find_by_foreign_key_result_tokens,
+        generate_find_by_reverse_foreign_key_result_tokens
     },
     insert::{
         generate_insert_tokens, 
@@ -188,7 +189,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
     let search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens();
+    let search_by_fk_result_tokens: Vec<TokenStream> = generate_find_by_foreign_key_result_tokens();
     let search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
+    let search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
@@ -242,9 +245,13 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
             // The search by FK impl
             #(#search_by_fk_tokens),*
+            // The search by FK as result impl
+            #(#search_by_fk_result_tokens),*
 
             // The search by reverse side of the FK impl
             #(#search_by_revese_fk_tokens),*
+            // The search by reverse side of the FK as result impl
+            #(#search_by_revese_fk_result_tokens),*
         }
 
         #generated_enum_type_for_fields
