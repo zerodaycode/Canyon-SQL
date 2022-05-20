@@ -15,12 +15,38 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_all() -> Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
-        {
+        #vis async fn find_all() -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name
-            )
-            .await
+            ).await
+                .ok()
+                .unwrap()
+                .to_entity::<#ty>()
+        }
+    }   
+}
+
+/// Generates the TokenStream for build the __find_all_result() CRUD 
+/// associated function
+pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis async fn find_all_result() -> 
+            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+                #table_name
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else {
+                Ok(result.ok().unwrap().to_entity::<#ty>())
+            }
         }
     }
     
@@ -50,7 +76,26 @@ pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn count() -> Result<i64, canyon_sql::tokio_postgres::Error> {
+        #vis async fn count() -> i64 {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
+                #table_name
+            ).await
+                .ok()
+                .unwrap()
+        }
+    }
+}
+
+/// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
+/// a posible success or error coming from the database
+pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+
+    quote! {
+        #vis async fn count_result() -> Result<i64, canyon_sql::tokio_postgres::Error> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name
             ).await
