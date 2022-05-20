@@ -26,7 +26,7 @@ use query_operations::{
         generate_find_by_reverse_foreign_key_result_tokens
     },
     insert::{
-        generate_insert_tokens, 
+        generate_insert_tokens,
         generate_multiple_insert_tokens
     }, 
     update::{
@@ -175,13 +175,15 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let find_by_id_result_tokens = generate_find_by_id_result_tokens(&macro_data);
     
     // Builds the insert() query
-    let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
-    // Builds the insert() query as a QueryBuilder
     let insert_tokens = generate_insert_tokens(&macro_data);
+    // Builds the insert_multi() query
+    let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
+    
     // Builds the update() query
     let update_query_tokens = generate_update_tokens(&macro_data);
     // Builds the update() query as a QueryBuilder
     let update_tokens = generate_update_query_tokens(&macro_data);
+
     // Builds the delete() query
     let delete_tokens = generate_delete_tokens(&macro_data);
     // Builds the delete() query as a QueryBuilder

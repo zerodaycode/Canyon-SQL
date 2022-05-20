@@ -119,7 +119,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         table_name: &str, 
         fields: &str, 
         values: &[&(dyn ToSql + Sync)]
-    ) -> Result<DatabaseResult<T>, Error> {
+    ) -> Result<i32, Error> {
 
         let mut field_values = String::new();
         // Construct the String that holds the '$1' placeholders for the values to insert
@@ -140,7 +140,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         fields_without_id_chars.next();
 
         let stmt = format!(
-            "INSERT INTO {} ({}) VALUES ({})", 
+            "INSERT INTO {} ({}) VALUES ({}) RETURNING id", 
             table_name, fields_without_id_chars.as_str(), field_values
         );
         
@@ -151,7 +151,17 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
         if let Err(error) = result {
             Err(error)
-        } else { Ok(result.ok().unwrap()) }
+        } else { 
+            Ok(
+                result
+                .ok()
+                .unwrap()
+                .wrapper
+                .get(0)
+                .unwrap()
+                .get("id")
+            ) 
+        }
     }
 
     /// Same as the [`fn@__insert`], but as an associated function of some T type.

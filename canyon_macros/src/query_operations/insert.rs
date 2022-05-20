@@ -23,18 +23,30 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         quote! { &self.#ident }
     });
 
-
     quote! {
-        #vis async fn insert(&self) -> 
-            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
-        {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+        #vis async fn insert(&mut self) -> Result<(), canyon_sql::tokio_postgres::Error> {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name, 
                 #column_names, 
                 &[
                     #(#insert_values),*
                 ]
-            ).await
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else {
+                self.id = result  
+                    .ok()
+                    .expect(
+                        format!(
+                            "Insert operation failed for {:?}", 
+                            &self
+                        ).as_str()
+                    );
+
+                Ok(())
+            }
         }
     }
 }

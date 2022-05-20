@@ -1,4 +1,4 @@
-use canyon_sql::*;
+use canyon_sql::{*, tokio_postgres::Error};
 
 pub mod league;
 pub mod tournament;
@@ -34,6 +34,9 @@ fn main() {
     */
     let _all_leagues: Vec<League> = League::find_all_result().await.ok().unwrap();
     println!("Leagues elements: {:?}", &_all_leagues);
+
+    // A simple example insertating data and handling the result returned
+    // insert_result_example().await;
 
     /*
         Canyon also has a powerful querybuilder.
@@ -109,7 +112,7 @@ fn main() {
 /// ``` 
 async fn _wire_data_on_schema() {
     // Data for the examples
-    let lec: League = League {
+    let mut lec: League = League {
         id: Default::default(),
         ext_id: 1,
         slug: "LEC".to_string(),
@@ -118,7 +121,7 @@ async fn _wire_data_on_schema() {
         image_url: "https://lec.eu".to_string(),
     };
 
-    let lck: League = League {
+    let mut lck: League = League {
         id: Default::default(),
         ext_id: 2,
         slug: "LCK".to_string(),
@@ -127,7 +130,7 @@ async fn _wire_data_on_schema() {
         image_url: "https://korean_lck.kr".to_string(),
     };
 
-    let lpl: League = League {
+    let mut lpl: League = League {
         id: Default::default(),
         ext_id: 3,
         slug: "LPL".to_string(),
@@ -139,9 +142,9 @@ async fn _wire_data_on_schema() {
     // Now, the insert operations in Canyon is designed as a method over
     // the object, so the data of the instance is automatically parsed
     // into it's correct types and formats and inserted into the table
-    // lec.insert().await;
-    // lck.insert().await;
-    // lpl.insert().await;
+    lec.insert().await.ok();
+    lck.insert().await.ok();
+    lpl.insert().await.ok();
 }
 
 /// Example of usage for a search given an entity related throught the 
@@ -250,7 +253,36 @@ async fn _search_data_by_fk_example() {
     // println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
 }
 
+/// Simple example on how to insert data into the database with a _result
+/// based method, which returns `()` or Error depending on how the action
+/// went when the query was performed
+async fn insert_result_example() {
+    // A simple example on how to insert new data into the database
+    // On the .insert() method, you always must have a &mut reference
+    // to the data that you want to insert, because the .insert() query
+    // will update the `Default::default()` value assigned in the
+    // initialization
+    let mut lec: League = League {
+        id: Default::default(),
+        ext_id: 1,
+        slug: "AAA LEC".to_string(),
+        name: "AAA League Europe Champions".to_string(),
+        region: "AAAAA EU West".to_string(),
+        image_url: "https://lec.eu".to_string(),
+    };
+    
+    println!("LEC before: {:?}", &lec);
 
+    let ins_result = lec.insert().await;
+    
+    // Now, we can handle the result returned, because it can contains a
+    // critical error that may leads your program to panic
+    if let Ok(_) = ins_result {
+        println!("LEC after: {:?}", &lec);
+    } else {
+        eprintln!("{:?}", ins_result.err())
+    }
+}
 /// Demonstration on how to perform an insert of multiple items on a table
 async fn _multi_insert_example() {
     let new_league = League {
@@ -278,9 +310,10 @@ async fn _multi_insert_example() {
         image_url: "https://www.lag.com".to_owned()
     };
 
-    // League::insert_into(
-    //     &[new_league, new_league2, new_league3]
-    // ).await;
+    League::insert_into(
+        &[new_league, new_league2, new_league3]
+    ).await
+    .ok();
 }
 
 
@@ -302,5 +335,6 @@ async fn _update_columns_associated_fn() {
         ).where_clause(
             LeagueFieldValue::id(3), Comp::Gt
         ).query()
-        .await;
+        .await
+        .ok();
 }
