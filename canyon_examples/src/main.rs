@@ -70,17 +70,17 @@ fn main() {
         for the SQL clause, and a variant of the Canyon's `Comp` enum type, which indicates
         how the comparation element on the filter clauses will be 
     */
-    let _all_leagues_as_querybuilder: Vec<League> = League::find_all_query()
-        .where_clause(
-            LeagueFieldValue::id(1), // This will create a filter -> `WHERE type.id = 1`
-            Comp::Eq // where the `=` symbol it's given by this variant
-        )
-        .query()
-        .await;
-    println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
+    // let _all_leagues_as_querybuilder: Vec<League> = League::find_all_query()
+    //     .where_clause(
+    //         LeagueFieldValue::id(1), // This will create a filter -> `WHERE type.id = 1`
+    //         Comp::Eq // where the `=` symbol it's given by this variant
+    //     )
+    //     .query()
+    //     .await;
+    // println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
-    // Uncomment to see the example of find by data through a FK relation
-    _search_data_by_fk_example().await;
+    // // Uncomment to see the example of find by data through a FK relation
+    // _search_data_by_fk_example().await;
 }
 
 /// Example of usage of the `.insert()` Crud operation. Also, allows you
