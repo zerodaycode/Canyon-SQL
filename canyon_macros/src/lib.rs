@@ -22,6 +22,7 @@ use query_operations::{
         generate_find_by_id_result_tokens,
         generate_find_by_foreign_key_tokens,
         generate_find_by_foreign_key_result_tokens,
+        generate_find_by_reverse_foreign_key_tokens,
         generate_find_by_reverse_foreign_key_result_tokens
     },
     insert::{

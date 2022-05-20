@@ -167,7 +167,9 @@ pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStrea
 }
 
 /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
-/// of a T type of as an associated function of same T type
+/// of a T type of as an associated function of same T type, but wrapped as a Result<T, Err>, representing
+/// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
+/// derive macro on the parent side of the relation
 pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
 
     let mut foreign_keys_tokens = Vec::new();
@@ -322,7 +324,7 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                                 Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
                             {
                                 let lookage_value = #field_value.to_string();
-                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
                                         .await;
                                 
@@ -347,12 +349,12 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                             /// Note that if you pass an instance of some ForeignKeyable type that
                             /// does not matches the other side of the relation, an error will be
                             /// generated
-                            pub async fn belongs_to<T>(value: &T) ->
+                            pub async fn belongs_to_result<T>(value: &T) ->
                                 Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
                                     where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
-                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
                                         .await;
                         
@@ -440,7 +442,69 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
     foreign_keys_tokens
 }
 
+/// Generates the TokenStream for build the __search_by_foreign_key() CRUD 
+/// associated function, but wrapped as a Result<T, Err>, representing
+/// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
+/// derive macro on the parent side of the relation
+pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroTokens) -> Vec<TokenStream> {
 
+    let mut foreign_keys_tokens = Vec::new();
+
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    let table_name = database_table_name_from_struct(ty);
+    let mut column_name = String::new();
+    let mut lookage_value_column = String::new();
+
+    // Find what relation belongs to the data passed in
+    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
+        for field in &element.entity_fields {
+            // Get the annotations
+            if field.annotation.is_some() {
+                let annotation = field.annotation.as_ref().unwrap();
+                if annotation.starts_with("Annotation: ForeignKey") {
+                    column_name.push_str(&field.field_name);
+                    let fk_table_column = &annotation.split(",")
+                        .map( |x| 
+                            x.split(":")
+                            .collect::<Vec<&str>>()
+                            .get(1)
+                            .unwrap()
+                            .to_owned()
+                        ).collect::<Vec<&str>>()[1..].to_owned();
+            
+                    lookage_value_column.push_str(fk_table_column.get(1).unwrap().trim());
+                    let method_name = "search_by__".to_owned() + 
+                        fk_table_column.get(0).unwrap().trim()
+                        + "_result";
+
+                    // Generate and identifier for the method based on the convention of "search_by__" (note the double underscore)
+                    // plus the 'table_name' property of the ForeignKey annotation
+                    let method_name_ident = proc_macro2::Ident::new(
+                        &method_name, proc_macro2::Span::call_site()
+                    );
+                    let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+
+                    foreign_keys_tokens.push(
+                        quote! {
+                            #vis async fn #quoted_method_name<T>(value: &T) -> 
+                                Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
+                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
+                                        .await
+                            }
+                        }
+                    );
+                }
+            }
+        }
+    }
+
+    foreign_keys_tokens
+}
 
 /// Helper to get the plural noun of a given table identifier
 fn _make_related_table_plural(singular: &str) -> String {
