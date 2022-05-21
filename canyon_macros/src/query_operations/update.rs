@@ -25,6 +25,8 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 
     quote! {
+        /// Updates a database record that matches
+        /// the current instance of a T type
         #vis async fn update(&self) -> () {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
                 #table_name,
@@ -36,7 +38,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
             .ok()
             .expect(
                 format!(
-                    "Insert operation failed for {:?}", 
+                    "Update operation failed for {:?}", 
                     &self
                 ).as_str()
             );
@@ -66,6 +68,9 @@ pub fn generate_update_result_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 
     quote! {
+        /// Updates a database record that matches
+        /// the current instance of a T type, returning a result
+        /// indicating a posible failure querying the database.
         #vis async fn update_result(&self) ->
             Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error>
         {

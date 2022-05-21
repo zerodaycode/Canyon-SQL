@@ -37,6 +37,7 @@ use query_operations::{
     },
     delete::{
         generate_delete_tokens,
+        generate_delete_result_tokens,
         generate_delete_query_tokens
     }
 };
@@ -192,6 +193,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Builds the delete() query
     let delete_tokens = generate_delete_tokens(&macro_data);
+    // Builds the delete() query as a result
+    let delete_result_tokens = generate_delete_result_tokens(&macro_data);
     // Builds the delete() query as a QueryBuilder
     let delete_query_tokens = generate_delete_query_tokens(&macro_data);
     
@@ -254,6 +257,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             
             // The delete impl
             #delete_tokens
+
+            // The delete as result impl
+            #delete_result_tokens
 
             // The delete as querybuilder impl
             #delete_query_tokens
