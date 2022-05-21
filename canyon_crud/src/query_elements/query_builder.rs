@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use tokio_postgres::Error;
+
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
@@ -29,7 +31,7 @@ pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowM
 impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self) -> Vec<T> {
+    pub async fn query(&mut self) -> Result<Vec<T>, Error> {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
         if self.query.sql.contains("UPDATE") && self.set_clause != "" {
@@ -66,7 +68,11 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
             unboxed_params.push(&**element);
         }
 
-        T::query(&self.query.sql[..], &unboxed_params).await.to_entity::<T>()
+        let result = T::query(&self.query.sql[..], &unboxed_params).await;
+
+        if let Err(error) = result {
+            Err(error)
+        } else { Ok(result.ok().unwrap().to_entity::<T>()) }
     }
 
     pub fn new(query: Query<'a, T>) -> Self {

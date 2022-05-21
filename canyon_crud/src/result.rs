@@ -17,7 +17,7 @@ impl<T: Debug> DatabaseResult<T> {
     pub fn new(result: Vec<Row>) -> Self {
         Self {
             wrapper: result,
-            _phantom_data: PhantomData  // type T need to be used
+            _phantom_data: PhantomData
         }
     }
 

@@ -7,6 +7,10 @@ use chrono::NaiveDate;
 use league::*;
 use tournament::*;
 
+// A type alias for the error returned in the _result operations
+type QueryError = canyon_sql::tokio_postgres::Error;
+
+
 /// The `#[canyon]` macro represents the entry point of a Canyon program.
 /// 
 /// When this annotation it's present, Canyon it's able to take care about everything
@@ -14,8 +18,8 @@ use tournament::*;
 /// being the most obvious and important the migrations control.
 #[canyon]
 fn main() {
+
     /*  
-        The insert example.
         On the first run, you may desire to uncomment the method call below,
         to be able to populate some data into the schema.
         Remember that all operation with CanyonCrud must be awaited,
@@ -31,9 +35,30 @@ fn main() {
         This automatically returns a collection (Vector) of elements found
         after query the database, automatically desearializating the returning
         rows into elements of type T
+
+        For short, the next operations are unwraped for results and options
+        without error handling.
+
+        A section in the official documentation it's dedicated to demostrate
+        how, when required, failable operations must be error handled.
     */
     let _all_leagues: Vec<League> = League::find_all().await;
     println!("Leagues elements: {:?}", &_all_leagues);
+
+    // The find_by_id(Number) operation. Returns an optional, 'cause this operation
+    // it could be easily a failure (not found the record by the provided PRIMARY KEY)
+    let _find_by_id: Option<League> = League::find_by_id(1).await;
+    println!("Find by ID: {:?}", &_find_by_id);
+
+    // Same operation but with the result variants
+    let _all_leagues_res: Result<Vec<League>, QueryError> = League::find_all_result().await;
+    println!("Leagues elements on the result variant: {:?}", &_all_leagues_res.ok().unwrap());
+
+    let _find_by_id: Result<Option<League>, QueryError> = League::find_by_id_result(1).await;
+    println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
+
+    // A simple example insertating data and handling the result returned
+    _insert_result_example().await;
 
     /*
         Canyon also has a powerful querybuilder.
@@ -76,11 +101,13 @@ fn main() {
             Comp::Eq // where the `=` symbol it's given by this variant
         )
         .query()
-        .await;
+        .await
+        .ok()
+        .unwrap();
     println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
-    // Uncomment to see the example of find by data through a FK relation
-    _search_data_by_fk_example().await;
+    // // Uncomment to see the example of find by data through a FK relation
+    // _search_data_by_fk_example().await;
 }
 
 /// Example of usage of the `.insert()` Crud operation. Also, allows you
@@ -109,8 +136,8 @@ fn main() {
 /// ``` 
 async fn _wire_data_on_schema() {
     // Data for the examples
-    let lec: League = League {
-        id: 1,
+    let mut lec: League = League {
+        id: Default::default(),
         ext_id: 1,
         slug: "LEC".to_string(),
         name: "League Europe Champions".to_string(),
@@ -118,8 +145,8 @@ async fn _wire_data_on_schema() {
         image_url: "https://lec.eu".to_string(),
     };
 
-    let lck: League = League {
-        id: 2,
+    let mut lck: League = League {
+        id: Default::default(),
         ext_id: 2,
         slug: "LCK".to_string(),
         name: "League Champions Korea".to_string(),
@@ -127,8 +154,8 @@ async fn _wire_data_on_schema() {
         image_url: "https://korean_lck.kr".to_string(),
     };
 
-    let lpl: League = League {
-        id: 2,
+    let mut lpl: League = League {
+        id: Default::default(),
         ext_id: 3,
         slug: "LPL".to_string(),
         name: "League PRO China".to_string(),
@@ -173,7 +200,9 @@ async fn _search_data_by_fk_example() {
             Comp::Eq  // where the `=` symbol it's given by this variant
         )
         .query()
-        .await;
+        .await
+        .ok()
+        .unwrap();
     println!("LPL QUERYBUILDER: {:?}", &some_lpl);
         
 
@@ -189,7 +218,7 @@ async fn _search_data_by_fk_example() {
             .unwrap()
             .id,  // The Foreign Key, pointing to the table 'League' and the 'id' column
     };
-    tournament_itce.insert().await;
+    // tournament_itce.insert().await.ok().unwrap();
 
     // You can search the 'League' that it's the parent of 'Tournament'
     let related_tournaments_league_method: Option<League> = 
@@ -243,10 +272,41 @@ async fn _search_data_by_fk_example() {
     // Finds all the tournaments that it's pointing to a concrete `League` record
     // This is usually known as the reverse side of a foreign key, but being a
     // many-to-one relation on this side
-    let tournaments_belongs_to_league: Vec<Tournament> = Tournament::search_by__league(&lec).await;
-    println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
+    // let tournaments_belongs_to_league: Vec<Tournament> = 
+    //     Tournament::search_by__league(&lec).await.ok().unwrap();
+    // println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
 }
 
+/// Simple example on how to insert data into the database with a _result
+/// based method, which returns `()` or Error depending on how the action
+/// went when the query was performed
+async fn _insert_result_example() {
+    // A simple example on how to insert new data into the database
+    // On the .insert() method, you always must have a &mut reference
+    // to the data that you want to insert, because the .insert() query
+    // will update the `Default::default()` value assigned in the
+    // initialization
+    let mut lec: League = League {
+        id: Default::default(),
+        ext_id: 1,
+        slug: "AAA LEC".to_string(),
+        name: "AAA League Europe Champions".to_string(),
+        region: "AAAAA EU West".to_string(),
+        image_url: "https://lec.eu".to_string(),
+    };
+    
+    println!("LEC before: {:?}", &lec);
+
+    let ins_result = lec.insert_result().await;
+    
+    // Now, we can handle the result returned, because it can contains a
+    // critical error that may leads your program to panic
+    if let Ok(_) = ins_result {
+        println!("LEC after: {:?}", &lec);
+    } else {
+        eprintln!("{:?}", ins_result.err())
+    }
+}
 
 /// Demonstration on how to perform an insert of multiple items on a table
 async fn _multi_insert_example() {
@@ -277,7 +337,8 @@ async fn _multi_insert_example() {
 
     League::insert_into(
         &[new_league, new_league2, new_league3]
-    ).await;
+    ).await
+    .ok();
 }
 
 
@@ -299,5 +360,6 @@ async fn _update_columns_associated_fn() {
         ).where_clause(
             LeagueFieldValue::id(3), Comp::Gt
         ).query()
-        .await;
+        .await
+        .ok();
 }
