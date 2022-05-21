@@ -104,8 +104,21 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         self
     } 
 
-    pub fn and_clause(mut self, r#and: &'a str) -> Self {
-        self.and_clause.push_str(&*(String::from(" AND ") + r#and));
+    pub fn and_clause<Z: FieldValueIdentifier>(mut self, r#and: Z, comp: Comp) -> Self {
+        let values = r#and.value()
+            .to_string()
+            .split(" ")
+            .map( |el| String::from(el))
+            .collect::<Vec<String>>();
+
+        let where_ = values.get(0).unwrap().to_string() + 
+            &comp.as_string()[..] + "'" +
+            values.get(1).unwrap() + "'"; 
+        
+        self.where_clause.push_str(
+            &*(String::from(" AND ") + where_.as_str())
+        );
+
         self
     } 
 
@@ -114,8 +127,17 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         self
     } 
 
-    pub fn order_by(mut self, order_by: &'a str) -> Self {
-        self.order_by_clause.push_str(&*(String::from(" ORDER BY ") + order_by));
+    pub fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
+        let desc = if desc { String::from(" DESC ") 
+            } else { "".to_owned() };
+
+        self.order_by_clause.push_str(
+            &*(
+                String::from(" ORDER BY ") + 
+                order_by.field_name_as_str().as_str() + 
+                &desc
+            )
+        );
         self
     }
 

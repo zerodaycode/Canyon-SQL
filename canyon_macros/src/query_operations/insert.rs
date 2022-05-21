@@ -207,7 +207,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
 
 
     quote! {
-        #vis async fn insert_into(values: &[#ty]) -> 
+        #vis async fn insert_multiple(values: &[#ty]) -> 
             Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
         {
             use crate::tokio_postgres::types::ToSql;

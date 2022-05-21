@@ -311,7 +311,7 @@ async fn _insert_result_example() {
 /// Demonstration on how to perform an insert of multiple items on a table
 async fn _multi_insert_example() {
     let new_league = League {
-        id: 10,
+        id: Default::default(),
         ext_id: 392489032,
         slug: "League10".to_owned(),
         name: "League10also".to_owned(),
@@ -319,7 +319,7 @@ async fn _multi_insert_example() {
         image_url: "https://www.sdklafjsd.com".to_owned()
     };
     let new_league2 = League {
-        id: 0,
+        id: Default::default(),
         ext_id: 392489032,
         slug: "League11".to_owned(),
         name: "League11also".to_owned(),
@@ -327,7 +327,7 @@ async fn _multi_insert_example() {
         image_url: "https://www.sdklafjsd.com".to_owned()
     };
     let new_league3 = League {
-        id: 3,
+        id: Default::default(),
         ext_id: 9687392489032,
         slug: "League3".to_owned(),
         name: "3League".to_owned(),
@@ -335,7 +335,7 @@ async fn _multi_insert_example() {
         image_url: "https://www.lag.com".to_owned()
     };
 
-    League::insert_into(
+    League::insert_multiple(
         &[new_league, new_league2, new_league3]
     ).await
     .ok();
