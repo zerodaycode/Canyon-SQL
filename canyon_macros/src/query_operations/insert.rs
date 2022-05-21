@@ -30,10 +30,14 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// This `insert` operation needs a `&mut` reference. That's because typically, 
         /// an insert operation represents *new* data stored in the database, so, when
         /// inserted, the database will generate a unique new value for the mandatory 
-        /// `id` field, having a unique identifier for every record.
+        /// `id` field, having a unique identifier for every record, and it will
+        /// automatically assign that returned id to `self.id`. So, after the `insert`
+        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
+        /// of the database row that represents.
         /// 
         /// ## *Examples*
         /// ```
+        
         /// let mut lec: League = League {
         ///     id: Default::default(),
         ///     ext_id: 1,
@@ -67,6 +71,10 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// lec.insert().await;
         /// lck.insert().await;
         /// lpl.insert().await;
+        /// 
+        /// ## self.id
+        /// Remember that after the insert operation, you instance already have 
+        /// the correct value for the `self.id` field.
         /// ```
         #vis async fn insert(&mut self) -> () {
             self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
@@ -113,7 +121,12 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// This `insert` operation needs a `&mut` reference. That's because typically, 
         /// an insert operation represents *new* data stored in the database, so, when
         /// inserted, the database will generate a unique new value for the mandatory 
-        /// `id` field, having a unique identifier for every record.
+        /// `id` field, having a unique identifier for every record, and it will
+        /// automatically assign that returned id to `self.id`. So, after the `insert`
+        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
+        /// of the database row that represents.
+        /// 
+        /// This operation returns a result type, indicating a posible failure querying the database.
         /// 
         /// ## *Examples*
         ///```

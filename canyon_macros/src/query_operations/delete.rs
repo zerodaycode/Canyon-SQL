@@ -46,13 +46,15 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// Deletes from a database entity the row that matches
         /// the current instance of a T type, returning a result
         /// indicating a posible failure querying the database.
-        #vis async fn delete_result(&self) -> 
-            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error>
-        {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
+        #vis async fn delete_result(&self) -> Result<(), canyon_sql::tokio_postgres::Error> {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name, 
                 self.id
-            ).await
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else { Ok(()) }
         }
     }
 }

@@ -71,16 +71,18 @@ pub fn generate_update_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// Updates a database record that matches
         /// the current instance of a T type, returning a result
         /// indicating a posible failure querying the database.
-        #vis async fn update_result(&self) ->
-            Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error>
-        {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+        #vis async fn update_result(&self) -> Result<(), canyon_sql::tokio_postgres::Error> {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
                 #table_name,
                 #column_names,
                 &[
                     #(#update_values),*
                 ]
-            ).await
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else { Ok(()) }
         }
     }
 }

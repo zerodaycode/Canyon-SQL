@@ -7,6 +7,10 @@ use chrono::NaiveDate;
 use league::*;
 use tournament::*;
 
+// A type alias for the error returned in the _result operations
+type QueryError = canyon_sql::tokio_postgres::Error;
+
+
 /// The `#[canyon]` macro represents the entry point of a Canyon program.
 /// 
 /// When this annotation it's present, Canyon it's able to take care about everything
@@ -14,6 +18,7 @@ use tournament::*;
 /// being the most obvious and important the migrations control.
 #[canyon]
 fn main() {
+
     /*  
         On the first run, you may desire to uncomment the method call below,
         to be able to populate some data into the schema.
@@ -30,12 +35,30 @@ fn main() {
         This automatically returns a collection (Vector) of elements found
         after query the database, automatically desearializating the returning
         rows into elements of type T
+
+        For short, the next operations are unwraped for results and options
+        without error handling.
+
+        A section in the official documentation it's dedicated to demostrate
+        how, when required, failable operations must be error handled.
     */
-    let _all_leagues: Vec<League> = League::find_all_result().await.ok().unwrap();
+    let _all_leagues: Vec<League> = League::find_all().await;
     println!("Leagues elements: {:?}", &_all_leagues);
 
+    // The find_by_id(Number) operation. Returns an optional, 'cause this operation
+    // it could be easily a failure (not found the record by the provided PRIMARY KEY)
+    let _find_by_id: Option<League> = League::find_by_id(1).await;
+    println!("Find by ID: {:?}", &_find_by_id);
+
+    // Same operation but with the result variants
+    let _all_leagues_res: Result<Vec<League>, QueryError> = League::find_all_result().await;
+    println!("Leagues elements on the result variant: {:?}", &_all_leagues_res.ok().unwrap());
+
+    let _find_by_id: Result<Option<League>, QueryError> = League::find_by_id_result(1).await;
+    println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
+
     // A simple example insertating data and handling the result returned
-    // _insert_result_example().await;
+    _insert_result_example().await;
 
     /*
         Canyon also has a powerful querybuilder.
@@ -72,14 +95,16 @@ fn main() {
         for the SQL clause, and a variant of the Canyon's `Comp` enum type, which indicates
         how the comparation element on the filter clauses will be 
     */
-    // let _all_leagues_as_querybuilder: Vec<League> = League::find_all_query()
-    //     .where_clause(
-    //         LeagueFieldValue::id(1), // This will create a filter -> `WHERE type.id = 1`
-    //         Comp::Eq // where the `=` symbol it's given by this variant
-    //     )
-    //     .query()
-    //     .await;
-    // println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
+    let _all_leagues_as_querybuilder: Vec<League> = League::find_all_query()
+        .where_clause(
+            LeagueFieldValue::id(1), // This will create a filter -> `WHERE type.id = 1`
+            Comp::Eq // where the `=` symbol it's given by this variant
+        )
+        .query()
+        .await
+        .ok()
+        .unwrap();
+    println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
     // // Uncomment to see the example of find by data through a FK relation
     // _search_data_by_fk_example().await;
@@ -282,6 +307,7 @@ async fn _insert_result_example() {
         eprintln!("{:?}", ins_result.err())
     }
 }
+
 /// Demonstration on how to perform an insert of multiple items on a table
 async fn _multi_insert_example() {
     let new_league = League {
