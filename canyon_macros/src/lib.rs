@@ -31,7 +31,8 @@ use query_operations::{
         generate_multiple_insert_tokens
     }, 
     update::{
-        generate_update_tokens, 
+        generate_update_tokens,
+        generate_update_result_tokens,
         generate_update_query_tokens
     },
     delete::{
@@ -183,9 +184,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
     
     // Builds the update() query
-    let update_query_tokens = generate_update_tokens(&macro_data);
+    let update_tokens = generate_update_tokens(&macro_data);
+    // Builds the update() query as a result
+    let update_result_tokens = generate_update_result_tokens(&macro_data);
     // Builds the update() query as a QueryBuilder
-    let update_tokens = generate_update_query_tokens(&macro_data);
+    let update_query_tokens = generate_update_query_tokens(&macro_data);
 
     // Builds the delete() query
     let delete_tokens = generate_delete_tokens(&macro_data);
@@ -240,17 +243,20 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The insert of multiple entities impl
             #insert_multi_tokens
 
+            // The update impl
+            #update_tokens
+
+            // The update as result impl
+            #update_result_tokens
+            
+            // The update as a querybuilder impl
+            #update_query_tokens
+            
             // The delete impl
             #delete_tokens
 
             // The delete as querybuilder impl
             #delete_query_tokens
-
-            // The update impl
-            #update_tokens
-            
-            // The update as a querybuilder impl
-            #update_query_tokens
 
             // The search by FK impl
             #(#search_by_fk_tokens),*

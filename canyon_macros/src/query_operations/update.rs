@@ -25,7 +25,48 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 
     quote! {
-        #vis async fn update(&self) ->
+        #vis async fn update(&self) -> () {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+                #table_name,
+                #column_names,
+                &[
+                    #(#update_values),*
+                ]
+            ).await
+            .ok()
+            .expect(
+                format!(
+                    "Insert operation failed for {:?}", 
+                    &self
+                ).as_str()
+            );
+        }
+    }
+}
+
+/// Generates the TokenStream for the __update() CRUD operation
+/// returning a result containing the success or an error
+pub fn generate_update_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    // Gets the name of the table in the database that maps the annotated Struct
+    let table_name = database_table_name_from_struct(ty);
+
+    // Retrives the fields of the Struct
+    let fields = macro_data.get_struct_fields();
+
+    // Retrieves the fields of the Struct as continuous String
+    let column_names = macro_data.get_struct_fields_as_strings();
+
+    let update_values = fields.iter().map( |ident| {
+        quote! { &self.#ident }
+    });
+
+
+    quote! {
+        #vis async fn update_result(&self) ->
             Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error>
         {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(

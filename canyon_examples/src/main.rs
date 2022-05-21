@@ -15,7 +15,6 @@ use tournament::*;
 #[canyon]
 fn main() {
     /*  
-        The insert example.
         On the first run, you may desire to uncomment the method call below,
         to be able to populate some data into the schema.
         Remember that all operation with CanyonCrud must be awaited,
