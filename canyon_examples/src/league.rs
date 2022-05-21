@@ -1,4 +1,4 @@
-use canyon_sql::{*, bounds::IntegralNumber};
+use canyon_sql::*;
 
 /// Represents a @LeagueOfLegends official League from some
 /// region

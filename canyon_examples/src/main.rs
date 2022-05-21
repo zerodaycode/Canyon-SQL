@@ -1,4 +1,4 @@
-use canyon_sql::{*, tokio_postgres::Error};
+use canyon_sql::*;
 
 pub mod league;
 pub mod tournament;
@@ -36,7 +36,7 @@ fn main() {
     println!("Leagues elements: {:?}", &_all_leagues);
 
     // A simple example insertating data and handling the result returned
-    // insert_result_example().await;
+    // _insert_result_example().await;
 
     /*
         Canyon also has a powerful querybuilder.
@@ -142,9 +142,9 @@ async fn _wire_data_on_schema() {
     // Now, the insert operations in Canyon is designed as a method over
     // the object, so the data of the instance is automatically parsed
     // into it's correct types and formats and inserted into the table
-    lec.insert().await.ok();
-    lck.insert().await.ok();
-    lpl.insert().await.ok();
+    lec.insert().await;
+    lck.insert().await;
+    lpl.insert().await;
 }
 
 /// Example of usage for a search given an entity related throught the 
@@ -256,7 +256,7 @@ async fn _search_data_by_fk_example() {
 /// Simple example on how to insert data into the database with a _result
 /// based method, which returns `()` or Error depending on how the action
 /// went when the query was performed
-async fn insert_result_example() {
+async fn _insert_result_example() {
     // A simple example on how to insert new data into the database
     // On the .insert() method, you always must have a &mut reference
     // to the data that you want to insert, because the .insert() query
@@ -273,7 +273,7 @@ async fn insert_result_example() {
     
     println!("LEC before: {:?}", &lec);
 
-    let ins_result = lec.insert().await;
+    let ins_result = lec.insert_result().await;
     
     // Now, we can handle the result returned, because it can contains a
     // critical error that may leads your program to panic

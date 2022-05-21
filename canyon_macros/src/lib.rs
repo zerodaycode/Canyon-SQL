@@ -27,6 +27,7 @@ use query_operations::{
     },
     insert::{
         generate_insert_tokens,
+        generate_insert_result_tokens,
         generate_multiple_insert_tokens
     }, 
     update::{
@@ -176,6 +177,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     
     // Builds the insert() query
     let insert_tokens = generate_insert_tokens(&macro_data);
+    // Builds the insert() query as a result
+    let insert_result_tokens = generate_insert_result_tokens(&macro_data);
     // Builds the insert_multi() query
     let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
     
@@ -230,6 +233,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
             // The insert impl
             #insert_tokens
+
+            // The insert as a result impl
+            #insert_result_tokens
 
             // The insert of multiple entities impl
             #insert_multi_tokens

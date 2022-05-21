@@ -4,7 +4,7 @@ use quote::quote;
 use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
 
-/// Generates the TokenStream for the __insert() CRUD operation
+/// Generates the TokenStream for the _insert() CRUD operation
 pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     // Destructure macro_tokens into raw data
@@ -24,7 +24,46 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
     });
 
     quote! {
-        #vis async fn insert(&mut self) -> Result<(), canyon_sql::tokio_postgres::Error> {
+        #vis async fn insert(&mut self) -> () {
+            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+                #table_name, 
+                #column_names, 
+                &[
+                    #(#insert_values),*
+                ]
+            ).await
+            .ok()
+            .expect(
+                format!(
+                    "Insert operation failed for {:?}", 
+                    &self
+                ).as_str()
+            );
+        }
+    }
+}
+
+/// Generates the TokenStream for the _insert_result() CRUD operation
+pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+
+    // Destructure macro_tokens into raw data
+    let (vis, ty) = (macro_data.vis, macro_data.ty);
+
+    // Gets the name of the table in the database that maps the annotated Struct
+    let table_name = database_table_name_from_struct(ty);
+
+    // Retrieves the fields of the Struct as continuous String
+    let column_names = macro_data.get_struct_fields_as_strings();
+
+    // Retrives the fields of the Struct
+    let fields = macro_data.get_struct_fields();
+
+    let insert_values = fields.iter().map( |ident| {
+        quote! { &self.#ident }
+    });
+
+    quote! {
+        #vis async fn insert_result(&mut self) -> Result<(), canyon_sql::tokio_postgres::Error> {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name, 
                 #column_names, 
