@@ -29,8 +29,7 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
         
         
         if (*QUERIES_TO_EXECUTE).lock().unwrap().len() > 1 {
-            // > 1 beacuase there's an [""] entry
-            println!("Queries to execute -> {}:", (*QUERIES_TO_EXECUTE).lock().unwrap().len());
+            // > 1 because there's an [""] entry
             for element in (*QUERIES_TO_EXECUTE).lock().unwrap().iter() {
                 println!("\t{}", element)
             }

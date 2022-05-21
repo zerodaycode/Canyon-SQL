@@ -17,14 +17,17 @@ impl<T: Debug> DatabaseResult<T> {
     pub fn new(result: Vec<Row>) -> Self {
         Self {
             wrapper: result,
-            _phantom_data: PhantomData  // type T need to be used
+            _phantom_data: PhantomData
         }
     }
 
-    /// Returns a Vec<T> full filled with allocated instances of the type T.
-    /// Z it's used to constrait the types that can call it to the same generic T type,
-    /// and to provide a way to statically call some `Z::deserialize` method.
-    pub fn as_response<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    /// Returns a Vec<T> filled with instances of the type T.
+    /// Z param it's used to constrait the types that can call this method.
+    /// 
+    /// Also, provides a way to statically call `Z::deserialize` method,
+    /// which it's a complex implementation used by the macros to automatically
+    /// map database columns into the fields for T.
+    pub fn to_entity<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
         where T: Transaction<T> {
 
         let mut results = Vec::new();

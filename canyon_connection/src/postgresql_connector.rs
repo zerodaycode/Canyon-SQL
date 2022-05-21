@@ -4,8 +4,7 @@ use tokio_postgres::{Client, Connection, Error, NoTls, Socket, tls::NoTlsStream}
 use crate::credentials::DatabaseCredentials;
 
 
-/// Creates a new connection with a database, returning the necessary tools
-/// to query the created link.
+/// Represents a connection with a `PostgreSQL` database
 pub struct DatabaseConnection<'a> {
     pub client: Client,
     pub connection: Connection<Socket, NoTlsStream>,

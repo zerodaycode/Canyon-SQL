@@ -13,18 +13,33 @@ use syn::{
 
 use query_operations::{
     select::{
-        generate_find_all_tokens, 
-        generate_find_all_query_tokens, 
+        generate_find_all_tokens,
+        generate_find_all_result_tokens,
+        generate_find_all_query_tokens,
+        generate_count_tokens,
+        generate_count_result_tokens,
         generate_find_by_id_tokens,
+        generate_find_by_id_result_tokens,
         generate_find_by_foreign_key_tokens,
-        generate_find_by_reverse_foreign_key_tokens
+        generate_find_by_foreign_key_result_tokens,
+        generate_find_by_reverse_foreign_key_tokens,
+        generate_find_by_reverse_foreign_key_result_tokens
     },
     insert::{
-        generate_insert_tokens, 
+        generate_insert_tokens,
+        generate_insert_result_tokens,
         generate_multiple_insert_tokens
     }, 
-    update::generate_update_tokens,
-    delete::generate_delete_tokens
+    update::{
+        generate_update_tokens,
+        generate_update_result_tokens,
+        generate_update_query_tokens
+    },
+    delete::{
+        generate_delete_tokens,
+        generate_delete_result_tokens,
+        generate_delete_query_tokens
+    }
 };
 
 use utils::{
@@ -35,9 +50,9 @@ use canyon_macro::wire_queries_to_execute;
 
 use canyon_manager::manager::{
     manager_builder::{
-        generate_data_struct, 
-        // get_field_attr, 
-        generate_fields_names_for_enum
+        generate_user_struct,
+        generate_enum_with_fields,
+        generate_enum_with_fields_values 
     }, 
     entity::CanyonEntity
 };
@@ -113,8 +128,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let entity = entity_res.ok().unwrap();
 
     // Generate the bits of code that we should give back to the compiler
-    let generated_data_struct = generate_data_struct(&entity);
-    let generated_enum_type_for_fields = generate_fields_names_for_enum(&entity);
+    let generated_user_struct = generate_user_struct(&entity);
+    let generated_enum_type_for_fields = generate_enum_with_fields(&entity);
+    let generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
@@ -146,23 +162,48 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // Builds the find_all() query
     let find_all_tokens = generate_find_all_tokens(&macro_data);
-    // Builds the find_all_query() query
+    // Builds the find_all_result() query
+    let find_all_result_tokens = generate_find_all_result_tokens(&macro_data);
+    // Builds the find_all_query() query as a QueryBuilder
     let find_all_query_tokens = generate_find_all_query_tokens(&macro_data);
+    
+    // Builds a COUNT(*) query over some table
+    let count_tokens = generate_count_tokens(&macro_data);
+    // Builds a COUNT(*) query over some table
+    let count_result_tokens = generate_count_result_tokens(&macro_data);
+   
     // Builds the find_by_id() query
     let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
+    // Builds the find_by_id_result() query
+    let find_by_id_result_tokens = generate_find_by_id_result_tokens(&macro_data);
+    
     // Builds the insert() query
-    let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
-    // Builds the insert() query as a querybuilder
     let insert_tokens = generate_insert_tokens(&macro_data);
+    // Builds the insert() query as a result
+    let insert_result_tokens = generate_insert_result_tokens(&macro_data);
+    // Builds the insert_multi() query
+    let insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
+    
     // Builds the update() query
     let update_tokens = generate_update_tokens(&macro_data);
+    // Builds the update() query as a result
+    let update_result_tokens = generate_update_result_tokens(&macro_data);
+    // Builds the update() query as a QueryBuilder
+    let update_query_tokens = generate_update_query_tokens(&macro_data);
+
     // Builds the delete() query
     let delete_tokens = generate_delete_tokens(&macro_data);
+    // Builds the delete() query as a result
+    let delete_result_tokens = generate_delete_result_tokens(&macro_data);
+    // Builds the delete() query as a QueryBuilder
+    let delete_query_tokens = generate_delete_query_tokens(&macro_data);
     
 
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
     let search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens();
+    let search_by_fk_result_tokens: Vec<TokenStream> = generate_find_by_foreign_key_result_tokens();
     let search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
+    let search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
@@ -170,39 +211,73 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         
     // Assemble everything
     let tokens = quote! {
-        #generated_data_struct
+        #generated_user_struct
+
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
             // The find_all impl
             #find_all_tokens
 
+            // The find_all_result impl
+            #find_all_result_tokens
+
             // The find_all_query impl
             #find_all_query_tokens
+
+            // The COUNT(*) impl
+            #count_tokens
+
+            // The COUNT(*) as result impl
+            #count_result_tokens
 
             // The find_by_id impl
             #find_by_id_tokens
 
+            // The find_by_id as result impl
+            #find_by_id_result_tokens
+
             // The insert impl
             #insert_tokens
+
+            // The insert as a result impl
+            #insert_result_tokens
 
             // The insert of multiple entities impl
             #insert_multi_tokens
 
-            // The delete impl
-            #delete_tokens
-
             // The update impl
             #update_tokens
 
+            // The update as result impl
+            #update_result_tokens
+            
+            // The update as a querybuilder impl
+            #update_query_tokens
+            
+            // The delete impl
+            #delete_tokens
+
+            // The delete as result impl
+            #delete_result_tokens
+
+            // The delete as querybuilder impl
+            #delete_query_tokens
+
             // The search by FK impl
             #(#search_by_fk_tokens),*
+            // The search by FK as result impl
+            #(#search_by_fk_result_tokens),*
 
             // The search by reverse side of the FK impl
             #(#search_by_revese_fk_tokens),*
+            // The search by reverse side of the FK as result impl
+            #(#search_by_revese_fk_result_tokens),*
         }
 
         #generated_enum_type_for_fields
+
+        #generated_enum_type_for_fields_values
     };
 
     // Pass the result back to the compiler

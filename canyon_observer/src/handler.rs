@@ -107,7 +107,7 @@ impl<'a> CanyonHandler<'a> {
         let results = Self::query(
             super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
             &[]
-        ).await.wrapper;
+        ).await.ok().unwrap().wrapper;
 
         let mut schema_info: Vec<RowTable> = Vec::new();
 

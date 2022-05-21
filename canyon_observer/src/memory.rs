@@ -61,6 +61,8 @@ impl CanyonMemory {
             "SELECT * FROM canyon_memory",
             &[]
         ).await
+        .ok()
+        .expect("Error querying Canyon Memory")
         .wrapper;
 
         // Manually maps the results
@@ -197,7 +199,11 @@ impl CanyonMemory {
 
                 // If more than two, we panic!
                 if canyon_entity_macro_counter > 1 {
-                    // TODO compile_error!(...)
+                    panic!(
+                        r"Canyon does not support having multiple structs annotated\ 
+                        with `#[canyon::entity]` on the same file when the `#[canyon]`\  
+                        macro it's present on the program"
+                    )
                 } else if canyon_entity_macro_counter == 1 {
                     self.memory.insert(
                         file.path()
@@ -224,7 +230,10 @@ impl CanyonMemory {
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
             )", 
             &[]
-        ).await.wrapper;
+        ).await
+        .ok()
+        .expect("Error creating the 'canyon_memory' table")
+        .wrapper;
     }
 }
 

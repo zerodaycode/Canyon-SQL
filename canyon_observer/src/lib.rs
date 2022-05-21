@@ -26,7 +26,7 @@ use lazy_static::lazy_static;
 use crate::postgresql::register_types::CanyonRegisterEntity;
 
 
-lazy_static! {
+lazy_static! {  // TODO implement an access control polity by number of times read the static refs
     pub static ref CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity>> = Mutex::new(Vec::new());
     pub static ref QUERIES_TO_EXECUTE: Mutex<Vec<String>> = Mutex::new(Vec::new());
 }
