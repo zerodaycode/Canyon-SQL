@@ -251,10 +251,10 @@ impl DatabaseSyncOperations {
         }
     }
 
-    fn check_table_on_database(table_name: &String, database_tables: &Vec<DatabaseTable<'_>>) -> bool {
+    fn check_table_on_database(table_name: &str, database_tables: &[DatabaseTable<'_>]) -> bool {
         database_tables
             .iter()
-            .any(|v| &v.table_name == table_name)
+            .any(|v| v.table_name == table_name)
     }
 
     fn columns_in_table(
