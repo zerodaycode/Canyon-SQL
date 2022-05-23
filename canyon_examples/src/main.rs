@@ -43,22 +43,22 @@ fn main() {
         how, when required, failable operations must be error handled.
     */
     let _all_leagues: Vec<League> = League::find_all().await;
-    println!("Leagues elements: {:?}", &_all_leagues);
+    // println!("Leagues elements: {:?}", &_all_leagues);
 
     // The find_by_id(Number) operation. Returns an optional, 'cause this operation
     // it could be easily a failure (not found the record by the provided PRIMARY KEY)
-    let _find_by_id: Option<League> = League::find_by_id(1).await;
-    println!("Find by ID: {:?}", &_find_by_id);
+    // let _find_by_id: Option<League> = League::find_by_id(1).await;
+    // println!("Find by ID: {:?}", &_find_by_id);
 
-    // Same operation but with the result variants
+    // // Same operation but with the result variants
     let _all_leagues_res: Result<Vec<League>, QueryError> = League::find_all_result().await;
-    println!("Leagues elements on the result variant: {:?}", &_all_leagues_res.ok().unwrap());
+    // println!("Leagues elements on the result variant: {:?}", &_all_leagues_res.ok().unwrap());
 
     let _find_by_id: Result<Option<League>, QueryError> = League::find_by_id_result(1).await;
-    println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
+    // println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
 
     // A simple example insertating data and handling the result returned
-    _insert_result_example().await;
+    // _insert_result_example().await;
 
     /*
         Canyon also has a powerful querybuilder.
@@ -104,10 +104,16 @@ fn main() {
         .await
         .ok()
         .unwrap();
-    println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
+    // println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
-    // // Uncomment to see the example of find by data through a FK relation
+    // Uncomment to see the example of find by data through a FK relation
     // _search_data_by_fk_example().await;
+
+    // Example of make a multi insert
+    _multi_insert_example().await;
+
+    // Example of update some columns at the same time for a concrete table
+    _update_columns_associated_fn().await;
 }
 
 /// Example of usage of the `.insert()` Crud operation. Also, allows you
@@ -272,9 +278,9 @@ async fn _search_data_by_fk_example() {
     // Finds all the tournaments that it's pointing to a concrete `League` record
     // This is usually known as the reverse side of a foreign key, but being a
     // many-to-one relation on this side
-    // let tournaments_belongs_to_league: Vec<Tournament> = 
-    //     Tournament::search_by__league(&lec).await.ok().unwrap();
-    // println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
+    let tournaments_belongs_to_league: Vec<Tournament> = 
+        Tournament::search_by__league(&lec).await.ok().unwrap();
+    println!("Tournament belongs to a league: {:?}", &tournaments_belongs_to_league);
 }
 
 /// Simple example on how to insert data into the database with a _result
@@ -310,7 +316,7 @@ async fn _insert_result_example() {
 
 /// Demonstration on how to perform an insert of multiple items on a table
 async fn _multi_insert_example() {
-    let new_league = League {
+    let mut new_league = League {
         id: Default::default(),
         ext_id: 392489032,
         slug: "League10".to_owned(),
@@ -318,7 +324,7 @@ async fn _multi_insert_example() {
         region: "Turkey".to_owned(),
         image_url: "https://www.sdklafjsd.com".to_owned()
     };
-    let new_league2 = League {
+    let mut new_league2 = League {
         id: Default::default(),
         ext_id: 392489032,
         slug: "League11".to_owned(),
@@ -326,7 +332,7 @@ async fn _multi_insert_example() {
         region: "LDASKJF".to_owned(),
         image_url: "https://www.sdklafjsd.com".to_owned()
     };
-    let new_league3 = League {
+    let mut new_league3 = League {
         id: Default::default(),
         ext_id: 9687392489032,
         slug: "League3".to_owned(),
@@ -336,7 +342,7 @@ async fn _multi_insert_example() {
     };
 
     League::insert_multiple(
-        &[new_league, new_league2, new_league3]
+        &mut [&mut new_league, &mut new_league2, &mut new_league3]
     ).await
     .ok();
 }

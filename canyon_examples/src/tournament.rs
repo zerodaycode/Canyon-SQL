@@ -12,7 +12,7 @@ pub struct Tournament {
     pub slug: String,
     pub start_date: NaiveDate,
     pub end_date: NaiveDate,
-    // TODO Make the table annotation accept a valid Rust identifier as well
+    
     #[foreign_key(table = "league", column = "id")]
     pub league: i32
 }

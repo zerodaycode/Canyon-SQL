@@ -212,7 +212,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
 
         let stmt = format!(
-            "INSERT INTO {} ({}) VALUES {}", 
+            "INSERT INTO {} ({}) VALUES {} RETURNING id", 
             table_name, 
             fields_without_id_chars.as_str(), 
             fields_values
