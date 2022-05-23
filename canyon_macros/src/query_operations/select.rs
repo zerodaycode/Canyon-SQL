@@ -424,13 +424,24 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
 
                     foreign_keys_tokens.push(
                         quote! {
-                            #vis async fn #quoted_method_name<T>(value: &T) -> Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+                            #vis async fn #quoted_method_name<T>(value: &T) -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
-                                        .await
+                                        .await;
+
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    Ok(
+                                        result
+                                            .ok()
+                                            .unwrap()
+                                            .to_entity::<#ty>()
+                                    )
+                                }
                             }
                         }
                     );
