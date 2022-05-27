@@ -24,4 +24,4 @@ jobs:
 
       - run: cargo publish --token ${CRATES_IO_TOKEN}
         env:
-          CRATES_TOKEN: ${{ CRATES_IO_TOKEN }}
+          CRATES_TOKEN: ${{ CRATES_IO_TOKEN }} ##
