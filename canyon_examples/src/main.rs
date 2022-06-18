@@ -58,7 +58,7 @@ fn main() {
     println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
 
     // A simple example insertating data and handling the result returned
-    _insert_result_example().await;
+    // _insert_result_example().await;
 
     /*
         Canyon also has a powerful querybuilder.
@@ -106,8 +106,8 @@ fn main() {
         .unwrap();
     println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
-    // // Uncomment to see the example of find by data through a FK relation
-    // _search_data_by_fk_example().await;
+    // Uncomment to see the example of find by data through a FK relation
+    _search_data_by_fk_example().await;
 }
 
 /// Example of usage of the `.insert()` Crud operation. Also, allows you
@@ -206,27 +206,27 @@ async fn _search_data_by_fk_example() {
     println!("LPL QUERYBUILDER: {:?}", &some_lpl);
         
 
-    let tournament_itce = Tournament {
-        id: 1,
-        ext_id: 4126494859789,
-        slug: "Slugaso".to_string(),
-        start_date: NaiveDate::from_ymd(2022, 5, 07),
-        end_date: NaiveDate::from_ymd(2023, 5, 10),
-        league: some_lpl
-            .get(0)  // Returns an Option<&T>
-            .cloned()
-            .unwrap()
-            .id,  // The Foreign Key, pointing to the table 'League' and the 'id' column
-    };
-    // tournament_itce.insert().await.ok().unwrap();
+    // let tournament_itce = Tournament {
+    //     id: Default::default(),
+    //     ext_id: 4126494859789,
+    //     slug: "Slugaso".to_string(),
+    //     start_date: NaiveDate::from_ymd(2022, 5, 07),
+    //     end_date: NaiveDate::from_ymd(2023, 5, 10),
+    //     league: some_lpl
+    //         .get(0)  // Returns an Option<&T>
+    //         .cloned()
+    //         .unwrap()
+    //         .id,  // The Foreign Key, pointing to the table 'League' and the 'id' column
+    // }; // CARE. Code can panic if the `some_lpl` Vec has no records
+    // // tournament_itce.insert().await.ok().unwrap();
 
-    // You can search the 'League' that it's the parent of 'Tournament'
-    let related_tournaments_league_method: Option<League> = 
-        tournament_itce.search_league().await;
-    println!(
-        "The related League queried through a method of tournament: {:?}", 
-        &related_tournaments_league_method
-    );
+    // // You can search the 'League' that it's the parent of 'Tournament'
+    // let related_tournaments_league_method: Option<League> = 
+    //     tournament_itce.search_league().await;
+    // println!(
+    //     "The related League queried through a method of tournament: {:?}", 
+    //     &related_tournaments_league_method
+    // );
 
     // Also, the common usage w'd be operating on data retrieve from the database, `but find_by_id`
     // returns an Option<T>, so an Option destructurement should be necessary
