@@ -1,4 +1,4 @@
-use std::{fs, collections::HashMap};
+use std::{fs, collections::HashMap, env};
 
 /// Manages to retrieve the credentials to the desired database connection from an
 /// handcoded `secrets.toml` file, located at the root of the project.
@@ -24,6 +24,9 @@ impl DatabaseCredentials {
     pub fn credentials_parser() -> HashMap<String, String> {
         const FILE_NAME: &str = "secrets.toml";
         let mut credentials_mapper: HashMap<_, _> = HashMap::new();
+
+        let path = env::current_dir();
+        println!("Parsing credentials from: {}", path.unwrap().display());
 
         let secrets_file = fs::read_to_string(FILE_NAME)
             .expect( // TODO Convert this to a custom error
