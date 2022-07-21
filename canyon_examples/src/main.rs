@@ -43,7 +43,7 @@ fn main() {
         how, when required, failable operations must be error handled.
     */
     let _all_leagues: Vec<League> = League::find_all().await;
-    // println!("Leagues elements: {:?}", &_all_leagues);
+    println!("Leagues elements: {:?}", &_all_leagues);
 
     // The find_by_id(Number) operation. Returns an optional, 'cause this operation
     // it could be easily a failure (not found the record by the provided PRIMARY KEY)
@@ -52,10 +52,10 @@ fn main() {
 
     // // Same operation but with the result variants
     let _all_leagues_res: Result<Vec<League>, QueryError> = League::find_all_result().await;
-    // println!("Leagues elements on the result variant: {:?}", &_all_leagues_res.ok().unwrap());
+    println!("Leagues elements on the result variant: {:?}", &_all_leagues_res.ok().unwrap());
 
     let _find_by_id: Result<Option<League>, QueryError> = League::find_by_id_result(1).await;
-    // println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
+    println!("Find by ID as a result: {:?}", &_find_by_id.ok().unwrap()); // Still has the Option<League>
 
     // A simple example insertating data and handling the result returned
     // _insert_result_example().await;
@@ -104,7 +104,7 @@ fn main() {
         .await
         .ok()
         .unwrap();
-    // println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
+    println!("Leagues elements QUERYBUILDER: {:?}", &_all_leagues_as_querybuilder);
 
     // Uncomment to see the example of find by data through a FK relation
     // _search_data_by_fk_example().await;
