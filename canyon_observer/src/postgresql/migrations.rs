@@ -236,13 +236,19 @@ impl DatabaseSyncOperations {
 
     pub async fn from_query_register() {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
+
         for i in 0..queries.len() - 1 {
+            let query_to_execute = queries
+            .get(i)
+            .expect(format!("Failed to retrieve query from the register at index: {}", i).as_str());
+
             Self::query(
-                queries.get(i).unwrap(),
+                query_to_execute,
                 &[],
             ).await
                 .ok()
-                .unwrap();
+                .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());
+                // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
         }
     }
 
@@ -272,7 +278,8 @@ impl DatabaseSyncOperations {
         table_name: String,
     ) -> Vec<String> {
         database_tables.iter()
-            .find(|x| x.table_name == table_name).expect("Error collecting database tables 2").columns
+            .find(|x| x.table_name == table_name).expect("Error parsing the columns to remove")
+            .columns
             .iter()
             .filter(|a| canyon_columns.iter()
                 .map(|x| x.field_name.to_string())
@@ -311,7 +318,7 @@ impl DatabaseSyncOperations {
             .map(|x|
                 x.split(':').collect::<Vec<&str>>()
                     .get(1)
-                    .expect("Error.Cant split annotations")
+                    .expect("Error. Unable to split annotations")
                     .trim()
                     .to_string()
             ).collect();
@@ -322,20 +329,19 @@ impl DatabaseSyncOperations {
         (table_to_reference, column_to_reference)
     }
 
-    fn add_foreign_key_with_annotation(&mut self,
-                                       field_annotations: &str,
-                                       table_name: String,
-                                       column_foreign_key: String,
+    fn add_foreign_key_with_annotation(
+        &mut self,
+        field_annotations: &str,
+        table_name: String,
+        column_foreign_key: String,
     ) {
 
-        // Extraemos de las field_annotation la correspondiente a la foreign key
         let annotation_data: (String, String) = Self::extract_foreign_key_annotation(field_annotations);
 
         let table_to_reference = annotation_data.0;
         let column_to_reference = annotation_data.1;
 
         let foreign_key_name = format!("{}_{}_fkey", &table_name, &column_foreign_key);
-
 
         self.constrains_operations.push(
             Box::new(
@@ -346,11 +352,12 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn add_foreign_key_with_references(&mut self,
-                                       table_to_reference: String,
-                                       column_to_reference: String,
-                                       table_name: String,
-                                       column_foreign_key: String,
+    fn add_foreign_key_with_references(
+        &mut self,
+        table_to_reference: String,
+        column_to_reference: String,
+        table_name: String,
+        column_foreign_key: String,
     ) {
         let foreign_key_name = format!("{}_{}_fkey", &table_name, &column_foreign_key);
 

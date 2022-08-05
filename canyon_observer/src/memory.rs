@@ -127,7 +127,7 @@ impl CanyonMemory {
                 updates.push(struct_name);
                 QUERIES_TO_EXECUTE.lock().unwrap().push(
                     format!(
-                        "UPDATE canyon_memory SET filename = '{}', struct_name = '{}'\
+                        "UPDATE canyon_memory SET filename = '{}', struct_name = '{}' \
                             WHERE id = {}", 
                         filename, struct_name, update.id
                     )
