@@ -137,8 +137,8 @@ impl CanyonMemory {
                 let rename_table = &update.struct_name != struct_name;
 
                 if rename_table {
-                    println!("Adding a new table to rename. Old name: {}, new name {}", update.struct_name.clone(), struct_name.clone());
-                    mem.table_rename.insert(update.struct_name.clone(), struct_name.clone());
+                    println!("Adding a new table to rename. new name: {}, old name {}", struct_name.clone(), update.struct_name.clone());
+                    mem.table_rename.insert( struct_name.clone().to_lowercase(),update.struct_name.clone().to_lowercase());
                 }
             }
         }

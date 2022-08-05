@@ -13,7 +13,7 @@ use crate::{
 };
 use crate::postgresql::information_schema::rows_to_table_mapper::DatabaseTable;
 
-use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
+use super::register_types::{CanyonRegisterEntityField};
 
 
 /// TODO Document, refactor and clarify the code @gbm25
@@ -57,17 +57,23 @@ impl DatabaseSyncOperations {
 
             // true if this table on the register is already on the database
             let table_on_database = Self::check_table_on_database(&table_name, &data.database_tables);
+            
+
 
             // If the table isn't on the database we push a new operation to the collection,
             // either to create a new table or to rename an existing one.
             if !table_on_database {
+                
+                let table_renamed = data.canyon_memory.table_rename.contains_key(&table_name);
+                
 
                 // canyon_memory holds a hashmap of the tables who must changed their name.
                 // If this table name is present, we dont create a new one, just rename
-                if data.canyon_memory.table_rename.contains_key(&table_name) {
-                    let new_table_name = data.canyon_memory.table_rename.get(&table_name).unwrap().to_string();
+                if table_renamed {
+                    
+                    let old_table_name = data.canyon_memory.table_rename.get(&table_name);
 
-                    Self::push_table_rename(self, table_name.clone(), new_table_name);
+                    Self::push_table_rename(self, old_table_name.unwrap().to_string(),table_name.clone());
 
                     // TODO Change foreign_key constrain name on database
                     continue;
@@ -84,9 +90,10 @@ impl DatabaseSyncOperations {
                     .iter()
                     .filter(|column| column.annotation.is_some())
                 {
-                    if field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                    let check = field.annotation.as_ref().expect("Annotation ForeignKey not found");
+                    if check.starts_with("Annotation: ForeignKey") {
                         Self::add_foreign_key_with_annotation(self,
-                                                              field.annotation.as_ref().unwrap(),
+                                                              check,
                                                               table_name.clone(),
                                                               field.field_name.clone(),
                         );
@@ -106,13 +113,13 @@ impl DatabaseSyncOperations {
 
                     // Case when the column doesnt exist on the database
                     // We push a new column operation to the collection for each one
-                    if columns_in_table.contains(&field.field_name).not() {
+                    if !columns_in_table.contains(&field.field_name) {
                         Self::add_column_to_table(self, table_name.clone(), field.clone());
 
                         // If field contains a foreign key annotation, add it to constrains_operations
-                        if field.annotation.is_some() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                        if field.annotation.is_some() && field.annotation.as_ref().expect("Field annot").starts_with("Annotation: ForeignKey") {
                             Self::add_foreign_key_with_annotation(self,
-                                                                  field.annotation.as_ref().unwrap(),
+                                                                  field.annotation.as_ref().expect("Field annot2"),
                                                                   table_name.clone(),
                                                                   field.field_name.clone(),
                             )
@@ -123,7 +130,7 @@ impl DatabaseSyncOperations {
                         let database_field = &data.database_tables.iter()
                             .find(|x| x.table_name == table_name)
                             .unwrap().columns
-                            .iter().find(|x| x.column_name == field.field_name).unwrap();
+                            .iter().find(|x| x.column_name == field.field_name).expect("Field annt exists");
 
                         let mut database_field_postgres_type: String = String::new();
                         match database_field.postgres_datatype.as_str() {
@@ -151,34 +158,34 @@ impl DatabaseSyncOperations {
                         }
 
                         // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
-                        if field.annotation.is_some() && database_field.foreign_key_name.is_none() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                        if field.annotation.is_some() && database_field.foreign_key_name.is_none() && field.annotation.as_ref().expect("FK and not in db").starts_with("Annotation: ForeignKey") {
                             Self::add_foreign_key_with_annotation(self,
-                                                                  field.annotation.as_ref().unwrap(),
+                                                                  field.annotation.as_ref().expect("FK and not in db 2"),
                                                                   table_name.clone(),
                                                                   field.field_name.clone(),
                             )
                         }
                         // Case when field contains a foreign key annotation, and there is already one in the database
-                        else if field.annotation.is_some() && database_field.foreign_key_name.is_some() && field.annotation.as_ref().unwrap().starts_with("Annotation: ForeignKey") {
+                        else if field.annotation.is_some() && database_field.foreign_key_name.is_some() && field.annotation.as_ref().expect("FK and already in db").starts_with("Annotation: ForeignKey") {
 
                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
-                            let annotation_data: (String, String) = Self::extract_foreign_key_annotation(field.annotation.as_ref().unwrap());
+                            let annotation_data: (String, String) = Self::extract_foreign_key_annotation(field.annotation.as_ref().expect("FK and already in db 2"));
 
                             // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
                             let references_regex = Regex::new(r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)").unwrap();
 
-                            let captures_references = references_regex.captures(database_field.foreign_key_info.as_ref().unwrap()).unwrap();
+                            let captures_references = references_regex.captures(database_field.foreign_key_info.as_ref().expect("Regex - foreign key info")).expect("Regex - foreign key info not found");
 
-                            let current_column = captures_references.name("current_column").unwrap().as_str().to_string();
-                            let ref_table = captures_references.name("ref_table").unwrap().as_str().to_string();
-                            let ref_column = captures_references.name("ref_column").unwrap().as_str().to_string();
+                            let current_column = captures_references.name("current_column").expect("Regex - Current column not found").as_str().to_string();
+                            let ref_table = captures_references.name("ref_table").expect("Regex - Ref tablenot found").as_str().to_string();
+                            let ref_column = captures_references.name("ref_column").expect("Regex - Ref column not found").as_str().to_string();
 
                             // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
                             if field.field_name != current_column || annotation_data.0 != ref_table || annotation_data.1 != ref_column {
                                 Self::delete_foreign_key_with_references(
                                     self,
                                     table_name.clone(),
-                                    database_field.foreign_key_name.as_ref().unwrap().to_string(),
+                                    database_field.foreign_key_name.as_ref().expect("Annotation foreign key constrain name not found").to_string(),
                                 );
 
                                 Self::add_foreign_key_with_references(
@@ -195,7 +202,7 @@ impl DatabaseSyncOperations {
                             Self::delete_foreign_key_with_references(
                                 self,
                                 table_name.clone(),
-                                database_field.foreign_key_name.as_ref().unwrap().to_string(),
+                                database_field.foreign_key_name.as_ref().expect("Annotation foreign key constrain name not found").to_string(),
                             );
                         }
                     }
@@ -218,18 +225,6 @@ impl DatabaseSyncOperations {
             }
         }
 
-        for database_table in data.database_tables {
-
-            if database_table.table_name == "canyon_memory" {
-                continue;
-            }
-
-            let to_delete = Self::is_table_in_db(data.canyon_tables.clone(), &database_table.table_name);
-
-            if to_delete {
-                Self::delete_table(self, database_table.table_name)
-            }
-        }
 
         for operation in &self.operations {
             operation.execute().await
@@ -264,7 +259,7 @@ impl DatabaseSyncOperations {
     ) -> Vec<String> {
         canyon_columns.iter()
             .filter(|a| database_tables.iter()
-                .find(|x| x.table_name == table_name).unwrap().columns
+                .find(|x| x.table_name == table_name).expect("Error collecting database tables").columns
                 .iter()
                 .map(|x| x.column_name.to_string())
                 .any(|x| x == a.field_name))
@@ -277,7 +272,7 @@ impl DatabaseSyncOperations {
         table_name: String,
     ) -> Vec<String> {
         database_tables.iter()
-            .find(|x| x.table_name == table_name).unwrap().columns
+            .find(|x| x.table_name == table_name).expect("Error collecting database tables 2").columns
             .iter()
             .filter(|a| canyon_columns.iter()
                 .map(|x| x.field_name.to_string())
@@ -285,13 +280,6 @@ impl DatabaseSyncOperations {
             .map(|a| a.column_name.to_string()).collect()
     }
 
-
-    fn is_table_in_db(canyon_tables: Vec<CanyonRegisterEntity>, database_table_name: &str) -> bool {
-        !canyon_tables
-                .iter()
-                .map(|canyon_table| &canyon_table.entity_name)
-                .any(|canyon_table_name| canyon_table_name == database_table_name)
-    }
 
     fn push_table_rename(&mut self, old_table_name: String, new_table_name: String) {
         self.operations.push(
@@ -315,29 +303,21 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn delete_table(&mut self, table_name: String) {
-        self.operations.push(
-            Box::new(
-                TableOperation::DropTable(table_name)
-            )
-        )
-    }
-
     fn extract_foreign_key_annotation(field_annotations: &str) -> (String, String) {
         let annotation_data: Vec<String> = field_annotations
             .split(',')
             // TODO check change (x.contains previously contained a negation)
-            .filter(|x| x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+            .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
             .map(|x|
                 x.split(':').collect::<Vec<&str>>()
                     .get(1)
-                    .unwrap()
+                    .expect("Error.Cant split annotations")
                     .trim()
                     .to_string()
             ).collect();
 
-        let table_to_reference = annotation_data.get(0).unwrap().to_string();
-        let column_to_reference = annotation_data.get(1).unwrap().to_string();
+        let table_to_reference = annotation_data.get(0).expect("Error extracting table ref from FK annotation").to_string();
+        let column_to_reference = annotation_data.get(1).expect("Error extracting column ref from FK annotation").to_string();
 
         (table_to_reference, column_to_reference)
     }
@@ -437,7 +417,6 @@ trait DatabaseOperation: Debug {
 #[derive(Debug)]
 enum TableOperation {
     CreateTable(String, Vec<CanyonRegisterEntityField>),
-    DropTable(String),
     AlterTableName(String, String),
     // old table_name, new table_name
     AddTableForeignKey(String, String, String, String, String),
@@ -459,9 +438,6 @@ impl DatabaseOperation for TableOperation {
                     ).collect::<Vec<String>>()
                         .join(", ")
                 ).replace('"', ""),
-            TableOperation::DropTable(table_name) =>
-                format!(
-                    "DROP TABLE {table_name} CASCADE;"),
             TableOperation::AlterTableName(old_table_name, new_table_name) =>
                 format!("ALTER TABLE {old_table_name} RENAME TO  {new_table_name};"),
             TableOperation::AddTableForeignKey(table_name, foreign_key_name,
