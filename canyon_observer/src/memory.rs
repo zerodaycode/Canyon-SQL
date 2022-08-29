@@ -45,7 +45,8 @@ use crate::QUERIES_TO_EXECUTE;
 /// The `memory field` HashMap is made by the filename as a key, and the struct's name as value
 #[derive(Debug)]
 pub struct CanyonMemory {
-    pub memory: HashMap<String, String>
+    pub memory: HashMap<String, String>,
+    pub table_rename: HashMap<String, String>
 }
 
 // Makes this structure able to make queries to the database
@@ -82,7 +83,8 @@ impl CanyonMemory {
 
         // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
-            memory: HashMap::new()
+            memory: HashMap::new(),
+            table_rename: HashMap::new(),
         };
         Self::find_canyon_entity_annotated_structs(&mut mem).await;
 
@@ -125,14 +127,22 @@ impl CanyonMemory {
                 updates.push(struct_name);
                 QUERIES_TO_EXECUTE.lock().unwrap().push(
                     format!(
-                        "UPDATE canyon_memory SET filename = '{}', struct_name = '{}'\
+                        "UPDATE canyon_memory SET filename = '{}', struct_name = '{}' \
                             WHERE id = {}", 
                         filename, struct_name, update.id
                     )
                 );
+
+                // if the updated element is the struct name, whe add it to the table_rename Hashmap
+                let rename_table = &update.struct_name != struct_name;
+
+                if rename_table {
+                    println!("Adding a new table to rename. new name: {}, old name {}", struct_name.clone(), update.struct_name.clone());
+                    mem.table_rename.insert( struct_name.clone().to_lowercase(),update.struct_name.clone().to_lowercase());
+                }
             }
         }
-        
+
 
         if values_to_insert != String::new() {
             values_to_insert.pop();
@@ -157,7 +167,7 @@ impl CanyonMemory {
                     {
                         QUERIES_TO_EXECUTE.lock().unwrap().push(
                             format!(
-                                "DELETE FROM canyon_memory WHERE struct_name = '{}'", 
+                                "DELETE FROM canyon_memory WHERE struct_name = '{}'",
                                 db_row.struct_name
                             )
                         );
