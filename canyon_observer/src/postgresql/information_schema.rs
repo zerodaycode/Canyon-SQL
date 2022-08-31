@@ -41,7 +41,7 @@ pub mod rows_to_table_mapper {
     /// Basically, it's an agrupation of rows of results when Canyon queries the `information schema`
     /// table, grouping by table name (one [`DatabaseTable`] is the rows that contains the information
     /// of a table)
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub struct DatabaseTable<'a> {
         pub table_name: String,
         pub columns: Vec<DatabaseTableColumn<'a>>,

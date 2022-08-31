@@ -1,4 +1,3 @@
-use std::io::BufRead;
 /// File that contains all the datatypes and logic to perform the migrations
 /// over a `PostgreSQL` database
 
@@ -40,7 +39,7 @@ impl DatabaseSyncOperations {
         // data: CanyonHandler<'static>,
         canyon_memory: CanyonMemory,
         canyon_tables: Vec<CanyonRegisterEntity>,
-        database_tables: Vec<DatabaseTable<'a>>,
+        database_tables: Vec<DatabaseTable<'static>>,
     ) {
         let data = CanyonHandler {
             canyon_memory: CanyonMemory::remember().await,
@@ -87,7 +86,7 @@ impl DatabaseSyncOperations {
                             .map( |attr|
                                 {
                                     if attr.starts_with("Annotation: ForeignKey") {
-                                        Self::add_foreign_key_with_annotation::<&String, &String, &String>(
+                                        Self::add_foreign_key_with_annotation::<&String, &String>(
                                             self, attr, &table_name, &field.field_name,
                                         );
                                     }
@@ -112,7 +111,7 @@ impl DatabaseSyncOperations {
                     // Case when the column doesn't exist on the database
                     // We push a new column operation to the collection for each one
                     if !columns_in_table.contains(&field.field_name) {
-                        Self::add_column_to_table::<&String>(self, &table_name, field.clone());
+                        Self::add_column_to_table::<String>(self, table_name.clone(), field.clone());
 
                         // // If field contains a foreign key annotation, add it to constrains_operations
                         // if field.annotation.is_some() && field.annotation.as_ref().expect("Field annot").starts_with("Annotation: ForeignKey") {
@@ -127,7 +126,7 @@ impl DatabaseSyncOperations {
                         // We added the founded contraints on the field attributes
                         for attr in &field.annotations {
                             if attr.starts_with("Annotation: ForeignKey") {
-                                Self::add_foreign_key_with_annotation::<&String, &String, &String>(
+                                Self::add_foreign_key_with_annotation::<&String, &String>(
                                     self, attr, &table_name, &field.field_name,
                                 );
                             }
@@ -138,9 +137,9 @@ impl DatabaseSyncOperations {
                     }
                     // Case when the column exist on the database
                     else {
-                        let d = &data.database_tables;
+                        let d = data.database_tables.clone();
                         let database_field = d
-                            .iter()
+                            .into_iter()
                             .find(|x| x.table_name == *table_name)
                             .unwrap().columns
                             .iter().find(|x| x.column_name == field.field_name).expect("Field annt exists");
@@ -179,7 +178,7 @@ impl DatabaseSyncOperations {
                             if attr.starts_with("Annotation: ForeignKey") {
                                 println!("Annotation ForeignKey found on fill_operations, case when column exists on DB");
                                 if database_field.foreign_key_name.is_none() {
-                                    Self::add_foreign_key_with_annotation::<&String, &String, &String>(
+                                    Self::add_foreign_key_with_annotation::<&String, &String>(
                                         self, &attr, &table_name, &field.field_name,
                                     )
                                 }
@@ -200,12 +199,13 @@ impl DatabaseSyncOperations {
     
                                     // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
                                     if field.field_name != current_column || annotation_data.0 != ref_table || annotation_data.1 != ref_column {
-                                        Self::delete_foreign_key_with_references::<&String>(
+                                        Self::delete_foreign_key_with_references::<String>(
                                             self,
-                                            &table_name,
+                                            table_name.clone(),
                                             database_field.foreign_key_name
                                                 .as_ref()
                                                 .expect("Annotation foreign key constrain name not found")
+                                                .to_string()
                                         );
     
                                         Self::add_foreign_key_with_references(
@@ -365,13 +365,12 @@ impl DatabaseSyncOperations {
         (table_to_reference, column_to_reference)
     }
 
-    fn add_foreign_key_with_annotation<'a, T, U, V>(
+    fn add_foreign_key_with_annotation<'a, U, V>(
         &mut self,
         field_annotations: &'a str,
         table_name: U,
         column_foreign_key: V,
     ) where 
-        T: Into<String> + Debug + Display + Sync,
         U: Into<String> + Debug + Display + Sync,
         V: Into<String> + Debug + Display + Sync  
     {
@@ -386,7 +385,7 @@ impl DatabaseSyncOperations {
         self.constrains_operations.push(
             Box::new(
                 TableOperation::AddTableForeignKey::<String, String, &str, &str, &str>(
-                    table_name.to_string(), foreign_key_name, column_foreign_key, table_to_reference, column_to_reference,
+                    table_name.to_string(), foreign_key_name, column_foreign_key.to_string().as_ref(), table_to_reference, column_to_reference,
                 )
             )
         );
@@ -421,11 +420,11 @@ impl DatabaseSyncOperations {
         table_with_foreign_key: T,
         constrain_name: T,
     ) where 
-        T: Into<String> + Debug + Display + Sync
+        T: Into<String> + Debug + Display + Sync + 'static
     {
         self.constrains_operations.push(
             Box::new(
-                TableOperation::DeleteTableForeignKey(
+                TableOperation::DeleteTableForeignKey::<T, T, T, T, T>(
                     // table_with_foreign_key,constrain_name
                     table_with_foreign_key, constrain_name,
                 )
@@ -434,7 +433,7 @@ impl DatabaseSyncOperations {
     }
 
     fn add_column_to_table<'a, T: 'a>(&mut self, table_name: T, field: CanyonRegisterEntityField)
-        where T: Into<String> + Debug + Display + Sync
+        where T: Into<String> + Debug + Display + Sync + 'static
     {
         self.operations.push(
             Box::new(
