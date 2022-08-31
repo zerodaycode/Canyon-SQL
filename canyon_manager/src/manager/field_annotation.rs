@@ -22,7 +22,7 @@ impl EntityFieldAnnotation {
         }
     }
 
-    pub fn foreign_key_parser(ident: &Ident, attr_args: &Result<Punctuated<MetaNameValue, Token![,]>, syn::Error>) -> syn::Result<Self> {
+    fn foreign_key_parser(ident: &Ident, attr_args: &Result<Punctuated<MetaNameValue, Token![,]>, syn::Error>) -> syn::Result<Self> {
         match attr_args {
             Ok(name_value) => {
                 let mut data: HashMap<String, String> = HashMap::new();

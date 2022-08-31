@@ -5,12 +5,12 @@ use quote::ToTokens;
 use syn::{Type, Attribute, Field};
 
 use super::field_annotation::EntityFieldAnnotation;
-/// Represents any of the fields and annotations (if any valid annotation) found for a CanyonEntity
+/// Represents any of the fields and annotations (if any valid annotation) found for an Rust struct
 #[derive(PartialDebug, Clone)]
 pub struct EntityField {
     pub name: Ident,
     pub field_type: Type,
-    pub attribute: Option<EntityFieldAnnotation>,
+    pub attributes: Vec<EntityFieldAnnotation>,
 }
 
 impl EntityField {
@@ -37,31 +37,41 @@ impl EntityField {
 
 
     pub fn new(name: &Ident, raw_helper_attributes: &[Attribute], ty: &Type) -> syn::Result<Self> {
-        // Getting the name of attributes put in front of struct fields
-        let helper_attributes = raw_helper_attributes
-            .iter()
-            .map(|attribute| { attribute })
-            .collect::<Vec<_>>();
+        // // Getting the name of attributes put in front of struct fields
+        // let helper_attributes = raw_helper_attributes
+        //     .iter()
+        //     .map(|attribute| { attribute })
+        //     .collect::<Vec<_>>();
             
-        // Making sense of the attribute(s)
-        let attribute_type = if helper_attributes.len() == 1 {
-            let helper_attribute = &helper_attributes[0];
-            Some(EntityFieldAnnotation::try_from(helper_attribute)?)
+        // // Making sense of the attribute(s)
+        // let attribute_type = if helper_attributes.len() == 1 {
+        //     let helper_attribute = &helper_attributes[0];
+        //     Some(EntityFieldAnnotation::try_from(helper_attribute)?)
 
-        } else if helper_attributes.len() > 1 {
-            return Err(
-                syn::Error::new_spanned(
-                    name, 
-                    "Field has more than one attribute"
-                )
-            );
-        } else { None };
+        // } else if helper_attributes.len() > 1 {
+        //     return Err(
+        //         syn::Error::new_spanned(
+        //             name, 
+        //             "Field has more than one attribute"
+        //         )
+        //     );
+        // } else { None };
+
+
+        let mut attributes = Vec::new();
+        for attr in raw_helper_attributes {
+            let result = Some(EntityFieldAnnotation::try_from(&attr)?);
+            match result {
+                Some(res) => attributes.push(res),
+                None => continue
+            }
+        }
 
         Ok(
             Self {
                 name: name.clone(),
                 field_type: ty.clone(),
-                attribute: attribute_type,
+                attributes: attributes
             }
         )
     }
