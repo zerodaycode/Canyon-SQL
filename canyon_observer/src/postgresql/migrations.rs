@@ -446,7 +446,7 @@ impl DatabaseOperation for TableOperation {
                         .join(", ")
                 ).replace('"', ""),
             TableOperation::AlterTableName(old_table_name, new_table_name) =>
-                format!("ALTER TABLE {old_table_name} RENAME TO  {new_table_name};"),
+                format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
             TableOperation::AddTableForeignKey(table_name, foreign_key_name,
                                                column_foreign_key, table_to_reference,
                                                column_to_reference) =>
@@ -478,7 +478,7 @@ impl DatabaseOperation for ColumnOperation {
     async fn execute(&self) {
         let stmt = match &*self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
-                format!("ALTER TABLE {table_name} ADD {} {};", entity_field.field_name, entity_field.field_type_to_postgres()),
+                format!("ALTER TABLE {table_name} ADD COLUMN \"{}\" {};", entity_field.field_name, entity_field.field_type_to_postgres()),
             ColumnOperation::DeleteColumn(table_name, column_name) =>
                 format!("ALTER TABLE {table_name} DROP COLUMN {column_name};"),
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
