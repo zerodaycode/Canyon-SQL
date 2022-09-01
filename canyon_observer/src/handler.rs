@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use tokio_postgres::{types::Type, Row};
 use partialdebug::placeholder::PartialDebug;
 
@@ -34,6 +32,7 @@ use super::{
 /// the user and annotated with the `#[canyon_entity]`
 #[derive(PartialDebug)]
 pub struct CanyonHandler<'a> {
+    // phantom: PhantomData<&'a str>
     pub canyon_memory: CanyonMemory,
     pub canyon_tables: Vec<CanyonRegisterEntity>,
     pub database_tables: Vec<DatabaseTable<'a>>,
@@ -46,18 +45,8 @@ impl<'a> CanyonHandler<'a> {
     /// and the database table with the memory of Canyon to perform the
     /// Migrations to completly handle the necessary database actions 
     pub async fn run() {
-        let a = Self::get_info_of_entities();
-        let b = Self::fetch_postgres_database_status().await;
-
-        // static s: CanyonHandler<'static> = Self {
-        //     canyon_memory: CanyonMemory::remember().await,
-        //     canyon_tables: a,
-        //     database_tables: b,
-        // };
-
         let mut db_operation = DatabaseSyncOperations::new();
         db_operation.fill_operations(
-            // self_
             CanyonMemory::remember().await,
             Self::get_info_of_entities(),
             Self::fetch_postgres_database_status().await

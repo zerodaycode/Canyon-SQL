@@ -36,13 +36,12 @@ impl DatabaseSyncOperations {
 
     pub async fn fill_operations<'a>(
         &mut self, 
-        // data: CanyonHandler<'static>,
         canyon_memory: CanyonMemory,
         canyon_tables: Vec<CanyonRegisterEntity>,
-        database_tables: Vec<DatabaseTable<'static>>,
+        database_tables: Vec<DatabaseTable<'a>>
     ) {
         let data = CanyonHandler {
-            canyon_memory: CanyonMemory::remember().await,
+            canyon_memory: canyon_memory,
             canyon_tables: canyon_tables,
             database_tables: database_tables
         };
@@ -80,10 +79,10 @@ impl DatabaseSyncOperations {
                 for field in cloned_fields
                     .iter()
                     .filter( 
-                        |column| column.annotations.iter().any( |attr| true)
+                        |column| column.annotations.len() > 0
                     ) {
                         field.annotations.iter()
-                            .map( |attr|
+                            .for_each( |attr|
                                 {
                                     if attr.starts_with("Annotation: ForeignKey") {
                                         Self::add_foreign_key_with_annotation::<&String, &String>(
@@ -141,8 +140,10 @@ impl DatabaseSyncOperations {
                         let database_field = d
                             .into_iter()
                             .find(|x| x.table_name == *table_name)
-                            .unwrap().columns
-                            .iter().find(|x| x.column_name == field.field_name).expect("Field annt exists");
+                            .unwrap();
+                        let database_field = database_field.columns
+                            .iter().find(|x| x.column_name == field.field_name)
+                            .expect("Field annt exists");
 
                         let mut database_field_postgres_type: String = String::new();
                         match database_field.postgres_datatype.as_str() {
@@ -345,10 +346,10 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn extract_foreign_key_annotation<'a>(field_annotations: String) -> (&'a str, &'a str) 
+    fn extract_foreign_key_annotation<'b>(field_annotations: String) -> (String, String) 
         // where T: Into<String> + Debug + Display + Sync
     {
-        let annotation_data: Vec<&'a str> = field_annotations
+        let annotation_data: Vec<String> = field_annotations
             .split(',')
             // TODO check change (x.contains previously contained a negation)
             .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
@@ -357,10 +358,17 @@ impl DatabaseSyncOperations {
                     .get(1)
                     .expect("Error. Unable to split annotations")
                     .trim()
-            ).collect();
+                    .to_string()
+            ).collect::<Vec<String>>();
 
-        let table_to_reference = annotation_data.get(0).expect("Error extracting table ref from FK annotation");
-        let column_to_reference = annotation_data.get(1).expect("Error extracting column ref from FK annotation");
+        let table_to_reference = annotation_data
+            .get(0)
+            .expect("Error extracting table ref from FK annotation")
+            .to_string();
+        let column_to_reference = annotation_data
+            .get(1)
+            .expect("Error extracting column ref from FK annotation")
+            .to_string();
 
         (table_to_reference, column_to_reference)
     }
@@ -384,8 +392,8 @@ impl DatabaseSyncOperations {
 
         self.constrains_operations.push(
             Box::new(
-                TableOperation::AddTableForeignKey::<String, String, &str, &str, &str>(
-                    table_name.to_string(), foreign_key_name, column_foreign_key.to_string().as_ref(), table_to_reference, column_to_reference,
+                TableOperation::AddTableForeignKey::<String, String, String, String, String>(
+                    table_name.to_string(), foreign_key_name, column_foreign_key.to_string(), table_to_reference, column_to_reference,
                 )
             )
         );
@@ -409,7 +417,7 @@ impl DatabaseSyncOperations {
         self.constrains_operations.push(
             Box::new(
                 TableOperation::AddTableForeignKey(
-                    table_name, &foreign_key_name, column_foreign_key, table_to_reference, column_to_reference,
+                    table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference,
                 )
             )
         );
