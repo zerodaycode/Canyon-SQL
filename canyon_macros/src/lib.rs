@@ -134,7 +134,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
-    new_entity.entity_name = entity.struct_name.to_string().to_lowercase();
+    new_entity.entity_name = entity.struct_name.to_string().to_lowercase().as_ref();
 
     // The entity fields
     for field in entity.attributes.iter() {
@@ -143,7 +143,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
         
         // The annotations
-        if let Some(annotation) = &field.attribute {
+        if let Some(annotation) = &field.attributes {
             new_entity_field.annotation = Some(annotation.get_as_string())
         }
 

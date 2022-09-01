@@ -32,8 +32,9 @@ use super::{
 /// the user and annotated with the `#[canyon_entity]`
 #[derive(PartialDebug)]
 pub struct CanyonHandler<'a> {
+    // phantom: PhantomData<&'a str>
     pub canyon_memory: CanyonMemory,
-    pub canyon_tables: Vec<CanyonRegisterEntity>,
+    pub canyon_tables: Vec<CanyonRegisterEntity<'a>>,
     pub database_tables: Vec<DatabaseTable<'a>>,
 }
 // Makes this structure able to make queries to the database
@@ -44,21 +45,17 @@ impl<'a> CanyonHandler<'a> {
     /// and the database table with the memory of Canyon to perform the
     /// Migrations to completly handle the necessary database actions 
     pub async fn run() {
-        let a = Self::get_info_of_entities();
-        let b = Self::fetch_postgres_database_status().await;
-
-        let self_ = Self {
-            canyon_memory: CanyonMemory::remember().await,
-            canyon_tables: a,
-            database_tables: b,
-        };
         let mut db_operation = DatabaseSyncOperations::new();
-        db_operation.fill_operations(self_).await;
+        db_operation.fill_operations(
+            CanyonMemory::remember().await,
+            Self::get_info_of_entities(),
+            Self::fetch_postgres_database_status().await
+        ).await;
     }
 
 
     /// Converts a [`CanyonEntity`](canyon_manager::manager::entity::CanyonEntity) into a [`CanyonRegisterEntity`]
-    fn get_info_of_entities() -> Vec<CanyonRegisterEntity> {
+    fn get_info_of_entities<'b>() -> Vec<CanyonRegisterEntity<'b>> {
         let mut entities: Vec<CanyonRegisterEntity> = Vec::new();
         let clone = (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone();
         for i in clone.iter() {
@@ -69,7 +66,7 @@ impl<'a> CanyonHandler<'a> {
                 let mut new_entity_field = CanyonRegisterEntityField::new();
                 new_entity_field.field_name = field.field_name.clone();
                 new_entity_field.field_type = field.field_type.clone();
-                new_entity_field.annotation = field.annotation.clone();
+                new_entity_field.annotations = field.annotations.clone();
                 new_entity.entity_fields.push(new_entity_field);
             }
             entities.push(new_entity);
@@ -103,7 +100,7 @@ impl<'a> CanyonHandler<'a> {
     /// Not all columns included in the example table. 
     /// 
     /// Too see all the columns that will be mapeed, see the [`struct@RowTable`]
-    async fn fetch_postgres_database_status() -> Vec<DatabaseTable<'a>> {
+    async fn fetch_postgres_database_status<'b>() -> Vec<DatabaseTable<'b>> {
         let results = Self::query(
             super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
             &[]
@@ -139,7 +136,7 @@ impl<'a> CanyonHandler<'a> {
 
     /// Groups all the [`RowTable`] entities that contains the info about a complete table into 
     /// a single entity of type [`DatabaseTable`]
-    fn generate_mapped_table_entities(schema_info: Vec<RowTable>) -> Vec<DatabaseTable<'a>> {
+    fn generate_mapped_table_entities<'b>(schema_info: Vec<RowTable>) -> Vec<DatabaseTable<'b>> {
         let mut database_tables = Vec::new();
 
         for mapped_table in &schema_info {

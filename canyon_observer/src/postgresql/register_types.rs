@@ -11,15 +11,15 @@ use crate::constants::{
 /// Gets the necessary identifiers of a CanyonEntity to make it the comparative
 /// against the database schemas
 #[derive(Debug, Clone)]
-pub struct CanyonRegisterEntity {
-    pub entity_name: String,
+pub struct CanyonRegisterEntity<'a> {
+    pub entity_name: &'a str,
     pub entity_fields: Vec<CanyonRegisterEntityField>,
 }
 
-impl CanyonRegisterEntity {
+impl<'a> CanyonRegisterEntity<'a> {
     pub fn new() -> Self {
         Self {
-            entity_name: String::new(),
+            entity_name: "",
             entity_fields: Vec::new(),
         }
     }
@@ -31,40 +31,35 @@ impl CanyonRegisterEntity {
     ///
     /// ```
     /// let my_id_field = CanyonRegisterEntityField {
-    ///                       field_name: "id".to_string(),
+    ///                       field_name: "id",
     ///                       field_type: "i32".to_string(),
     ///                       annotation: None
     ///                   };
     ///
     /// let my_name_field = CanyonRegisterEntityField {
-    ///                          field_name: "name".to_string(),
+    ///                          field_name: "name",
     ///                          field_type: "String".to_string(),
     ///                          annotation: None
     ///                     };
     ///
-    /// let my_canyon_register_entity = CanyonRegisterEntity {
-    ///                                    entity_name: String,
-    ///                                    entity_fields: vec![my_id_field,my_name_field]
-    ///                                 };
-    ///
-    ///
     /// let expected_result = "id INTEGER NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY, name TEXT NOT NULL";
     ///
     /// assert_eq!(expected_result, my_canyon_register_entity.entity_fields_as_string());
+    /// ```
     pub fn entity_fields_as_string(&self) -> String {
 
-    let mut fields_strings:Vec<String> = Vec::new();
+        let mut fields_strings:Vec<String> = Vec::new();
 
-    for field in &self.entity_fields {
+        for field in &self.entity_fields {
 
-        let column_postgres_syntax = field.field_type_to_postgres();
-        let field_as_string = format!("{} {}", field.field_name, column_postgres_syntax);
-        fields_strings.push(field_as_string);
+            let column_postgres_syntax = field.field_type_to_postgres();
+            let field_as_string = format!("{} {}", field.field_name, column_postgres_syntax);
+            fields_strings.push(field_as_string);
+        }
+
+            fields_strings.join(" ")
+        }
     }
-
-        fields_strings.join(" ")
-    }
-}
 
 /// Complementary type for a field that represents a struct field that maps
 /// some real database column data
@@ -72,7 +67,7 @@ impl CanyonRegisterEntity {
 pub struct CanyonRegisterEntityField {
     pub field_name: String,
     pub field_type: String,
-    pub annotation: Option<String>
+    pub annotations: Vec<String>
 }
 
 impl CanyonRegisterEntityField {
@@ -80,7 +75,7 @@ impl CanyonRegisterEntityField {
         Self {
             field_name: String::new(),
             field_type: String::new(),
-            annotation: None
+            annotations: Vec::new()
         }
     }
 
