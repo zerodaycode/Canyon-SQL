@@ -57,7 +57,7 @@ impl DatabaseSyncOperations {
                     // let old_table_name = data.canyon_memory.table_rename.to_owned().get(&table_name.to_owned());
                     let otn = canyon_memory.table_rename.get(table_name).unwrap().to_owned().clone();
 
-                    Self::push_table_rename::<String, &str>(self, otn,table_name);
+                    Self::push_table_rename::<String, &str>(self, otn,&table_name);
 
                     // TODO Change foreign_key constrain name on database
                     continue;

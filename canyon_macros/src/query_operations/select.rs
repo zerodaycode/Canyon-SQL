@@ -178,8 +178,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
     for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations attached to the entity, if some
-            if field.annotation.is_some() {
-                let annotation = field.annotation.as_ref().unwrap();
+            for annotation in field.annotations {
                 if annotation.starts_with("Annotation: ForeignKey") {
                     column_name.push_str(&field.field_name);
                     let fk_table_column = &annotation.split(",")
@@ -281,8 +280,7 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
     for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations attached to the entity, if some
-            if field.annotation.is_some() {
-                let annotation = field.annotation.as_ref().unwrap();
+            for annotation in field.annotations {
                 if annotation.starts_with("Annotation: ForeignKey") {
                     column_name.push_str(&field.field_name);
                     let fk_table_column = &annotation.split(",")
@@ -399,8 +397,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
     for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations
-            if field.annotation.is_some() {
-                let annotation = field.annotation.as_ref().unwrap();
+            for annotation in field.annotations {
                 if annotation.starts_with("Annotation: ForeignKey") {
                     column_name.push_str(&field.field_name);
                     let fk_table_column = &annotation.split(",")
@@ -471,8 +468,7 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
     for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations
-            if field.annotation.is_some() {
-                let annotation = field.annotation.as_ref().unwrap();
+            for annotation in field.annotations {
                 if annotation.starts_with("Annotation: ForeignKey") {
                     column_name.push_str(&field.field_name);
                     let fk_table_column = &annotation.split(",")
