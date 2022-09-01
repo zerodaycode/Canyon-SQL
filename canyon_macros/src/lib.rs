@@ -139,7 +139,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
             .into_boxed_str()
     );
-    println!("TABLE NAME: {}", e);
     new_entity.entity_name = e; 
 
     // The entity fields
