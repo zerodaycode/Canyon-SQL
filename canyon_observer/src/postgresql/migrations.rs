@@ -105,16 +105,6 @@ impl DatabaseSyncOperations {
                     if !columns_in_table.contains(&field.field_name) {
                         Self::add_column_to_table::<&str>(self, &table_name, field.clone());
 
-                        // // If field contains a foreign key annotation, add it to constrains_operations
-                        // if field.annotation.is_some() && field.annotation.as_ref().expect("Field annot").starts_with("Annotation: ForeignKey") {
-                        //     Self::add_foreign_key_with_annotation(
-                        //         self,
-                        //         field.annotation.as_ref().expect("Field annot2"),
-                        //         table_name.clone(),
-                        //         field.field_name.clone(),
-                        //     )
-                        // }
-
                         // We added the founded contraints on the field attributes
                         for attr in &field.annotations {
                             if attr.starts_with("Annotation: ForeignKey") {
@@ -160,6 +150,19 @@ impl DatabaseSyncOperations {
                         }
 
                         if field.field_type != database_field_postgres_type {
+                            if field.field_type.starts_with("Option") {
+                                self.constrains_operations.push(
+                                    Box::new(
+                                        ColumnOperation::AlterColumnDropNotNull(table_name, field.clone())
+                                    )
+                                );
+                            } else{
+                                self.constrains_operations.push(
+                                    Box::new(
+                                        ColumnOperation::AlterColumnSetNotNull(table_name, field.clone())
+                                    )
+                                );
+                            }
                             Self::change_column_type(self, table_name, field.clone());
                         }
 
@@ -178,7 +181,6 @@ impl DatabaseSyncOperations {
                                 }
                                 // Case when field contains a foreign key annotation, and there is already one in the database
                                 else if database_field.foreign_key_name.is_some() {
-    
                                     // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                                     let annotation_data = Self::extract_foreign_key_annotation(attr.clone());
     
@@ -255,6 +257,7 @@ impl DatabaseSyncOperations {
         }
     }
 
+    /// Make the detected migrations for the next Canyon-SQL run
     pub async fn from_query_register() {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
 
@@ -270,6 +273,7 @@ impl DatabaseSyncOperations {
                 .ok()
                 .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());
                 // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
+                // TODO Ask for user input?
         }
     }
 
@@ -468,7 +472,7 @@ impl DatabaseSyncOperations {
     }
 }
 
-/// TODO Docs
+/// Trait that enables implementors to execute migration queries 
 #[async_trait]
 trait DatabaseOperation: Debug {
     async fn execute(&self);
@@ -511,17 +515,22 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
                     "CREATE TABLE {table_name} ({:?});",
                     table_fields.iter().map(|entity_field|
                         format!("{} {}", entity_field.field_name, entity_field.field_type_to_postgres())
-                    ).collect::<Vec<String>>()
-                        .join(", ")
+                    ).collect::<Vec<String>>().join(", ")
                 ).replace('"', ""),
+
             TableOperation::AlterTableName(old_table_name, new_table_name) =>
                 format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
-            TableOperation::AddTableForeignKey(table_name, foreign_key_name,
-                                               column_foreign_key, table_to_reference,
-                                               column_to_reference) =>
-                format!("ALTER TABLE {table_name} \
-                     ADD CONSTRAINT {foreign_key_name} \
-                     FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"),
+
+            TableOperation::AddTableForeignKey(
+                table_name, 
+                foreign_key_name,
+                column_foreign_key, 
+                table_to_reference,
+                column_to_reference
+            ) => format!(
+                "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
+                FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
+            ),
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constrain_name) =>
                 format!("ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constrain_name};"),
@@ -538,6 +547,8 @@ enum ColumnOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
     DeleteColumn(T, String),
     // AlterColumnName,
     AlterColumnType(T, CanyonRegisterEntityField),
+    AlterColumnDropNotNull(T, CanyonRegisterEntityField),
+    AlterColumnSetNotNull(T, CanyonRegisterEntityField)
 }
 
 impl<T> Transaction<Self> for ColumnOperation<T> 
@@ -551,11 +562,32 @@ impl<T> DatabaseOperation for ColumnOperation<T>
     async fn execute(&self) {
         let stmt = match &*self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
-                format!("ALTER TABLE {table_name} ADD COLUMN \"{}\" {};", entity_field.field_name, entity_field.field_type_to_postgres()),
+                format!(
+                    "ALTER TABLE {table_name} ADD COLUMN \"{}\" {};", 
+                    entity_field.field_name, 
+                    entity_field.field_type_to_postgres()
+                ),
             ColumnOperation::DeleteColumn(table_name, column_name) =>
-                format!("ALTER TABLE {table_name} DROP COLUMN {column_name};"),
+                format!("ALTER TABLE {table_name} DROP COLUMN \"{column_name}\";"),
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
-                format!("ALTER TABLE {table_name} ALTER COLUMN {} TYPE {};", entity_field.field_name, entity_field.field_type_to_postgres())
+                format!(
+                    "ALTER TABLE {table_name} ALTER COLUMN \"{}\" TYPE {};", 
+                    entity_field.field_name, 
+                    entity_field.field_type_to_postgres()
+                ),
+            ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" DROP NOT NULL",
+                    table_name,
+                    entity_field.field_name
+                ),
+            ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" SET NOT NULL",
+                    table_name,
+                    entity_field.field_name
+                )
+                
         };
 
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)

@@ -127,7 +127,7 @@ impl CanyonRegisterEntityField {
             rust_type::OPT_NAIVE_DATE =>  postgres_type.push_str("DATE"),
             &_ => postgres_type.push_str("DATE")
         }
-
+        
         postgres_type
     }
 
