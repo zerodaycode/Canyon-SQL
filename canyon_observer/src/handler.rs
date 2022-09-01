@@ -31,16 +31,12 @@ use super::{
 /// it's full potential, completly managing all the entities written by
 /// the user and annotated with the `#[canyon_entity]`
 #[derive(PartialDebug)]
-pub struct CanyonHandler<'a> {
-    // phantom: PhantomData<&'a str>
-    pub canyon_memory: CanyonMemory,
-    pub canyon_tables: Vec<CanyonRegisterEntity<'a>>,
-    pub database_tables: Vec<DatabaseTable<'a>>,
-}
-// Makes this structure able to make queries to the database
-impl<'a> Transaction<Self> for CanyonHandler<'a> {}
+pub struct CanyonHandler;
 
-impl<'a> CanyonHandler<'a> {
+// Makes this structure able to make queries to the database
+impl Transaction<Self> for CanyonHandler {}
+
+impl CanyonHandler {
     /// Launches the mechanism to parse the Database schema, the Canyon register
     /// and the database table with the memory of Canyon to perform the
     /// Migrations to completly handle the necessary database actions 

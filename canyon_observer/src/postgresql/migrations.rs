@@ -103,7 +103,7 @@ impl DatabaseSyncOperations {
                     // Case when the column doesn't exist on the database
                     // We push a new column operation to the collection for each one
                     if !columns_in_table.contains(&field.field_name) {
-                        Self::add_column_to_table::<&str>(self, table_name, field.clone());
+                        Self::add_column_to_table::<&str>(self, &table_name, field.clone());
 
                         // // If field contains a foreign key annotation, add it to constrains_operations
                         // if field.annotation.is_some() && field.annotation.as_ref().expect("Field annot").starts_with("Annotation: ForeignKey") {
