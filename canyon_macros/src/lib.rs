@@ -142,10 +142,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         new_entity_field.field_name = field.name.to_string();
         new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
         
-        // The annotations
-        if let Some(annotation) = &field.attributes {
-            new_entity_field.annotation = Some(annotation.get_as_string())
-        }
+        &field.attributes.iter().for_each(
+            |attr| new_entity_field.annotations.push(attr.get_as_string())
+        );
 
         new_entity.entity_fields.push(new_entity_field);
     }
