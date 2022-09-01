@@ -571,9 +571,10 @@ impl<T> DatabaseOperation for ColumnOperation<T>
                 format!("ALTER TABLE {table_name} DROP COLUMN \"{column_name}\";"),
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
                 format!(
-                    "ALTER TABLE {table_name} ALTER COLUMN \"{}\" TYPE {};", 
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
+                    table_name,
                     entity_field.field_name, 
-                    entity_field.field_type_to_postgres()
+                    entity_field.to_postgres_alter_syntax()
                 ),
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
                 format!(

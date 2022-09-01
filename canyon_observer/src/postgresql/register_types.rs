@@ -127,6 +127,35 @@ impl CanyonRegisterEntityField {
             rust_type::OPT_NAIVE_DATE =>  postgres_type.push_str("DATE"),
             &_ => postgres_type.push_str("DATE")
         }
+
+        postgres_type
+    }
+
+    pub fn to_postgres_alter_syntax(&self) -> String {
+        let mut rust_type_clean = self.field_type.replace(' ',"");
+        let rs_type_is_optional =  self.field_type.to_uppercase().starts_with("OPTION");
+
+        if rs_type_is_optional {
+            let type_regex = Regex::new(r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>").unwrap();
+            let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
+            rust_type_clean = capture_rust_type.name("rust_type").unwrap().as_str().to_string();
+        }
+
+        let mut postgres_type = String::new();
+
+        match rust_type_clean.as_str() {
+            rust_type::I32 => postgres_type.push_str("INTEGER"),
+            rust_type::OPT_I32 => postgres_type.push_str("INTEGER"),
+            rust_type::I64 =>  postgres_type.push_str("BIGINT"),
+            rust_type::OPT_I64 =>  postgres_type.push_str("BIGINT"),
+            rust_type::STRING =>  postgres_type.push_str("TEXT"),
+            rust_type::OPT_STRING =>  postgres_type.push_str("TEXT"),
+            rust_type::BOOL =>  postgres_type.push_str("BOOLEAN"),
+            rust_type::OPT_BOOL =>  postgres_type.push_str("BOOLEAN"),
+            rust_type::NAIVE_DATE =>  postgres_type.push_str("DATE"),
+            rust_type::OPT_NAIVE_DATE =>  postgres_type.push_str("DATE"),
+            &_ => postgres_type.push_str("DATE")
+        }
         
         postgres_type
     }

@@ -2,10 +2,6 @@ use tokio_postgres::{types::Type, Row};
 use partialdebug::placeholder::PartialDebug;
 
 use canyon_crud::crud::Transaction;
-use crate::postgresql::register_types::{
-    CanyonRegisterEntity, 
-    CanyonRegisterEntityField
-};
 
 use super::{
     CANYON_REGISTER_ENTITIES,
@@ -44,31 +40,11 @@ impl CanyonHandler {
         let mut db_operation = DatabaseSyncOperations::new();
         db_operation.fill_operations(
             CanyonMemory::remember().await,
-            Self::get_info_of_entities(),
+            (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone(),
             Self::fetch_postgres_database_status().await
         ).await;
     }
 
-
-    /// Converts a [`CanyonEntity`](canyon_manager::manager::entity::CanyonEntity) into a [`CanyonRegisterEntity`]
-    fn get_info_of_entities<'b>() -> Vec<CanyonRegisterEntity<'b>> {
-        let mut entities: Vec<CanyonRegisterEntity> = Vec::new();
-        let clone = (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone();
-        for i in clone.iter() {
-            let mut new_entity = CanyonRegisterEntity::new();
-            new_entity.entity_name = i.entity_name.clone();
-
-            for field in i.entity_fields.iter() {
-                let mut new_entity_field = CanyonRegisterEntityField::new();
-                new_entity_field.field_name = field.field_name.clone();
-                new_entity_field.field_type = field.field_type.clone();
-                new_entity_field.annotations = field.annotations.clone();
-                new_entity.entity_fields.push(new_entity_field);
-            }
-            entities.push(new_entity);
-        }
-        entities
-    }
 
     /// Fetches the *information schema* of the *public schema* of a `PostgreSQL` database,
     /// in order to retrieve the relation between the tables and it's columns, constraints
