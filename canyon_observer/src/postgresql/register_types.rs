@@ -11,15 +11,15 @@ use crate::constants::{
 /// Gets the necessary identifiers of a CanyonEntity to make it the comparative
 /// against the database schemas
 #[derive(Debug, Clone)]
-pub struct CanyonRegisterEntity {
-    pub entity_name: String,
+pub struct CanyonRegisterEntity<'a> {
+    pub entity_name: &'a str,
     pub entity_fields: Vec<CanyonRegisterEntityField>,
 }
 
-impl CanyonRegisterEntity {
+impl<'a> CanyonRegisterEntity<'a> {
     pub fn new() -> Self {
         Self {
-            entity_name: "".to_string(),
+            entity_name: "",
             entity_fields: Vec::new(),
         }
     }

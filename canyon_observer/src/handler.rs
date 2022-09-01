@@ -34,7 +34,7 @@ use super::{
 pub struct CanyonHandler<'a> {
     // phantom: PhantomData<&'a str>
     pub canyon_memory: CanyonMemory,
-    pub canyon_tables: Vec<CanyonRegisterEntity>,
+    pub canyon_tables: Vec<CanyonRegisterEntity<'a>>,
     pub database_tables: Vec<DatabaseTable<'a>>,
 }
 // Makes this structure able to make queries to the database
@@ -55,7 +55,7 @@ impl<'a> CanyonHandler<'a> {
 
 
     /// Converts a [`CanyonEntity`](canyon_manager::manager::entity::CanyonEntity) into a [`CanyonRegisterEntity`]
-    fn get_info_of_entities<'b>() -> Vec<CanyonRegisterEntity> {
+    fn get_info_of_entities<'b>() -> Vec<CanyonRegisterEntity<'b>> {
         let mut entities: Vec<CanyonRegisterEntity> = Vec::new();
         let clone = (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone();
         for i in clone.iter() {
