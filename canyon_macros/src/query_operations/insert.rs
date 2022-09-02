@@ -23,6 +23,9 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         quote! { &self.#ident }
     });
 
+    let pk = macro_data.get_primary_key_annotation();
+    println!("PK for {}: {:?}", &ty.to_string(), &pk);
+
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
         /// entry (row), returning the `PRIMARY KEY` = `self.id`
@@ -78,7 +81,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// ```
         #vis async fn insert(&mut self) -> () {
             self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-                #table_name, 
+                #table_name,
+                // #pk,
                 #column_names, 
                 &[
                     #(#insert_values),*

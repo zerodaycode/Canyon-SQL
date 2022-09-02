@@ -162,16 +162,36 @@ impl CanyonRegisterEntityField {
 
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
     fn to_postgres_id_syntax(&self) -> String {
+        let has_pk_annotation = self.annotations.iter().find(
+            |a| a.starts_with("Annotation: PrimaryKey")
+        );
+
+        let pk_is_autoincremental = match has_pk_annotation {
+            Some(annotation) => if annotation.contains("true") { true } else { false },
+            None => false
+        };
+
+        let numeric = vec!["i16", "i32", "i64"];
+
         let postgres_datatype_syntax = Self::to_postgres_syntax(self);
-        format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)
+
+        if numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental {
+            format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)
+        } else {
+            format!("{} PRIMARY KEY", postgres_datatype_syntax)
+        }
     }
 
     pub fn field_type_to_postgres(&self) -> String {
-        let column_postgres_syntax = match self.field_name.as_str() {
-            "id" => Self::to_postgres_id_syntax(self),
-            _ => Self::to_postgres_syntax(self),
-        };
+        let is_pk = self.annotations.iter().find(
+            |a| a.starts_with("Annotation: PrimaryKey")
+        );
 
-        column_postgres_syntax
+        println!("Field: {:?}, is pk? {:?}", self.field_name,is_pk);
+
+        match is_pk {
+            Some(_) => Self::to_postgres_id_syntax(&self),
+            None => Self::to_postgres_syntax(&self)
+        }
     }
 }

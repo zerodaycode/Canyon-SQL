@@ -63,7 +63,7 @@ impl EntityFieldAnnotation {
                 )
             },
             Err(_) => Ok(
-                EntityFieldAnnotation::PrimaryKey(false)
+                EntityFieldAnnotation::PrimaryKey(true)
             )
         }
     }

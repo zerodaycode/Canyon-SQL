@@ -116,7 +116,8 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     /// where the ID it's created by the database as a unique element being
     /// autoincremental for every new record inserted on the table.
     async fn __insert(
-        table_name: &str, 
+        table_name: &str,
+        // primary_key: Option<&String>,
         fields: &str, 
         values: &[&(dyn ToSql + Sync)]
     ) -> Result<i32, Error> {
@@ -132,6 +133,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             }
         }
 
+        // TODO
         // Removes the id from the insert operation
         let mut fields_without_id_chars = fields.chars();
         fields_without_id_chars.next();
@@ -143,6 +145,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             "INSERT INTO {} ({}) VALUES ({}) RETURNING id", 
             table_name, fields_without_id_chars.as_str(), field_values
         );
+        println!("INSERT: {:?}", &stmt);
         
         let result = Self::query(
             &stmt[..], 

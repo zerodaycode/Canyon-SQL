@@ -45,6 +45,8 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     quote! {
         #[derive(Clone, Debug)]
         #[allow(non_camel_case_types)]
+        #[allow(unused_variables)]
+        #[allow(dead_code)]
         /// Auto-generated enum to represent every field of the related type
         /// as a variant of an enum that it's named with the concatenation
         /// of the type identifier + Field
@@ -115,6 +117,8 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
     quote! {
         #[derive(Debug)]
         #[allow(non_camel_case_types)]
+        #[allow(unused_variables)]
+        #[allow(dead_code)]
         /// Auto-generated enumeration to represent each field of the related 
         /// type as a variant, which can support and contain a value of the field data type.
         /// 
