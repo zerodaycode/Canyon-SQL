@@ -44,7 +44,8 @@ use query_operations::{
 
 use utils::{
     function_parser::FunctionParser,
-    macro_tokens::MacroTokens 
+    macro_tokens::MacroTokens, 
+    helpers::database_table_name_from_entity_name
 };
 use canyon_macro::wire_queries_to_execute;
 
@@ -134,7 +135,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
-    new_entity.entity_name = Box::leak(entity.struct_name.to_string().to_lowercase().into_boxed_str());
+    let e = Box::leak(
+        database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
+            .into_boxed_str()
+    );
+    new_entity.entity_name = e; 
 
     // The entity fields
     for field in entity.attributes.iter() {

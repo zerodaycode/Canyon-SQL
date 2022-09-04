@@ -42,6 +42,7 @@ impl DatabaseSyncOperations {
         for canyon_register_entity in canyon_tables {
 
             let table_name = canyon_register_entity.entity_name;
+            println!("TABLE_NAME: {}", table_name);
 
             // true if this table on the register is already on the database
             let table_on_database = Self::check_table_on_database(&table_name, &database_tables);
@@ -105,16 +106,6 @@ impl DatabaseSyncOperations {
                     if !columns_in_table.contains(&field.field_name) {
                         Self::add_column_to_table::<&str>(self, &table_name, field.clone());
 
-                        // // If field contains a foreign key annotation, add it to constrains_operations
-                        // if field.annotation.is_some() && field.annotation.as_ref().expect("Field annot").starts_with("Annotation: ForeignKey") {
-                        //     Self::add_foreign_key_with_annotation(
-                        //         self,
-                        //         field.annotation.as_ref().expect("Field annot2"),
-                        //         table_name.clone(),
-                        //         field.field_name.clone(),
-                        //     )
-                        // }
-
                         // We added the founded contraints on the field attributes
                         for attr in &field.annotations {
                             if attr.starts_with("Annotation: ForeignKey") {
@@ -130,11 +121,13 @@ impl DatabaseSyncOperations {
                     // Case when the column exist on the database
                     else {
                         let d = database_tables.clone();
-                        let database_field = d
+                        let database_table = d
                             .into_iter()
                             .find(|x| x.table_name == *table_name)
                             .unwrap();
-                        let database_field = database_field.columns
+
+                        println!("DATABASE TABLE: {}",database_table.table_name);
+                        let database_field = database_table.columns
                             .iter().find(|x| x.column_name == field.field_name)
                             .expect("Field annt exists");
 
@@ -154,12 +147,28 @@ impl DatabaseSyncOperations {
                             }
                             _ => {}
                         }
-
-                        if database_field.is_nullable && field.field_type.to_uppercase().starts_with("OPTION") {
+                        println!("Table: {}, Column name: {}", table_name, field.field_name);
+                        if database_field.is_nullable {
                             database_field_postgres_type = format!("Option<{}>", database_field_postgres_type);
                         }
-
+                        println!("Is database field nullable ? -> {}",database_field.is_nullable);
+                        
+                        println!("Database column type: {}, Rust type {}",database_field_postgres_type,field.field_type);
                         if field.field_type != database_field_postgres_type {
+                            
+                            if field.field_type.starts_with("Option") {
+                                self.constrains_operations.push(
+                                    Box::new(
+                                        ColumnOperation::AlterColumnDropNotNull(table_name, field.clone())
+                                    )
+                                );
+                            } else{
+                                self.constrains_operations.push(
+                                    Box::new(
+                                        ColumnOperation::AlterColumnSetNotNull(table_name, field.clone())
+                                    )
+                                );
+                            }
                             Self::change_column_type(self, table_name, field.clone());
                         }
 
@@ -178,7 +187,6 @@ impl DatabaseSyncOperations {
                                 }
                                 // Case when field contains a foreign key annotation, and there is already one in the database
                                 else if database_field.foreign_key_name.is_some() {
-    
                                     // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
                                     let annotation_data = Self::extract_foreign_key_annotation(attr.clone());
     
@@ -255,6 +263,7 @@ impl DatabaseSyncOperations {
         }
     }
 
+    /// Make the detected migrations for the next Canyon-SQL run
     pub async fn from_query_register() {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
 
@@ -270,6 +279,7 @@ impl DatabaseSyncOperations {
                 .ok()
                 .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());
                 // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
+                // TODO Ask for user input?
         }
     }
 
@@ -288,7 +298,17 @@ impl DatabaseSyncOperations {
     ) -> Vec<String> {
         canyon_columns.iter()
             .filter(|a| database_tables.iter()
-                .find(|x| x.table_name == table_name).expect("Error collecting database tables").columns
+                .find(
+                    |x| 
+                    {
+                        println!(
+                            "Database Table: {}, actual table: {}",
+                            &x.table_name, table_name
+                        );
+                        x.table_name == table_name
+                    }
+                ).expect("Error collecting database tables")
+                .columns
                 .iter()
                 .map(|x| x.column_name.to_string())
                 .any(|x| x == a.field_name))
@@ -468,7 +488,7 @@ impl DatabaseSyncOperations {
     }
 }
 
-/// TODO Docs
+/// Trait that enables implementors to execute migration queries 
 #[async_trait]
 trait DatabaseOperation: Debug {
     async fn execute(&self);
@@ -511,17 +531,22 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
                     "CREATE TABLE {table_name} ({:?});",
                     table_fields.iter().map(|entity_field|
                         format!("{} {}", entity_field.field_name, entity_field.field_type_to_postgres())
-                    ).collect::<Vec<String>>()
-                        .join(", ")
+                    ).collect::<Vec<String>>().join(", ")
                 ).replace('"', ""),
+
             TableOperation::AlterTableName(old_table_name, new_table_name) =>
                 format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
-            TableOperation::AddTableForeignKey(table_name, foreign_key_name,
-                                               column_foreign_key, table_to_reference,
-                                               column_to_reference) =>
-                format!("ALTER TABLE {table_name} \
-                     ADD CONSTRAINT {foreign_key_name} \
-                     FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"),
+
+            TableOperation::AddTableForeignKey(
+                table_name, 
+                foreign_key_name,
+                column_foreign_key, 
+                table_to_reference,
+                column_to_reference
+            ) => format!(
+                "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
+                FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
+            ),
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constrain_name) =>
                 format!("ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constrain_name};"),
@@ -538,6 +563,8 @@ enum ColumnOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
     DeleteColumn(T, String),
     // AlterColumnName,
     AlterColumnType(T, CanyonRegisterEntityField),
+    AlterColumnDropNotNull(T, CanyonRegisterEntityField),
+    AlterColumnSetNotNull(T, CanyonRegisterEntityField)
 }
 
 impl<T> Transaction<Self> for ColumnOperation<T> 
@@ -551,11 +578,33 @@ impl<T> DatabaseOperation for ColumnOperation<T>
     async fn execute(&self) {
         let stmt = match &*self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
-                format!("ALTER TABLE {table_name} ADD COLUMN \"{}\" {};", entity_field.field_name, entity_field.field_type_to_postgres()),
+                format!(
+                    "ALTER TABLE {table_name} ADD COLUMN \"{}\" {};", 
+                    entity_field.field_name, 
+                    entity_field.field_type_to_postgres()
+                ),
             ColumnOperation::DeleteColumn(table_name, column_name) =>
-                format!("ALTER TABLE {table_name} DROP COLUMN {column_name};"),
+                format!("ALTER TABLE {table_name} DROP COLUMN \"{column_name}\";"),
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
-                format!("ALTER TABLE {table_name} ALTER COLUMN {} TYPE {};", entity_field.field_name, entity_field.field_type_to_postgres())
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
+                    table_name,
+                    entity_field.field_name, 
+                    entity_field.to_postgres_alter_syntax()
+                ),
+            ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" DROP NOT NULL;",
+                    table_name,
+                    entity_field.field_name
+                ),
+            ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" SET NOT NULL;",
+                    table_name,
+                    entity_field.field_name
+                )
+                
         };
 
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
