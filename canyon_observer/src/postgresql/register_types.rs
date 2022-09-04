@@ -186,9 +186,7 @@ impl CanyonRegisterEntityField {
         let is_pk = self.annotations.iter().find(
             |a| a.starts_with("Annotation: PrimaryKey")
         );
-
-        println!("Field: {:?}, is pk? {:?}", self.field_name,is_pk);
-
+        
         match is_pk {
             Some(_) => Self::to_postgres_id_syntax(&self),
             None => Self::to_postgres_syntax(&self)

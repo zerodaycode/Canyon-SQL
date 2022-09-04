@@ -26,7 +26,6 @@ impl EntityFieldAnnotation {
         match attr_args {
             Ok(name_value) => {
                 let mut data: HashMap<String, bool> = HashMap::new();
-                println!("Before nv loop. name_value len: {}", &name_value.len());
                 for nv in name_value {
                     // The identifier
                     let attr_value_ident = nv.path.get_ident().unwrap().to_string();

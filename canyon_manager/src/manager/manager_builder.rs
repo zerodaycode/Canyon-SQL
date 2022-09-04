@@ -156,28 +156,3 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         }
     }
 }
-
-
-// /// Helper to debug the attached attributes to a field
-// pub fn _get_field_attr(entity: &CanyonEntity) -> () {
-//     let _field_attributes = entity
-//         .attributes
-//         .iter()
-//         .map(|field| {
-//             match field.attributes {
-//                 Some(EntityFieldAnnotation::ForeignKey(_, _)) => {
-//                     println!("Annotation ForeignKey found in field: {} for {} entity", 
-//                         &field.name, &entity.struct_name
-//                     );
-//                 },
-//                 _ => {
-//                     println!("No annotation found for field: {} in {} entity", 
-//                         &field.name, &entity.struct_name
-//                     );
-//                 },
-//             };
-//         })
-//         .collect::<Vec<_>>();
-
-//         ()
-// }
