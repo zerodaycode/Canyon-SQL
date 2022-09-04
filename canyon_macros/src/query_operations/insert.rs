@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -16,6 +18,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data.get_struct_fields_as_strings();
 
+    println!("columnas: {}",column_names);
+
     // Retrives the fields of the Struct
     let fields = macro_data.get_struct_fields();
 
@@ -23,8 +27,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         quote! { &self.#ident }
     });
 
-    let pk = macro_data.get_primary_key_annotation();
-    println!("PK for {}: {:?}", &ty.to_string(), &pk);
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -82,8 +86,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         #vis async fn insert(&mut self) -> () {
             self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name,
-                // #pk,
-                #column_names, 
+                #pk,
+                &mut #column_names, 
                 &[
                     #(#insert_values),*
                 ]
@@ -117,6 +121,9 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     let insert_values = fields.iter().map( |ident| {
         quote! { &self.#ident }
     });
+
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -158,11 +165,10 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// 
         #vis async fn insert_result(&mut self) -> Result<(), canyon_sql::tokio_postgres::Error> {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-                #table_name, 
+                #table_name,
+                #pk,
                 #column_names, 
-                &[
-                    #(#insert_values),*
-                ]
+                &[#(#insert_values),*]
             ).await;
 
             if let Err(error) = result {
