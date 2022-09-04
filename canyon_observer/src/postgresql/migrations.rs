@@ -42,7 +42,6 @@ impl DatabaseSyncOperations {
         for canyon_register_entity in canyon_tables {
 
             let table_name = canyon_register_entity.entity_name;
-            println!("TABLE_NAME: {}", table_name);
 
             // true if this table on the register is already on the database
             let table_on_database = Self::check_table_on_database(&table_name, &database_tables);
@@ -126,7 +125,6 @@ impl DatabaseSyncOperations {
                             .find(|x| x.table_name == *table_name)
                             .unwrap();
 
-                        println!("DATABASE TABLE: {}",database_table.table_name);
                         let database_field = database_table.columns
                             .iter().find(|x| x.column_name == field.field_name)
                             .expect("Field annt exists");
@@ -147,15 +145,12 @@ impl DatabaseSyncOperations {
                             }
                             _ => {}
                         }
-                        println!("Table: {}, Column name: {}", table_name, field.field_name);
+                        
                         if database_field.is_nullable {
                             database_field_postgres_type = format!("Option<{}>", database_field_postgres_type);
                         }
-                        println!("Is database field nullable ? -> {}",database_field.is_nullable);
                         
-                        println!("Database column type: {}, Rust type {}",database_field_postgres_type,field.field_type);
                         if field.field_type != database_field_postgres_type {
-                            
                             if field.field_type.starts_with("Option") {
                                 self.constrains_operations.push(
                                     Box::new(
@@ -298,16 +293,7 @@ impl DatabaseSyncOperations {
     ) -> Vec<String> {
         canyon_columns.iter()
             .filter(|a| database_tables.iter()
-                .find(
-                    |x| 
-                    {
-                        println!(
-                            "Database Table: {}, actual table: {}",
-                            &x.table_name, table_name
-                        );
-                        x.table_name == table_name
-                    }
-                ).expect("Error collecting database tables")
+                .find( |x| x.table_name == table_name).expect("Error collecting database tables")
                 .columns
                 .iter()
                 .map(|x| x.column_name.to_string())

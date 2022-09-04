@@ -45,6 +45,8 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     quote! {
         #[derive(Clone, Debug)]
         #[allow(non_camel_case_types)]
+        #[allow(unused_variables)]
+        #[allow(dead_code)]
         /// Auto-generated enum to represent every field of the related type
         /// as a variant of an enum that it's named with the concatenation
         /// of the type identifier + Field
@@ -115,6 +117,8 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
     quote! {
         #[derive(Debug)]
         #[allow(non_camel_case_types)]
+        #[allow(unused_variables)]
+        #[allow(dead_code)]
         /// Auto-generated enumeration to represent each field of the related 
         /// type as a variant, which can support and contain a value of the field data type.
         /// 
@@ -152,28 +156,3 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         }
     }
 }
-
-
-// /// Helper to debug the attached attributes to a field
-// pub fn _get_field_attr(entity: &CanyonEntity) -> () {
-//     let _field_attributes = entity
-//         .attributes
-//         .iter()
-//         .map(|field| {
-//             match field.attributes {
-//                 Some(EntityFieldAnnotation::ForeignKey(_, _)) => {
-//                     println!("Annotation ForeignKey found in field: {} for {} entity", 
-//                         &field.name, &entity.struct_name
-//                     );
-//                 },
-//                 _ => {
-//                     println!("No annotation found for field: {} in {} entity", 
-//                         &field.name, &entity.struct_name
-//                     );
-//                 },
-//             };
-//         })
-//         .collect::<Vec<_>>();
-
-//         ()
-// }

@@ -37,27 +37,7 @@ impl EntityField {
 
 
     pub fn new(name: &Ident, raw_helper_attributes: &[Attribute], ty: &Type) -> syn::Result<Self> {
-        // // Getting the name of attributes put in front of struct fields
-        // let helper_attributes = raw_helper_attributes
-        //     .iter()
-        //     .map(|attribute| { attribute })
-        //     .collect::<Vec<_>>();
-            
-        // // Making sense of the attribute(s)
-        // let attribute_type = if helper_attributes.len() == 1 {
-        //     let helper_attribute = &helper_attributes[0];
-        //     Some(EntityFieldAnnotation::try_from(helper_attribute)?)
-
-        // } else if helper_attributes.len() > 1 {
-        //     return Err(
-        //         syn::Error::new_spanned(
-        //             name, 
-        //             "Field has more than one attribute"
-        //         )
-        //     );
-        // } else { None };
-
-
+        
         let mut attributes = Vec::new();
         for attr in raw_helper_attributes {
             let result = Some(EntityFieldAnnotation::try_from(&attr)?);
