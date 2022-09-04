@@ -31,10 +31,15 @@ pub mod regex {
 /// TODO
 pub mod rust_type {
     pub const I32: &'static str = "i32";
+    pub const OPT_I32: &'static str = "Option<i32>";
     pub const I64: &'static str = "i64";
+    pub const OPT_I64: &'static str = "Option<i64>";
     pub const STRING: &'static str = "String";
+    pub const OPT_STRING: &'static str = "Option<String>";
     pub const BOOL: &'static str = "bool";
+    pub const OPT_BOOL: &'static str = "Option<bool>";
     pub const NAIVE_DATE: &'static str = "NaiveDate";
+    pub const OPT_NAIVE_DATE: &'static str = "Option<NaiveDate>";
 }
 
 /// TODO

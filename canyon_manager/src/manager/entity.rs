@@ -111,13 +111,11 @@ impl CanyonEntity {
 impl Parse for CanyonEntity {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
         let _struct = input.parse::<ItemStruct>()?;
-
         // Retrieve the struct's visibility
         let _vis = _struct.vis;
-
         // Retrieve the generics attached to this struct
         let _generics = _struct.generics;
-
+        
         // Retrive the struct fields
         let mut parsed_fields: Vec<EntityField> = Vec::new();
         for field in _struct.fields {
