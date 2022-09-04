@@ -237,10 +237,22 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
 
     /// Updates an entity from the database that belongs to a current instance
     async fn __update(
-        table_name: &str, 
+        table_name: &str,
+        primary_key: &str,
         fields: &str, 
         values: &[&(dyn ToSql + Sync)]
-    ) -> Result<DatabaseResult<T>, Error> {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+
+        if primary_key == "" {
+            return Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "Canyon does not allow the use of the `.update(&self)` method \
+                    on entities that does not contains a primary key. \
+                    Please, use instead the T::update(...) associated function."
+                ).into_inner().unwrap()
+            )
+        }
         
         let mut vec_columns_values:Vec<String> = Vec::new();
         
@@ -251,18 +263,25 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             vec_columns_values.push(column_equal_value)
         }
 
-        vec_columns_values.remove(0);
+        let pk_index = fields.split(", ")
+            .collect::<Vec<&str>>()
+            .iter()
+            .position(|pk| *pk == primary_key)
+            .unwrap();
+
+        vec_columns_values.remove(pk_index);
+
         let str_columns_values = vec_columns_values.join(",");
 
         let stmt = format!(
-            "UPDATE {} SET {} WHERE id = $1",
-            table_name, str_columns_values
+            "UPDATE {} SET {} WHERE id = ${:?}",
+            table_name, str_columns_values, pk_index + 1
         );
 
         let result = Self::query(&stmt[..], values).await;
 
         if let Err(error) = result {
-            Err(error)
+            Err(error.into_source().unwrap())
         } else { Ok(result.ok().unwrap()) }
     }
 

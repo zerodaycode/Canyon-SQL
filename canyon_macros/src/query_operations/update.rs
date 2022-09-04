@@ -23,13 +23,17 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
         quote! { &self.#ident }
     });
 
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
+
 
     quote! {
         /// Updates a database record that matches
         /// the current instance of a T type
         #vis async fn update(&self) -> () {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+            let a = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
                 #table_name,
+                #pk,
                 #column_names,
                 &[
                     #(#update_values),*
@@ -66,14 +70,18 @@ pub fn generate_update_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         quote! { &self.#ident }
     });
 
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
+
 
     quote! {
         /// Updates a database record that matches
         /// the current instance of a T type, returning a result
         /// indicating a posible failure querying the database.
-        #vis async fn update_result(&self) -> Result<(), canyon_sql::tokio_postgres::Error> {
+        #vis async fn update_result(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
                 #table_name,
+                #pk,
                 #column_names,
                 &[
                     #(#update_values),*
