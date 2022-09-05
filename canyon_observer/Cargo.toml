@@ -12,6 +12,7 @@ async-trait = { version = "0.1.50" }
 regex = "1.5"
 walkdir = "2"
 lazy_static = "1.4.0"
+proc-macro2 = "1.0.27"
 
 # Debug
 partialdebug = "0.2.0"

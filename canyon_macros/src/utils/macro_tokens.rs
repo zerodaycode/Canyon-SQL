@@ -91,4 +91,24 @@ impl<'a> MacroTokens<'a> {
         
         column_names_as_chars.as_str().to_owned()
     }
+
+
+    /// Utility for find the primary key attribute (if exists) and the
+    /// column name (field) which belongs
+    pub fn get_primary_key_annotation(&self) -> Option<String> {
+        let f = self.fields
+            .iter()
+            .find( |field| 
+                field.attrs.iter()
+                    .map( |attr| 
+                        attr.path.segments[0].clone().ident
+                    ).map( |ident| 
+                        ident.to_string()
+                    ).find ( |field_name| 
+                        field_name == "primary_key"
+                    ) == Some("primary_key".to_string())
+            );
+
+        f.map( |v| v.ident.clone().unwrap().to_string())
+    }
 }
