@@ -1,7 +1,8 @@
 [package]
 name = "canyon_sql"
-version = "0.4.0"
+version = "1.0.0"
 edition = "2021"
+authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto<gbm25@gmail.com>"]
 
 [dependencies]
 tokio-postgres = { version = "0.7.2", features=["with-chrono-0_4"]  }

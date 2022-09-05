@@ -44,7 +44,8 @@ use query_operations::{
 
 use utils::{
     function_parser::FunctionParser,
-    macro_tokens::MacroTokens 
+    macro_tokens::MacroTokens, 
+    helpers::database_table_name_from_entity_name
 };
 use canyon_macro::wire_queries_to_execute;
 
@@ -134,7 +135,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
-    new_entity.entity_name = entity.struct_name.to_string().to_lowercase();
+    let e = Box::leak(
+        database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
+            .into_boxed_str()
+    );
+    new_entity.entity_name = e; 
 
     // The entity fields
     for field in entity.attributes.iter() {
@@ -142,10 +147,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         new_entity_field.field_name = field.name.to_string();
         new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
         
-        // The annotations
-        if let Some(annotation) = &field.attribute {
-            new_entity_field.annotation = Some(annotation.get_as_string())
-        }
+        field.attributes.iter().for_each(
+            |attr| new_entity_field.annotations.push(attr.get_as_string())
+        );
 
         new_entity.entity_fields.push(new_entity_field);
     }
