@@ -55,7 +55,7 @@ use canyon_manager::manager::{
         generate_enum_with_fields,
         generate_enum_with_fields_values 
     }, 
-    entity::CanyonEntity
+    entity::CanyonEntity, field_annotation::EntityFieldAnnotation
 };
 
 use canyon_observer::{
@@ -78,6 +78,22 @@ use canyon_observer::{
 /// the necessary operations for the migrations
 #[proc_macro_attribute]
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    println!("Metadata for the canyon arg: {:?}", &_meta);
+    let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
+    // println!("Parsed metadata: {:?}", &element);
+    // let _args = match MacroArgs::from_list(&_args) {
+
+    // }
+    println!("Lenght of Nested: {:?}", &attrs.len());
+    for a in attrs {
+        match a {
+            syn::NestedMeta::Meta(m) => 
+                println!("Parsed metadata: {:?}", &m.path().get_ident().unwrap().to_string()),
+            syn::NestedMeta::Lit(lit) => 
+                println!("Parsed literal: {:?}", &lit.to_owned().into::<&str>()),
+        }
+    }
+
     // Parses the function that this attribute is attached to
     let func_res = syn::parse::<FunctionParser>(input);
     
@@ -85,11 +101,12 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
         return quote! { fn main() {} }.into()
     }
     
+    // TODO check if the `canyon` macro it's attached only to main? 
     let func = func_res.ok().unwrap();
     let sign = func.clone().sig;
     let body = func.clone().block.stmts;
 
-    // The code used by Canyon to perform it's managed state
+    // The migrations
     let rt = tokio::runtime::Runtime::new().unwrap();
     rt.block_on(async {
         CanyonHandler::run().await;

@@ -5,6 +5,11 @@ use quote::quote;
 
 use canyon_observer::QUERIES_TO_EXECUTE;
 
+#[derive(Debug, Clone)]
+pub enum CanyonMacroAnnotation {
+    Migrations
+}
+
 
 /// Creates a TokenScream that is used to load the data generated at compile-time
 /// by the `CanyonManaged` macros again on the queries register
