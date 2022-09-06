@@ -11,22 +11,22 @@
 /// in order to perform the migrations
 
 
-pub mod handler;
-mod memory;
-mod constants;
-
 // Database Engine related
 pub mod postgresql;
 
 extern crate canyon_crud;
 
+// The migrator tool
+pub mod handler;
+mod memory;
+mod constants;
+
 use std::sync::Mutex;
-use lazy_static::lazy_static;
 
 use crate::postgresql::register_types::CanyonRegisterEntity;
 
 
-lazy_static! {  // TODO implement an access control polity by number of times read the static refs
-    pub static ref CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> = Mutex::new(Vec::new());
-    pub static ref QUERIES_TO_EXECUTE: Mutex<Vec<String>> = Mutex::new(Vec::new());
-}
+// lazy_static! {  // TODO implement an access control polity by number of times read the static refs
+    pub static CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> = Mutex::new(Vec::new());
+    pub static QUERIES_TO_EXECUTE: Mutex<Vec<String>> = Mutex::new(Vec::new());
+// }

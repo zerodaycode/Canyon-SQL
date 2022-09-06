@@ -40,7 +40,7 @@ impl CanyonHandler {
         let mut db_operation = DatabaseSyncOperations::new();
         db_operation.fill_operations(
             CanyonMemory::remember().await,
-            (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone(),
+            CANYON_REGISTER_ENTITIES.lock().unwrap().clone(),
             Self::fetch_postgres_database_status().await
         ).await;
     }

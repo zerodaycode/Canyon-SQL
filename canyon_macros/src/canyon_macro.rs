@@ -11,7 +11,7 @@ use canyon_observer::QUERIES_TO_EXECUTE;
 pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     let mut queries = String::new();
 
-    for query in (*QUERIES_TO_EXECUTE).lock().unwrap().iter() {
+    for query in QUERIES_TO_EXECUTE.lock().unwrap().iter() {
         queries.push_str(&(query.to_owned() + "->"));
     }
     
@@ -28,9 +28,9 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
             .collect::<Vec<String>>();
         
         
-        if (*QUERIES_TO_EXECUTE).lock().unwrap().len() > 1 {
+        if QUERIES_TO_EXECUTE.lock().unwrap().len() > 1 {
             // > 1 because there's an [""] entry
-            for element in (*QUERIES_TO_EXECUTE).lock().unwrap().iter() {
+            for element in QUERIES_TO_EXECUTE.lock().unwrap().iter() {
                 println!("\t{}", element)
             }
         }

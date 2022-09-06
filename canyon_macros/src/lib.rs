@@ -155,7 +155,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     }
 
     // Fill the register with the data of the attached struct
-    (*CANYON_REGISTER_ENTITIES).lock().unwrap().push(new_entity);
+    CANYON_REGISTER_ENTITIES.lock().unwrap().push(new_entity);
 
     // Struct name as Ident for wire in the macro
     let ty = entity.struct_name;
