@@ -42,11 +42,11 @@ pub struct CanyonSqlConfig<'a> {
 #[derive(Deserialize, Debug)]
 pub struct Datasources<'a> {
     #[serde(borrow)]
-    pub datasources: Vec<Datasource<'a>>
+    pub datasources: Vec<DatasourceConfig<'a>>
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Datasource<'a> {
+pub struct DatasourceConfig<'a> {
     #[serde(borrow)]
     pub name: &'a str, 
     pub properties: DatasourceProperties<'a>
@@ -61,6 +61,9 @@ pub struct DatasourceProperties<'a> {
     pub db_name: &'a str,
 }
 
+
+// pub struct Datasource<T:>
+pub trait Datasource: Sync + Send {}
 
 /// Manages to retrieve the credentials to the desired database connection from an
 /// handcoded `secrets.toml` file, located at the root of the project.
