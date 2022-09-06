@@ -65,6 +65,12 @@ pub struct DatasourceProperties<'a> {
 // pub struct Datasource<T:>
 pub trait Datasource: Sync + Send {}
 
+pub struct DatabaseCredentialsH<T: Datasource> {
+    pub db_type: T
+}
+
+
+
 /// Manages to retrieve the credentials to the desired database connection from an
 /// handcoded `secrets.toml` file, located at the root of the project.
 pub struct DatabaseCredentials {
