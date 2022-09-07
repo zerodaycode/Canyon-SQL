@@ -1,6 +1,7 @@
 use std::{fs, collections::HashMap};
 use serde::Deserialize;
 
+
 /// ```
 #[test]
 fn load_ds_config_from_array() {
@@ -34,25 +35,25 @@ fn load_ds_config_from_array() {
 }
 
 /// ```
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig<'a> {
     #[serde(borrow)]
     pub canyon_sql: Datasources<'a>
 }
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Datasources<'a> {
     #[serde(borrow)]
     pub datasources: Vec<DatasourceConfig<'a>>
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub struct DatasourceConfig<'a> {
     #[serde(borrow)]
     pub name: &'a str, 
     pub properties: DatasourceProperties<'a>
 } 
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone, Copy)]
 pub struct DatasourceProperties<'a> {
     pub db_type: &'a str,  
     pub username: &'a str, 

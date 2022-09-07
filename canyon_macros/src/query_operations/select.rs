@@ -24,16 +24,14 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                 .unwrap()
                 .to_entity::<#ty>()
         }
-        // #vis async fn find_all_datasource<T>(datasourceType: T) -> Vec<#ty> 
-        //     where T: canyon_sql::canyon_connection::Datasource
-        // {
-        //     <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-        //         #table_name
-        //     ).await
-        //         .ok()
-        //         .unwrap()
-        //         .to_entity::<#ty>()
-        // }
+        #vis async fn find_all_datasource<'a>(datasourceType: canyon_sql::canyon_connection::credentials::DatasourceConfig<'a>) -> Vec<#ty> {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+                #table_name
+            ).await
+                .ok()
+                .unwrap()
+                .to_entity::<#ty>()
+        }
     }   
 }
 

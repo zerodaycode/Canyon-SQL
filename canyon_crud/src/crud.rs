@@ -157,7 +157,7 @@ pub trait CrudOperations<T>: Transaction<T>
                 .wrapper
                 .get(0)
                 .unwrap()
-                .get("id")
+                .get("id")  // TODO Tremendo cambio por el valor de la clave primaria
             ) 
         }
     }
