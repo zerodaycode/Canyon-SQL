@@ -9,11 +9,13 @@ quote = "1.0.9"
 proc-macro2 = "1.0.27"
 futures = "0.3.21"
 tokio = { version = "1.9.0", features = ["full"] }
+toml = "0.5.9"
 
 
 canyon_observer = { path = "../canyon_observer" }
 canyon_manager = { path = "../canyon_manager" }
 canyon_crud = { path = "../canyon_crud" }
+canyon_connection = { path = "../canyon_connection" }
 
 [lib]
 proc-macro = true

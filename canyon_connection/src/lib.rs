@@ -1,10 +1,12 @@
 pub mod postgresql_connector;
-mod credentials;
+pub mod credentials;
 
-use crate::credentials::{DatabaseCredentials, Datasource};
+use crate::credentials::DatasourceConfig;
+pub use crate::credentials::DatabaseCredentials;
 use lazy_static::lazy_static;
 
+
+pub static mut DATASOURCES: Vec<DatasourceConfig<'static>> = Vec::new();
 lazy_static! {
     pub static ref CREDENTIALS: DatabaseCredentials = DatabaseCredentials::new();
-    pub static ref DATASOURCES: Vec<&'static dyn Datasource> = Vec::new();
 }

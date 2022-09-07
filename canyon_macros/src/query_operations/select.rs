@@ -1,9 +1,9 @@
 use canyon_observer::CANYON_REGISTER_ENTITIES;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::utils::helpers::*;
-
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for build the __find_all() CRUD 
@@ -15,7 +15,8 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_all() -> Vec<#ty> {
+        #vis async fn find_all() -> Vec<#ty>
+        {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name
             ).await
@@ -23,6 +24,16 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                 .unwrap()
                 .to_entity::<#ty>()
         }
+        // #vis async fn find_all_datasource<T>(datasourceType: T) -> Vec<#ty> 
+        //     where T: canyon_sql::canyon_connection::Datasource
+        // {
+        //     <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+        //         #table_name
+        //     ).await
+        //         .ok()
+        //         .unwrap()
+        //         .to_entity::<#ty>()
+        // }
     }   
 }
 

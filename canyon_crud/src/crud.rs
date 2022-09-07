@@ -74,8 +74,10 @@ pub trait Transaction<T: Debug> {
 /// in the [`canyon_macros`] crates, on the root of this project. 
 
 #[async_trait]
-pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transaction<T> {
-
+pub trait CrudOperations<T>: Transaction<T> 
+    where T: Debug + CrudOperations<T> + RowMapper<T>
+{
+    // type Datasource;
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
     async fn __find_all(table_name: &str) -> Result<DatabaseResult<T>, Error> {

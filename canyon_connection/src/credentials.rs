@@ -61,14 +61,11 @@ pub struct DatasourceProperties<'a> {
     pub db_name: &'a str,
 }
 
-
-// pub struct Datasource<T:>
-pub trait Datasource: Sync + Send {}
-
-// pub struct DatabaseCredentialsH<T: Datasource> {
-//     pub db_type: T
-// }
-
+#[derive(Debug)]
+pub enum DatabaseType {
+    PostgreSql,
+    SqlServer
+}
 
 
 /// Manages to retrieve the credentials to the desired database connection from an
@@ -130,10 +127,4 @@ impl DatabaseCredentials {
 
         credentials_mapper
     }
-}
-
-
-pub enum DatabaseType {
-    PostgreSql,
-    SqlServer
 }

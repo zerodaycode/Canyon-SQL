@@ -4,6 +4,8 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
+use std::fs;
+
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
@@ -67,6 +69,11 @@ use canyon_observer::{
     }, 
 };
 
+use canyon_connection::{
+    DATASOURCES,
+    credentials::CanyonSqlConfig
+};
+
 
 /// Macro for handling the entry point to the program. 
 /// 
@@ -79,6 +86,18 @@ use canyon_observer::{
 #[proc_macro_attribute]
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
+
+    // Load the configuration from the config file
+    const CONFIG_FILE_IDENTIFIER: &'static str = "canyon.toml";
+    let raw_config_file = fs::read_to_string(CONFIG_FILE_IDENTIFIER)
+        .expect("Error opening or reading the Canyon configuration file");
+    let canyon_sql_config: CanyonSqlConfig = toml::from_str(raw_config_file.as_str())
+        .expect("Error generating the configuration for Canyon-SQL");
+
+    DATASOURCES = canyon_sql_config.canyon_sql.datasources;
+
+    println!("Detected configuration for Canyon-SQL:\n{:?}", &canyon_sql_config);
+    
     
     // Parses the attributes declared in the arguments of this proc macro
     let attrs_parse_result = parse_canyon_macro_attributes(&attrs);
@@ -314,7 +333,6 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     // that we can manipulate
     let ast: DeriveInput = syn::parse(input).unwrap();
     
-
     // Checks that this macro is on a struct
     match ast.data {
         syn::Data::Struct(ref _s) => (),
