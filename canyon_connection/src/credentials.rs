@@ -65,9 +65,9 @@ pub struct DatasourceProperties<'a> {
 // pub struct Datasource<T:>
 pub trait Datasource: Sync + Send {}
 
-pub struct DatabaseCredentialsH<T: Datasource> {
-    pub db_type: T
-}
+// pub struct DatabaseCredentialsH<T: Datasource> {
+//     pub db_type: T
+// }
 
 
 
