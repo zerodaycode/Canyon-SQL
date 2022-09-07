@@ -6,7 +6,8 @@ pub use tokio_postgres;
 // Macros crate
 pub extern crate canyon_macros;
 pub extern crate canyon_crud;
-pub extern crate canyon_observer; 
+pub extern crate canyon_observer;
+pub extern crate canyon_connection;
 
 /// This reexports allows the users to import all the available
 /// `Canyon-SQL` features in a single statement like:
@@ -25,5 +26,6 @@ pub extern crate canyon_observer;
 pub use canyon_macros::*;
 pub use canyon_observer::*;
 pub use canyon_crud::*;
+pub use canyon_connection::*;
 pub use async_trait::*;
 pub use tokio_postgres::Row;
