@@ -47,7 +47,7 @@ use utils::{
     macro_tokens::MacroTokens, 
     helpers::database_table_name_from_entity_name
 };
-use canyon_macro::wire_queries_to_execute;
+use canyon_macro::{wire_queries_to_execute, parse_canyon_macro_attributes};
 
 use canyon_manager::manager::{
     manager_builder::{
@@ -78,38 +78,56 @@ use canyon_observer::{
 /// the necessary operations for the migrations
 #[proc_macro_attribute]
 pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    // Parses the function that this attribute is attached to
-    let func_res = syn::parse::<FunctionParser>(input);
+    let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
     
+    // Parses the attributes declared in the arguments of this proc macro
+    let attrs_parse_result = parse_canyon_macro_attributes(&attrs);
+    if attrs_parse_result.error.is_some() {
+        return attrs_parse_result.error.unwrap()
+    }
+
+    // Parses the function items that this attribute is attached to
+    let func_res = syn::parse::<FunctionParser>(input);
     if func_res.is_err() {
         return quote! { fn main() {} }.into()
     }
     
+    // TODO check if the `canyon` macro it's attached only to main? 
     let func = func_res.ok().unwrap();
     let sign = func.clone().sig;
     let body = func.clone().block.stmts;
 
-    // The code used by Canyon to perform it's managed state
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
-        CanyonHandler::run().await;
-    });
+    if attrs_parse_result.allowed_migrations {
+        // The migrations
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            CanyonHandler::run().await;
+        });
 
-    // The queries to execute at runtime in the managed state
-    let mut queries_tokens: Vec<TokenStream> = Vec::new();
-    wire_queries_to_execute(&mut queries_tokens);
-    
-    // The final code wired in main()
-    quote! {
-        use canyon_sql::tokio;
-        #[tokio::main]
-        async #sign {
-            {
-                #(#queries_tokens)*
+        // The queries to execute at runtime in the managed state
+        let mut queries_tokens: Vec<TokenStream> = Vec::new();
+        wire_queries_to_execute(&mut queries_tokens);
+        
+        // The final code wired in main()
+        quote! {
+            use canyon_sql::tokio;
+            #[tokio::main]
+            async #sign {
+                {
+                    #(#queries_tokens)*
+                }
+                #(#body)*
             }
-            #(#body)*
-        }
-    }.into()
+        }.into()
+    } else {
+        quote! {
+            use canyon_sql::tokio;
+            #[tokio::main]
+            async #sign {
+                #(#body)*
+            }
+        }.into()
+    }
 
 }
 
