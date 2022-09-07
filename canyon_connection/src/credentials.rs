@@ -42,11 +42,11 @@ pub struct CanyonSqlConfig<'a> {
 #[derive(Deserialize, Debug)]
 pub struct Datasources<'a> {
     #[serde(borrow)]
-    pub datasources: Vec<Datasource<'a>>
+    pub datasources: Vec<DatasourceConfig<'a>>
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Datasource<'a> {
+pub struct DatasourceConfig<'a> {
     #[serde(borrow)]
     pub name: &'a str, 
     pub properties: DatasourceProperties<'a>
@@ -60,6 +60,15 @@ pub struct DatasourceProperties<'a> {
     pub host: &'a str,
     pub db_name: &'a str,
 }
+
+
+// pub struct Datasource<T:>
+pub trait Datasource: Sync + Send {}
+
+// pub struct DatabaseCredentialsH<T: Datasource> {
+//     pub db_type: T
+// }
+
 
 
 /// Manages to retrieve the credentials to the desired database connection from an
