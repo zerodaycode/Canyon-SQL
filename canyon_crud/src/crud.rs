@@ -84,8 +84,8 @@ pub trait CrudOperations<T>: Transaction<T>
         Self::query(&stmt[..], &[], datasource_name).await
     }
 
-    fn __find_all_query(table_name: &str) -> QueryBuilder<T> {
-        Query::new(format!("SELECT * FROM {}", table_name), &[])
+    fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+        Query::new(format!("SELECT * FROM {}", table_name), &[], datasource_name)
     }
 
     /// Queries the database and try to find an item on the most common pk
@@ -304,8 +304,8 @@ pub trait CrudOperations<T>: Transaction<T>
     /// if the user desires
     /// 
     /// Implemented as an associated function, not dependent on an instance
-    fn __update_query(table_name: &str) -> QueryBuilder<T> {
-        Query::new(format!("UPDATE {}", table_name), &[])
+    fn __update_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+        Query::new(format!("UPDATE {}", table_name), &[], datasource_name)
     }
     
     /// Deletes the entity from the database that belongs to a current instance
@@ -327,8 +327,8 @@ pub trait CrudOperations<T>: Transaction<T>
     /// if the user desires
     /// 
     /// Implemented as an associated function, not dependent on an instance
-    fn __delete_query(table_name: &str) -> QueryBuilder<T> {
-        Query::new(format!("DELETE FROM {}", table_name), &[])
+    fn __delete_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+        Query::new(format!("DELETE FROM {}", table_name), &[], datasource_name)
     }
     
     /// Performs a search over some table pointed with a ForeignKey annotation

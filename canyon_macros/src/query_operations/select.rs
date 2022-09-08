@@ -86,7 +86,7 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         /// TODO docs
-        #vis fn find_all_query() -> query_elements::query_builder::QueryBuilder<'static, #ty> {
+        #vis fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
                 #table_name, ""
             )
@@ -94,7 +94,7 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
 
         /// TODO docs
         #vis fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
-            query_elements::query_builder::QueryBuilder<'static, #ty> 
+            query_elements::query_builder::QueryBuilder<'a, #ty> 
         {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
                 #table_name, datasource_name
@@ -186,7 +186,7 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
             } else { None }
         }
 
-        #vis async fn find_by_id_datasource<'a, N>(id: N, &'a str) -> Option<#ty> 
+        #vis async fn find_by_id_datasource<'a, N>(id: N, datasource_name: &'a str) -> Option<#ty> 
             where N: canyon_sql::canyon_crud::bounds::IntegralNumber
         {
             /// TODO docs

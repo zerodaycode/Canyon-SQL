@@ -88,14 +88,14 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
 }
 
 /// Generates the TokenStream for the __delete() CRUD operation as a 
-/// [`query_elements::query_builder::QueryBuilder<'static, #ty>`]
+/// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
 pub fn generate_delete_query_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
         /// TODO Docs
-        #vis fn delete_query(&self) -> query_elements::query_builder::QueryBuilder<'static, #ty> {
+        #vis fn delete_query<'a>(&self) -> query_elements::query_builder::QueryBuilder<'a, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete_query(
                 #table_name, ""
             )
@@ -103,7 +103,7 @@ pub fn generate_delete_query_tokens(macro_data: &MacroTokens) -> TokenStream {
 
         /// TODO Docs
         #vis fn delete_query_datasource<'a>(&self, datasource_name: &'a str) -> 
-            query_elements::query_builder::QueryBuilder<'static, #ty> 
+            query_elements::query_builder::QueryBuilder<'a, #ty> 
         {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete_query(
                 #table_name, datasource_name
