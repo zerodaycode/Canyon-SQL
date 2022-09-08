@@ -52,14 +52,18 @@ fn determine_allowed_attributes(meta: &syn::Meta, cma: &mut CanyonMacroAttribute
     if attr_ident_str.as_str() == "enable_migrations" {
         cma.allowed_migrations = true;
     } else {
+        let error = syn::Error::new_spanned(
+            Ident::new(&attr_ident_str, attr_ident.span().into()), 
+        format!(
+                "No `{attr_ident_str}` arguments allowed in the `Canyon` macro attributes.\n\
+                Allowed ones are: {:?}", ALLOWED_ATTRS
+            )
+        ).into_compile_error();
         cma.error = Some(
-            syn::Error::new_spanned(
-                Ident::new(&attr_ident_str, attr_ident.span().into()), 
-                format!(
-                    "No {attr_ident_str} allowed in the `Canyon` macro.\n\
-                    Allowed ones are: {:?}", ALLOWED_ATTRS
-                )
-            ).into_compile_error().into()
+           quote! {
+                #error
+                fn main() {}
+           }.into()
         )
     }
 }
@@ -67,10 +71,14 @@ fn determine_allowed_attributes(meta: &syn::Meta, cma: &mut CanyonMacroAttribute
 /// Creates a custom error for report not allowed literals on the attribute
 /// args of the `canyon` proc macro
 fn report_literals_not_allowed(ident: &str, s: &Lit) -> TokenStream1 {
-    // let ident = Ident::new(ident, s.span().into());
-    syn::Error::new_spanned(Ident::new(ident, s.span().into()), 
+    let error = syn::Error::new_spanned(Ident::new(ident, s.span().into()), 
         "No literals allowed in the `Canyon` macro"
-    ).into_compile_error().into()
+    ).into_compile_error();
+    
+    quote! {
+        #error
+        fn main() {}
+   }.into()
 }
 
 

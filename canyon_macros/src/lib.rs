@@ -140,11 +140,14 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let entity_res = syn::parse::<CanyonEntity>(input);
     
     if entity_res.is_err() {
-        return entity_res.err().unwrap().into_compile_error().into()
+        return entity_res.err()
+            .expect("Unexpected error parsing the struct")
+            .into_compile_error()
+            .into()
     }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
-    let entity = entity_res.ok().unwrap();
+    let entity = entity_res.ok().expect("Unexpected error parsing the struct");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
@@ -157,7 +160,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
             .into_boxed_str()
     );
-    new_entity.entity_name = e; 
+    new_entity.entity_name = e;
+    println!("Entity name: {}", &e);
 
     // The entity fields
     for field in entity.attributes.iter() {
@@ -168,12 +172,14 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         field.attributes.iter().for_each(
             |attr| new_entity_field.annotations.push(attr.get_as_string())
         );
-
+        println!("New entity field: {:?}", &new_entity_field);
         new_entity.entity_fields.push(new_entity_field);
     }
 
     // Fill the register with the data of the attached struct
-    CANYON_REGISTER_ENTITIES.lock().unwrap().push(new_entity);
+    CANYON_REGISTER_ENTITIES.lock()
+        .expect("Error adquiring Mutex guard on Canyon Entity macro")
+        .push(new_entity);
 
     // Struct name as Ident for wire in the macro
     let ty = entity.struct_name;
@@ -226,6 +232,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let search_by_fk_result_tokens: Vec<TokenStream> = generate_find_by_foreign_key_result_tokens();
     let search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
     let search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
+
+    
 
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
