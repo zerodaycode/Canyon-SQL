@@ -15,18 +15,20 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_all() -> Vec<#ty>
-        {
+        #vis async fn find_all() -> Vec<#ty>{
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-                #table_name
+                #table_name,
+                ""
             ).await
                 .ok()
                 .unwrap()
                 .to_entity::<#ty>()
         }
-        #vis async fn find_all_datasource<'a>(datasourceType: canyon_sql::canyon_connection::credentials::DatasourceConfig<'a>) -> Vec<#ty> {
+
+        #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-                #table_name
+                #table_name,
+                datasource_name
             ).await
                 .ok()
                 .unwrap()
@@ -48,7 +50,23 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-                #table_name
+                #table_name,
+                ""
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else {
+                Ok(result.ok().unwrap().to_entity::<#ty>())
+            }
+        }
+
+        #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
+            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+                #table_name,
+                datasource_name
             ).await;
 
             if let Err(error) = result {
@@ -58,7 +76,6 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             }
         }
     }
-    
 }
 
 /// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
@@ -79,18 +96,26 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 /// Performs a COUNT(*) query over some table
 pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
         #vis async fn count() -> i64 {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name
+                #table_name,
+                ""
             ).await
-                .ok()
-                .unwrap()
+            .ok()
+            .unwrap()
+        }
+
+        #vis async fn count_datasource<'a>(datasource_name: &'a str) -> i64 {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
+                #table_name,
+                datasource_name
+            ).await
+            .ok()
+            .unwrap()
         }
     }
 }
@@ -98,15 +123,21 @@ pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
 /// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
 /// a posible success or error coming from the database
 pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
         #vis async fn count_result() -> Result<i64, canyon_sql::tokio_postgres::Error> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name
+                #table_name,
+                ""
+            ).await
+        }
+
+        #vis async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, canyon_sql::tokio_postgres::Error> {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
+                #table_name,
+                datasource_name
             ).await
         }
     }
@@ -114,16 +145,41 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
 
 /// Generates the TokenStream for build the __find_by_id() CRUD operation
 pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
         #vis async fn find_by_id<N>(id: N) -> Option<#ty> 
             where N: canyon_sql::canyon_crud::bounds::IntegralNumber
         {
-            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+                #table_name, 
+                id,
+                ""
+            ).await;
+                
+            if response.as_ref().is_ok() {
+                match response.as_ref().ok().unwrap() {
+                    n if n.wrapper.len() == 0 => None,
+                    _ => Some(
+                        response
+                            .ok()
+                            .unwrap()
+                            .to_entity::<#ty>()[0]
+                            .clone()
+                    )
+                }
+            } else { None }
+        }
+
+        #vis async fn find_by_id_datasource<'a, N>(id: N, &'a str) -> Option<#ty> 
+            where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        {
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+                #table_name, 
+                id,
+                datasource_name
+            )
                 .await;
                 
             if response.as_ref().is_ok() {
@@ -144,9 +200,7 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 /// Generates the TokenStream for build the __find_by_id() CRUD operation
 pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
@@ -154,8 +208,37 @@ pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStrea
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
                 where N: canyon_sql::canyon_crud::bounds::IntegralNumber
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
-                .await;
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+                #table_name, 
+                id,
+                ""
+            ).await;
+                
+            if let Err(error) = result {
+                Err(error)
+            } else { 
+                match result.as_ref().ok().unwrap() {
+                    n if n.wrapper.len() == 0 => Ok(None),
+                    _ => Ok(Some(
+                        result
+                            .ok()
+                            .unwrap()
+                            .to_entity::<#ty>()[0]
+                            .clone()
+                    ))
+                } 
+            }
+        }
+
+        #vis async fn find_by_id_result_datasource<'a, N>(id: N, datasource_name: &'a str) -> 
+            Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
+                where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+                #table_name, 
+                id,
+                datasource_name
+            ).await;
                 
             if let Err(error) = result {
                 Err(error)
@@ -226,7 +309,27 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                             pub async fn #quoted_method_name(&self) -> Option<#fk_ty> {
                                 let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                                
+                                if response.as_ref().is_ok() {
+                                    match response.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => None,
+                                        _ => Some(
+                                            response
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        )
+                                    }
+                                } else { None }
+                            }
+
+                            pub async fn #quoted_method_name_datasource<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                                let lookage_value = #field_value.to_string();
+                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                                 
                                 if response.as_ref().is_ok() {
@@ -253,7 +356,27 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                                
+                                if response.as_ref().is_ok() {
+                                    match response.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => None,
+                                        _ => Some(
+                                            response
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        )
+                                    }
+                                } else { None }
+                            }
+
+                            pub async fn #quoted_method_name_datasource<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                                let lookage_value = #field_value.to_string();
+                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                                 
                                 if response.as_ref().is_ok() {
@@ -332,7 +455,31 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                             {
                                 let lookage_value = #field_value.to_string();
                                 let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                                
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    match result.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => Ok(None),
+                                        _ => Ok(Some(
+                                            result
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        ))
+                                    } 
+                                }
+                            }
+
+                            pub async fn #quoted_method_name_datasource<'a>(&self, &'a str) -> 
+                                Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                            {
+                                let lookage_value = #field_value.to_string();
+                                let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                                 
                                 if let Err(error) = result {
@@ -362,7 +509,32 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
                                 let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                        
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    match result.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => Ok(None),
+                                        _ => Ok(Some(
+                                            result
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        ))
+                                    } 
+                                }
+                            }
+
+                            pub async fn belongs_to_result_datasource<'a, T>(value: &T, datasource_name: &'a str) ->
+                                Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
+                                let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                         
                                 if let Err(error) = result {

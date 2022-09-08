@@ -9,7 +9,7 @@ use lazy_static::lazy_static;
 
 const CONFIG_FILE_IDENTIFIER: &'static str = "canyon.toml";
 
-// pub static mut DATASOURCES: Vec<DatasourceConfig<'static>> = Vec::new();
+
 lazy_static! {
     static ref RAW_CONFIG_FILE: String = fs::read_to_string(CONFIG_FILE_IDENTIFIER)
         .expect("Error opening or reading the Canyon configuration file");
@@ -18,4 +18,5 @@ lazy_static! {
 
     pub static ref CREDENTIALS: DatabaseCredentials = DatabaseCredentials::new();
     pub static ref DATASOURCES: Vec<DatasourceConfig<'static>> = CONFIG_FILE.canyon_sql.datasources.clone();
+    pub static ref DEFAULT_DATASOURCE: DatasourceConfig<'static> = CONFIG_FILE.canyon_sql.datasources.clone()[0];
 }
