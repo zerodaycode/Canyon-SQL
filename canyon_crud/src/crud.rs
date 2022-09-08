@@ -10,8 +10,8 @@ use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
 
 use canyon_connection::{
-    CREDENTIALS,
-    postgresql_connector::DatabaseConnection
+    DATASOURCES,
+    postgresql_connector::DatabaseConnection, DEFAULT_DATASOURCE
 };
 
 
@@ -24,11 +24,24 @@ use canyon_connection::{
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
-    async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], _datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
+    async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
         where Q: ?Sized + ToStatement + Sync
     {
-        let database_connection = 
-            DatabaseConnection::new(&(*CREDENTIALS)).await.unwrap();
+        // Get the default (DATASOURCES[0]) datasource
+        let database_connection = if datasource_name == "" {
+            DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await.unwrap()
+        } else { // Get the specified one
+            DatabaseConnection::new(
+                &DATASOURCES.iter()
+                .find( |ds| ds.name == datasource_name)
+                .expect(&format!("No datasource found with the specified parameter: `{}`", datasource_name))
+                .properties
+            ).await.unwrap()
+        };
+
+
+        // let database_connection = 
+        //     DatabaseConnection::new(&(*CREDENTIALS)).await.unwrap();
 
         let (client, connection) =
             (database_connection.client, database_connection.connection);
