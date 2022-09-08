@@ -11,7 +11,8 @@ use crate::query_elements::query_builder::QueryBuilder;
 
 use canyon_connection::{
     DATASOURCES,
-    postgresql_connector::DatabaseConnection, DEFAULT_DATASOURCE
+    DEFAULT_DATASOURCE,
+    postgresql_connector::DatabaseConnection, 
 };
 
 
@@ -29,22 +30,24 @@ pub trait Transaction<T: Debug> {
     {
         // Get the default (DATASOURCES[0]) datasource
         let database_connection = if datasource_name == "" {
-            DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await.unwrap()
+            DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
         } else { // Get the specified one
             DatabaseConnection::new(
                 &DATASOURCES.iter()
                 .find( |ds| ds.name == datasource_name)
                 .expect(&format!("No datasource found with the specified parameter: `{}`", datasource_name))
                 .properties
-            ).await.unwrap()
+            ).await
         };
 
+        if let Err(db_conn) = database_connection {
+            return Err(db_conn);
+        }
 
-        // let database_connection = 
-        //     DatabaseConnection::new(&(*CREDENTIALS)).await.unwrap();
+        let db_conn = database_connection.ok().unwrap();
 
         let (client, connection) =
-            (database_connection.client, database_connection.connection);
+            (db_conn.client, db_conn.connection);
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -164,7 +167,7 @@ pub trait CrudOperations<T>: Transaction<T>
             fields, 
             field_values_placeholders
         );
-        println!("\nINSERT STMT: {}\n", &stmt);
+
         let result = Self::query(
             &stmt[..], 
             &values,

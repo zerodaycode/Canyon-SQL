@@ -161,7 +161,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             .into_boxed_str()
     );
     new_entity.entity_name = e;
-    println!("Entity name: {}", &e);
 
     // The entity fields
     for field in entity.attributes.iter() {
@@ -172,7 +171,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         field.attributes.iter().for_each(
             |attr| new_entity_field.annotations.push(attr.get_as_string())
         );
-        println!("New entity field: {:?}", &new_entity_field);
+
         new_entity.entity_fields.push(new_entity_field);
     }
 
@@ -309,7 +308,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
         #generated_enum_type_for_fields_values
     };
-
+    
     // Pass the result back to the compiler
     tokens.into()
 }
