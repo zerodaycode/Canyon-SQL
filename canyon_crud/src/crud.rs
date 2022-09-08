@@ -11,7 +11,7 @@ use crate::query_elements::query_builder::QueryBuilder;
 
 use canyon_connection::{
     CREDENTIALS,
-    postgresql_connector::DatabaseConnection, credentials::DatasourceConfig
+    postgresql_connector::DatabaseConnection
 };
 
 
@@ -24,7 +24,7 @@ use canyon_connection::{
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
-    async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
+    async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], _datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
         where Q: ?Sized + ToStatement + Sync
     {
         let database_connection = 
@@ -250,7 +250,7 @@ pub trait CrudOperations<T>: Transaction<T>
         primary_key: &str,
         fields: &str, 
         values: &[&(dyn ToSql + Sync)],
-        datasource: &DatasourceConfig<'_>
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
         if primary_key == "" {
@@ -291,7 +291,7 @@ pub trait CrudOperations<T>: Transaction<T>
         let result = Self::query(
             &stmt[..], 
             values,
-            datasource
+            datasource_name
         ).await;
 
         if let Err(error) = result {
@@ -309,12 +309,12 @@ pub trait CrudOperations<T>: Transaction<T>
     }
     
     /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete(table_name: &str, id: i32, datasource: &DatasourceConfig<'_>) -> Result<DatabaseResult<T>, Error> {
+    async fn __delete(table_name: &str, id: i32, datasource_name: &str) -> Result<DatabaseResult<T>, Error> {
         let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
         let result = Self::query(
             &stmt[..], 
             &[&id],
-            datasource
+            datasource_name
         ).await;
 
         if let Err(error) = result {
@@ -336,7 +336,7 @@ pub trait CrudOperations<T>: Transaction<T>
         related_table: &str, 
         related_column: &str,
         lookage_value: &str,
-        datasource: &DatasourceConfig<'_>
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Error> {
 
         let stmt = format!(
@@ -349,7 +349,7 @@ pub trait CrudOperations<T>: Transaction<T>
         let result = Self::query(
             &stmt[..], 
             &[],
-            datasource
+            datasource_name
         ).await;
 
         if let Err(error) = result {
@@ -362,7 +362,7 @@ pub trait CrudOperations<T>: Transaction<T>
         table: &str, 
         column: &str,
         lookage_value: String,
-        datasource: &DatasourceConfig<'_>
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Error> {
 
         let stmt = format!(
@@ -375,7 +375,7 @@ pub trait CrudOperations<T>: Transaction<T>
         let result = Self::query(
             &stmt[..], 
             &[],
-            datasource
+            datasource_name
         ).await;
 
         if let Err(error) = result {

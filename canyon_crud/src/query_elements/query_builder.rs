@@ -31,14 +31,14 @@ pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowM
 impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self) -> Result<Vec<T>, Error> {
+    pub async fn query(&mut self, datasource_name: &str) -> Result<Vec<T>, Error> {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
         if self.query.sql.contains("UPDATE") && self.set_clause != "" {
             self.query.sql.push_str(&self.set_clause)
         } else if !self.query.sql.contains("UPDATE") && self.set_clause != "" {
             panic!(
-                "'SET' SQL statement only must be used in `Type::update_query() associated functions`"
+                "'SET' SQL statement only must be used in `T::update_query() associated functions`"
             );
         }
         
@@ -68,7 +68,11 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
             unboxed_params.push(&**element);
         }
 
-        let result = T::query(&self.query.sql[..], &unboxed_params).await;
+        let result = T::query(
+            &self.query.sql[..], 
+            &unboxed_params,
+            datasource_name
+        ).await;
 
         if let Err(error) = result {
             Err(error)

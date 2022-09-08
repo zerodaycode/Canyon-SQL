@@ -270,6 +270,7 @@ impl DatabaseSyncOperations {
             Self::query(
                 query_to_execute,
                 &[],
+                ""
             ).await
                 .ok()
                 .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());

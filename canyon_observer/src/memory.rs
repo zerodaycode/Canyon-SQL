@@ -60,7 +60,8 @@ impl CanyonMemory {
         // Check database for the "memory data"
         let mem_results = Self::query(
             "SELECT * FROM canyon_memory",
-            &[]
+            &[],
+            ""
         ).await
         .ok()
         .expect("Error querying Canyon Memory")
@@ -239,7 +240,8 @@ impl CanyonMemory {
             ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
             )", 
-            &[]
+            &[],
+            ""
         ).await
         .ok()
         .expect("Error creating the 'canyon_memory' table")

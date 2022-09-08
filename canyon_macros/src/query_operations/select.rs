@@ -11,10 +11,10 @@ use crate::utils::macro_tokens::MacroTokens;
 pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn find_all() -> Vec<#ty>{
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name,
@@ -25,6 +25,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                 .to_entity::<#ty>()
         }
 
+        /// TODO docs
         #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name,
@@ -40,12 +41,11 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
 /// Generates the TokenStream for build the __find_all_result() CRUD 
 /// associated function
 pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn find_all_result() -> 
             Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
         {
@@ -61,6 +61,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             }
         }
 
+        /// TODO docs
         #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
             Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
         {
@@ -80,15 +81,23 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
 
 /// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
 pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis fn find_all_query() -> query_elements::query_builder::QueryBuilder<'static, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
-                #table_name
+                #table_name, ""
+            )
+        }
+
+        /// TODO docs
+        #vis fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
+            query_elements::query_builder::QueryBuilder<'static, #ty> 
+        {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
+                #table_name, datasource_name
             )
         }
     }
@@ -100,6 +109,7 @@ pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn count() -> i64 {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name,
@@ -109,6 +119,7 @@ pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
             .unwrap()
         }
 
+        /// TODO docs
         #vis async fn count_datasource<'a>(datasource_name: &'a str) -> i64 {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name,
@@ -127,6 +138,7 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn count_result() -> Result<i64, canyon_sql::tokio_postgres::Error> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name,
@@ -134,6 +146,7 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
             ).await
         }
 
+        /// TODO docs
         #vis async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, canyon_sql::tokio_postgres::Error> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name,
@@ -149,6 +162,7 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn find_by_id<N>(id: N) -> Option<#ty> 
             where N: canyon_sql::canyon_crud::bounds::IntegralNumber
         {
@@ -175,12 +189,12 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
         #vis async fn find_by_id_datasource<'a, N>(id: N, &'a str) -> Option<#ty> 
             where N: canyon_sql::canyon_crud::bounds::IntegralNumber
         {
+            /// TODO docs
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
                 #table_name, 
                 id,
                 datasource_name
-            )
-                .await;
+            ).await;
                 
             if response.as_ref().is_ok() {
                 match response.as_ref().ok().unwrap() {
@@ -204,6 +218,7 @@ pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStrea
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn find_by_id_result<N>(id: N) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
                 where N: canyon_sql::canyon_crud::bounds::IntegralNumber
@@ -230,6 +245,7 @@ pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStrea
             }
         }
 
+        /// TODO docs
         #vis async fn find_by_id_result_datasource<'a, N>(id: N, datasource_name: &'a str) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
                 where N: canyon_sql::canyon_crud::bounds::IntegralNumber
@@ -291,7 +307,11 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     // Converts a database table name generated by convection (lower case separated
                     // by underscores) to the Rust struct identifier convenction
@@ -326,7 +346,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 } else { None }
                             }
 
-                            pub async fn #quoted_method_name_datasource<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
                                 let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
@@ -373,7 +393,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 } else { None }
                             }
 
-                            pub async fn #quoted_method_name_datasource<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
                                 let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
@@ -405,7 +425,6 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
 /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
 /// of a T type of as an associated function of same T type
 pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
-
     let mut foreign_keys_tokens = Vec::new();
     let mut column_name = String::new();
 
@@ -435,7 +454,11 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     // Converts a database table name generated by convection (lower case separated
                     // by underscores) to the Rust struct identifier convenction
@@ -474,7 +497,7 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                                 }
                             }
 
-                            pub async fn #quoted_method_name_datasource<'a>(&self, &'a str) -> 
+                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> 
                                 Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
                             {
                                 let lookage_value = #field_value.to_string();
@@ -598,7 +621,11 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     foreign_keys_tokens.push(
                         quote! {
@@ -607,7 +634,27 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
                                 let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
+                                        .await;
+
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    Ok(
+                                        result
+                                            .ok()
+                                            .unwrap()
+                                            .to_entity::<#ty>()
+                                    )
+                                }
+                            }
+
+                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+                                where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
+                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
                                         .await;
 
                                 if let Err(error) = result {
@@ -671,7 +718,11 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     foreign_keys_tokens.push(
                         quote! {
@@ -681,7 +732,21 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
                                 <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
+                                        .await
+                            }
+                        }
+                    );
+
+                    foreign_keys_tokens.push(
+                        quote! {
+                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> 
+                                Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
+                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
                                         .await
                             }
                         }
