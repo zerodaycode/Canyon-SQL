@@ -26,12 +26,13 @@ pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowM
     and_clause: String,
     in_clause: &'a[Box<dyn InClauseValues>],
     order_by_clause: String,
-    set_clause: String
+    set_clause: String,
+    datasource_name: &'a str
 }
 impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self, datasource_name: &str) -> Result<Vec<T>, Error> {
+    pub async fn query(&mut self) -> Result<Vec<T>, Error> {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
         if self.query.sql.contains("UPDATE") && self.set_clause != "" {
@@ -71,7 +72,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         let result = T::query(
             &self.query.sql[..], 
             &unboxed_params,
-            datasource_name
+            self.datasource_name
         ).await;
 
         if let Err(error) = result {
@@ -79,14 +80,15 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         } else { Ok(result.ok().unwrap().to_entity::<T>()) }
     }
 
-    pub fn new(query: Query<'a, T>) -> Self {
+    pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
         Self {
             query: query,
             where_clause: String::new(),
             and_clause: String::new(),
             in_clause: &[],
             order_by_clause: String::new(),
-            set_clause: String::new()
+            set_clause: String::new(),
+            datasource_name: datasource_name
         }
     }
 

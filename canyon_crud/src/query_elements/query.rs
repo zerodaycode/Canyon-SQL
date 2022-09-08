@@ -23,7 +23,7 @@ impl<'a, T> Query<'a, T> where T: Debug + CrudOperations<T> + Transaction<T> + R
             params: params,
             marker: PhantomData
         };
-        QueryBuilder::<T>::new(self_)
+        QueryBuilder::<T>::new(self_, datasource_name)
     }
 }
 
