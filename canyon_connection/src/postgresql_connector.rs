@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use tokio_postgres::{Client, Connection, Error, NoTls, Socket, tls::NoTlsStream};
 
-use crate::credentials::DatasourceProperties;
+use crate::datasources::DatasourceProperties;
 
 
 /// Represents a connection with a `PostgreSQL` database

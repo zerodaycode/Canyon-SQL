@@ -1,10 +1,9 @@
 pub mod postgresql_connector;
-pub mod credentials;
+mod datasources;
 
 use std::fs;
 
-use crate::credentials::{DatasourceConfig, CanyonSqlConfig};
-pub use crate::credentials::DatabaseCredentials;
+use crate::datasources::{DatasourceConfig, CanyonSqlConfig};
 use lazy_static::lazy_static;
 
 const CONFIG_FILE_IDENTIFIER: &'static str = "canyon.toml";
@@ -16,7 +15,6 @@ lazy_static! {
     static ref CONFIG_FILE: CanyonSqlConfig<'static> = toml::from_str(RAW_CONFIG_FILE.as_str())
         .expect("Error generating the configuration for Canyon-SQL");
 
-    pub static ref CREDENTIALS: DatabaseCredentials = DatabaseCredentials::new();
     pub static ref DATASOURCES: Vec<DatasourceConfig<'static>> = CONFIG_FILE.canyon_sql.datasources.clone();
     pub static ref DEFAULT_DATASOURCE: DatasourceConfig<'static> = CONFIG_FILE.canyon_sql.datasources.clone()[0];
 }
