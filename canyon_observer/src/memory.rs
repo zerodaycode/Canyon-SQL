@@ -60,7 +60,8 @@ impl CanyonMemory {
         // Check database for the "memory data"
         let mem_results = Self::query(
             "SELECT * FROM canyon_memory",
-            &[]
+            &[],
+            ""
         ).await
         .ok()
         .expect("Error querying Canyon Memory")
@@ -137,7 +138,6 @@ impl CanyonMemory {
                 let rename_table = &update.struct_name != struct_name;
 
                 if rename_table {
-                    println!("Adding a new table to rename. new name: {}, old name {}", struct_name.clone(), update.struct_name.clone());
                     mem.table_rename.insert( struct_name.clone().to_lowercase(),update.struct_name.clone().to_lowercase());
                 }
             }
@@ -239,7 +239,8 @@ impl CanyonMemory {
             ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
             )", 
-            &[]
+            &[],
+            ""
         ).await
         .ok()
         .expect("Error creating the 'canyon_memory' table")

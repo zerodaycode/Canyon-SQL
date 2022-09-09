@@ -10,8 +10,9 @@ use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
 
 use canyon_connection::{
-    CREDENTIALS,
-    postgresql_connector::DatabaseConnection
+    DATASOURCES,
+    DEFAULT_DATASOURCE,
+    postgresql_connector::DatabaseConnection, 
 };
 
 
@@ -24,14 +25,29 @@ use canyon_connection::{
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
-    async fn query<Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)]) -> Result<DatabaseResult<T>, Error> 
+    async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
         where Q: ?Sized + ToStatement + Sync
     {
-        let database_connection = 
-            DatabaseConnection::new(&(*CREDENTIALS)).await.unwrap();
+        // Get the default (DATASOURCES[0]) datasource
+        let database_connection = if datasource_name == "" {
+            DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
+        } else { // Get the specified one
+            DatabaseConnection::new(
+                &DATASOURCES.iter()
+                .find( |ds| ds.name == datasource_name)
+                .expect(&format!("No datasource found with the specified parameter: `{}`", datasource_name))
+                .properties
+            ).await
+        };
+
+        if let Err(db_conn) = database_connection {
+            return Err(db_conn);
+        }
+
+        let db_conn = database_connection.ok().unwrap();
 
         let (client, connection) =
-            (database_connection.client, database_connection.connection);
+            (db_conn.client, db_conn.connection);
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -74,31 +90,33 @@ pub trait Transaction<T: Debug> {
 /// in the [`canyon_macros`] crates, on the root of this project. 
 
 #[async_trait]
-pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transaction<T> {
-
+pub trait CrudOperations<T>: Transaction<T> 
+    where T: Debug + CrudOperations<T> + RowMapper<T>
+{
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    async fn __find_all(table_name: &str) -> Result<DatabaseResult<T>, Error> {
+    async fn __find_all(table_name: &str, datasource_name: &str) -> Result<DatabaseResult<T>, Error> {
         let stmt = format!("SELECT * FROM {}", table_name);
-        Self::query(&stmt[..], &[]).await
+        Self::query(&stmt[..], &[], datasource_name).await
     }
 
-    fn __find_all_query(table_name: &str) -> QueryBuilder<T> {
-        Query::new(format!("SELECT * FROM {}", table_name), &[])
+    fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+        Query::new(format!("SELECT * FROM {}", table_name), &[], datasource_name)
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_id<N>(table_name: &str, id: N) -> Result<DatabaseResult<T>, Error> 
+    async fn __find_by_id<N>(table_name: &str, id: N, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
         where N: IntegralNumber
     {
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
-        Self::query(&stmt[..], &[&id]).await
+        Self::query(&stmt[..], &[&id], datasource_name).await
     }
 
-    async fn __count(table_name: &str) -> Result<i64, Error> {
+    async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Error> {
         let count = Self::query(
             &format!("SELECT COUNT (*) FROM {}", table_name)[..], 
-            &[]
+            &[],
+            datasource_name
         ).await;
         
         if let Err(error) = count {
@@ -124,7 +142,8 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         table_name: &str,
         primary_key: &str,
         fields: &str,
-        values: &[&(dyn ToSql + Sync)]
+        values: &[&(dyn ToSql + Sync)],
+        datasource_name: &str
     ) -> Result<i32, Error> {
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
@@ -132,17 +151,27 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         if primary_key != "" { 
             crud_algorythms::manage_primary_key(primary_key, &mut fields, &mut values)
         }
+        // Converting the fields column names to case-insensitive
+        fields = fields
+            .split(", ")
+            .map( |column_name| format!("\"{}\"", column_name))
+            .collect::<Vec<String>>()
+            .join(", ");
 
         let mut field_values_placeholders = String::new();
         crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
 
         let stmt = format!(
             "INSERT INTO {} ({}) VALUES ({}) RETURNING id", 
-            table_name, fields, field_values_placeholders
+            table_name, 
+            fields, 
+            field_values_placeholders
         );
+
         let result = Self::query(
             &stmt[..], 
-            &values
+            &values,
+            datasource_name
         ).await;
 
         if let Err(error) = result {
@@ -155,7 +184,7 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
                 .wrapper
                 .get(0)
                 .unwrap()
-                .get("id")
+                .get("id")  // TODO Tremendo cambio por el valor de la clave primaria
             ) 
         }
     }
@@ -165,12 +194,20 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         table_name: &str,
         primary_key: &str,
         fields: &str, 
-        values_arr: &mut Vec<Vec<Box<&(dyn ToSql + Sync)>>>
+        values_arr: &mut Vec<Vec<Box<&(dyn ToSql + Sync)>>>,
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Error> {
 
         // Removes the id from the insert operation if there's some
         // autogenerated primary_key on the table
         let mut fields = fields.to_string();
+        // Converting the fields column names to case-insensitive
+        fields = fields
+            .split(", ")
+            .map( |column_name| format!("\"{}\"", column_name))
+            .collect::<Vec<String>>()
+            .join(", ");
+
         let mut splitted = fields.split(", ")
             .collect::<Vec<&str>>();
         let pk_value_index = splitted.iter()
@@ -228,7 +265,11 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             }
         };
 
-        let result = Self::query(&stmt[..], &values[..]).await;
+        let result = Self::query(
+            &stmt[..], 
+            &values[..],
+            datasource_name
+        ).await;
 
         if let Err(error) = result {
             Err(error)
@@ -240,7 +281,8 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         table_name: &str,
         primary_key: &str,
         fields: &str, 
-        values: &[&(dyn ToSql + Sync)]
+        values: &[&(dyn ToSql + Sync)],
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
         if primary_key == "" {
@@ -256,9 +298,9 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
         
         let mut vec_columns_values:Vec<String> = Vec::new();
         
-        for (i, column_name) in fields.split(',').enumerate() {
+        for (i, column_name) in fields.split(", ").enumerate() {
             let column_equal_value = format!(
-                "{} = ${}", column_name.to_owned(), i + 1
+                "\"{}\" = ${}", column_name.to_owned(), i + 1
             );
             vec_columns_values.push(column_equal_value)
         }
@@ -278,7 +320,11 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
             table_name, str_columns_values, pk_index + 1
         );
 
-        let result = Self::query(&stmt[..], values).await;
+        let result = Self::query(
+            &stmt[..], 
+            values,
+            datasource_name
+        ).await;
 
         if let Err(error) = result {
             Err(error.into_source().unwrap())
@@ -290,14 +336,19 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     /// if the user desires
     /// 
     /// Implemented as an associated function, not dependent on an instance
-    fn __update_query(table_name: &str) -> QueryBuilder<T> {
-        Query::new(format!("UPDATE {}", table_name), &[])
+    fn __update_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+        Query::new(format!("UPDATE {}", table_name), &[], datasource_name)
     }
     
     /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete(table_name: &str, id: i32) -> Result<DatabaseResult<T>, Error> {
+    async fn __delete(table_name: &str, id: i32, datasource_name: &str) -> Result<DatabaseResult<T>, Error> {
+        // TODO Take PK instead of ID
         let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
-        let result = Self::query(&stmt[..], &[&id]).await;
+        let result = Self::query(
+            &stmt[..], 
+            &[&id],
+            datasource_name
+        ).await;
 
         if let Err(error) = result {
             Err(error)
@@ -309,25 +360,30 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     /// if the user desires
     /// 
     /// Implemented as an associated function, not dependent on an instance
-    fn __delete_query(table_name: &str) -> QueryBuilder<T> {
-        Query::new(format!("DELETE FROM {}", table_name), &[])
+    fn __delete_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+        Query::new(format!("DELETE FROM {}", table_name), &[], datasource_name)
     }
     
     /// Performs a search over some table pointed with a ForeignKey annotation
     async fn __search_by_foreign_key(
         related_table: &str, 
         related_column: &str,
-        lookage_value: &str
+        lookage_value: &str,
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Error> {
 
         let stmt = format!(
             "SELECT * FROM {} WHERE {} = {}", 
             related_table,
-            related_table.to_owned() + "." + related_column,
+            related_table.to_owned() + "." + "\"" + related_column + "\"",
             lookage_value
         );
 
-        let result = Self::query(&stmt[..], &[]).await;
+        let result = Self::query(
+            &stmt[..], 
+            &[],
+            datasource_name
+        ).await;
 
         if let Err(error) = result {
             Err(error)
@@ -338,17 +394,22 @@ pub trait CrudOperations<T: Debug + CrudOperations<T> + RowMapper<T>>: Transacti
     async fn __search_by_reverse_side_foreign_key(
         table: &str, 
         column: &str,
-        lookage_value: String
+        lookage_value: String,
+        datasource_name: &str
     ) -> Result<DatabaseResult<T>, Error> {
 
         let stmt = format!(
-            "SELECT * FROM {} WHERE {} = {}", 
+            "SELECT * FROM {} WHERE \"{}\" = {}", 
             table,
             column,
             lookage_value
         );
 
-        let result = Self::query(&stmt[..], &[]).await;
+        let result = Self::query(
+            &stmt[..], 
+            &[],
+            datasource_name
+        ).await;
 
         if let Err(error) = result {
             Err(error)

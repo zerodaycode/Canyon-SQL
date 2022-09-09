@@ -174,7 +174,6 @@ impl DatabaseSyncOperations {
                             // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
                             // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
                             if attr.starts_with("Annotation: ForeignKey") {
-                                println!("Annotation ForeignKey found on fill_operations, case when column exists on DB");
                                 if database_field.foreign_key_name.is_none() {
                                     Self::add_foreign_key_with_annotation::<&str, &String>(
                                         self, &attr, table_name, &field.field_name,
@@ -270,6 +269,7 @@ impl DatabaseSyncOperations {
             Self::query(
                 query_to_execute,
                 &[],
+                ""
             ).await
                 .ok()
                 .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());
