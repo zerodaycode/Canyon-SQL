@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
+use tokio_postgres::types::FromSql;
 use tokio_postgres::{ToStatement, types::ToSql, Error};
 
 use crate::{mapper::RowMapper, bounds::PrimaryKey};
@@ -107,7 +108,7 @@ pub trait CrudOperations<T>: Transaction<T>
     async fn __find_by_pk<P>(table_name: &str, pk: P, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
         where P: PrimaryKey
     {
-        /// TODO where pk_field
+        // TODO where pk_field
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
         Self::query(&stmt[..], &[&pk], datasource_name).await
     }
@@ -138,13 +139,13 @@ pub trait CrudOperations<T>: Transaction<T>
     /// autoincremental for every new record inserted on the table, if the attribute
     /// is configured to support this case. If there's no PK, or it's configured as NOT autoincremental,
     /// just performns an insert.
-    async fn __insert(
-        table_name: &str,
-        primary_key: &str,
-        fields: &str,
-        values: &[&(dyn ToSql + Sync)],
-        datasource_name: &str
-    ) -> Result<i32, Error> {  // TODO Implement `PrimaryKey` trait type
+    async fn __insert<'a, P: PrimaryKey>(
+        table_name: &'a str,
+        primary_key: &'a str,
+        fields: &'a str,
+        values: &'a[&'a(dyn ToSql + Sync)],
+        datasource_name: &'a str
+    ) -> Result<Box<i32>, Error> {  // TODO Implement `PrimaryKey` trait type
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
         let mut values = values.to_vec();
@@ -161,7 +162,7 @@ pub trait CrudOperations<T>: Transaction<T>
         let mut field_values_placeholders = String::new();
         crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
 
-        /// TODO RETURNING pk
+        // TODO RETURNING pk
         let stmt = format!(
             "INSERT INTO {} ({}) VALUES ({}) RETURNING id", 
             table_name, 
@@ -177,15 +178,17 @@ pub trait CrudOperations<T>: Transaction<T>
 
         if let Err(error) = result {
             Err(error)
-        } else { 
+        } else {
             Ok(
-                result
-                .ok()
-                .unwrap()
-                .wrapper
-                .get(0)
-                .unwrap()
-                .get("id")  // TODO Tremendo cambio por el valor de la clave primaria
+                Box::new(
+                    result
+                        .ok()
+                        .unwrap()
+                        .wrapper
+                        .get(0)
+                        .unwrap()
+                        .get("id")
+                )  // TODO Tremendo cambio por el valor de la clave primaria
             ) 
         }
     }
@@ -249,7 +252,7 @@ pub trait CrudOperations<T>: Transaction<T>
             }
         }
 
-        /// TODO RETURNING pk_field
+        // TODO RETURNING pk_field
         let stmt = format!(
             "INSERT INTO {} ({}) VALUES {} RETURNING id", 
             table_name, 
@@ -316,7 +319,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let str_columns_values = vec_columns_values.join(",");
 
-        /// TODO where pk_field
+        // TODO where pk_field
         let stmt = format!(
             "UPDATE {} SET {} WHERE id = ${:?}",
             table_name, str_columns_values, pk_index + 1
