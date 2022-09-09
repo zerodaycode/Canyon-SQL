@@ -14,7 +14,10 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        /// TODO docs
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
         #vis async fn find_all() -> Vec<#ty>{
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name,
@@ -25,7 +28,14 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                 .to_entity::<#ty>()
         }
 
-        /// TODO docs
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
         #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
                 #table_name,
@@ -45,7 +55,10 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        /// TODO docs
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
         #vis async fn find_all_result() -> 
             Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
         {
@@ -61,7 +74,18 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             }
         }
 
-        /// TODO docs
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        /// 
+        /// Also, returns a [`Vec<T>, Error>`], wrapping a possible failure
+        /// querying the database, or, if no errors happens, a Vec<T> containing
+        /// the data found.
         #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
             Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
         {
@@ -85,14 +109,26 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        /// TODO docs
+        /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        /// 
+        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention.
         #vis fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
                 #table_name, ""
             )
         }
 
-        /// TODO docs
+        /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        /// 
+        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
         #vis fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
             query_elements::query_builder::QueryBuilder<'a, #ty> 
         {
@@ -156,17 +192,23 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
     }
 }
 
-/// Generates the TokenStream for build the __find_by_id() CRUD operation
-pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
+/// Generates the TokenStream for build the __find_by_pk() CRUD operation
+pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        /// TODO docs
-        #vis async fn find_by_id<N>(id: N) -> Option<#ty> 
-            where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// a field declared as primary key.
+        #vis async fn find_by_pk<P>(id: P) -> Option<#ty> 
+            where N: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
-            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
                 id,
                 ""
@@ -186,11 +228,22 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
             } else { None }
         }
 
-        #vis async fn find_by_id_datasource<'a, N>(id: N, datasource_name: &'a str) -> Option<#ty> 
-            where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database with the specified datasource.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// a field declared as primary key.
+        #vis async fn find_by_pk_datasource<'a, P>(id: P, datasource_name: &'a str) -> Option<#ty> 
+            where N: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             /// TODO docs
-            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
                 id,
                 datasource_name
@@ -212,18 +265,29 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     }
 }
 
-/// Generates the TokenStream for build the __find_by_id() CRUD operation
-pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+/// Generates the TokenStream for build the __find_by_pk() CRUD operation
+pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        /// TODO docs
-        #vis async fn find_by_id_result<N>(id: N) -> 
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// some field declared as primary key.
+        /// 
+        /// Also, returns a [`Result<Option<T>, Error>`], wrapping a possible failure
+        /// querying the database, or, if no errors happens, a success containing
+        /// and Option<T> with the data found wrapped in the Some(T) variant,
+        /// or None if the value isn't found on the table.
+        #vis async fn find_by_pk_result<P>(id: P) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+                where N: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
                 id,
                 ""
@@ -245,12 +309,27 @@ pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStrea
             }
         }
 
-        /// TODO docs
-        #vis async fn find_by_id_result_datasource<'a, N>(id: N, datasource_name: &'a str) -> 
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// some field declared as primary key.
+        /// 
+        /// Also, returns a [`Result<Option<T>, Error>`], wrapping a possible failure
+        /// querying the database, or, if no errors happens, a success containing
+        /// and Option<T> with the data found wrapped in the Some(T) variant,
+        /// or None if the value isn't found on the table.
+        #vis async fn find_by_pk_result_datasource<'a, P>(id: P, datasource_name: &'a str) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+                where N: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
                 id,
                 datasource_name

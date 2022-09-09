@@ -18,8 +18,8 @@ use query_operations::{
         generate_find_all_query_tokens,
         generate_count_tokens,
         generate_count_result_tokens,
-        generate_find_by_id_tokens,
-        generate_find_by_id_result_tokens,
+        generate_find_by_pk_tokens,
+        generate_find_by_pk_result_tokens,
         generate_find_by_foreign_key_tokens,
         generate_find_by_foreign_key_result_tokens,
         generate_find_by_reverse_foreign_key_tokens,
@@ -132,8 +132,11 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 }
 
 
-/// Takes data from the struct annotated with macro to fill the Canyon Register
-/// where lives the data that Canyon needs to work in `managed mode`
+/// Takes data from the struct annotated with the `canyon_entity` macro to fill the Canyon Register
+/// where lives the data that Canyon needs to work.
+/// 
+/// Also, it's the responsible of generate the tokens for all the `Crud` methods available over
+/// your type
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let input_cloned = input.clone();
@@ -200,9 +203,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let count_result_tokens = generate_count_result_tokens(&macro_data);
    
     // Builds the find_by_id() query
-    let find_by_id_tokens = generate_find_by_id_tokens(&macro_data);
+    let find_by_id_tokens = generate_find_by_pk_tokens(&macro_data);
     // Builds the find_by_id_result() query
-    let find_by_id_result_tokens = generate_find_by_id_result_tokens(&macro_data);
+    let find_by_id_result_tokens = generate_find_by_pk_result_tokens(&macro_data);
     
     // Builds the insert() query
     let insert_tokens = generate_insert_tokens(&macro_data);
@@ -313,8 +316,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     tokens.into()
 }
 
-/// Allows the implementors to auto-derive de `crud-operations` trait, which defines the methods
-/// that will perform the database communication and that will query against the db.
+/// Allows the implementors to auto-derive the `CrudOperations` trait, which defines the methods
+/// that will perform the database communication and the implementation of the queries for every
+/// type, as defined in the `CrudOperations` + `Transaction` traits.
 #[proc_macro_derive(CanyonCrud)]
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // Construct a representation of Rust code as a syntax tree

@@ -73,10 +73,15 @@ pub trait ForeignKeyable {
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
 pub trait InClauseValues: ToSql + ToString {}
 
-
-/// Definition and implementation for relating integral numbers in Rust
-/// in concrete, to make certain methods and functions accept both
-/// `i32` or `i64`types interchangeably
-pub trait IntegralNumber: ToSql + Sync + Send {}
-impl IntegralNumber for i32 {}
-impl IntegralNumber for i64 {}
+/// Defines a trait to join types that can represent
+/// PrimaryKey type.
+/// 
+/// Canyon only accepts values of i32, i64 
+/// + any Rust String type that can work 
+/// as any Rust string variation.
+pub trait PrimaryKey: ToSql + Sync + Send {}
+impl PrimaryKey for i32 {}
+impl PrimaryKey for i64 {}
+impl PrimaryKey for &str {}
+impl PrimaryKey for String {}
+impl PrimaryKey for &String {}

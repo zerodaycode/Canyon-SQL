@@ -3,9 +3,8 @@ use std::fmt::Debug;
 use async_trait::async_trait;
 use tokio_postgres::{ToStatement, types::ToSql, Error};
 
-use crate::mapper::RowMapper;
+use crate::{mapper::RowMapper, bounds::PrimaryKey};
 use crate::result::DatabaseResult;
-use crate::bounds::IntegralNumber;
 use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
 
@@ -105,8 +104,8 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_id<N>(table_name: &str, id: N, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
-        where N: IntegralNumber
+    async fn __find_by_pk<P>(table_name: &str, id: P, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
+        where P: PrimaryKey
     {
         let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
         Self::query(&stmt[..], &[&id], datasource_name).await
@@ -144,7 +143,7 @@ pub trait CrudOperations<T>: Transaction<T>
         fields: &str,
         values: &[&(dyn ToSql + Sync)],
         datasource_name: &str
-    ) -> Result<i32, Error> {
+    ) -> Result<i32, Error> {  // TODO Implement `PrimaryKey` trait type
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
         let mut values = values.to_vec();
@@ -341,7 +340,9 @@ pub trait CrudOperations<T>: Transaction<T>
     }
     
     /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete(table_name: &str, id: i32, datasource_name: &str) -> Result<DatabaseResult<T>, Error> {
+    async fn __delete<'a, P>(table_name: &str, id: P, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
+        where P: PrimaryKey
+    {
         // TODO Take PK instead of ID
         let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
         let result = Self::query(
