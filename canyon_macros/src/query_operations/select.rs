@@ -206,7 +206,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
         #vis async fn find_by_pk<P>(id: P) -> Option<#ty> 
-            where N: canyon_sql::canyon_crud::bounds::PrimaryKey
+            where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
@@ -240,7 +240,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
         #vis async fn find_by_pk_datasource<'a, P>(id: P, datasource_name: &'a str) -> Option<#ty> 
-            where N: canyon_sql::canyon_crud::bounds::PrimaryKey
+            where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             /// TODO docs
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
@@ -285,7 +285,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
         /// or None if the value isn't found on the table.
         #vis async fn find_by_pk_result<P>(id: P) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where N: canyon_sql::canyon_crud::bounds::PrimaryKey
+                where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
@@ -327,7 +327,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
         /// or None if the value isn't found on the table.
         #vis async fn find_by_pk_result_datasource<'a, P>(id: P, datasource_name: &'a str) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where N: canyon_sql::canyon_crud::bounds::PrimaryKey
+                where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name, 
