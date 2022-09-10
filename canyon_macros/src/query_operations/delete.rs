@@ -77,7 +77,7 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.id,
+                self.#pk_field,
                 ""
             ).await;
 
@@ -95,7 +95,7 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.id,
+                self.#pk_field,
                 datasource_name
             ).await;
 
