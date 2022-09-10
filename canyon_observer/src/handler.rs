@@ -195,6 +195,14 @@ impl CanyonHandler {
                 if let ColumnTypeValue::StringValue(value) = &column.value {
                     entity_column.foreign_key_name = value.to_owned()
                 }
+            }else if column_identifier == "primary_key_info" {
+                if let ColumnTypeValue::StringValue(value) = &column.value {
+                    entity_column.primary_key_info = value.to_owned()
+                }
+            } else if column_identifier == "primary_key_name" {
+                if let ColumnTypeValue::StringValue(value) = &column.value {
+                    entity_column.primary_key_name = value.to_owned()
+                }
             };
             // Just for split the related column data into what will be the values for
             // every DatabaseTableColumn.
