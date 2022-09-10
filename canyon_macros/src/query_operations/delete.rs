@@ -9,12 +9,21 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
+    let fields = macro_data.get_struct_fields();
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
+    let pk_field = fields.iter().find( |f| 
+        *f.to_string() == pk
+    ).expect("Failed to obtain the value of the primary key for the delete operation");
+
+
     quote! {
         /// Deletes from a database entity the row that matches
         /// the current instance of a T type
         #vis async fn delete(&self) {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
-                #table_name, 
+                #table_name,
+                #pk,
                 self.id,
                 ""
             ).await
@@ -31,7 +40,8 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the current instance of a T type with the specified datasource
         #vis async fn delete_datasource<'a>(&self, datasource_name: &'a str) {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
-                #table_name, 
+                #table_name,
+                #pk,
                 self.id,
                 datasource_name
             ).await
@@ -52,13 +62,21 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
+    let fields = macro_data.get_struct_fields();
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
+    let pk_field = fields.iter().find( |f| 
+        *f.to_string() == pk
+    ).expect("Failed to obtain the value of the primary key for the delete operation");
+
     quote! {
         /// Deletes from a database entity the row that matches
         /// the current instance of a T type, returning a result
         /// indicating a posible failure querying the database.
-        #vis async fn delete_result(&self) -> Result<(), canyon_sql::tokio_postgres::Error> {
+        #vis async fn delete_result(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
-                #table_name, 
+                #table_name,
+                #pk,
                 self.id,
                 ""
             ).await;
@@ -72,10 +90,11 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the current instance of a T type, returning a result
         /// indicating a posible failure querying the database with the specified datasource.
         #vis async fn delete_result_datasource<'a>(&self, datasource_name: &'a str) -> 
-            Result<(), canyon_sql::tokio_postgres::Error> 
+            Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
-                #table_name, 
+                #table_name,
+                #pk,
                 self.id,
                 datasource_name
             ).await;

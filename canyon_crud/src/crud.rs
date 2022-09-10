@@ -63,10 +63,7 @@ pub trait Transaction<T: Debug> {
             Err(error)
         } else {
             Ok(
-                DatabaseResult::new(
-                    query_result
-                        .expect("A really bad error happened")
-                )
+                DatabaseResult::new(query_result.expect("A really bad error happened"))
             )
         }
     }
@@ -203,9 +200,6 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let mut splitted = fields.split(", ")
             .collect::<Vec<&str>>();
-        println!("pk: {:?}", &primary_key);
-        println!("pk: {:?}", &format!("\"{}\"", primary_key).as_str());
-        println!("Fields: {:?}", &splitted);
         
         let pk_value_index = splitted.iter()
             .position(|pk| *pk == format!("\"{}\"", primary_key).as_str())
@@ -251,7 +245,6 @@ pub trait CrudOperations<T>: Transaction<T>
             fields_values,
             primary_key
         );
-        println!("\nInsert: {:?}", &stmt);
 
         // Converts the array of array of values in an array of correlated values
         // with it's correspondents $X
@@ -288,7 +281,8 @@ pub trait CrudOperations<T>: Transaction<T>
                     std::io::ErrorKind::Unsupported,
                     "Canyon does not allow the use of the `.update(&self)` method \
                     on entities that does not contains a primary key. \
-                    Please, use instead the T::update(...) associated function."
+                    Please, use instead the T::update(...) associated function \
+                    provided as a QueryBuilder."
                 ).into_inner().unwrap()
             )
         }
@@ -312,10 +306,9 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let str_columns_values = vec_columns_values.join(",");
 
-        // TODO where pk_field
         let stmt = format!(
-            "UPDATE {} SET {} WHERE id = ${:?}",
-            table_name, str_columns_values, pk_index + 1
+            "UPDATE {} SET {} WHERE {} = ${:?}",
+            table_name, str_columns_values, primary_key, pk_index + 1
         );
 
         let result = Self::query(
@@ -339,19 +332,36 @@ pub trait CrudOperations<T>: Transaction<T>
     }
     
     /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete<'a, P>(table_name: &str, pk: P, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
+    async fn __delete<'a, P>(
+        table_name: &str, 
+        pk_column_name: &'a str, 
+        pk_value: P, 
+        datasource_name: &str
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where P: PrimaryKey
     {
-        // TODO Take PK instead of ID
-        let stmt = format!("DELETE FROM {} WHERE id = $1", table_name);
+        if pk_column_name == "" {
+            return Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "Canyon does not allow the use of the `.delete(&self)` method \
+                    on entities that does not contains a primary key. \
+                    Please, use instead the T::delete(...) associated function \
+                    provided as a QueryBuilder."
+                ).into_inner().unwrap()
+            )
+        }
+
+        let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
+
         let result = Self::query(
             &stmt[..], 
-            &[&pk],
+            &[&pk_value],
             datasource_name
         ).await;
 
         if let Err(error) = result {
-            Err(error)
+            Err(error.into_source().unwrap())
         } else { Ok(result.ok().unwrap()) }
     }
 
