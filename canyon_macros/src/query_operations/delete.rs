@@ -12,9 +12,8 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
     let fields = macro_data.get_struct_fields();
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
-    let pk_field = fields.iter().find( |f| 
-        *f.to_string() == pk
-    ).expect("Failed to obtain the value of the primary key for the delete operation");
+    let pk_field = fields.iter().find( |f| *f.to_string() == pk)
+        .expect("Failed to obtain the value of the primary key for the delete operation");
 
 
     quote! {
@@ -24,7 +23,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.id,
+                self.#pk_field,
                 ""
             ).await
             .ok()
@@ -42,7 +41,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.id,
+                self.#pk_field,
                 datasource_name
             ).await
             .ok()
