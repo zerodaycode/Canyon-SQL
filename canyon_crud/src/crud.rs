@@ -1,4 +1,5 @@
 use std::fmt::Debug;
+use std::rc::Rc;
 
 use async_trait::async_trait;
 use tokio_postgres::types::FromSql;
@@ -145,7 +146,7 @@ pub trait CrudOperations<T>: Transaction<T>
         fields: &'a str,
         values: &'a[&'a(dyn ToSql + Sync)],
         datasource_name: &'a str
-    ) -> Result<Box<i32>, Error> {  // TODO Implement `PrimaryKey` trait type
+    ) -> Result<DatabaseResult<T>, Error> {
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
         let mut values = values.to_vec();
@@ -162,12 +163,12 @@ pub trait CrudOperations<T>: Transaction<T>
         let mut field_values_placeholders = String::new();
         crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
 
-        // TODO RETURNING pk
         let stmt = format!(
-            "INSERT INTO {} ({}) VALUES ({}) RETURNING id", 
+            "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
             table_name, 
             fields, 
-            field_values_placeholders
+            field_values_placeholders,
+            primary_key
         );
 
         let result = Self::query(
@@ -179,17 +180,7 @@ pub trait CrudOperations<T>: Transaction<T>
         if let Err(error) = result {
             Err(error)
         } else {
-            Ok(
-                Box::new(
-                    result
-                        .ok()
-                        .unwrap()
-                        .wrapper
-                        .get(0)
-                        .unwrap()
-                        .get("id")
-                )  // TODO Tremendo cambio por el valor de la clave primaria
-            ) 
+            Ok(result.ok().unwrap())
         }
     }
 

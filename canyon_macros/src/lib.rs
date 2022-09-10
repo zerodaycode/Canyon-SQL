@@ -28,7 +28,7 @@ use query_operations::{
     insert::{
         generate_insert_tokens,
         generate_insert_result_tokens,
-        generate_multiple_insert_tokens
+        // generate_multiple_insert_tokens
     }, 
     update::{
         generate_update_tokens,
@@ -143,21 +143,19 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let entity_res = syn::parse::<CanyonEntity>(input);
     
     if entity_res.is_err() {
-        println!("\nError with this entity\n");
         return entity_res.err()
             .expect("Unexpected error parsing the struct")
             .into_compile_error()
             .into()
     }
-    println!("\nNOOOOOOOOO Error with this entity\n");
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
     let entity = entity_res.ok().expect("Unexpected error parsing the struct");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
-    let generated_enum_type_for_fields = generate_enum_with_fields(&entity);
-    let generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
+    let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
+    let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
@@ -214,8 +212,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let _insert_tokens = generate_insert_tokens(&macro_data);
     // Builds the insert() query as a result
     let _insert_result_tokens = generate_insert_result_tokens(&macro_data);
-    // Builds the insert_multi() query
-    let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
+    // // Builds the insert_multi() query
+    // let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
     
     // Builds the update() query
     let _update_tokens = generate_update_tokens(&macro_data);
@@ -275,8 +273,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The insert impl
             #_insert_tokens
 
-            // // The insert as a result impl
-            // #insert_result_tokens
+            // The insert as a result impl
+            #_insert_result_tokens
 
             // // The insert of multiple entities impl
             // #insert_multi_tokens

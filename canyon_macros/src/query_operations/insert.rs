@@ -24,6 +24,12 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
+    
+    let pk_type = macro_data._fields_with_types()
+        .into_iter()
+        .find( |(i, _t)| i.to_string() == pk)
+        .expect("Failed to obtain the declared type for the primary key")
+        .1;
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -79,7 +85,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the correct value for the `self.id` field.
         /// ```
         #vis async fn insert(&mut self) -> () {
-            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert::<i32>(
                 #table_name,
                 #pk,
                 &mut #column_names, 
@@ -92,7 +98,10 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
                     "Insert operation failed for {:?}", 
                     &self
                 ).as_str()
-            );
+            ).wrapper
+            .get(0)
+            .unwrap()
+            .get(#pk);
         }
 
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -149,7 +158,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the correct value for the `self.id` field.
         /// ```
         #vis async fn insert_datasource(&mut self, datasource_name: &str) -> () {
-            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert::<#pk_type>(
                 #table_name,
                 #pk,
                 &mut #column_names, 
@@ -162,10 +171,14 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
                     "Insert operation failed for {:?}", 
                     &self
                 ).as_str()
-            );
+            ).wrapper
+            .get(0)
+            .unwrap()
+            .get(#pk);
         }
     }
 }
+
 
 /// Generates the TokenStream for the _insert_result() CRUD operation
 pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
@@ -189,6 +202,12 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
+
+    let pk_type = macro_data._fields_with_types()
+        .into_iter()
+        .find( |(i, _t)| i.to_string() == pk)
+        .expect("Failed to obtain the declared type for the primary key")
+        .1;
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -230,7 +249,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// ```
         /// 
         #vis async fn insert_result(&mut self) -> Result<(), canyon_sql::tokio_postgres::Error> {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert::<#pk_type>(
                 #table_name,
                 #pk,
                 #column_names, 
@@ -248,7 +267,10 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
                             "Insert operation failed for {:?}", 
                             &self
                         ).as_str()
-                    );
+                    ).wrapper
+                    .get(0)
+                    .unwrap()
+                    .get(#pk);
 
                 Ok(())
             }
@@ -292,7 +314,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// ```
         /// 
         #vis async fn insert_result_datasource(&mut self, datasource_name: &str) -> Result<(), canyon_sql::tokio_postgres::Error> {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert::<#pk_type>(
                 #table_name,
                 #pk,
                 #column_names, 
@@ -310,7 +332,10 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
                             "Insert operation failed for {:?}", 
                             &self
                         ).as_str()
-                    );
+                    ).wrapper
+                    .get(0)
+                    .unwrap()
+                    .get(#pk);
 
                 Ok(())
             }
