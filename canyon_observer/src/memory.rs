@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use walkdir::WalkDir;
 use std::fs;
-use canyon_crud::crud::Transaction;
+use canyon_crud::{crud::Transaction, bounds::PrimaryKey};
 
 use crate::QUERIES_TO_EXECUTE;
 
@@ -73,7 +73,8 @@ impl CanyonMemory {
         // Cando non a encontres no parseo de archivos, acumulas no array
         // Tremendísima query con WHERE IN (45)
         for row in mem_results {
-            let db_row =  CanyonMemoryDatabaseRow {
+            let db_row = CanyonMemoryDatabaseRow {
+                /// TODO Generify the value of the ID over PrimaryKey
                 id: row.get::<&str, i32>("id"),
                 filename: row.get::<&str, String>("filename"),
                 struct_name: row.get::<&str, String>("struct_name"),
@@ -251,8 +252,8 @@ impl CanyonMemory {
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryDatabaseRow {
-    id: i32,
+struct CanyonMemoryDatabaseRow<T: PrimaryKey> {
+    id: T,
     filename: String,
     struct_name: String
 }
