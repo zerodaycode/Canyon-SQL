@@ -1,8 +1,6 @@
 use std::fmt::Debug;
-use std::rc::Rc;
 
 use async_trait::async_trait;
-use tokio_postgres::types::FromSql;
 use tokio_postgres::{ToStatement, types::ToSql, Error};
 
 use crate::{mapper::RowMapper, bounds::PrimaryKey};
@@ -455,14 +453,10 @@ mod crud_algorythms {
     }
 
     /// Construct the String that holds the '$num' placeholders for the multi values to insert
-    pub fn generate_multi_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
-        for num in 0..*total_values {
-            if num < total_values - 1 {
-                placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
-            } else {
-                placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
-            }
-        }
+    pub fn _generate_multi_insert_placeholders<'a>(
+        // args
+    ) {
+        todo!() // TODO impl for unit test
     }
 }
  

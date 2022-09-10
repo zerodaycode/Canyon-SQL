@@ -258,17 +258,17 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The find_all_query impl
             #_find_all_query_tokens
 
-            // // The COUNT(*) impl
-            // #count_tokens
+            // The COUNT(*) impl
+            #_count_tokens
 
-            // // The COUNT(*) as result impl
-            // #count_result_tokens
+            // The COUNT(*) as result impl
+            #_count_result_tokens
 
-            // // The find_by_id impl
-            // #find_by_id_tokens
+            // The find_by_id impl
+            #_find_by_pk_tokens
 
-            // // The find_by_id as result impl
-            // #find_by_id_result_tokens
+            // The find_by_id as result impl
+            #_find_by_pk_result_tokens
 
             // The insert impl
             #_insert_tokens
@@ -279,38 +279,38 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The insert of multiple entities impl
             #_insert_multi_tokens
 
-            // // The update impl
-            // #update_tokens
+            // The update impl
+            #_update_tokens
 
-            // // The update as result impl
-            // #update_result_tokens
+            // The update as result impl
+            #_update_result_tokens
             
-            // // The update as a querybuilder impl
-            // #update_query_tokens
+            // The update as a querybuilder impl
+            #_update_query_tokens
             
-            // // The delete impl
-            // #delete_tokens
+            // The delete impl
+            #_delete_tokens
 
-            // // The delete as result impl
-            // #delete_result_tokens
+            // The delete as result impl
+            #_delete_result_tokens
 
-            // // The delete as querybuilder impl
-            // #delete_query_tokens
+            // The delete as querybuilder impl
+            #_delete_query_tokens
 
-            // // The search by FK impl
-            // #(#search_by_fk_tokens),*
-            // // The search by FK as result impl
-            // #(#search_by_fk_result_tokens),*
+            // The search by FK impl
+            #(#_search_by_fk_tokens),*
+            // The search by FK as result impl
+            #(#_search_by_fk_result_tokens),*
 
-            // // The search by reverse side of the FK impl
-            // #(#search_by_revese_fk_tokens),*
-            // // The search by reverse side of the FK as result impl
-            // #(#search_by_revese_fk_result_tokens),*
+            // The search by reverse side of the FK impl
+            #(#_search_by_revese_fk_tokens),*
+            // The search by reverse side of the FK as result impl
+            #(#_search_by_revese_fk_result_tokens),*
         }
 
-        // #generated_enum_type_for_fields
+        #_generated_enum_type_for_fields
 
-        // #generated_enum_type_for_fields_values
+        #_generated_enum_type_for_fields_values
     };
     
     // Pass the result back to the compiler
