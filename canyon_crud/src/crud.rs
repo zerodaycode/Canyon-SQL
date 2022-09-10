@@ -185,12 +185,12 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Same as the [`fn@__insert`], but as an associated function of some T type.
-    async fn __insert_multi(
-        table_name: &str,
-        primary_key: &str,
-        fields: &str, 
-        values_arr: &mut Vec<Vec<Box<&(dyn ToSql + Sync)>>>,
-        datasource_name: &str
+    async fn __insert_multi<'a, P: PrimaryKey>(
+        table_name: &'a str,
+        primary_key: &'a str,
+        fields: &'a str, 
+        values_arr: &'a mut Vec<Vec<Box<&'a (dyn ToSql + Sync)>>>,
+        datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Error> {
 
         // Removes the pk from the insert operation if there's some
@@ -205,10 +205,14 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let mut splitted = fields.split(", ")
             .collect::<Vec<&str>>();
+        println!("pk: {:?}", &primary_key);
+        println!("pk: {:?}", &format!("\"{}\"", primary_key).as_str());
+        println!("Fields: {:?}", &splitted);
+        
         let pk_value_index = splitted.iter()
-            .position(|pk| *pk == primary_key)
-            .unwrap();
-        splitted.retain(|pk| *pk != primary_key);
+            .position(|pk| *pk == format!("\"{}\"", primary_key).as_str())
+            .expect("Error. No primary key found when should be there");
+        splitted.retain(|pk| *pk != format!("\"{}\"", primary_key).as_str());
         fields = splitted.join(", ").to_string();
 
         let mut fields_values = String::new();
@@ -218,7 +222,6 @@ pub trait CrudOperations<T>: Transaction<T>
         let values_arr_len = values_arr.len();
 
         for vector in values_arr.iter_mut() {
-            
             let mut inner_counter = 0;
             fields_values.push('(');
             vector.remove(pk_value_index);
@@ -243,13 +246,14 @@ pub trait CrudOperations<T>: Transaction<T>
             }
         }
 
-        // TODO RETURNING pk_field
         let stmt = format!(
-            "INSERT INTO {} ({}) VALUES {} RETURNING id", 
+            "INSERT INTO {} ({}) VALUES {} RETURNING {}", 
             table_name, 
             &fields, 
-            fields_values
+            fields_values,
+            primary_key
         );
+        println!("\nInsert: {:?}", &stmt);
 
         // Converts the array of array of values in an array of correlated values
         // with it's correspondents $X
@@ -441,6 +445,17 @@ mod crud_algorythms {
 
     /// Construct the String that holds the '$num' placeholders for the values to insert
     pub fn generate_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
+        for num in 0..*total_values {
+            if num < total_values - 1 {
+                placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
+            } else {
+                placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
+            }
+        }
+    }
+
+    /// Construct the String that holds the '$num' placeholders for the multi values to insert
+    pub fn generate_multi_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
         for num in 0..*total_values {
             if num < total_values - 1 {
                 placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
