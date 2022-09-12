@@ -264,10 +264,10 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The COUNT(*) as result impl
             #_count_result_tokens
 
-            // The find_by_id impl
+            // The find_by_pk impl
             #_find_by_pk_tokens
 
-            // The find_by_id as result impl
+            // The find_by_pk as result impl
             #_find_by_pk_result_tokens
 
             // The insert impl

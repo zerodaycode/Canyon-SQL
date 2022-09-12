@@ -492,6 +492,7 @@ enum TableOperation<T, U, V, W, X> {
     DeleteTableForeignKey(T, T)
 }
 
+
 impl<T, U, V, W, X> Transaction<T> for TableOperation<T, U, V, W, X> 
     where 
         T: Into<String> + Debug + Display + Sync,
