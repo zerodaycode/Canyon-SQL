@@ -12,13 +12,19 @@ pub mod postgresql_queries {
             gi.numeric_precision_radix,
             gi.datetime_precision,
             gi.interval_type,
-            CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) AS foreign_key_info,
-            fk.conname as foreign_key_name
+            CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'FOREIGN KEY')
+            	THEN CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) ELSE NULL END AS foreign_key_info,
+            CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'FOREIGN KEY')
+            	THEN con.conname ELSE NULL END AS foreign_key_name,
+            CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'PRIMARY KEY')
+            	THEN CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) ELSE NULL END AS primary_key_info,
+            CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'PRIMARY KEY')
+            	THEN con.conname ELSE NULL END AS primary_key_name
         FROM
             information_schema.columns AS gi
-        LEFT JOIN pg_catalog.pg_constraint AS fk on
-            gi.table_name = CAST(fk.conrelid::regclass AS TEXT) AND
-            gi.column_name = split_part(split_part(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT),')',1),'(',2) AND fk.contype = 'f'
+        LEFT JOIN pg_catalog.pg_constraint AS con on
+            gi.table_name = CAST(con.conrelid::regclass AS TEXT) AND
+            gi.column_name = split_part(split_part(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT),')',1),'(',2)
         WHERE
             table_schema = 'public';";
 }

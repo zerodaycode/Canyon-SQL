@@ -19,6 +19,8 @@ use super::register_types::{CanyonRegisterEntityField, CanyonRegisterEntity};
 #[derive(Debug)]
 pub struct DatabaseSyncOperations {
     operations: Vec<Box<dyn DatabaseOperation>>,
+    drop_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
+    set_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
     constrains_operations: Vec<Box<dyn DatabaseOperation>>
 }
 
@@ -28,6 +30,8 @@ impl DatabaseSyncOperations {
     pub fn new() -> Self {
         Self {
             operations: Vec::new(),
+            drop_primary_key_operations: Vec::new(),
+            set_primary_key_operations: Vec::new(),
             constrains_operations: Vec::new()
         }
     }
@@ -79,11 +83,13 @@ impl DatabaseSyncOperations {
                                 {
                                     if attr.starts_with("Annotation: ForeignKey") {
                                         Self::add_foreign_key_with_annotation::<&str, &String>(
-                                            self, attr, table_name, &field.field_name,
+                                            self, &field.annotations, table_name, &field.field_name,
                                         );
                                     }
                                     if attr.starts_with("Annotation: PrimaryKey") {
-                                        println!("Annotation PrimaryKey found on fill_operations")
+                                        Self::add_primary_key::<&str>(
+                                            self, table_name, field.clone()
+                                        );
                                     }
                                 }
                             );
@@ -109,11 +115,13 @@ impl DatabaseSyncOperations {
                         for attr in &field.annotations {
                             if attr.starts_with("Annotation: ForeignKey") {
                                 Self::add_foreign_key_with_annotation::<&str, &String>(
-                                    self, attr, table_name, &field.field_name,
+                                    self, &field.annotations, table_name, &field.field_name,
                                 );
                             }
                             if attr.starts_with("Annotation: PrimaryKey") {
-                                println!("Annotation PrimaryKey found on fill_operations")
+                                Self::add_primary_key::<&str>(
+                                    self, table_name, field.clone()
+                                );
                             }
                         }
                     }
@@ -169,64 +177,93 @@ impl DatabaseSyncOperations {
 
                         // TODO Pending the implementation as a list of the attributes on DATABASE
 
-                        // We added the founded contraints on the field attributes
-                        for attr in field.annotations {
-                            // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
-                            // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
-                            if attr.starts_with("Annotation: ForeignKey") {
-                                if database_field.foreign_key_name.is_none() {
-                                    Self::add_foreign_key_with_annotation::<&str, &String>(
-                                        self, &attr, table_name, &field.field_name,
-                                    )
-                                }
-                                // Case when field contains a foreign key annotation, and there is already one in the database
-                                else if database_field.foreign_key_name.is_some() {
-                                    // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
-                                    let annotation_data = Self::extract_foreign_key_annotation(attr.clone());
-    
-                                    // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
-                                    let references_regex = Regex::new(r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)").unwrap();
-    
-                                    let captures_references = references_regex.captures(database_field.foreign_key_info.as_ref().expect("Regex - foreign key info")).expect("Regex - foreign key info not found");
-    
-                                    let current_column = captures_references.name("current_column").expect("Regex - Current column not found").as_str().to_string();
-                                    let ref_table = captures_references.name("ref_table").expect("Regex - Ref tablenot found").as_str().to_string();
-                                    let ref_column = captures_references.name("ref_column").expect("Regex - Ref column not found").as_str().to_string();
-    
-                                    // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
-                                    if field.field_name != current_column || annotation_data.0 != ref_table || annotation_data.1 != ref_column {
-                                        Self::delete_foreign_key_with_references::<String>(
-                                            self,
-                                            table_name.to_string(),
-                                            database_field.foreign_key_name
-                                                .as_ref()
-                                                .expect("Annotation foreign key constrain name not found")
-                                                .to_string()
-                                        );
-    
-                                        Self::add_foreign_key_with_references(
-                                            self,
-                                            annotation_data.0,
-                                            annotation_data.1,
-                                            table_name.clone(),
-                                            field.field_name.clone(),
-                                        )
-                                    }
-                                }
-                                // For the other case
-                                // // Case when field don't contains a foreign key annotation, but there is already one in the database
-                                // else if field.annotation.is_none() && database_field.foreign_key_name.is_none().not() {
-                                //     Self::delete_foreign_key_with_references(
-                                //         self,
-                                //         table_name.clone(),
-                                //         database_field.foreign_key_name.as_ref().expect("Annotation foreign key constrain name not found").to_string(),
-                                //     );
-                                // }
+
+                        let field_is_primary_key = field.annotations.iter().any(|anno| anno.starts_with("Annotation: PrimaryKey"));
+
+                        let field_is_foreign_key = field.annotations.iter().any(|anno| anno.starts_with("Annotation: ForeignKey"));
+
+
+                        // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
+                        // TODO Evaluate changing the name of the primary key if it already exists in the database
+
+                        // -------- PRIMARY KEY CASE ----------------------------
+
+                        // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
+                        if field_is_primary_key && database_field.primary_key_name.is_none() {
+                            println!("Annotation: PrimaryKey found on fill_operations, case when column exists on DB");
+                            Self::add_foreign_key_with_annotation::<&str, &String>(
+                                self, &field.annotations, table_name, &field.field_name,
+                            )
+                        }
+
+                        // Case when field don't contains a primary key annotation, but there is already one in the database column
+                        else if !field_is_primary_key && database_field.foreign_key_name.is_some() {
+                         Self::drop_primary_key::<String>(
+                                    self,
+                                    table_name.to_string(),
+                                    database_field.primary_key_name
+                                        .as_ref()
+                                        .expect("PrimaryKey constrain name not found")
+                                        .to_string()
+                                );
+                        }
+
+
+                        // -------- FOREIGN KEY CASE ----------------------------
+
+                        // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
+                        if field_is_foreign_key && database_field.foreign_key_name.is_none() {
+                            println!("Annotation ForeignKey found on fill_operations, case when column exists on DB");
+                            if database_field.foreign_key_name.is_none() {
+                                Self::add_foreign_key_with_annotation::<&str, &String>(
+                                    self, &field.annotations, table_name, &field.field_name,
+                                )
                             }
-                            
-                            if attr.starts_with("Annotation: PrimaryKey") {
-                                println!("Annotation PrimaryKey found on fill_operations, case when column exists on DB");
+                        }
+                        // Case when field contains a foreign key annotation, and there is already one in the database
+                        else if field_is_foreign_key && database_field.foreign_key_name.is_some() {
+                            // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
+                            let annotation_data = Self::extract_foreign_key_annotation(&field.annotations);
+
+                            // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
+                            let references_regex = Regex::new(r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)").unwrap();
+
+                            let captures_references = references_regex.captures(database_field.foreign_key_info.as_ref().expect("Regex - foreign key info")).expect("Regex - foreign key info not found");
+
+                            let current_column = captures_references.name("current_column").expect("Regex - Current column not found").as_str().to_string();
+                            let ref_table = captures_references.name("ref_table").expect("Regex - Ref tablenot found").as_str().to_string();
+                            let ref_column = captures_references.name("ref_column").expect("Regex - Ref column not found").as_str().to_string();
+
+                            // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
+                            if field.field_name != current_column || annotation_data.0 != ref_table || annotation_data.1 != ref_column {
+                                Self::delete_foreign_key_with_references::<String>(
+                                    self,
+                                    table_name.to_string(),
+                                    database_field.foreign_key_name
+                                        .as_ref()
+                                        .expect("Annotation foreign key constrain name not found")
+                                        .to_string()
+                                );
+
+                                Self::add_foreign_key_with_references(
+                                    self,
+                                    annotation_data.0,
+                                    annotation_data.1,
+                                    table_name,
+                                    field.field_name.clone(),
+                                )
                             }
+                        }
+                        // Case when field don't contains a foreign key annotation, but there is already one in the database column
+                        else if !field_is_foreign_key && database_field.foreign_key_name.is_some() {
+                         Self::delete_foreign_key_with_references::<String>(
+                                    self,
+                                    table_name.to_string(),
+                                    database_field.foreign_key_name
+                                        .as_ref()
+                                        .expect("ForeignKey constrain name not found")
+                                        .to_string()
+                                );
                         }
                     }
                 }
@@ -242,7 +279,7 @@ impl DatabaseSyncOperations {
                 // If we have columns to remove, we push a new operation to the vector for each one
                 if columns_to_remove.is_empty().not() {
                     for column in &columns_to_remove {
-                        Self::delete_column_from_table(self, table_name.clone(), column.to_owned())
+                        Self::delete_column_from_table(self, table_name, column.to_owned())
                     }
                 }
             }
@@ -251,6 +288,12 @@ impl DatabaseSyncOperations {
 
         for operation in &self.operations {
             operation.execute().await
+        }
+        for drop_primary_key_operation in &self.drop_primary_key_operations {
+            drop_primary_key_operation.execute().await
+        }
+        for set_primary_key_operation in &self.set_primary_key_operations {
+            set_primary_key_operation.execute().await
         }
         for constrain_operation in &self.constrains_operations {
             constrain_operation.execute().await
@@ -345,10 +388,10 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn extract_foreign_key_annotation<'b>(field_annotations: String) -> (String, String) 
-        // where T: Into<String> + Debug + Display + Sync
+    fn extract_foreign_key_annotation<'b>(field_annotations: &Vec<String>) -> (String, String)
     {
-        let annotation_data: Vec<String> = field_annotations
+        let annotation_data: Vec<String> = field_annotations.iter().
+            find(|anno| anno.starts_with("Annotation: ForeignKey")).expect("Can't find foreign key annotation")
             .split(',')
             // TODO check change (x.contains previously contained a negation)
             .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
@@ -374,7 +417,7 @@ impl DatabaseSyncOperations {
 
     fn add_foreign_key_with_annotation<'a, U, V>(
         &mut self,
-        field_annotations: &'a str,
+        field_annotations: &'a Vec<String>,
         table_name: U,
         column_foreign_key: V,
     ) where 
@@ -382,7 +425,7 @@ impl DatabaseSyncOperations {
         V: Into<String> + Debug + Display + Sync  
     {
 
-        let annotation_data = Self::extract_foreign_key_annotation(field_annotations.to_string());
+        let annotation_data = Self::extract_foreign_key_annotation(field_annotations);
 
         let table_to_reference = annotation_data.0;
         let column_to_reference = annotation_data.1;
@@ -439,6 +482,33 @@ impl DatabaseSyncOperations {
         );
     }
 
+
+    fn add_primary_key<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
+        where T: Into<String> + Debug + Display + Sync + 'static
+    {
+        self.set_primary_key_operations.push(
+            Box::new(
+                TableOperation::AddTablePrimaryKey::<T, T, T, T, T>(
+                    table_name, field
+                )
+            )
+        );
+    }
+
+    fn drop_primary_key<T>(&mut self, table_name: T, primary_key_name: T)
+        where T: Into<String> + Debug + Display + Sync + 'static
+    {
+        self.drop_primary_key_operations.push(
+            Box::new(
+                TableOperation::DeleteTablePrimaryKey::<T, T, T, T, T>(
+                    table_name, primary_key_name
+                )
+            )
+        );
+    }
+
+
+
     fn add_column_to_table<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
         where T: Into<String> + Debug + Display + Sync + 'static
     {
@@ -488,8 +558,13 @@ enum TableOperation<T, U, V, W, X> {
     AlterTableName(T, U),
     // table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
     AddTableForeignKey(T, U, V, W, X),
-    // table_with_foreign_key,constrain_name
-    DeleteTableForeignKey(T, T)
+    // table_with_foreign_key, constrain_name
+    DeleteTableForeignKey(T, T),
+    // table_name, entity_field, column_name
+    AddTablePrimaryKey(T, CanyonRegisterEntityField),
+    // table_name, constrain_name
+    DeleteTablePrimaryKey(T, T)
+
 }
 
 
@@ -537,6 +612,24 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constrain_name) =>
                 format!("ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constrain_name};"),
+
+            TableOperation::AddTablePrimaryKey(
+                table_name,
+                entity_field
+            ) => format!(
+                "ALTER TABLE {} ADD {} (\"{}\");",
+                table_name,
+                entity_field.define_primary_key_syntax(),
+                entity_field.field_name
+            ),
+
+            TableOperation::DeleteTablePrimaryKey(
+                table_name,
+                primary_key_name
+            ) => format!(
+                "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name};"
+            ),
+
         };
 
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
