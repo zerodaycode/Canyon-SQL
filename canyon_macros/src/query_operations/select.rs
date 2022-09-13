@@ -1,9 +1,9 @@
 use canyon_observer::CANYON_REGISTER_ENTITIES;
+
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::utils::helpers::*;
-
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for build the __find_all() CRUD 
@@ -11,13 +11,35 @@ use crate::utils::macro_tokens::MacroTokens;
 pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
     // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_all() -> Vec<#ty> {
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
+        #vis async fn find_all() -> Vec<#ty>{
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-                #table_name
+                #table_name,
+                ""
+            ).await
+                .ok()
+                .unwrap()
+                .to_entity::<#ty>()
+        }
+
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+                #table_name,
+                datasource_name
             ).await
                 .ok()
                 .unwrap()
@@ -29,17 +51,47 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
 /// Generates the TokenStream for build the __find_all_result() CRUD 
 /// associated function
 pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
         #vis async fn find_all_result() -> 
             Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
-                #table_name
+                #table_name,
+                ""
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else {
+                Ok(result.ok().unwrap().to_entity::<#ty>())
+            }
+        }
+
+        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// the name of your entity but converted to the corresponding
+        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// with snake_case identifiers.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        /// 
+        /// Also, returns a [`Vec<T>, Error>`], wrapping a possible failure
+        /// querying the database, or, if no errors happens, a Vec<T> containing
+        /// the data found.
+        #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
+            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+                #table_name,
+                datasource_name
             ).await;
 
             if let Err(error) = result {
@@ -49,20 +101,39 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             }
         }
     }
-    
 }
 
 /// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
 pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis fn find_all_query() -> query_elements::query_builder::QueryBuilder<'static, #ty> {
+        /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        /// 
+        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention.
+        #vis fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
-                #table_name
+                #table_name, ""
+            )
+        }
+
+        /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        /// 
+        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        #vis fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
+            query_elements::query_builder::QueryBuilder<'a, #ty> 
+        {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
+                #table_name, datasource_name
             )
         }
     }
@@ -70,18 +141,28 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
 
 /// Performs a COUNT(*) query over some table
 pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn count() -> i64 {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name
+                #table_name,
+                ""
             ).await
-                .ok()
-                .unwrap()
+            .ok()
+            .unwrap()
+        }
+
+        /// TODO docs
+        #vis async fn count_datasource<'a>(datasource_name: &'a str) -> i64 {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
+                #table_name,
+                datasource_name
+            ).await
+            .ok()
+            .unwrap()
         }
     }
 }
@@ -89,33 +170,84 @@ pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
 /// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
 /// a posible success or error coming from the database
 pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
+        /// TODO docs
         #vis async fn count_result() -> Result<i64, canyon_sql::tokio_postgres::Error> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name
+                #table_name,
+                ""
+            ).await
+        }
+
+        /// TODO docs
+        #vis async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, canyon_sql::tokio_postgres::Error> {
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
+                #table_name,
+                datasource_name
             ).await
         }
     }
 }
 
-/// Generates the TokenStream for build the __find_by_id() CRUD operation
-pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
+/// Generates the TokenStream for build the __find_by_pk() CRUD operation
+pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_by_id<N>(id: N) -> Option<#ty> 
-            where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// a field declared as primary key.
+        #vis async fn find_by_pk<P>(id: P) -> Option<#ty> 
+            where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
-            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
-                .await;
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
+                #table_name, 
+                id,
+                ""
+            ).await;
+                
+            if response.as_ref().is_ok() {
+                match response.as_ref().ok().unwrap() {
+                    n if n.wrapper.len() == 0 => None,
+                    _ => Some(
+                        response
+                            .ok()
+                            .unwrap()
+                            .to_entity::<#ty>()[0]
+                            .clone()
+                    )
+                }
+            } else { None }
+        }
+
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database with the specified datasource.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// a field declared as primary key.
+        #vis async fn find_by_pk_datasource<'a, P>(id: P, datasource_name: &'a str) -> Option<#ty> 
+            where P: canyon_sql::canyon_crud::bounds::PrimaryKey
+        {
+            /// TODO docs
+            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
+                #table_name, 
+                id,
+                datasource_name
+            ).await;
                 
             if response.as_ref().is_ok() {
                 match response.as_ref().ok().unwrap() {
@@ -133,20 +265,75 @@ pub fn generate_find_by_id_tokens(macro_data: &MacroTokens) -> TokenStream {
     }
 }
 
-/// Generates the TokenStream for build the __find_by_id() CRUD operation
-pub fn generate_find_by_id_result_tokens(macro_data: &MacroTokens) -> TokenStream {
-    // Destructure macro_tokens into raw data
+/// Generates the TokenStream for build the __find_by_pk() CRUD operation
+pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
-
     let table_name = database_table_name_from_struct(ty);
 
     quote! {
-        #vis async fn find_by_id_result<N>(id: N) -> 
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// some field declared as primary key.
+        /// 
+        /// Also, returns a [`Result<Option<T>, Error>`], wrapping a possible failure
+        /// querying the database, or, if no errors happens, a success containing
+        /// and Option<T> with the data found wrapped in the Some(T) variant,
+        /// or None if the value isn't found on the table.
+        #vis async fn find_by_pk_result<P>(id: P) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where N: canyon_sql::canyon_crud::bounds::IntegralNumber
+                where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_id(#table_name, id)
-                .await;
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
+                #table_name, 
+                id,
+                ""
+            ).await;
+                
+            if let Err(error) = result {
+                Err(error)
+            } else { 
+                match result.as_ref().ok().unwrap() {
+                    n if n.wrapper.len() == 0 => Ok(None),
+                    _ => Ok(Some(
+                        result
+                            .ok()
+                            .unwrap()
+                            .to_entity::<#ty>()[0]
+                            .clone()
+                    ))
+                } 
+            }
+        }
+
+        /// Finds an element on the queried table that matches the 
+        /// value of the field annotated with the `primary_key` attribute, 
+        /// filtering by the column that it's declared as the primary 
+        /// key on the database.
+        /// 
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`] 
+        /// passed as parameter.
+        /// 
+        /// This operation it's only available if the [`CanyonEntity`] contains
+        /// some field declared as primary key.
+        /// 
+        /// Also, returns a [`Result<Option<T>, Error>`], wrapping a possible failure
+        /// querying the database, or, if no errors happens, a success containing
+        /// and Option<T> with the data found wrapped in the Some(T) variant,
+        /// or None if the value isn't found on the table.
+        #vis async fn find_by_pk_result_datasource<'a, P>(id: P, datasource_name: &'a str) -> 
+            Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
+                where P: canyon_sql::canyon_crud::bounds::PrimaryKey
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
+                #table_name, 
+                id,
+                datasource_name
+            ).await;
                 
             if let Err(error) = result {
                 Err(error)
@@ -175,7 +362,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
     let mut foreign_keys_tokens = Vec::new();
     let mut column_name = String::new();
 
-    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
+    for element in CANYON_REGISTER_ENTITIES.lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations attached to the entity, if some
             for annotation in &field.annotations {
@@ -199,7 +386,11 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     // Converts a database table name generated by convection (lower case separated
                     // by underscores) to the Rust struct identifier convenction
@@ -217,7 +408,27 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                             pub async fn #quoted_method_name(&self) -> Option<#fk_ty> {
                                 let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                                
+                                if response.as_ref().is_ok() {
+                                    match response.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => None,
+                                        _ => Some(
+                                            response
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        )
+                                    }
+                                } else { None }
+                            }
+
+                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                                let lookage_value = #field_value.to_string();
+                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                                 
                                 if response.as_ref().is_ok() {
@@ -244,7 +455,27 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                                
+                                if response.as_ref().is_ok() {
+                                    match response.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => None,
+                                        _ => Some(
+                                            response
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        )
+                                    }
+                                } else { None }
+                            }
+
+                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                                let lookage_value = #field_value.to_string();
+                                let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                                 
                                 if response.as_ref().is_ok() {
@@ -273,11 +504,10 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
 /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
 /// of a T type of as an associated function of same T type
 pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
-
     let mut foreign_keys_tokens = Vec::new();
     let mut column_name = String::new();
 
-    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
+    for element in CANYON_REGISTER_ENTITIES.lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations attached to the entity, if some
             for annotation in &field.annotations {
@@ -303,7 +533,11 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     // Converts a database table name generated by convection (lower case separated
                     // by underscores) to the Rust struct identifier convenction
@@ -323,7 +557,31 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                             {
                                 let lookage_value = #field_value.to_string();
                                 let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                                
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    match result.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => Ok(None),
+                                        _ => Ok(Some(
+                                            result
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        ))
+                                    } 
+                                }
+                            }
+
+                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> 
+                                Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                            {
+                                let lookage_value = #field_value.to_string();
+                                let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                                 
                                 if let Err(error) = result {
@@ -353,7 +611,32 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
                             {
                                 let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
                                 let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value)
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, "")
+                                        .await;
+                        
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    match result.as_ref().ok().unwrap() {
+                                        n if n.wrapper.len() == 0 => Ok(None),
+                                        _ => Ok(Some(
+                                            result
+                                                .ok()
+                                                .unwrap()
+                                                .to_entity::<#fk_ty>()[0]
+                                                .clone()
+                                        ))
+                                    } 
+                                }
+                            }
+
+                            pub async fn belongs_to_result_datasource<'a, T>(value: &T, datasource_name: &'a str) ->
+                                Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
+                                let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
+                                    __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
                                         .await;
                         
                                 if let Err(error) = result {
@@ -394,7 +677,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
     let mut lookage_value_column = String::new();
 
     // Find what relation belongs to the data passed in
-    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
+    for element in CANYON_REGISTER_ENTITIES.lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations
             for annotation in &field.annotations {
@@ -417,7 +700,11 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     foreign_keys_tokens.push(
                         quote! {
@@ -426,7 +713,27 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
                                 let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
+                                        .await;
+
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else { 
+                                    Ok(
+                                        result
+                                            .ok()
+                                            .unwrap()
+                                            .to_entity::<#ty>()
+                                    )
+                                }
+                            }
+
+                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+                                where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
+                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
                                         .await;
 
                                 if let Err(error) = result {
@@ -465,7 +772,7 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
     let mut lookage_value_column = String::new();
 
     // Find what relation belongs to the data passed in
-    for element in (*CANYON_REGISTER_ENTITIES).lock().unwrap().iter() {
+    for element in CANYON_REGISTER_ENTITIES.lock().unwrap().iter() {
         for field in &element.entity_fields {
             // Get the annotations
             for annotation in &field.annotations {
@@ -490,7 +797,11 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                     let method_name_ident = proc_macro2::Ident::new(
                         &method_name, proc_macro2::Span::call_site()
                     );
+                    let method_name_ident_ds = proc_macro2::Ident::new(
+                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+                    );
                     let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
+                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
 
                     foreign_keys_tokens.push(
                         quote! {
@@ -500,7 +811,21 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
                                 <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value)
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
+                                        .await
+                            }
+                        }
+                    );
+
+                    foreign_keys_tokens.push(
+                        quote! {
+                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> 
+                                Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
+                            {
+                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
+                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
                                         .await
                             }
                         }

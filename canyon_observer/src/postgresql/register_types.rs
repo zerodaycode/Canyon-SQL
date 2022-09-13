@@ -182,6 +182,26 @@ impl CanyonRegisterEntityField {
         }
     }
 
+    /// Return the syntax and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
+    pub fn define_primary_key_syntax(&self) -> String {
+        let has_pk_annotation = self.annotations.iter().find(
+            |a| a.starts_with("Annotation: PrimaryKey")
+        );
+
+        let pk_is_autoincremental = match has_pk_annotation {
+            Some(annotation) => if annotation.contains("true") { true } else { false },
+            None => false
+        };
+
+        let numeric = vec!["i16", "i32", "i64"];
+
+        if numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental {
+            format!(" PRIMARY KEY GENERATED ALWAYS AS IDENTITY")
+        } else {
+            format!(" PRIMARY KEY")
+        }
+    }
+
     pub fn field_type_to_postgres(&self) -> String {
         let is_pk = self.annotations.iter().find(
             |a| a.starts_with("Annotation: PrimaryKey")

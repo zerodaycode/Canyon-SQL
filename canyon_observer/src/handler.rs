@@ -40,7 +40,7 @@ impl CanyonHandler {
         let mut db_operation = DatabaseSyncOperations::new();
         db_operation.fill_operations(
             CanyonMemory::remember().await,
-            (*CANYON_REGISTER_ENTITIES).lock().unwrap().clone(),
+            CANYON_REGISTER_ENTITIES.lock().unwrap().clone(),
             Self::fetch_postgres_database_status().await
         ).await;
     }
@@ -75,7 +75,8 @@ impl CanyonHandler {
     async fn fetch_postgres_database_status<'b>() -> Vec<DatabaseTable<'b>> {
         let results = Self::query(
             super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
-            &[]
+            &[],
+            ""
         ).await.ok().unwrap().wrapper;
 
         let mut schema_info: Vec<RowTable> = Vec::new();
@@ -194,6 +195,14 @@ impl CanyonHandler {
             } else if column_identifier == "foreign_key_name" {
                 if let ColumnTypeValue::StringValue(value) = &column.value {
                     entity_column.foreign_key_name = value.to_owned()
+                }
+            }else if column_identifier == "primary_key_info" {
+                if let ColumnTypeValue::StringValue(value) = &column.value {
+                    entity_column.primary_key_info = value.to_owned()
+                }
+            } else if column_identifier == "primary_key_name" {
+                if let ColumnTypeValue::StringValue(value) = &column.value {
+                    entity_column.primary_key_name = value.to_owned()
                 }
             };
             // Just for split the related column data into what will be the values for
