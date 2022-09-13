@@ -340,18 +340,6 @@ pub trait CrudOperations<T>: Transaction<T>
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where P: PrimaryKey
     {
-        if pk_column_name == "" {
-            return Err(
-                std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    "Canyon does not allow the use of the `.delete(&self)` method \
-                    on entities that does not contains a primary key. \
-                    Please, use instead the T::delete(...) associated function \
-                    provided as a QueryBuilder."
-                ).into_inner().unwrap()
-            )
-        }
-
         let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
 
         let result = Self::query(
