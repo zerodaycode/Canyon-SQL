@@ -25,17 +25,27 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
     
-    let pk_type = macro_data._fields_with_types()
+    let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
         .find( |(i, _t)| i.to_string() == pk);
+    
+    let pk_ident = if let Some(pk_data) = &pk_ident_type {
+        let i = &pk_data.0;
+        quote! { #i }
+    } else {
+        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
+        return quote! {};
+    };
 
-    let insert_turbofish = if let Some(pk_type_) = pk_type {
-        let t = pk_type_.1;
+    let insert_turbofish = if let Some(pk_data) = &pk_ident_type {
+        let t = &pk_data.1;
         quote! { __insert::<#t> }
     } else { 
         // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
         return quote! {}; 
     };
+
+
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -90,7 +100,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the value of the field declared as `primary_key`
         /// ```
         #vis async fn insert(&mut self) -> () {
-            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
+            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
                 #table_name,
                 #pk,
                 &mut #column_names, 
@@ -162,7 +172,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the value of the field declared as `primary_key`
         /// ```
         #vis async fn insert_datasource(&mut self, datasource_name: &str) -> () {
-            self.id = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
+            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
                 #table_name,
                 #pk,
                 &mut #column_names, 
@@ -207,12 +217,20 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
 
-    let pk_type = macro_data._fields_with_types()
+    let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
         .find( |(i, _t)| i.to_string() == pk);
 
-    let insert_turbofish = if let Some(pk_type_) = pk_type {
-        let t = pk_type_.1;
+    let pk_ident = if let Some(pk_data) = &pk_ident_type {
+        let i = &pk_data.0;
+        quote! { #i }
+    } else {
+        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
+        return quote! {};
+    };
+
+    let insert_turbofish = if let Some(pk_type_) = &pk_ident_type {
+        let t = &pk_type_.1;
         quote! { __insert::<#t> }
     } else {
         // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
@@ -221,14 +239,14 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.id` with the specified
+        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
         /// datasource by it's `datasouce name`, defined in the configuration file.
         /// 
         /// This `insert` operation needs a `&mut` reference. That's because typically, 
         /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the mandatory 
-        /// `id` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned id to `self.id`. So, after the `insert`
+        /// inserted, the database will generate a unique new value for the  
+        /// `pk` field, having a unique identifier for every record, and it will
+        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
         /// operation, you instance will have the correct value that is the *PRIMARY KEY*
         /// of the database row that represents.
         /// 
@@ -270,7 +288,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
             if let Err(error) = result {
                 Err(error)
             } else {
-                self.id = result  
+                self.#pk_ident = result  
                     .ok()
                     .expect(
                         format!(
@@ -287,13 +305,14 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         }
 
         /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.id`
+        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
+        /// datasource by it's `datasouce name`, defined in the configuration file.
         /// 
         /// This `insert` operation needs a `&mut` reference. That's because typically, 
         /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the mandatory 
-        /// `id` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned id to `self.id`. So, after the `insert`
+        /// inserted, the database will generate a unique new value for the  
+        /// `pk` field, having a unique identifier for every record, and it will
+        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
         /// operation, you instance will have the correct value that is the *PRIMARY KEY*
         /// of the database row that represents.
         /// 
@@ -335,7 +354,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
             if let Err(error) = result {
                 Err(error)
             } else {
-                self.id = result  
+                self.#pk_ident = result  
                     .ok()
                     .expect(
                         format!(
@@ -381,11 +400,19 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
 
-    let pk_type = macro_data._fields_with_types()
+    let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
         .find( |(i, _t)| i.to_string() == pk);
 
-    let insert_multi_turbofish = if let Some(pk_type_) = pk_type {
+    let pk_ident = if let Some(pk_data) = &pk_ident_type {
+        let i = &pk_data.0;
+        quote! { #i }
+    } else {
+        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
+        return quote! {};
+    };
+
+    let insert_multi_turbofish = if let Some(pk_type_) = pk_ident_type {
         let t = pk_type_.1;
         quote! { __insert_multi::<#t> }
     } else { 
@@ -456,7 +483,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
                 Err(error)
             } else {
                 for (idx, instance) in values.iter_mut().enumerate() {
-                    instance.id = autogenerated_ids
+                    instance.#pk_ident = autogenerated_ids
                         .as_ref()
                         .ok()
                         .unwrap()
@@ -533,7 +560,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
                 Err(error)
             } else {
                 for (idx, instance) in values.iter_mut().enumerate() {
-                    instance.id = autogenerated_ids
+                    instance.#pk_ident = autogenerated_ids
                         .as_ref()
                         .ok()
                         .unwrap()

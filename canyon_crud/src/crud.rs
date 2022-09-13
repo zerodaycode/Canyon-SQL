@@ -275,6 +275,7 @@ pub trait CrudOperations<T>: Transaction<T>
         datasource_name: &str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
+        // TODO Detatch this error from here and just not compile the macro
         if primary_key == "" {
             return Err(
                 std::io::Error::new(
