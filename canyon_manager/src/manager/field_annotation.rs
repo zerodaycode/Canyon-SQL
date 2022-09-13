@@ -135,7 +135,6 @@ impl TryFrom<&&Attribute> for EntityFieldAnnotation {
 
     fn try_from(attribute: &&Attribute) -> Result<Self, Self::Error> {
         let ident = attribute.path.segments[0].ident.clone();
-        println!("Parsing: {} annotation in TryFrom", &ident.to_string());
         let name_values: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
             attribute.parse_args_with(Punctuated::parse_terminated);
 

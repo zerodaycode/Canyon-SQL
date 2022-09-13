@@ -312,6 +312,7 @@ impl DatabaseSyncOperations {
             Self::query(
                 query_to_execute,
                 &[],
+                ""
             ).await
                 .ok()
                 .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());
@@ -565,6 +566,7 @@ enum TableOperation<T, U, V, W, X> {
     DeleteTablePrimaryKey(T, T)
 
 }
+
 
 impl<T, U, V, W, X> Transaction<T> for TableOperation<T, U, V, W, X> 
     where 
