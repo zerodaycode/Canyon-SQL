@@ -12,8 +12,14 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
     let fields = macro_data.get_struct_fields();
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
-    let pk_field = fields.iter().find( |f| *f.to_string() == pk)
-        .expect("Failed to obtain the value of the primary key for the delete operation");
+    let pk_field = fields.iter().find( |f| *f.to_string() == pk);
+
+    let pk_field_value = if let Some(pk_f) = pk_field {
+        quote! { self.#pk_f }
+    } else {
+        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor 
+        return quote! {};
+    };  
 
 
     quote! {
@@ -23,7 +29,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.#pk_field,
+                #pk_field_value,
                 ""
             ).await
             .ok()
@@ -41,7 +47,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens) -> TokenStream {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.#pk_field,
+                #pk_field_value,
                 datasource_name
             ).await
             .ok()
@@ -66,7 +72,14 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         .unwrap_or_default();
     let pk_field = fields.iter().find( |f| 
         *f.to_string() == pk
-    ).expect("Failed to obtain the value of the primary key for the delete operation");
+    );
+
+    let pk_field_value = if let Some(pk_f) = pk_field {
+        quote! { self.#pk_f }
+    } else {
+        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
+        return quote! {}; 
+    }; 
 
     quote! {
         /// Deletes from a database entity the row that matches
@@ -76,7 +89,7 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.#pk_field,
+                #pk_field_value,
                 ""
             ).await;
 
@@ -94,7 +107,7 @@ pub fn generate_delete_result_tokens(macro_data: &MacroTokens) -> TokenStream {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete(
                 #table_name,
                 #pk,
-                self.#pk_field,
+                #pk_field_value,
                 datasource_name
             ).await;
 
