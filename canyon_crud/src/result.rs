@@ -28,8 +28,8 @@ impl<T: Debug> DatabaseResult<T> {
     /// which it's a complex implementation used by the macros to automatically
     /// map database columns into the fields for T.
     pub fn to_entity<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
-        where T: Transaction<T> {
-
+        where T: Transaction<T> 
+    {
         let mut results = Vec::new();
         
         self.wrapper.iter().for_each( |row| {

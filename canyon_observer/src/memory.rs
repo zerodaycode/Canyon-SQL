@@ -74,7 +74,6 @@ impl CanyonMemory {
         // Tremendísima query con WHERE IN (45)
         for row in mem_results {
             let db_row = CanyonMemoryDatabaseRow {
-                /// TODO Generify the value of the ID over PrimaryKey
                 id: row.get::<&str, i32>("id"),
                 filename: row.get::<&str, String>("filename"),
                 struct_name: row.get::<&str, String>("struct_name"),
@@ -201,7 +200,7 @@ impl CanyonMemory {
                                 .unwrap_or(&"FAILED")
                         )
                     }
-                    if line.contains("#[") && line.contains("canyon_entity]") 
+                    if line.contains("#[") && line.contains("canyon_entity") 
                         && !line.starts_with("//") 
                     {
                         canyon_entity_macro_counter += 1;
@@ -252,8 +251,8 @@ impl CanyonMemory {
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryDatabaseRow<T: PrimaryKey> {
-    id: T,
+struct CanyonMemoryDatabaseRow {
+    id: i32,
     filename: String,
     struct_name: String
 }

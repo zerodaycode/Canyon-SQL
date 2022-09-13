@@ -412,7 +412,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     // Creates the TokenStream for wire the column names into the 
     // Canyon RowMapper
-    let field_names_for_row_mapper = fields.iter().map(|(_vis, ident)| {
+    let init_field_values = fields.iter().map(|(_vis, ident)| {
         let ident_name = ident.to_string();
         quote! {  
             #ident: row.try_get(#ident_name)
@@ -428,7 +428,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         {
             fn deserialize(row: &Row) -> #ty {
                 Self {
-                    #(#field_names_for_row_mapper),*
+                    #(#init_field_values),*
                 }
             }
         }
