@@ -297,6 +297,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The delete as querybuilder impl
             #_delete_query_tokens
 
+
+            // TODO check errors on foreign key macros. Right now code doesn't compile if they are uncommented
+
             // The search by FK impl
             #(#_search_by_fk_tokens),*
             // The search by FK as result impl

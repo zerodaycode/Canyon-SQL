@@ -488,7 +488,7 @@ pub fn generate_find_by_foreign_key_tokens() -> Vec<TokenStream> {
                                 } else { None }
                             }
 
-                            pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
+                            pub async fn belongs_to_datasource<'a>(&self, datasource_name: &'a str) -> Option<#fk_ty> {
                                 let lookage_value = #field_value.to_string();
                                 let response = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
                                     __search_by_foreign_key(#fk_table, #fk_column, &lookage_value, datasource_name)
