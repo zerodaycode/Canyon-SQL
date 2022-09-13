@@ -81,6 +81,7 @@ impl DatabaseSyncOperations {
                         field.annotations.iter()
                             .for_each( |attr|
                                 {
+                                    println!("Annotation: {} found for entity: {}", attr, &canyon_register_entity.entity_name);
                                     if attr.starts_with("Annotation: ForeignKey") {
                                         Self::add_foreign_key_with_annotation::<&str, &String>(
                                             self, &field.annotations, table_name, &field.field_name,
@@ -105,14 +106,14 @@ impl DatabaseSyncOperations {
 
                 // For each field (name, type) in this table of the register
                 for field in canyon_register_entity.entity_fields.clone() {
-
                     // Case when the column doesn't exist on the database
                     // We push a new column operation to the collection for each one
                     if !columns_in_table.contains(&field.field_name) {
                         Self::add_column_to_table::<&str>(self, &table_name, field.clone());
 
-                        // We added the founded contraints on the field attributes
+                        // We added the founded constraints on the field attributes
                         for attr in &field.annotations {
+                            println!("Annotation: {} found for entity: {}", attr, &canyon_register_entity.entity_name);
                             if attr.starts_with("Annotation: ForeignKey") {
                                 Self::add_foreign_key_with_annotation::<&str, &String>(
                                     self, &field.annotations, table_name, &field.field_name,
@@ -175,12 +176,12 @@ impl DatabaseSyncOperations {
                             Self::change_column_type(self, table_name, field.clone());
                         }
 
-                        // TODO Pending the implementation as a list of the attributes on DATABASE
 
+                        let field_is_primary_key = field.annotations.iter()
+                            .any(|anno| anno.starts_with("Annotation: PrimaryKey"));
 
-                        let field_is_primary_key = field.annotations.iter().any(|anno| anno.starts_with("Annotation: PrimaryKey"));
-
-                        let field_is_foreign_key = field.annotations.iter().any(|anno| anno.starts_with("Annotation: ForeignKey"));
+                        let field_is_foreign_key = field.annotations.iter()
+                            .any(|anno| anno.starts_with("Annotation: ForeignKey"));
 
 
                         // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
@@ -190,22 +191,21 @@ impl DatabaseSyncOperations {
 
                         // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
                         if field_is_primary_key && database_field.primary_key_name.is_none() {
-                            println!("Annotation: PrimaryKey found on fill_operations, case when column exists on DB");
-                            Self::add_foreign_key_with_annotation::<&str, &String>(
-                                self, &field.annotations, table_name, &field.field_name,
-                            )
+                            Self::add_primary_key::<&str>(
+                                self, table_name, field.clone()
+                            );
                         }
 
                         // Case when field don't contains a primary key annotation, but there is already one in the database column
                         else if !field_is_primary_key && database_field.foreign_key_name.is_some() {
                          Self::drop_primary_key::<String>(
-                                    self,
-                                    table_name.to_string(),
-                                    database_field.primary_key_name
-                                        .as_ref()
-                                        .expect("PrimaryKey constrain name not found")
-                                        .to_string()
-                                );
+                                self,
+                                table_name.to_string(),
+                                database_field.primary_key_name
+                                    .as_ref()
+                                    .expect("PrimaryKey constrain name not found")
+                                    .to_string()
+                            );
                         }
 
 
@@ -213,7 +213,6 @@ impl DatabaseSyncOperations {
 
                         // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
                         if field_is_foreign_key && database_field.foreign_key_name.is_none() {
-                            println!("Annotation ForeignKey found on fill_operations, case when column exists on DB");
                             if database_field.foreign_key_name.is_none() {
                                 Self::add_foreign_key_with_annotation::<&str, &String>(
                                     self, &field.annotations, table_name, &field.field_name,
@@ -388,31 +387,36 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn extract_foreign_key_annotation<'b>(field_annotations: &Vec<String>) -> (String, String)
+    fn extract_foreign_key_annotation(field_annotations: &Vec<String>) -> (String, String)
     {
-        let annotation_data: Vec<String> = field_annotations.iter().
-            find(|anno| anno.starts_with("Annotation: ForeignKey")).expect("Can't find foreign key annotation")
-            .split(',')
-            // TODO check change (x.contains previously contained a negation)
-            .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
-            .map(|x|
-                x.split(':').collect::<Vec<&str>>()
-                    .get(1)
-                    .expect("Error. Unable to split annotations")
-                    .trim()
-                    .to_string()
-            ).collect::<Vec<String>>();
+        let opt_fk_annotation = field_annotations.iter().
+            find(|anno| anno.starts_with("Annotation: ForeignKey"));
+        if let Some(fk_annotation) = opt_fk_annotation {
+            let annotation_data = fk_annotation
+                .split(',')
+                .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                .map(|x|
+                    x.split(':').collect::<Vec<&str>>()
+                        .get(1)
+                        .expect("Error. Unable to split annotations")
+                        .trim()
+                        .to_string()
+                ).collect::<Vec<String>>();
 
-        let table_to_reference = annotation_data
-            .get(0)
-            .expect("Error extracting table ref from FK annotation")
-            .to_string();
-        let column_to_reference = annotation_data
-            .get(1)
-            .expect("Error extracting column ref from FK annotation")
-            .to_string();
+            let table_to_reference = annotation_data
+                .get(0)
+                .expect("Error extracting table ref from FK annotation")
+                .to_string();
+            let column_to_reference = annotation_data
+                .get(1)
+                .expect("Error extracting column ref from FK annotation")
+                .to_string();
 
-        (table_to_reference, column_to_reference)
+            (table_to_reference, column_to_reference)
+        } else {
+            panic!("Detected a Foreign Key attribute when does not exists on the user's code");
+        }
+            
     }
 
     fn add_foreign_key_with_annotation<'a, U, V>(
