@@ -101,14 +101,14 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_pk<P>(table_name: &str, pk: P, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
-        where P: PrimaryKey
+    async fn __find_by_pk<P>(table_name: &str, pk: &str, pk_value: P, datasource_name: &str) 
+        -> Result<DatabaseResult<T>, Error> where P: PrimaryKey
     {
-        // TODO where pk_field
-        let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
-        Self::query(&stmt[..], &[&pk], datasource_name).await
+        let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
+        Self::query(&stmt[..], &[&pk_value], datasource_name).await
     }
 
+    /// Counts the total entries (rows) of elements of a database table
     async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Error> {
         let count = Self::query(
             &format!("SELECT COUNT (*) FROM {}", table_name)[..], 

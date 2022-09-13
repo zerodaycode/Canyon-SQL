@@ -197,6 +197,12 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
+
+    // Disabled if there's no `primary_key` annotation
+    if pk == "" { return quote! {}; }
+
     quote! {
         /// Finds an element on the queried table that matches the 
         /// value of the field annotated with the `primary_key` attribute, 
@@ -205,12 +211,13 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// 
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
-        #vis async fn find_by_pk<P>(id: P) -> Option<#ty> 
+        #vis async fn find_by_pk<P>(pk_value: P) -> Option<#ty> 
             where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name, 
-                id,
+                #table_name,
+                #pk,
+                pk_value,
                 ""
             ).await;
                 
@@ -239,13 +246,14 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// 
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
-        #vis async fn find_by_pk_datasource<'a, P>(id: P, datasource_name: &'a str) -> Option<#ty> 
+        #vis async fn find_by_pk_datasource<'a, P>(pk_value: P, datasource_name: &'a str) -> Option<#ty> 
             where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             /// TODO docs
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name, 
-                id,
+                #table_name,
+                #pk,
+                pk_value,
                 datasource_name
             ).await;
                 
@@ -270,6 +278,12 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
+    let pk = macro_data.get_primary_key_annotation()
+        .unwrap_or_default();
+
+    // Disabled if there's no `primary_key` annotation
+    if pk == "" { return quote! {}; }
+
     quote! {
         /// Finds an element on the queried table that matches the 
         /// value of the field annotated with the `primary_key` attribute, 
@@ -283,13 +297,14 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        #vis async fn find_by_pk_result<P>(id: P) -> 
+        #vis async fn find_by_pk_result<P>(pk_value: P) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
                 where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name, 
-                id,
+                #table_name,
+                #pk,
+                pk_value,
                 ""
             ).await;
                 
@@ -325,13 +340,14 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        #vis async fn find_by_pk_result_datasource<'a, P>(id: P, datasource_name: &'a str) -> 
+        #vis async fn find_by_pk_result_datasource<'a, P>(pk_value: P, datasource_name: &'a str) -> 
             Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
                 where P: canyon_sql::canyon_crud::bounds::PrimaryKey
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name, 
-                id,
+                #table_name,
+                #pk, 
+                pk_value,
                 datasource_name
             ).await;
                 
