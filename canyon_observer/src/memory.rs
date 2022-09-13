@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use walkdir::WalkDir;
 use std::fs;
-use canyon_crud::crud::Transaction;
+use canyon_crud::{crud::Transaction, bounds::PrimaryKey};
 
 use crate::QUERIES_TO_EXECUTE;
 
@@ -60,7 +60,8 @@ impl CanyonMemory {
         // Check database for the "memory data"
         let mem_results = Self::query(
             "SELECT * FROM canyon_memory",
-            &[]
+            &[],
+            ""
         ).await
         .ok()
         .expect("Error querying Canyon Memory")
@@ -72,7 +73,8 @@ impl CanyonMemory {
         // Cando non a encontres no parseo de archivos, acumulas no array
         // Tremendísima query con WHERE IN (45)
         for row in mem_results {
-            let db_row =  CanyonMemoryDatabaseRow {
+            let db_row = CanyonMemoryDatabaseRow {
+                /// TODO Generify the value of the ID over PrimaryKey
                 id: row.get::<&str, i32>("id"),
                 filename: row.get::<&str, String>("filename"),
                 struct_name: row.get::<&str, String>("struct_name"),
@@ -137,7 +139,6 @@ impl CanyonMemory {
                 let rename_table = &update.struct_name != struct_name;
 
                 if rename_table {
-                    println!("Adding a new table to rename. new name: {}, old name {}", struct_name.clone(), update.struct_name.clone());
                     mem.table_rename.insert( struct_name.clone().to_lowercase(),update.struct_name.clone().to_lowercase());
                 }
             }
@@ -239,7 +240,8 @@ impl CanyonMemory {
             ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
             )", 
-            &[]
+            &[],
+            ""
         ).await
         .ok()
         .expect("Error creating the 'canyon_memory' table")
@@ -250,8 +252,8 @@ impl CanyonMemory {
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryDatabaseRow {
-    id: i32,
+struct CanyonMemoryDatabaseRow<T: PrimaryKey> {
+    id: T,
     filename: String,
     struct_name: String
 }

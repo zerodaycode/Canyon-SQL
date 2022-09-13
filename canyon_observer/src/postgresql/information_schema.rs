@@ -63,6 +63,8 @@ pub mod rows_to_table_mapper {
         pub interval_type: Option<String>,
         pub foreign_key_info: Option<String>,
         pub foreign_key_name: Option<String>,
+        pub primary_key_info: Option<String>,
+        pub primary_key_name: Option<String>,
         pub phantom: &'a str,  // TODO
     }
 
@@ -81,6 +83,8 @@ pub mod rows_to_table_mapper {
                 interval_type: None,
                 foreign_key_info: None,
                 foreign_key_name: None,
+                primary_key_info: None,
+                primary_key_name: None,
                 phantom: "",
             }
         }
