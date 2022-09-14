@@ -91,6 +91,10 @@ impl DatabaseSyncOperations {
                                         Self::add_primary_key::<&str>(
                                             self, table_name, field.clone()
                                         );
+
+                                        Self::add_identity::<&str>(
+                                            self, table_name, field.clone()
+                                        );
                                     }
                                 }
                             );
@@ -120,14 +124,22 @@ impl DatabaseSyncOperations {
                                 );
                             }
                             if attr.starts_with("Annotation: PrimaryKey") {
+
                                 Self::add_primary_key::<&str>(
-                                    self, table_name, field.clone()
+                                    self, table_name, field.clone(),
+                                );
+
+                                Self::add_identity::<&str>(
+                                    self, table_name, field.clone(),
                                 );
                             }
                         }
+
+
                     }
                     // Case when the column exist on the database
                     else {
+
                         let d = database_tables.clone();
                         let database_table = d
                             .into_iter()
@@ -183,31 +195,40 @@ impl DatabaseSyncOperations {
                         let field_is_foreign_key = field.annotations.iter()
                             .any(|anno| anno.starts_with("Annotation: ForeignKey"));
 
-
+                        println!("field {}, is primary key ? {}, is database column not a PK? {:?}",field.field_name,field_is_primary_key,database_field.primary_key_info.is_none());
                         // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
                         // TODO Evaluate changing the name of the primary key if it already exists in the database
 
                         // -------- PRIMARY KEY CASE ----------------------------
 
                         // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
-                        if field_is_primary_key && database_field.primary_key_name.is_none() {
+                        if field_is_primary_key && database_field.primary_key_info.is_none() {
                             Self::add_primary_key::<&str>(
-                                self, table_name, field.clone()
+                                self, table_name, field.clone(),
+                            );
+                            Self::add_identity::<&str>(
+                                self, table_name, field.clone(),
                             );
                         }
 
                         // Case when field don't contains a primary key annotation, but there is already one in the database column
-                        else if !field_is_primary_key && database_field.foreign_key_name.is_some() {
-                         Self::drop_primary_key::<String>(
+                        else if !field_is_primary_key && database_field.primary_key_info.is_some() {
+                            Self::drop_primary_key::<String>(
                                 self,
                                 table_name.to_string(),
                                 database_field.primary_key_name
                                     .as_ref()
                                     .expect("PrimaryKey constrain name not found")
-                                    .to_string()
+                                    .to_string(),
                             );
-                        }
 
+                            if database_field.is_identity {
+                                Self::drop_identity::<&str>(
+                                            self, table_name, field.clone()
+                                        );
+                            }
+
+                        }
 
                         // -------- FOREIGN KEY CASE ----------------------------
 
@@ -511,6 +532,40 @@ impl DatabaseSyncOperations {
         );
     }
 
+    fn add_identity<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
+        where T: Into<String> + Debug + Display + Sync + 'static
+    {
+
+
+        self.constrains_operations.push(
+            Box::new(
+                ColumnOperation::AlterColumnAddIdentity(
+                    table_name.to_string(), field.clone(),
+                )
+            )
+        );
+
+        self.constrains_operations.push(
+            Box::new(
+                SequenceOperation::ModifySequence(
+                    table_name, field,
+                )
+            )
+        );
+    }
+
+    fn drop_identity<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
+        where T: Into<String> + Debug + Display + Sync + 'static
+    {
+        self.constrains_operations.push(
+            Box::new(
+                ColumnOperation::AlterColumnDropIdentity(
+                    table_name, field,
+                )
+            )
+        );
+    }
+
 
 
     fn add_column_to_table<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
@@ -621,9 +676,8 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
                 table_name,
                 entity_field
             ) => format!(
-                "ALTER TABLE {} ADD {} (\"{}\");",
+                "ALTER TABLE {} ADD PRIMARY KEY (\"{}\");",
                 table_name,
-                entity_field.define_primary_key_syntax(),
                 entity_field.field_name
             ),
 
@@ -631,7 +685,7 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
                 table_name,
                 primary_key_name
             ) => format!(
-                "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name};"
+                "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"
             ),
 
         };
@@ -648,7 +702,11 @@ enum ColumnOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
     // AlterColumnName,
     AlterColumnType(T, CanyonRegisterEntityField),
     AlterColumnDropNotNull(T, CanyonRegisterEntityField),
-    AlterColumnSetNotNull(T, CanyonRegisterEntityField)
+    AlterColumnSetNotNull(T, CanyonRegisterEntityField),
+    // TODO if implement throught annotations, modify for both GENERATED {ALWAYS,BY DEFAULT}
+    AlterColumnAddIdentity(T, CanyonRegisterEntityField),
+    AlterColumnDropIdentity(T, CanyonRegisterEntityField)
+
 }
 
 impl<T> Transaction<Self> for ColumnOperation<T> 
@@ -687,10 +745,54 @@ impl<T> DatabaseOperation for ColumnOperation<T>
                     "ALTER TABLE {} ALTER COLUMN \"{}\" SET NOT NULL;",
                     table_name,
                     entity_field.field_name
-                )
-                
+                ),
+
+            ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;",
+                    table_name,
+                    entity_field.field_name
+                ),
+
+            ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" DROP IDENTITY;",
+                    table_name,
+                    entity_field.field_name
+                ),
+
         };
 
+        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
+    }
+}
+
+
+/// Helper for operations involving sequences
+#[derive(Debug)]
+enum SequenceOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
+    ModifySequence(T, CanyonRegisterEntityField),
+}
+
+impl<T> Transaction<Self> for SequenceOperation<T>
+    where T: Into<String> + std::fmt::Debug + Display + Sync
+{}
+
+#[async_trait]
+impl<T> DatabaseOperation for SequenceOperation<T>
+    where T: Into<String> + std::fmt::Debug + Display + Sync
+{
+    async fn execute(&self) {
+        let stmt = match &*self {
+            SequenceOperation::ModifySequence(table_name, entity_field) =>
+                format!(
+                    "SELECT setval(pg_get_serial_sequence('{}', '{}'), max(\"{}\")) from {};",
+                    table_name,
+                    entity_field.field_name,
+                    entity_field.field_name,
+                    table_name
+                )
+        };
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
     }
 }

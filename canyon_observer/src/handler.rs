@@ -204,13 +204,21 @@ impl CanyonHandler {
                 if let ColumnTypeValue::StringValue(value) = &column.value {
                     entity_column.primary_key_name = value.to_owned()
                 }
+            } else if column_identifier == "is_identity" {
+                if let ColumnTypeValue::StringValue(value) = &column.value {
+                    entity_column.is_identity = matches!(value.as_ref().unwrap().as_str(), "YES")
+                }
+            } else if column_identifier == "identity_generation" {
+                if let ColumnTypeValue::StringValue(value) = &column.value {
+                    entity_column.identity_generation = value.to_owned()
+                }
             };
             // Just for split the related column data into what will be the values for
             // every DatabaseTableColumn.
             // Every times that we find an &RelatedColumn which column identifier
-            // is == "foreign_key_name", we know that we finished to set the values
+            // is == "identity_generation", we know that we finished to set the values
             // for a new DatabaseTableColumn
-            if &column.column_identifier == "foreign_key_name" {
+            if &column.column_identifier == "identity_generation" {
                 table_entity.columns.push(entity_column.clone());
                 if idx == mapped_table.columns.len() - 1 {
                     entity_column = DatabaseTableColumn::new();

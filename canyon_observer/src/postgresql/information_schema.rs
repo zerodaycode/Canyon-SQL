@@ -65,6 +65,8 @@ pub mod rows_to_table_mapper {
         pub foreign_key_name: Option<String>,
         pub primary_key_info: Option<String>,
         pub primary_key_name: Option<String>,
+        pub is_identity: bool,
+        pub identity_generation: Option<String>,
         pub phantom: &'a str,  // TODO
     }
 
@@ -85,6 +87,8 @@ pub mod rows_to_table_mapper {
                 foreign_key_name: None,
                 primary_key_info: None,
                 primary_key_name: None,
+                is_identity: false,
+                identity_generation: None,
                 phantom: "",
             }
         }
