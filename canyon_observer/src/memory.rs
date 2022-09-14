@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use walkdir::WalkDir;
 use std::fs;
-use canyon_crud::{crud::Transaction, bounds::PrimaryKey};
+use canyon_crud::crud::Transaction;
 
 use crate::QUERIES_TO_EXECUTE;
 

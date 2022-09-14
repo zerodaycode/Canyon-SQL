@@ -23,11 +23,11 @@ use canyon_connection::{
 /// automatically map it to an struct.
 #[async_trait]
 pub trait Transaction<T: Debug> {
+    #[allow(unreachable_code)]
     /// Performs the necessary to execute a query against the database
     async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
         where Q: ?Sized + ToStatement + Sync
     {
-        // Get the default (DATASOURCES[0]) datasource
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
         } else { // Get the specified one
@@ -39,14 +39,17 @@ pub trait Transaction<T: Debug> {
             ).await
         };
 
-        if let Err(db_conn) = database_connection {
-            return Err(db_conn);
+        if let Err(_db_conn) = database_connection {
+            todo!(); // panic for now, we must change the return type of all the Crud methods
+            // and the return types expected on the macros 
+            // return Err(db_conn);
+            // Box<(dyn std::error::Error + Send + Sync + 'static)>
         }
 
         let db_conn = database_connection.ok().unwrap();
-
+        let postgres_connection = db_conn.postgres_connection.unwrap();
         let (client, connection) =
-            (db_conn.client, db_conn.connection);
+            (postgres_connection.client, postgres_connection.connection);
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
