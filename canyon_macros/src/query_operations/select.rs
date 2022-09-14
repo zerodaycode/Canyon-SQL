@@ -683,7 +683,6 @@ pub fn generate_find_by_foreign_key_result_tokens() -> Vec<TokenStream> {
 /// Generates the TokenStream for build the __search_by_foreign_key() CRUD 
 /// associated function
 pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> Vec<TokenStream> {
-
     let mut foreign_keys_tokens = Vec::new();
 
     let (vis, ty) = (macro_data.vis, macro_data.ty);
@@ -778,7 +777,6 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
 /// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
 /// derive macro on the parent side of the relation
 pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroTokens) -> Vec<TokenStream> {
-
     let mut foreign_keys_tokens = Vec::new();
 
     let (vis, ty) = (macro_data.vis, macro_data.ty);
@@ -830,11 +828,7 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
                                         .await
                             }
-                        }
-                    );
 
-                    foreign_keys_tokens.push(
-                        quote! {
                             #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> 
                                 Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
                                     where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
