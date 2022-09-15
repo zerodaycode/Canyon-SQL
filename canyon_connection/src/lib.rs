@@ -1,6 +1,6 @@
 extern crate async_std;
 
-pub mod postgresql_connector;
+pub mod canyon_database_connector;
 mod datasources;
 
 use std::fs;

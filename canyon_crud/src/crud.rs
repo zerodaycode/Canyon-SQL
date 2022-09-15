@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
+use canyon_connection::canyon_database_connector::DatabaseType;
 use tokio_postgres::{ToStatement, types::ToSql, Error};
 
 use crate::{mapper::RowMapper, bounds::PrimaryKey};
@@ -11,7 +12,7 @@ use crate::query_elements::query_builder::QueryBuilder;
 use canyon_connection::{
     DATASOURCES,
     DEFAULT_DATASOURCE,
-    postgresql_connector::DatabaseConnection, 
+    canyon_database_connector::DatabaseConnection, 
 };
 
 
@@ -44,30 +45,15 @@ pub trait Transaction<T: Debug> {
             // and the return types expected on the macros 
             // return Err(db_conn);
             // Box<(dyn std::error::Error + Send + Sync + 'static)>
-        }
-
-        let db_conn = database_connection.ok().unwrap();
-        let postgres_connection = db_conn.postgres_connection.unwrap();
-        let (client, connection) =
-            (postgres_connection.client, postgres_connection.connection);
-
-        tokio::spawn(async move {
-            if let Err(e) = connection.await {
-                eprintln!("An error occured while trying to connect to the database: {}", e);
-            }
-        });
-
-        let query_result = client.query(
-            stmt.into(),
-            params
-        ).await;
-
-        if let Err(error) = query_result {
-            Err(error)
         } else {
-            Ok(
-                DatabaseResult::new(query_result.expect("A really bad error happened"))
-            )
+            // No errors
+            let db_conn = database_connection.ok().unwrap();
+             
+            match db_conn.database_type {
+                DatabaseType::PostgreSql => 
+                    query_launcher::launch_postgres_query::<Q, T>(db_conn, stmt, params).await,
+                DatabaseType::SqlServer => todo!()
+            }
         }
     }
 }
@@ -461,4 +447,41 @@ mod crud_algorythms {
         todo!() // TODO impl for unit test
     }
 }
- 
+
+mod query_launcher {
+    use std::fmt::Debug;
+    use canyon_connection::canyon_database_connector::DatabaseConnection;
+    use tokio_postgres::{Error, types::ToSql, ToStatement};
+    use crate::result::DatabaseResult;
+
+    pub async fn launch_postgres_query<Q, T>(
+        db_conn: DatabaseConnection,
+        stmt: &Q,
+        params: &[&(dyn ToSql + Sync)] ,
+    ) -> Result<DatabaseResult<T>, Error> 
+        where Q: ?Sized + ToStatement + Sync, T: Debug
+    {
+        let postgres_connection = db_conn.postgres_connection.unwrap();
+        let (client, connection) =
+            (postgres_connection.client, postgres_connection.connection);
+
+        tokio::spawn(async move {
+            if let Err(e) = connection.await {
+                eprintln!("An error occured while trying to connect to the database: {}", e);
+            }
+        });
+
+        let query_result = client.query(
+            stmt.into(),
+            params
+        ).await;
+
+        if let Err(error) = query_result {
+            Err(error)
+        } else {
+            Ok(
+                DatabaseResult::new(query_result.expect("A really bad error happened"))
+            )
+        }
+    }
+}

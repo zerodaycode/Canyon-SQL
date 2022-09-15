@@ -1,7 +1,7 @@
 use canyon_observer::CANYON_REGISTER_ENTITIES;
 
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::quote;
 
 use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;

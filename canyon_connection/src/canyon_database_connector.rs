@@ -5,6 +5,21 @@ use tokio_postgres::{Client, Connection, NoTls, Socket, tls::NoTlsStream};
 
 use crate::datasources::DatasourceProperties;
 
+/// Represents the current supported databases by Canyon
+pub enum DatabaseType {
+    PostgreSql,
+    SqlServer
+}
+
+impl DatabaseType {
+    pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
+        match datasource.db_type {
+            "postgresql" => Self::PostgreSql,
+            "sqlserver" => Self::SqlServer,
+            _ => todo!() // TODO Change for boxed dyn error type
+        }
+    }
+}
 
 /// A connection with a `PostgreSQL` database
 pub struct PostgreSqlConnection {
@@ -20,7 +35,8 @@ pub struct SqlServerConnection {
 /// The Canyon database connection handler.
 pub struct DatabaseConnection {
     pub postgres_connection: Option<PostgreSqlConnection>,
-    pub sqlserver_connection: Option<SqlServerConnection>
+    pub sqlserver_connection: Option<SqlServerConnection>,
+    pub database_type: DatabaseType
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -47,7 +63,8 @@ impl DatabaseConnection {
                         client: new_client,
                         connection: new_connection
                     }),
-                    sqlserver_connection: None
+                    sqlserver_connection: None,
+                    database_type: DatabaseType::from_datasource(&datasource)
                 })
             },
             "sqlserver" => {
@@ -79,7 +96,8 @@ impl DatabaseConnection {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
                         client: client.ok().expect("Fallo en la conexión a la BBDD")
-                    })
+                    }),
+                    database_type: DatabaseType::from_datasource(&datasource)
                 })
             },
             &_ => return Err(

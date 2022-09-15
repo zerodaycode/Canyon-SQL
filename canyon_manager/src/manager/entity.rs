@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use proc_macro2::{Ident, TokenStream};
-use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics, DeriveInput};
+use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
 use quote::quote;
 use partialdebug::placeholder::PartialDebug;
 

@@ -8,7 +8,7 @@ use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
-    DeriveInput, Fields, Visibility, parse::Parse
+    DeriveInput, Fields, Visibility
 };
 
 use query_operations::{
@@ -230,7 +230,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Builds the delete() query as a QueryBuilder
     let _delete_query_tokens = generate_delete_query_tokens(&macro_data);
     
-
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
     let _search_by_fk_tokens: TokenStream = generate_find_by_foreign_key_tokens(&macro_data);
     let _search_by_fk_result_tokens: TokenStream = generate_find_by_foreign_key_result_tokens(&macro_data);
