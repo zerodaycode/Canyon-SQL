@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use proc_macro2::{Ident, TokenStream};
-use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
+use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics, DeriveInput, Fields};
 use quote::{quote};
 use partialdebug::placeholder::PartialDebug;
 
@@ -20,6 +20,36 @@ unsafe impl Send for CanyonEntity {}
 unsafe impl Sync for CanyonEntity {}
 
 impl CanyonEntity {
+    
+    pub fn new(_struct: &DeriveInput) -> Self {
+        let mut parsed_fields: Vec<EntityField> = Vec::new();
+        let fields = match _struct.data {
+            syn::Data::Struct(ref s) => &s.fields,
+            _ => todo!()
+        };
+        for field in fields {
+            // println!("[MACRO ENTITY ENTITY FIELD PARSING] - Entity field: {:?}", field.clone().ident.unwrap().to_string());
+            let struct_attribute: _ = EntityField::try_from(field)
+                .ok()
+                .expect(
+                    format!("Error parsing the field: {:?} for the struct: {:?}", 
+                    &field.ident.as_ref().unwrap().to_string(),
+                    &_struct.ident.to_string()).as_str()
+                );
+            parsed_fields.push(struct_attribute)
+        }
+
+        let _struct = _struct.clone();
+
+        Self {
+            struct_name: _struct.ident,
+            vis: _struct.vis,
+            generics: _struct.generics,
+            attributes: parsed_fields
+        }
+    }
+
+
     /// Generates as many variants for the enum as fields has the type
     /// which this enum is related to, and that type it's the entity
     /// stored in [`CanyonEntity`]
