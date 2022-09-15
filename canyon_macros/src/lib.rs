@@ -139,25 +139,18 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 /// your type
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    // let input_cloned = input.clone();
-    // let entity_res = syn::parse::<CanyonEntity>(input);
-    
-    // Calls the helper struct to build the tokens that generates the final CRUD methos
-    let ast: DeriveInput = syn::parse(input)
-        .expect("Error parsing `Canyon Entity for generate the CRUD methods");
-    let macro_data = MacroTokens::new(&ast);
-    let ent = CanyonEntity::new(&ast);
+    let input_cloned = input.clone();
+    let entity_res = syn::parse::<CanyonEntity>(input);
 
-    // if entity_res.is_err() {
-    //     return entity_res.err()
-    //         .expect("Unexpected error parsing the struct")
-    //         .into_compile_error()
-    //         .into()
-    // }
+    if entity_res.is_err() {
+        return entity_res.err()
+            .expect("Unexpected error parsing the struct")
+            .into_compile_error()
+            .into()
+    }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
-    // let entity = entity_res.ok().expect("Unexpected error parsing the struct");
-    let entity = ent;
+    let entity = entity_res.ok().expect("Unexpected error parsing the struct");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
@@ -194,7 +187,10 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Struct name as Ident for wire in the macro
     let ty = entity.struct_name;
 
-    
+    // Calls the helper struct to build the tokens that generates the final CRUD methos
+    let ast: DeriveInput = syn::parse(input_cloned)
+        .expect("Error parsing `Canyon Entity for generate the CRUD methods");
+    let macro_data = MacroTokens::new(&ast);
 
     // Builds the find_all() query
     let _find_all_tokens = generate_find_all_tokens(&macro_data);
@@ -242,7 +238,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let _search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
 
     
-
     // Get the generics identifiers
     let (impl_generics, ty_generics, where_clause) = 
     macro_data.generics.split_for_impl();
