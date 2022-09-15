@@ -1,3 +1,5 @@
+extern crate async_std;
+
 pub mod postgresql_connector;
 mod datasources;
 

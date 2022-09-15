@@ -55,7 +55,6 @@ pub fn database_table_name_from_entity_name(ty: &str) -> String {
 
 /// Parses the content of an &str to get the related identifier of a type
 pub fn database_table_name_to_struct_ident(name: &str) -> Ident {
-
     let mut struct_name: String = String::new();
     
     let mut first_iteration = true;

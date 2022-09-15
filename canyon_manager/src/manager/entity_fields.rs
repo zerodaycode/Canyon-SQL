@@ -37,7 +37,6 @@ impl EntityField {
 
 
     pub fn new(name: &Ident, raw_helper_attributes: &[Attribute], ty: &Type) -> syn::Result<Self> {
-        
         let mut attributes = Vec::new();
         for attr in raw_helper_attributes {
             let result = Some(EntityFieldAnnotation::try_from(&attr)?);
@@ -71,7 +70,7 @@ impl TryFrom<&Field> for EntityField {
                     "Expected a structure with named fields, unnamed field given"
                 )
             })?;
-
+        
         Self::new(&name, &field.attrs, &field.ty)
     }
 }

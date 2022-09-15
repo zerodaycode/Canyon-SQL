@@ -23,11 +23,11 @@ use canyon_connection::{
 /// automatically map it to an struct.
 #[async_trait]
 pub trait Transaction<T: Debug> {
+    #[allow(unreachable_code)]
     /// Performs the necessary to execute a query against the database
     async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
         where Q: ?Sized + ToStatement + Sync
     {
-        // Get the default (DATASOURCES[0]) datasource
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
         } else { // Get the specified one
@@ -39,14 +39,17 @@ pub trait Transaction<T: Debug> {
             ).await
         };
 
-        if let Err(db_conn) = database_connection {
-            return Err(db_conn);
+        if let Err(_db_conn) = database_connection {
+            todo!(); // panic for now, we must change the return type of all the Crud methods
+            // and the return types expected on the macros 
+            // return Err(db_conn);
+            // Box<(dyn std::error::Error + Send + Sync + 'static)>
         }
 
         let db_conn = database_connection.ok().unwrap();
-
+        let postgres_connection = db_conn.postgres_connection.unwrap();
         let (client, connection) =
-            (db_conn.client, db_conn.connection);
+            (postgres_connection.client, postgres_connection.connection);
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -101,14 +104,14 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_pk<P>(table_name: &str, pk: P, datasource_name: &str) -> Result<DatabaseResult<T>, Error> 
-        where P: PrimaryKey
+    async fn __find_by_pk<P>(table_name: &str, pk: &str, pk_value: P, datasource_name: &str) 
+        -> Result<DatabaseResult<T>, Error> where P: PrimaryKey
     {
-        // TODO where pk_field
-        let stmt = format!("SELECT * FROM {} WHERE id = $1", table_name);
-        Self::query(&stmt[..], &[&pk], datasource_name).await
+        let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
+        Self::query(&stmt[..], &[&pk_value], datasource_name).await
     }
 
+    /// Counts the total entries (rows) of elements of a database table
     async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Error> {
         let count = Self::query(
             &format!("SELECT COUNT (*) FROM {}", table_name)[..], 
@@ -275,6 +278,7 @@ pub trait CrudOperations<T>: Transaction<T>
         datasource_name: &str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
+        // TODO Detatch this error from here and just not compile the macro
         if primary_key == "" {
             return Err(
                 std::io::Error::new(

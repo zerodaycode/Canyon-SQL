@@ -8,7 +8,7 @@ use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
-    DeriveInput, Fields, Visibility
+    DeriveInput, Fields, Visibility, parse::Parse
 };
 
 use query_operations::{
@@ -139,18 +139,25 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 /// your type
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    let input_cloned = input.clone();
-    let entity_res = syn::parse::<CanyonEntity>(input);
+    // let input_cloned = input.clone();
+    // let entity_res = syn::parse::<CanyonEntity>(input);
     
-    if entity_res.is_err() {
-        return entity_res.err()
-            .expect("Unexpected error parsing the struct")
-            .into_compile_error()
-            .into()
-    }
+    // Calls the helper struct to build the tokens that generates the final CRUD methos
+    let ast: DeriveInput = syn::parse(input)
+        .expect("Error parsing `Canyon Entity for generate the CRUD methods");
+    let macro_data = MacroTokens::new(&ast);
+    let ent = CanyonEntity::new(&ast);
+
+    // if entity_res.is_err() {
+    //     return entity_res.err()
+    //         .expect("Unexpected error parsing the struct")
+    //         .into_compile_error()
+    //         .into()
+    // }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
-    let entity = entity_res.ok().expect("Unexpected error parsing the struct");
+    // let entity = entity_res.ok().expect("Unexpected error parsing the struct");
+    let entity = ent;
 
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
@@ -172,7 +179,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
         
         field.attributes.iter().for_each(
-            |attr| new_entity_field.annotations.push(attr.get_as_string())
+            |attr|
+                new_entity_field.annotations.push(attr.get_as_string())
         );
 
         new_entity.entity_fields.push(new_entity_field);
@@ -186,10 +194,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Struct name as Ident for wire in the macro
     let ty = entity.struct_name;
 
-    // Calls the helper struct to build the tokens that generates the final CRUD methos
-    let ast: DeriveInput = syn::parse(input_cloned)
-        .expect("Error parsing `Canyon Entity for generate the CRUD methods");
-    let macro_data = MacroTokens::new(&ast);
+    
 
     // Builds the find_all() query
     let _find_all_tokens = generate_find_all_tokens(&macro_data);
@@ -231,8 +236,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     
 
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
-    let _search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens();
-    let _search_by_fk_result_tokens: Vec<TokenStream> = generate_find_by_foreign_key_result_tokens();
+    let _search_by_fk_tokens: TokenStream = generate_find_by_foreign_key_tokens(&macro_data);
+    let _search_by_fk_result_tokens: TokenStream = generate_find_by_foreign_key_result_tokens(&macro_data);
     let _search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
     let _search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
 
@@ -298,11 +303,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             #_delete_query_tokens
 
             // The search by FK impl
-            #(#_search_by_fk_tokens),*
-            // The search by FK as result impl
-            #(#_search_by_fk_result_tokens),*
+            #_search_by_fk_tokens
+            // // The search by FK as result impl
+            #_search_by_fk_result_tokens
 
-            // The search by reverse side of the FK impl
+            // // The search by reverse side of the FK impl
             #(#_search_by_revese_fk_tokens),*
             // The search by reverse side of the FK as result impl
             #(#_search_by_revese_fk_result_tokens),*
@@ -412,7 +417,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     // Creates the TokenStream for wire the column names into the 
     // Canyon RowMapper
-    let field_names_for_row_mapper = fields.iter().map(|(_vis, ident)| {
+    let init_field_values = fields.iter().map(|(_vis, ident)| {
         let ident_name = ident.to_string();
         quote! {  
             #ident: row.try_get(#ident_name)
@@ -428,7 +433,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         {
             fn deserialize(row: &Row) -> #ty {
                 Self {
-                    #(#field_names_for_row_mapper),*
+                    #(#init_field_values),*
                 }
             }
         }
