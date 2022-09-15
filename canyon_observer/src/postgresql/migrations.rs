@@ -81,7 +81,6 @@ impl DatabaseSyncOperations {
                         field.annotations.iter()
                             .for_each( |attr|
                                 {
-                                    println!("Annotation: {} found for entity: {}", attr, &canyon_register_entity.entity_name);
                                     if attr.starts_with("Annotation: ForeignKey") {
                                         Self::add_foreign_key_with_annotation::<&str, &String>(
                                             self, &field.annotations, table_name, &field.field_name,
@@ -117,7 +116,6 @@ impl DatabaseSyncOperations {
 
                         // We added the founded constraints on the field attributes
                         for attr in &field.annotations {
-                            println!("Annotation: {} found for entity: {}", attr, &canyon_register_entity.entity_name);
                             if attr.starts_with("Annotation: ForeignKey") {
                                 Self::add_foreign_key_with_annotation::<&str, &String>(
                                     self, &field.annotations, table_name, &field.field_name,
@@ -194,8 +192,6 @@ impl DatabaseSyncOperations {
 
                         let field_is_foreign_key = field.annotations.iter()
                             .any(|anno| anno.starts_with("Annotation: ForeignKey"));
-
-                        println!("field {}, is primary key ? {}, is database column not a PK? {:?}",field.field_name,field_is_primary_key,database_field.primary_key_info.is_none());
                         // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
                         // TODO Evaluate changing the name of the primary key if it already exists in the database
 
