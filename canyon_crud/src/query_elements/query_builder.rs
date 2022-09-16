@@ -80,7 +80,7 @@ impl<'a, W, T> QueryBuilder<'a, W, T>
         // }
 
         let result = T::query::<String, W>(
-            &self.query.sql, 
+            &"".to_string(), 
             self.query.params,
             self.datasource_name
         ).await;

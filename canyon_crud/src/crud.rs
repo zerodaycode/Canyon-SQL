@@ -28,7 +28,7 @@ use canyon_connection::{
 pub trait Transaction<T: Debug> {
     #[allow(unreachable_code)]
     /// Performs the necessary to execute a query against the database
-    async fn query<'a, Q, W>(stmt: &Q, params: &[W], datasource_name: &'a str) 
+    async fn query<'a, Q, W>(stmt: &'a Q, params: &'a [W], datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
         where 
             Q: Into<Cow<'a, str>> + From<&'a Q> +'a + ToStatement + Sync + Send + Clone,
@@ -91,9 +91,9 @@ pub trait CrudOperations<T>: Transaction<T>
 {
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    async fn __find_all<'a, P>(table_name: &str, datasource_name: &str)
+    async fn __find_all<'a: 'life1, P>(table_name: &str, datasource_name: &str)
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where P : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where P : ToSql + IntoSql<'a> + Clone + Sync + Send + 'life1
     {
         let stmt = format!("SELECT * FROM {}", table_name);
         Self::query::<String, P>(&stmt, &[], datasource_name).await
