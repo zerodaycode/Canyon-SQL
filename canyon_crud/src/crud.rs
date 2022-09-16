@@ -51,7 +51,7 @@ pub trait Transaction<T: Debug> {
              
             match db_conn.database_type {
                 DatabaseType::PostgreSql => 
-                    query_launcher::launch_postgres_query::<Q, T>(db_conn, stmt, params).await,
+                    postgres_query_launcher::launch::<Q, T>(db_conn, stmt, params).await,
                 DatabaseType::SqlServer => todo!()
             }
         }
@@ -448,13 +448,13 @@ mod crud_algorythms {
     }
 }
 
-mod query_launcher {
+mod postgres_query_launcher {
     use std::fmt::Debug;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
     use tokio_postgres::{Error, types::ToSql, ToStatement};
     use crate::result::DatabaseResult;
 
-    pub async fn launch_postgres_query<Q, T>(
+    pub async fn launch<Q, T>(
         db_conn: DatabaseConnection,
         stmt: &Q,
         params: &[&(dyn ToSql + Sync)] ,
@@ -471,17 +471,20 @@ mod query_launcher {
             }
         });
 
-        let query_result = client.query(
-            stmt.into(),
-            params
-        ).await;
+        let query_result = client.query(stmt.into(), params).await;
 
-        if let Err(error) = query_result {
-            Err(error)
-        } else {
+        if let Err(error) = query_result { Err(error) } else {
             Ok(
                 DatabaseResult::new(query_result.expect("A really bad error happened"))
             )
         }
+    }
+}
+
+mod sqlserver_query_launcher {
+    use crate::canyon_connection::tiberius::*;
+
+    pub async fn launch_sqlserver_query() {
+        Query::new("SELECT * FROM ");
     }
 }

@@ -409,8 +409,8 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     );
 
-    // Creates the TokenStream for wire the column names into the 
-    // Canyon RowMapper
+    // Here it's where the incoming values of the DatabaseResult are wired into a new
+    // instance, mapping the fields of the type against the columns
     let init_field_values = fields.iter().map(|(_vis, ident)| {
         let ident_name = ident.to_string();
         quote! {  

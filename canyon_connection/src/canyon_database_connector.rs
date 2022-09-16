@@ -49,10 +49,11 @@ impl DatabaseConnection {
                 let (new_client, new_connection) =
                     tokio_postgres::connect(
                     &format!(
-                        "postgres://{user}:{pswd}@{host}/{db}",
+                        "postgres://{user}:{pswd}@{host}:{port}/{db}",
                             user = datasource.username,
                             pswd = datasource.password,
                             host = datasource.host,
+                            port = datasource.port,
                             db = datasource.db_name
                         )[..], 
                     NoTls
@@ -70,12 +71,14 @@ impl DatabaseConnection {
             "sqlserver" => {
                 let mut config = Config::new();
 
-                config.host("ecomt.database.windows.net");
-                config.port(1433);
-                config.database("OteaCenterDes");
+                config.host(datasource.host);
+                config.port(datasource.port);
+                config.database(datasource.db_name);
 
                 // Using SQL Server authentication.
-                config.authentication(AuthMethod::sql_server("administrador", "ny0crzlp@"));
+                config.authentication(
+                    AuthMethod::sql_server(datasource.username, datasource.password)
+                );
 
                 // on production, it is not a good idea to do this
                 config.trust_cert();
@@ -95,7 +98,7 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: client.ok().expect("Fallo en la conexión a la BBDD")
+                        client: client.ok().expect("A failure happened connecting to the database")
                     }),
                     database_type: DatabaseType::from_datasource(&datasource)
                 })

@@ -58,5 +58,6 @@ pub struct DatasourceProperties<'a> {
     pub username: &'a str, 
     pub password: &'a str,
     pub host: &'a str,
+    pub port: u16,
     pub db_name: &'a str,
 }

@@ -1,3 +1,4 @@
+pub extern crate tiberius;
 extern crate async_std;
 
 pub mod canyon_database_connector;
