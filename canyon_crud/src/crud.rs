@@ -15,6 +15,9 @@ use canyon_connection::{
     canyon_database_connector::DatabaseConnection, 
 };
 
+trait ToCanyonSql {}
+impl ToCanyonSql for dyn tokio_postgres::types::ToSql {}
+
 
 /// This traits defines and implements a query against a database given
 /// an statemt `stmt` and the params to pass the to the client.
@@ -58,6 +61,7 @@ pub trait Transaction<T: Debug> {
     }
 }
 
+
 /// [`CrudOperations`] it's one of the core parts of Canyon.
 /// 
 /// Here it's defined and implemented every CRUD operation that Canyon
@@ -73,7 +77,6 @@ pub trait Transaction<T: Debug> {
 /// See it's definition and docs to see the real implications.
 /// Also, you can find the written macro-code that performs the auto-mapping
 /// in the [`canyon_macros`] crates, on the root of this project. 
-
 #[async_trait]
 pub trait CrudOperations<T>: Transaction<T> 
     where T: Debug + CrudOperations<T> + RowMapper<T>
@@ -457,7 +460,7 @@ mod postgres_query_launcher {
     pub async fn launch<Q, T>(
         db_conn: DatabaseConnection,
         stmt: &Q,
-        params: &[&(dyn ToSql + Sync)] ,
+        params: &[&(dyn ToSql + Sync)],
     ) -> Result<DatabaseResult<T>, Error> 
         where Q: ?Sized + ToStatement + Sync, T: Debug
     {
@@ -482,9 +485,34 @@ mod postgres_query_launcher {
 }
 
 mod sqlserver_query_launcher {
-    use crate::canyon_connection::tiberius::*;
+    use std::{fmt::Debug, borrow::Cow};
+    use canyon_connection::canyon_database_connector::DatabaseConnection;
+    use crate::{canyon_connection::tiberius::*, result::DatabaseResult};
 
-    pub async fn launch_sqlserver_query() {
-        Query::new("SELECT * FROM ");
+    use super::ToCanyonSql;
+
+    trait NewTrait: ToCanyonSql + for<'r> canyon_connection::tiberius::IntoSql<'r> {}
+
+    pub async fn launch_sqlserver_query<'a, Q, T>(
+        db_conn: DatabaseConnection,
+        stmt: Q,
+        params: &[&(impl IntoSql<'a> + 'a + Clone)],
+    ) -> Result<DatabaseResult<T>> 
+        where Q: Into<Cow<'a, str>> + From<&'a Q> + 'a, T: Debug
+    {
+        let mut sql_server_query = Query::new(stmt);
+        params.into_iter().for_each( |param| sql_server_query.bind( (**param).clone()) );
+
+        let client = &mut db_conn.sqlserver_connection
+            .expect("Error querying the SqlServer database") // TODO Better msg
+            .client;
+
+        let results = sql_server_query.query(client).await?
+            .into_results().await?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>();
+
+        Ok(DatabaseResult::new(vec![]))
     }
 }
