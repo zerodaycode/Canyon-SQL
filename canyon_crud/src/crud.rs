@@ -1,7 +1,9 @@
+use std::borrow::Cow;
 use std::fmt::Debug;
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseType;
+use canyon_connection::tiberius::IntoSql;
 use canyon_connection::tokio_postgres::{ToStatement, types::ToSql, Error};
 
 use crate::{mapper::RowMapper, bounds::PrimaryKey};
@@ -16,7 +18,10 @@ use canyon_connection::{
 };
 
 trait ToCanyonSql {}
-impl ToCanyonSql for dyn canyon_connection::tokio_postgres::types::ToSql {}
+impl ToCanyonSql for dyn canyon_connection::tokio_postgres::types::ToSql + Sync {}
+impl ToCanyonSql for &(dyn canyon_connection::tokio_postgres::types::ToSql + Sync) {}
+impl ToCanyonSql for (dyn canyon_connection::tiberius::IntoSql<'_> + 'static) {}
+impl ToCanyonSql for &(dyn canyon_connection::tiberius::IntoSql<'_> + 'static) {}
 
 
 /// This traits defines and implements a query against a database given
@@ -29,8 +34,9 @@ impl ToCanyonSql for dyn canyon_connection::tokio_postgres::types::ToSql {}
 pub trait Transaction<T: Debug> {
     #[allow(unreachable_code)]
     /// Performs the necessary to execute a query against the database
-    async fn query<'a, Q>(stmt: &Q, params: &[&(dyn ToSql + Sync)], datasource_name: &'a str) -> Result<DatabaseResult<T>, Error> 
-        where Q: ?Sized + ToStatement + Sync
+    async fn query<'a, Q>(stmt: &Q, params: &[impl ToCanyonSql + ToSql + Sync + IntoSql<'a> + Clone], datasource_name: &'a str) 
+        -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+        where Q: Into<Cow<'a, str>> + From<&'a Q> +'a + ToStatement + Sync + Send
     {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -53,9 +59,15 @@ pub trait Transaction<T: Debug> {
             let db_conn = database_connection.ok().unwrap();
              
             match db_conn.database_type {
-                DatabaseType::PostgreSql => 
-                    postgres_query_launcher::launch::<Q, T>(db_conn, stmt, params).await,
-                DatabaseType::SqlServer => todo!()
+                DatabaseType::PostgreSql => {
+                    let mut m_params: Vec<&(dyn ToSql + Sync)> = Vec::new();
+                    for p in params.iter() {
+                        m_params.push(p as &(dyn ToSql + Sync))
+                    }
+                    postgres_query_launcher::launch::<Q, T>(db_conn, stmt, m_params.as_slice()).await
+                },
+                DatabaseType::SqlServer =>
+                    sqlserver_query_launcher::launch::<Q, T>(db_conn, *stmt, params).await
             }
         }
     }
@@ -454,14 +466,14 @@ mod crud_algorythms {
 mod postgres_query_launcher {
     use std::fmt::Debug;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use canyon_connection::tokio_postgres::{Error, types::ToSql, ToStatement};
+    use canyon_connection::tokio_postgres::{types::ToSql, ToStatement};
     use crate::result::DatabaseResult;
 
     pub async fn launch<Q, T>(
         db_conn: DatabaseConnection,
         stmt: &Q,
         params: &[&(dyn ToSql + Sync)],
-    ) -> Result<DatabaseResult<T>, Error> 
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where Q: ?Sized + ToStatement + Sync, T: Debug
     {
         let postgres_connection = db_conn.postgres_connection.unwrap();
@@ -476,10 +488,10 @@ mod postgres_query_launcher {
 
         let query_result = client.query(stmt.into(), params).await;
 
-        if let Err(error) = query_result { Err(error) } else {
-            Ok(
-                DatabaseResult::new(query_result.expect("A really bad error happened"))
-            )
+        if let Err(error) = query_result { 
+            Err(Box::new(error)) 
+        } else {
+            Ok(DatabaseResult::new(query_result.expect("A really bad error happened")))
         }
     }
 }
@@ -489,21 +501,21 @@ mod sqlserver_query_launcher {
     use crate::{
         canyon_connection::{
             async_std::net::TcpStream,
-            tiberius::{Query, Row, IntoSql, Result, Client},
+            tiberius::{Query, Row, IntoSql, Client},
             canyon_database_connector::DatabaseConnection
         }, 
         result::DatabaseResult
     };
 
-    pub async fn launch_sqlserver_query<'a, Q, T>(
+    pub async fn launch<'a, Q, T>(
         db_conn: DatabaseConnection,
         stmt: Q,
-        params: &[&(impl IntoSql<'a> + 'a + Clone)],
-    ) -> Result<DatabaseResult<T>> 
+        params: &[impl IntoSql<'a> + Clone + 'a],
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where Q: Into<Cow<'a, str>> + From<&'a Q> + 'a, T: Debug
     {
         let mut sql_server_query = Query::new(stmt);
-        params.into_iter().for_each( |param| sql_server_query.bind( (**param).clone()) );
+        params.into_iter().for_each( |param| sql_server_query.bind( (*param).clone() ));
 
         let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection
             .expect("Error querying the SqlServer database") // TODO Better msg
