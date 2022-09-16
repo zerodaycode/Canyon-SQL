@@ -1,4 +1,4 @@
-use canyon_connection::tokio_postgres::types::ToSql;
+use canyon_connection::{tokio_postgres::types::ToSql, tiberius::IntoSql};
 use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
@@ -10,20 +10,26 @@ use crate::{
 
 /// Holds a sql sentence details
 #[derive(Debug, Clone)]
-pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
+pub struct Query<'a, W, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> 
+    where W : ToSql + IntoSql<'a> + Clone + Sync + Send
+{
     pub sql: String,
-    pub params: &'a[Box<dyn ToSql + Sync>],
+    pub params: &'a[W],
     marker: PhantomData<T>
 }
 
-impl<'a, T> Query<'a, T> where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {
-    pub fn new(sql: String, params: &'a[Box<dyn ToSql + Sync>], datasource_name: &'a str) -> QueryBuilder<'a, T> {
+impl<'a, W, T> Query<'a, W, T> 
+    where 
+        W : ToSql + IntoSql<'a> + Clone + Sync + Send,
+        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
+{
+    pub fn new(sql: String, params: &'a[W], datasource_name: &'a str) -> QueryBuilder<'a, W, T> {
         let self_ = Self {
             sql: sql,
             params: params,
             marker: PhantomData
         };
-        QueryBuilder::<T>::new(self_, datasource_name)
+        QueryBuilder::<W, T>::new(self_, datasource_name)
     }
 }
 

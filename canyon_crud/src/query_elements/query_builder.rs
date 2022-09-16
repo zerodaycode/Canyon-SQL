@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use canyon_connection::tokio_postgres::Error;
+use canyon_connection::{tokio_postgres::{Error, types::ToSql}, tiberius::IntoSql};
 
 use crate::{
     query_elements::query::Query,
@@ -20,8 +20,12 @@ use crate::{
 
 /// Builder for a query while chaining SQL clauses
 #[derive(Debug, Clone)]
-pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
-    query: Query<'a, T>,
+pub struct QueryBuilder<'a, W, T> 
+    where 
+        W : ToSql + IntoSql<'a> + Clone + Sync + Send,
+        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    query: Query<'a, W, T>,
     where_clause: String,
     and_clause: String,
     in_clause: &'a[Box<dyn InClauseValues>],
@@ -29,10 +33,16 @@ pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowM
     set_clause: String,
     datasource_name: &'a str
 }
-impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
+impl<'a, W, T> QueryBuilder<'a, W, T> 
+    where 
+        W : ToSql + IntoSql<'a> + Clone + Sync + Send,
+        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self) -> Result<Vec<T>, Error> {
+    pub async fn query(&mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
         if self.query.sql.contains("UPDATE") && self.set_clause != "" {
@@ -64,14 +74,14 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         self.query.sql.push(';');
 
         
-        let mut unboxed_params = Vec::new();
-        for element in self.query.params {
-            unboxed_params.push(&**element);
-        }
+        // let mut unboxed_params: Vec<W> = Vec::new();
+        // for element in self.query.params {
+        //     unboxed_params.push(element);
+        // }
 
-        let result = T::query(
-            &self.query.sql[..], 
-            &unboxed_params,
+        let result = T::query::<String, W>(
+            &self.query.sql, 
+            self.query.params,
             self.datasource_name
         ).await;
 
@@ -80,7 +90,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         } else { Ok(result.ok().unwrap().to_entity::<T>()) }
     }
 
-    pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
+    pub fn new(query: Query<'a, W, T>, datasource_name: &'a str) -> Self {
         Self {
             query: query,
             where_clause: String::new(),
