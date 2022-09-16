@@ -17,12 +17,6 @@ use canyon_connection::{
     canyon_database_connector::DatabaseConnection, 
 };
 
-trait ToCanyonSql {}
-impl ToCanyonSql for dyn canyon_connection::tokio_postgres::types::ToSql + Sync {}
-impl ToCanyonSql for &(dyn canyon_connection::tokio_postgres::types::ToSql + Sync) {}
-impl ToCanyonSql for (dyn canyon_connection::tiberius::IntoSql<'_> + 'static) {}
-impl ToCanyonSql for &(dyn canyon_connection::tiberius::IntoSql<'_> + 'static) {}
-
 
 /// This traits defines and implements a query against a database given
 /// an statemt `stmt` and the params to pass the to the client.
@@ -34,9 +28,11 @@ impl ToCanyonSql for &(dyn canyon_connection::tiberius::IntoSql<'_> + 'static) {
 pub trait Transaction<T: Debug> {
     #[allow(unreachable_code)]
     /// Performs the necessary to execute a query against the database
-    async fn query<'a, Q>(stmt: &Q, params: &[impl ToCanyonSql + ToSql + Sync + IntoSql<'a> + Clone], datasource_name: &'a str) 
-        -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where Q: Into<Cow<'a, str>> + From<&'a Q> +'a + ToStatement + Sync + Send
+    async fn query<'a, Q, W>(stmt: &Q, params: &[W], datasource_name: &'a str) 
+        -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+        where 
+            Q: Into<Cow<'a, str>> + From<&'a Q> +'a + ToStatement + Sync + Send,
+            W: ToSql + Sync + IntoSql<'a> + Clone
     {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -73,7 +69,7 @@ pub trait Transaction<T: Debug> {
     }
 }
 
-
+trait NewTrait<'a>: canyon_connection::tokio_postgres::types::ToSql + IntoSql<'a> + Clone + Sync + Send {}
 /// [`CrudOperations`] it's one of the core parts of Canyon.
 /// 
 /// Here it's defined and implemented every CRUD operation that Canyon
@@ -95,11 +91,12 @@ pub trait CrudOperations<T>: Transaction<T>
 {
     /// The implementation of the most basic database usage pattern.
     /// Given a table name, extracts all db records for the table
-    async fn __find_all(table_name: &str, datasource_name: &str)
+    async fn __find_all<'a, P>(table_name: &str, datasource_name: &str)
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+        where P : ToSql + IntoSql<'a> + Clone + Sync + Send
     {
         let stmt = format!("SELECT * FROM {}", table_name);
-        Self::query(&stmt[..], &[], datasource_name).await
+        Self::query::<String, P>(&stmt, &[], datasource_name).await
     }
 
     fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
@@ -107,18 +104,18 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_pk<P>(table_name: &str, pk: &str, pk_value: P, datasource_name: &str) 
+    async fn __find_by_pk<'a, P>(table_name: &str, pk: &str, pk_value: P, datasource_name: &str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where P: PrimaryKey
+        where P: ToSql + IntoSql<'a> + Clone + Sync + Send
     {
         let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
-        Self::query(&stmt[..], &[&pk_value], datasource_name).await
+        Self::query::<String, P>(&stmt, &[pk_value], datasource_name).await
     }
 
     /// Counts the total entries (rows) of elements of a database table
     async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let count = Self::query(
-            &format!("SELECT COUNT (*) FROM {}", table_name)[..], 
+        let count = Self::query::<String, i64>(
+            &format!("SELECT COUNT (*) FROM {}", table_name), 
             &[],
             datasource_name
         ).await;
@@ -142,16 +139,18 @@ pub trait CrudOperations<T>: Transaction<T>
     /// autoincremental for every new record inserted on the table, if the attribute
     /// is configured to support this case. If there's no PK, or it's configured as NOT autoincremental,
     /// just performns an insert.
-    async fn __insert<'a, P: PrimaryKey>(
+    async fn __insert<'a, P: PrimaryKey<'a>, W>(
         table_name: &'a str,
         primary_key: &'a str,
         fields: &'a str,
-        values: &'a[&'a(dyn ToSql + Sync)],
+        params: &'a[impl ToSql + IntoSql<'a> + Clone + Sync + Send],
         datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
+        where W : ToSql + IntoSql<'a> + Clone + Sync + Send
+    {
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
-        let mut values = values.to_vec();
+        let mut values = params.to_vec();
         if primary_key != "" { 
             crud_algorythms::manage_primary_key(primary_key, &mut fields, &mut values)
         }
@@ -173,9 +172,9 @@ pub trait CrudOperations<T>: Transaction<T>
             primary_key
         );
 
-        let result = Self::query(
-            &stmt[..], 
-            &values,
+        let result = Self::query::<String, W>(
+            &stmt, 
+            params,
             datasource_name
         ).await;
 
@@ -187,7 +186,7 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Same as the [`fn@__insert`], but as an associated function of some T type.
-    async fn __insert_multi<'a, P: PrimaryKey>(
+    async fn __insert_multi<'a, P: PrimaryKey<'a>>(
         table_name: &'a str,
         primary_key: &'a str,
         fields: &'a str, 
@@ -346,7 +345,7 @@ pub trait CrudOperations<T>: Transaction<T>
         pk_value: P, 
         datasource_name: &str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where P: PrimaryKey
+        where P: PrimaryKey<'a>
     {
         let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
 
@@ -426,7 +425,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
 /// Utilities for adecuating some data coming from macros to the generated SQL
 mod crud_algorythms {
-    use canyon_connection::tokio_postgres::types::ToSql;
+    use canyon_connection::{tokio_postgres::types::ToSql, tiberius::IntoSql};
 
     /// Operates over the data of the insert operations to generate the insert
     /// SQL depending of it's a `primary_key` annotation, if it's setted as 
@@ -434,7 +433,7 @@ mod crud_algorythms {
     pub fn manage_primary_key<'a>(
         primary_key: &'a str,
         fields: &'a mut String,
-        values: &'a mut Vec<&(dyn ToSql + Sync)>
+        values: &'a mut Vec<impl ToSql + IntoSql<'a> + Clone + Sync + Send>
     ) { 
         let mut splitted = fields.split(", ")
             .collect::<Vec<&str>>();
