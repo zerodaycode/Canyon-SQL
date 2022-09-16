@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseType;
-use tokio_postgres::{ToStatement, types::ToSql, Error};
+use canyon_connection::tokio_postgres::{ToStatement, types::ToSql, Error};
 
 use crate::{mapper::RowMapper, bounds::PrimaryKey};
 use crate::result::DatabaseResult;
@@ -16,7 +16,7 @@ use canyon_connection::{
 };
 
 trait ToCanyonSql {}
-impl ToCanyonSql for dyn tokio_postgres::types::ToSql {}
+impl ToCanyonSql for dyn canyon_connection::tokio_postgres::types::ToSql {}
 
 
 /// This traits defines and implements a query against a database given
@@ -411,7 +411,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
 /// Utilities for adecuating some data coming from macros to the generated SQL
 mod crud_algorythms {
-    use tokio_postgres::types::ToSql;
+    use canyon_connection::tokio_postgres::types::ToSql;
 
     /// Operates over the data of the insert operations to generate the insert
     /// SQL depending of it's a `primary_key` annotation, if it's setted as 
@@ -454,7 +454,7 @@ mod crud_algorythms {
 mod postgres_query_launcher {
     use std::fmt::Debug;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use tokio_postgres::{Error, types::ToSql, ToStatement};
+    use canyon_connection::tokio_postgres::{Error, types::ToSql, ToStatement};
     use crate::result::DatabaseResult;
 
     pub async fn launch<Q, T>(
@@ -486,12 +486,14 @@ mod postgres_query_launcher {
 
 mod sqlserver_query_launcher {
     use std::{fmt::Debug, borrow::Cow};
-    use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use crate::{canyon_connection::tiberius::*, result::DatabaseResult};
-
-    use super::ToCanyonSql;
-
-    trait NewTrait: ToCanyonSql + for<'r> canyon_connection::tiberius::IntoSql<'r> {}
+    use crate::{
+        canyon_connection::{
+            async_std::net::TcpStream,
+            tiberius::{Query, Row, IntoSql, Result, Client},
+            canyon_database_connector::DatabaseConnection
+        }, 
+        result::DatabaseResult
+    };
 
     pub async fn launch_sqlserver_query<'a, Q, T>(
         db_conn: DatabaseConnection,
@@ -503,11 +505,11 @@ mod sqlserver_query_launcher {
         let mut sql_server_query = Query::new(stmt);
         params.into_iter().for_each( |param| sql_server_query.bind( (**param).clone()) );
 
-        let client = &mut db_conn.sqlserver_connection
+        let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection
             .expect("Error querying the SqlServer database") // TODO Better msg
             .client;
 
-        let results = sql_server_query.query(client).await?
+        let results: Vec<Row> = sql_server_query.query(client).await?
             .into_results().await?
             .into_iter()
             .flatten()

@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use tokio_postgres::Row;
+use canyon_connection::tokio_postgres::Row;
 
 use crate::crud::Transaction;
 

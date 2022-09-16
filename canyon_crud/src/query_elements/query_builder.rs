@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use tokio_postgres::Error;
+use canyon_connection::tokio_postgres::Error;
 
 use crate::{
     query_elements::query::Query,

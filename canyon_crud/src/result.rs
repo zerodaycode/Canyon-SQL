@@ -1,10 +1,14 @@
 use std::{marker::PhantomData, fmt::Debug};
 
-use tokio_postgres::Row;
+use canyon_connection::tokio_postgres::Row;
 
 use crate::{mapper::RowMapper, crud::Transaction};
 
-/// Represents a database result after a query, by wrapping the `tokio::postgres` result
+pub trait DatabaseRow {}
+impl DatabaseRow for Row {}
+
+/// Represents a database result after a query, by wrapping the `Vec<Row>` types that comes with the
+/// results after the query.
 /// and providing methods to deserialize this result into a **user defined struct**
 #[derive(Debug)]
 pub struct DatabaseResult<T: Debug> {

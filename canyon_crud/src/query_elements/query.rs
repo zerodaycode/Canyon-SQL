@@ -1,4 +1,4 @@
-use tokio_postgres::types::ToSql;
+use canyon_connection::tokio_postgres::types::ToSql;
 use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
