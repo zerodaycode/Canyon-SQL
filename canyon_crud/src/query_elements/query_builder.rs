@@ -40,7 +40,7 @@ impl<'a, W, T> QueryBuilder<'a, W, T>
 {
 
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self)
+    pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     {
         self.query.sql.retain(|c| !r#";"#.contains(c));
@@ -80,7 +80,7 @@ impl<'a, W, T> QueryBuilder<'a, W, T>
         // }
 
         let result = T::query::<String, W>(
-            &"".to_string(), 
+            self.query.sql.clone(), 
             self.query.params,
             self.datasource_name
         ).await;

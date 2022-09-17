@@ -217,7 +217,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                pk_value,
+                &[pk_value],
                 ""
             ).await;
                 
