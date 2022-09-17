@@ -79,10 +79,30 @@ pub trait InClauseValues: ToSql + ToString {}
 /// Canyon only accepts values of i32, i64 
 /// + any Rust String type that can work 
 /// as any Rust string variation.
-pub trait PrimaryKey<'a>: IntoSql<'a> + ToSql + Sync + Send + Clone {}
+pub trait PrimaryKey<'a>: IntoSql<'a> + ToSql + Sync + Send + Clone + QueryParameters<'a> {}
 
 impl<'a> PrimaryKey<'a> for i32 {}
 impl<'a> PrimaryKey<'a> for i64 {}
 impl<'a> PrimaryKey<'a> for &'a str {}
 impl<'a> PrimaryKey<'a> for String {}
 impl<'a> PrimaryKey<'a> for &'a String {}
+
+
+/// Defines a trait for represent type bounds against the allowed
+/// datatypes supported by Canyon to be used as query parameters
+pub trait QueryParameters<'a>: IntoSql<'a> + ToSql + Sync + Send + Clone {}
+
+impl<'a> QueryParameters<'a> for i32 {}
+impl<'a> QueryParameters<'a> for i64 {}
+impl<'a> QueryParameters<'a> for &'a str {}
+impl<'a> QueryParameters<'a> for String {}
+impl<'a> QueryParameters<'a> for &'a String {}
+impl<'a> QueryParameters<'a> for &'a [u8] {}
+
+
+/// Defines a trait for make a placeholder when the type it's required
+/// by a bound in the callable function, but there's usually an
+/// empty `&[]` value, because that query does not need to bound
+/// any parameter to the generated query
+pub trait PlaceholderType<'a>: IntoSql<'a> + ToSql + Sync + Send + Clone + QueryParameters<'a> {}
+impl<'a> PlaceholderType<'a> for &'a [u8] {}

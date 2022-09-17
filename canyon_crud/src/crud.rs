@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-use std::ffi::OsString;
 use std::fmt::Debug;
 
 use async_trait::async_trait;
@@ -7,7 +5,8 @@ use canyon_connection::canyon_database_connector::DatabaseType;
 use canyon_connection::tiberius::IntoSql;
 use canyon_connection::tokio_postgres::{ToStatement, types::ToSql};
 
-use crate::{mapper::RowMapper, bounds::PrimaryKey};
+use crate::bounds::{PrimaryKey, QueryParameters, PlaceholderType};
+use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
 use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
@@ -27,13 +26,12 @@ use canyon_connection::{
 /// automatically map it to an struct.
 #[async_trait]
 pub trait Transaction<T: Debug> {
-    #[allow(unreachable_code)]
     /// Performs the necessary to execute a query against the database
     async fn query<'a, Q, W>(stmt: String, params: &'a [W], datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
         where 
             Q: ToStatement + Sync + Send,
-            W: ToSql + Sync + IntoSql<'a> + Clone + 'a
+            W: QueryParameters<'a>
     {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -94,14 +92,14 @@ pub trait CrudOperations<T>: Transaction<T>
     /// Given a table name, extracts all db records for the table
     async fn __find_all<'a, P>(table_name: &'a str, datasource_name: &'a str)
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where P : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where P: PlaceholderType<'a> + 'a
     {
         let stmt = format!("SELECT * FROM {}", table_name);
         Self::query::<String, P>(stmt, &[], datasource_name).await
     }
 
     fn __find_all_query<'a, W>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, W, T>
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send
+        where W: QueryParameters<'a>
     {
         Query::new(format!("SELECT * FROM {}", table_name), &[], datasource_name)
     }
@@ -109,7 +107,7 @@ pub trait CrudOperations<T>: Transaction<T>
     /// Queries the database and try to find an item on the most common pk
     async fn __find_by_pk<'a, P>(table_name: &'a str, pk: &'a str, pk_value: &'a [P], datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where P: ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where P: PrimaryKey<'a>
     {
         let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
         Self::query::<String, P>(stmt, pk_value, datasource_name).await
@@ -142,27 +140,36 @@ pub trait CrudOperations<T>: Transaction<T>
     /// autoincremental for every new record inserted on the table, if the attribute
     /// is configured to support this case. If there's no PK, or it's configured as NOT autoincremental,
     /// just performns an insert.
-    async fn __insert<'a, P: PrimaryKey<'a>, W>(
+    async fn __insert<'a, W>(
         table_name: &'a str,
         primary_key: &'a str,
         fields: &'a str,
         params: &'a[W],
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a>
     {
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
         let mut values = params.to_vec();
         if primary_key != "" { 
-            crud_algorythms::manage_primary_key(primary_key, &mut fields, &mut values)
+            let mut splitted = fields.split(", ")
+            .collect::<Vec<&str>>();
+            let index = splitted.iter()
+                .position(|pk| *pk == primary_key)
+                .unwrap();
+            values.remove(index);
+
+            splitted.retain(|pk| *pk != primary_key);
+            fields = splitted.join(", ").to_string();
+        } else {
+            // Converting the fields column names to case-insensitive
+            fields = fields
+                .split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>()
+                .join(", ");
         }
-        // Converting the fields column names to case-insensitive
-        fields = fields
-            .split(", ")
-            .map( |column_name| format!("\"{}\"", column_name))
-            .collect::<Vec<String>>()
-            .join(", ");
 
         let mut field_values_placeholders = String::new();
         crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
@@ -189,14 +196,14 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Same as the [`fn@__insert`], but as an associated function of some T type.
-    async fn __insert_multi<'a, P: PrimaryKey<'a>, W>(
+    async fn __insert_multi<'a, W>(
         table_name: &'a str,
         primary_key: &'a str,
         fields: &'a str, 
         values_arr: &'a mut Vec<Vec<Box<W>>>,
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a>
     {
         // Removes the pk from the insert operation if there's some
         // autogenerated primary_key on the table
@@ -267,7 +274,8 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query::<String, W>(
             stmt, 
-            &values[..],
+            // values.as_slice(),
+            &[],  // TODO Mega fix to accept both owned and ref values
             datasource_name
         ).await;
 
@@ -284,7 +292,7 @@ pub trait CrudOperations<T>: Transaction<T>
         values: &'a [W],
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a>
     {
         // TODO Detatch this error from here and just not compile the macro
         if primary_key == "" {
@@ -340,25 +348,25 @@ pub trait CrudOperations<T>: Transaction<T>
     /// 
     /// Implemented as an associated function, not dependent on an instance
     fn __update_query<'a, W>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, W, T> 
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a>
     {
         Query::new(format!("UPDATE {}", table_name), &[], datasource_name)
     }
     
     /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete<'a, P: PrimaryKey<'a>, W>(
+    async fn __delete<'a, W>(
         table_name: &str, 
         pk_column_name: &'a str, 
-        pk_value: W, 
+        pk_value: &'a[W], 
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a>
     {
         let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
 
         let result = Self::query::<String, W>(
             stmt, 
-            &[pk_value],
+            pk_value,
             datasource_name
         ).await;
 
@@ -373,7 +381,7 @@ pub trait CrudOperations<T>: Transaction<T>
     /// 
     /// Implemented as an associated function, not dependent on an instance
     fn __delete_query<'a, W>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, W, T>
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send
+        where W: PrimaryKey<'a>
     {
         Query::new(format!("DELETE FROM {}", table_name), &[], datasource_name)
     }
@@ -385,7 +393,7 @@ pub trait CrudOperations<T>: Transaction<T>
         lookage_value: &'a str,
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a> + 'a
     {
 
         let stmt = format!(
@@ -413,7 +421,7 @@ pub trait CrudOperations<T>: Transaction<T>
         lookage_value: String,
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where W : ToSql + IntoSql<'a> + Clone + Sync + Send + 'a
+        where W: PrimaryKey<'a> + 'a
     {
 
         let stmt = format!(
@@ -443,7 +451,7 @@ mod crud_algorythms {
     /// Operates over the data of the insert operations to generate the insert
     /// SQL depending of it's a `primary_key` annotation, if it's setted as 
     /// autogenerated (discards the pk field and value from the insert)
-    pub fn manage_primary_key<'a>(
+    pub fn _manage_primary_key<'a>(
         primary_key: &'a str,
         fields: &'a mut String,
         values: &'a mut Vec<impl ToSql + IntoSql<'a> + Clone + Sync + Send>
@@ -481,7 +489,7 @@ mod crud_algorythms {
 mod postgres_query_launcher {
     use std::fmt::Debug;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use canyon_connection::tokio_postgres::{types::ToSql, ToStatement};
+    use canyon_connection::tokio_postgres::types::ToSql;
     use crate::result::DatabaseResult;
 
     pub async fn launch<T>(
@@ -512,7 +520,7 @@ mod postgres_query_launcher {
 }
 
 mod sqlserver_query_launcher {
-    use std::{fmt::Debug, borrow::Cow};
+    use std::fmt::Debug;
     use crate::{
         canyon_connection::{
             async_std::net::TcpStream,
@@ -537,7 +545,7 @@ mod sqlserver_query_launcher {
             .expect("Error querying the SqlServer database") // TODO Better msg
             .client;
 
-        let results: Vec<Row> = sql_server_query.query(client).await?
+        let _results: Vec<Row> = sql_server_query.query(client).await?
             .into_results().await?
             .into_iter()
             .flatten()

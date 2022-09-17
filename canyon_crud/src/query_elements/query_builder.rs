@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use canyon_connection::{tokio_postgres::{Error, types::ToSql}, tiberius::IntoSql};
-
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
@@ -12,7 +10,8 @@ use crate::{
     bounds::{
         FieldIdentifier,
         FieldValueIdentifier, 
-        InClauseValues
+        InClauseValues,
+        QueryParameters
     }, 
     mapper::RowMapper
 };
@@ -22,7 +21,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct QueryBuilder<'a, W, T> 
     where 
-        W : ToSql + IntoSql<'a> + Clone + Sync + Send,
+        W: QueryParameters<'a>,
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     query: Query<'a, W, T>,
@@ -35,7 +34,7 @@ pub struct QueryBuilder<'a, W, T>
 }
 impl<'a, W, T> QueryBuilder<'a, W, T> 
     where 
-        W : ToSql + IntoSql<'a> + Clone + Sync + Send,
+        W: QueryParameters<'a>,
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
 

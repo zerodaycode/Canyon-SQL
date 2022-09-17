@@ -3,7 +3,7 @@ use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
     query_elements::query_builder::QueryBuilder,
-    crud::{Transaction, CrudOperations}, mapper::RowMapper
+    crud::{Transaction, CrudOperations}, mapper::RowMapper, bounds::QueryParameters 
 };
 
 
@@ -20,7 +20,7 @@ pub struct Query<'a, W, T: Debug + CrudOperations<T> + Transaction<T> + RowMappe
 
 impl<'a, W, T> Query<'a, W, T> 
     where 
-        W : ToSql + IntoSql<'a> + Clone + Sync + Send,
+        W: QueryParameters<'a>,
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
     pub fn new(sql: String, params: &'a[W], datasource_name: &'a str) -> QueryBuilder<'a, W, T> {
