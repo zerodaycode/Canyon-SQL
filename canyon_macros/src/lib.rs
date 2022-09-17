@@ -251,8 +251,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The find_all impl
             #_find_all_tokens
 
-            // // The find_all_result impl
-            // #_find_all_result_tokens
+            // The find_all_result impl
+            #_find_all_result_tokens
 
             // // The find_all_query impl
             // // #_find_all_query_tokens

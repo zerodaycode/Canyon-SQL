@@ -62,7 +62,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
         #vis async fn find_all_result<'a>() -> 
-            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+            Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
             __find_all::<&'a [u8]>(
@@ -90,7 +90,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
         /// querying the database, or, if no errors happens, a Vec<T> containing
         /// the data found.
         #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
-            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+            Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
             __find_all::<&'a [u8]>(
