@@ -1,11 +1,11 @@
-use canyon_connection::{tokio_postgres::types::ToSql, tiberius::IntoSql};
 use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
     query_elements::query_builder::QueryBuilder,
-    crud::{Transaction, CrudOperations}, mapper::RowMapper, bounds::QueryParameters 
+    crud::{Transaction, CrudOperations}, 
+    mapper::RowMapper, 
+    bounds::QueryParameters 
 };
-
 
 
 /// Holds a sql sentence details

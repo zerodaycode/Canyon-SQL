@@ -10,8 +10,7 @@ use crate::{
     bounds::{
         FieldIdentifier,
         FieldValueIdentifier, 
-        InClauseValues,
-        QueryParameters
+        InClauseValues
     }, 
     mapper::RowMapper
 };
@@ -71,7 +70,7 @@ impl<'a, T> QueryBuilder<'a, T>
 
         let result = T::query(
             self.query.sql.clone(), 
-            self.query.params,  // TODO Ultra big todo just for compilance
+            self.query.params,
             self.datasource_name
         ).await;
 

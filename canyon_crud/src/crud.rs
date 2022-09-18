@@ -2,10 +2,8 @@ use std::fmt::Debug;
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseType;
-use canyon_connection::tiberius::IntoSql;
-use canyon_connection::tokio_postgres::{ToStatement, types::ToSql};
 
-use crate::bounds::{PrimaryKey, QueryParameters, PlaceholderType, ObjectSafe};
+use crate::bounds::{PrimaryKey, QueryParameters};
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
 use crate::query_elements::query::Query;
@@ -126,15 +124,13 @@ pub trait CrudOperations<T>: Transaction<T>
     /// autoincremental for every new record inserted on the table, if the attribute
     /// is configured to support this case. If there's no PK, or it's configured as NOT autoincremental,
     /// just performns an insert.
-    async fn __insert<'a, P>(
+    async fn __insert<'a>(
         table_name: &'a str,
         primary_key: &'a str,
         fields: &'a str,
         params: &'a[&'a dyn QueryParameters<'a>],
         datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where P: PrimaryKey<'a> + 'a
-    {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
         let mut values = params.to_vec();
@@ -477,7 +473,6 @@ mod crud_algorythms {
 mod postgres_query_launcher {
     use std::fmt::Debug;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use canyon_connection::tokio_postgres::types::ToSql;
     use crate::bounds::QueryParameters;
     use crate::result::DatabaseResult;
 
@@ -518,21 +513,22 @@ mod sqlserver_query_launcher {
     use crate::{
         canyon_connection::{
             async_std::net::TcpStream,
-            tiberius::{Query, Row, IntoSql, Client},
+            tiberius::{Query, Row, Client},
             canyon_database_connector::DatabaseConnection
         }, 
-        result::DatabaseResult, bounds::{QueryParameters, ObjectSafe}
+        result::DatabaseResult, 
+        bounds::QueryParameters
     };
 
-    pub async fn launch<'a, T>(
+    pub async fn _launch<'a, T>(
         db_conn: DatabaseConnection,
         stmt: String,
-        params: &'a [&'a dyn QueryParameters<'a>],
+        _params: &'a [&'a dyn QueryParameters<'a>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where 
             T: Debug
     {
-        let mut sql_server_query = Query::new(stmt);
+        let sql_server_query = Query::new(stmt);
         // params.into_iter().for_each( |param| sql_server_query.bind( param ));
 
         let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection
