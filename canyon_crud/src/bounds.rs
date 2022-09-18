@@ -168,8 +168,7 @@ pub trait QueryParameters<'a>: Sync + Send {
 
 impl<'a> QueryParameters<'a> for i32 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync + 'a) {
-        let a: Box<&dyn AsAny> = Box::new(self);
-        match a.as_any().downcast_ref::<i32>() {
+        match self.as_any().downcast_ref::<i32>() {
             Some(b) => b,
             None => panic!("Bad conversion of parameters"),
         }
@@ -177,8 +176,7 @@ impl<'a> QueryParameters<'a> for i32 {
 }
 impl<'a> QueryParameters<'a> for i64 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync + 'a) {
-        let a: Box<&dyn AsAny> = Box::new(self);
-        match a.as_any().downcast_ref::<i64>() {
+        match self.as_any().downcast_ref::<i64>() {
             Some(b) => b,
             None => panic!("Bad conversion of parameters"),
         }
@@ -186,8 +184,7 @@ impl<'a> QueryParameters<'a> for i64 {
 }
 impl<'a> QueryParameters<'a> for String {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync + 'a) {
-        let a: Box<&dyn AsAny> = Box::new(self);
-        match a.as_any().downcast_ref::<String>() {
+        match self.as_any().downcast_ref::<String>() {
             Some(b) => b,
             None => panic!("Bad conversion of parameters"),
         }
