@@ -9,27 +9,24 @@ use crate::{
 
 
 /// Holds a sql sentence details
-#[derive(Debug, Clone)]
-pub struct Query<'a, W, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> 
-    where W : ToSql + IntoSql<'a> + Clone + Sync + Send
-{
+#[derive(Clone)]
+pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
     pub sql: String,
-    pub params: &'a[W],
+    pub params: &'a[&'a dyn QueryParameters<'a>],
     marker: PhantomData<T>
 }
 
-impl<'a, W, T> Query<'a, W, T> 
-    where 
-        W: QueryParameters<'a>,
+impl<'a, T> Query<'a, T> 
+    where
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
-    pub fn new(sql: String, params: &'a[W], datasource_name: &'a str) -> QueryBuilder<'a, W, T> {
+    pub fn new(sql: String, params: &'a[&'a dyn QueryParameters<'a>], datasource_name: &'a str) -> QueryBuilder<'a, T> {
         let self_ = Self {
             sql: sql,
             params: params,
             marker: PhantomData
         };
-        QueryBuilder::<W, T>::new(self_, datasource_name)
+        QueryBuilder::<T>::new(self_, datasource_name)
     }
 }
 

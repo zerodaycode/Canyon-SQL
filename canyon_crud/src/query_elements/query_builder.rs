@@ -18,13 +18,12 @@ use crate::{
 
 
 /// Builder for a query while chaining SQL clauses
-#[derive(Debug, Clone)]
-pub struct QueryBuilder<'a, W, T> 
-    where 
-        W: QueryParameters<'a>,
+#[derive(Clone)]
+pub struct QueryBuilder<'a, T> 
+    where
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-    query: Query<'a, W, T>,
+    query: Query<'a, T>,
     where_clause: String,
     and_clause: String,
     in_clause: &'a[Box<dyn InClauseValues>],
@@ -32,12 +31,10 @@ pub struct QueryBuilder<'a, W, T>
     set_clause: String,
     datasource_name: &'a str
 }
-impl<'a, W, T> QueryBuilder<'a, W, T> 
+impl<'a, T> QueryBuilder<'a, T> 
     where 
-        W: QueryParameters<'a>,
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-
     // Generates a Query object that contains the necessary data to performn a query
     pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
@@ -72,15 +69,9 @@ impl<'a, W, T> QueryBuilder<'a, W, T>
 
         self.query.sql.push(';');
 
-        
-        // let mut unboxed_params: Vec<W> = Vec::new();
-        // for element in self.query.params {
-        //     unboxed_params.push(element);
-        // }
-
-        let result = T::query::<String, W>(
+        let result = T::query(
             self.query.sql.clone(), 
-            self.query.params,
+            self.query.params,  // TODO Ultra big todo just for compilance
             self.datasource_name
         ).await;
 
@@ -89,7 +80,7 @@ impl<'a, W, T> QueryBuilder<'a, W, T>
         } else { Ok(result.ok().unwrap().to_entity::<T>()) }
     }
 
-    pub fn new(query: Query<'a, W, T>, datasource_name: &'a str) -> Self {
+    pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
         Self {
             query: query,
             where_clause: String::new(),

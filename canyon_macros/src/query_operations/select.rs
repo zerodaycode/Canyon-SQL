@@ -20,7 +20,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// with snake_case identifiers.
         #vis async fn find_all<'a>() -> Vec<#ty>{
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all::<&'a[u8]>(
+            __find_all(
                 #table_name,
                 ""
             ).await
@@ -39,7 +39,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// passed as parameter.
         #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all::<&'a[u8]>(
+            __find_all(
                 #table_name,
                 datasource_name
             ).await
@@ -65,7 +65,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all::<&'a [u8]>(
+            __find_all(
                 #table_name,
                 ""
             ).await;
@@ -93,7 +93,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all::<&'a [u8]>(
+            __find_all(
                 #table_name,
                 datasource_name
             ).await;
