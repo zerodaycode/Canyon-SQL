@@ -1,3 +1,7 @@
+use std::{borrow::Cow};
+
+use canyon_connection::tiberius::ColumnData;
+
 use canyon_connection::{tokio_postgres::types::ToSql, tiberius::IntoSql};
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
@@ -164,6 +168,25 @@ impl AsAny for NaiveTime {
 /// datatypes supported by Canyon to be used as query parameters
 pub trait QueryParameters<'a>: Sync + Send {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync + 'a);
+}
+
+impl<'a> IntoSql<'a> for &'a dyn QueryParameters<'a> {
+    fn into_sql(self) -> ColumnData<'a> {
+        let cast = &self as &dyn std::any::Any;
+
+        let casted = match cast.type_id() {
+            String => match cast.downcast_ref::<String>() {
+                Some(v) => ColumnData::String(Some(Cow::from(v.as_str()))),
+                None => todo!(),
+            },
+            i32 => match cast.downcast_ref::<i32>() {
+                Some(v) => ColumnData::I32(Some(*v)),
+                None => todo!(),
+            },
+        };
+
+        casted
+    }
 }
 
 impl<'a> QueryParameters<'a> for i32 {
