@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::{borrow::Cow};
 
 use canyon_connection::tiberius::ColumnData;
@@ -163,6 +164,11 @@ impl AsAny for NaiveTime {
         self
     }
 }
+impl AsAny for &dyn QueryParameters<'static> {
+    fn as_any(&self) -> &dyn std::any::Any {
+        &self as &dyn std::any::Any
+    }
+}
 
 /// Defines a trait for represent type bounds against the allowed
 /// datatypes supported by Canyon to be used as query parameters
@@ -170,16 +176,16 @@ pub trait QueryParameters<'a>: Sync + Send {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync + 'a);
 }
 
-impl<'a> IntoSql<'a> for &'a dyn QueryParameters<'a> {
-    fn into_sql(self) -> ColumnData<'a> {
-        let cast = &self as &dyn std::any::Any;
+impl IntoSql<'_> for &dyn QueryParameters<'_> {
+    fn into_sql(self) -> ColumnData<'static> {
+        let s = self.clone_from(&self);
 
-        let casted = match cast.type_id() {
-            String => match cast.downcast_ref::<String>() {
+        let casted = match (&*self).as_any().type_id() {
+            String => match (&*self).as_any().clone().downcast_ref::<String>() {
                 Some(v) => ColumnData::String(Some(Cow::from(v.as_str()))),
                 None => todo!(),
             },
-            i32 => match cast.downcast_ref::<i32>() {
+            i32 => match (&*self).as_any().downcast_ref::<i32>() {
                 Some(v) => ColumnData::I32(Some(*v)),
                 None => todo!(),
             },
