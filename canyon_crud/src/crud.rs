@@ -510,6 +510,8 @@ mod postgres_query_launcher {
 
 mod sqlserver_query_launcher {
     use std::fmt::Debug;
+    use canyon_connection::tiberius::IntoSql;
+
     use crate::{
         canyon_connection::{
             async_std::net::TcpStream,
@@ -523,16 +525,16 @@ mod sqlserver_query_launcher {
     pub async fn _launch<'a, T>(
         db_conn: DatabaseConnection,
         stmt: String,
-        _params: &'a [&'a dyn QueryParameters<'a>],
+        params: &'a [&'a dyn QueryParameters<'a>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where 
             T: Debug
     {
-        let sql_server_query = Query::new(stmt);
-        // params.into_iter().for_each( |param| sql_server_query.bind( param ));
+        let mut sql_server_query = Query::new(stmt);
+        params.into_iter().for_each( |param| sql_server_query.bind( *param ));
 
         let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection
-            .expect("Error querying the SqlServer database") // TODO Better msg
+            .expect("Error querying the SqlServer database") // TODO Better msg?
             .client;
 
         let _results: Vec<Row> = sql_server_query.query(client).await?
