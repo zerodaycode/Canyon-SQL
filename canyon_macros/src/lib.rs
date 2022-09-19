@@ -272,8 +272,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The insert impl
             #_insert_tokens
 
-            // The insert as a result impl
-            #_insert_result_tokens
+            // // The insert as a result impl
+            // #_insert_result_tokens
 
             // // The insert of multiple entities impl
             // #_insert_multi_tokens

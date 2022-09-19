@@ -27,7 +27,7 @@ pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
     async fn query<'a, Z>(stmt: String, params: Z, datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-        where Z: Into<Vec<&'a dyn QueryParameters<'a>>> + Sync + Send
+        where Z: AsRef<&'a [&'a dyn QueryParameters<'a>]>
         {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -48,7 +48,7 @@ pub trait Transaction<T: Debug> {
              
             match db_conn.database_type {
                 DatabaseType::PostgreSql => 
-                    postgres_query_launcher::launch::<T>(db_conn, stmt, params.into().as_slice()).await,
+                    postgres_query_launcher::launch::<T>(db_conn, stmt, params.into()).await,
                 DatabaseType::SqlServer =>
                     todo!()
                     // sqlserver_query_launcher::launch::<T>(db_conn, stmt, params).await
@@ -94,7 +94,7 @@ pub trait CrudOperations<T>: Transaction<T>
         where P: PrimaryKey<'a>
     {
         let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
-        Self::query(stmt, pk_value, datasource_name).await
+        Self::query(stmt, pk_value.to_vec(), datasource_name).await
     }
 
     /// Counts the total entries (rows) of elements of a database table
@@ -169,7 +169,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query(
             stmt, 
-            values.as_slice(),
+            values,
             datasource_name
         ).await;
 
@@ -317,7 +317,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query(
             stmt, 
-            values,
+            values.to_vec(),
             datasource_name
         ).await;
 
@@ -350,7 +350,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query(
             stmt, 
-            pk_value,
+            pk_value.to_vec(),
             datasource_name
         ).await;
 
@@ -377,7 +377,7 @@ pub trait CrudOperations<T>: Transaction<T>
         lookage_value: &'a str,
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where P: PrimaryKey<'a> + 'a
+        where P: PrimaryKey<'a>
     {
 
         let stmt = format!(
@@ -389,7 +389,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query(
             stmt, 
-            vec![],
+            &[],
             datasource_name
         ).await;
 
@@ -405,7 +405,7 @@ pub trait CrudOperations<T>: Transaction<T>
         lookage_value: String,
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where P: PrimaryKey<'a> + 'a
+        where P: PrimaryKey<'a>
     {
 
         let stmt = format!(
@@ -417,7 +417,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query(
             stmt, 
-            vec![],
+            &[],
             datasource_name
         ).await;
 
