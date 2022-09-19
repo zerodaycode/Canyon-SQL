@@ -121,78 +121,78 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
             .to_owned();
         }
 
-        // /// Inserts into a database entity the current data in `self`, generating a new
-        // /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
-        // /// datasource by it's `datasouce name`, defined in the configuration file.
-        // /// 
-        // /// This `insert` operation needs a `&mut` reference. That's because typically, 
-        // /// an insert operation represents *new* data stored in the database, so, when
-        // /// inserted, the database will generate a unique new value for the  
-        // /// `pk` field, having a unique identifier for every record, and it will
-        // /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
-        // /// operation, you instance will have the correct value that is the *PRIMARY KEY*
-        // /// of the database row that represents.
-        // /// 
-        // /// ## *Examples*
-        // /// ```
+        /// Inserts into a database entity the current data in `self`, generating a new
+        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
+        /// datasource by it's `datasouce name`, defined in the configuration file.
+        /// 
+        /// This `insert` operation needs a `&mut` reference. That's because typically, 
+        /// an insert operation represents *new* data stored in the database, so, when
+        /// inserted, the database will generate a unique new value for the  
+        /// `pk` field, having a unique identifier for every record, and it will
+        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
+        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
+        /// of the database row that represents.
+        /// 
+        /// ## *Examples*
+        /// ```
         
-        // /// let mut lec: League = League {
-        // ///     id: Default::default(),
-        // ///     ext_id: 1,
-        // ///     slug: "LEC".to_string(),
-        // ///     name: "League Europe Champions".to_string(),
-        // ///     region: "EU West".to_string(),
-        // ///     image_url: "https://lec.eu".to_string(),
-        // /// };
+        /// let mut lec: League = League {
+        ///     id: Default::default(),
+        ///     ext_id: 1,
+        ///     slug: "LEC".to_string(),
+        ///     name: "League Europe Champions".to_string(),
+        ///     region: "EU West".to_string(),
+        ///     image_url: "https://lec.eu".to_string(),
+        /// };
 
-        // /// let mut lck: League = League {
-        // ///     id: Default::default(),
-        // ///     ext_id: 2,
-        // ///     slug: "LCK".to_string(),
-        // ///     name: "League Champions Korea".to_string(),
-        // ///     region: "South Korea".to_string(),
-        // ///     image_url: "https://korean_lck.kr".to_string(),
-        // /// };
+        /// let mut lck: League = League {
+        ///     id: Default::default(),
+        ///     ext_id: 2,
+        ///     slug: "LCK".to_string(),
+        ///     name: "League Champions Korea".to_string(),
+        ///     region: "South Korea".to_string(),
+        ///     image_url: "https://korean_lck.kr".to_string(),
+        /// };
 
-        // /// let mut lpl: League = League {
-        // ///     id: Default::default(),
-        // ///     ext_id: 3,
-        // ///     slug: "LPL".to_string(),
-        // ///     name: "League PRO China".to_string(),
-        // ///     region: "China".to_string(),
-        // ///     image_url: "https://chinese_lpl.ch".to_string(),
-        // /// };
+        /// let mut lpl: League = League {
+        ///     id: Default::default(),
+        ///     ext_id: 3,
+        ///     slug: "LPL".to_string(),
+        ///     name: "League PRO China".to_string(),
+        ///     region: "China".to_string(),
+        ///     image_url: "https://chinese_lpl.ch".to_string(),
+        /// };
 
-        // /// Now, the insert operations in Canyon is designed as a method over
-        // /// the object, so the data of the instance is automatically parsed
-        // /// into it's correct types and formats and inserted into the table
-        // /// lec.insert().await;
-        // /// lck.insert().await;
-        // /// lpl.insert().await;
-        // /// 
-        // /// Remember that after the insert operation, your instance will have updated
-        // /// the value of the field declared as `primary_key`
-        // /// ```
-        // #vis async fn insert_datasource(&mut self, datasource_name: &str) -> () {
-        //     self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-        //         #table_name,
-        //         #pk,
-        //         &mut #column_names, 
-        //         &[#(#insert_values_cloned),*],
-        //         datasource_name
-        //     ).await
-        //     .ok()
-        //     .expect(
-        //         format!(
-        //             "Insert operation failed for {:?}", 
-        //             &self
-        //         ).as_str()
-        //     ).wrapper
-        //     .get(0)
-        //     .unwrap()
-        //     .get::<&str, #pk_type>(#pk)
-        //     .to_owned();
-        // }
+        /// Now, the insert operations in Canyon is designed as a method over
+        /// the object, so the data of the instance is automatically parsed
+        /// into it's correct types and formats and inserted into the table
+        /// lec.insert().await;
+        /// lck.insert().await;
+        /// lpl.insert().await;
+        /// 
+        /// Remember that after the insert operation, your instance will have updated
+        /// the value of the field declared as `primary_key`
+        /// ```
+        #vis async fn insert_datasource(&mut self, datasource_name: &str) -> () {
+            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
+                #table_name,
+                #pk,
+                &mut #column_names, 
+                &[#(#insert_values_cloned),*],
+                datasource_name
+            ).await
+            .ok()
+            .expect(
+                format!(
+                    "Insert operation failed for {:?}", 
+                    &self
+                ).as_str()
+            ).wrapper
+            .get(0)
+            .unwrap()
+            .get::<&str, #pk_type>(#pk)
+            .to_owned();
+        }
     }
 }
 

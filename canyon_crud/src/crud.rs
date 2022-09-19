@@ -27,7 +27,7 @@ pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
     async fn query<'a, Z>(stmt: String, params: Z, datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-        where Z: AsRef<&'a [&'a dyn QueryParameters<'a>]>
+        where Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send
         {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -48,7 +48,7 @@ pub trait Transaction<T: Debug> {
              
             match db_conn.database_type {
                 DatabaseType::PostgreSql => 
-                    postgres_query_launcher::launch::<T>(db_conn, stmt, params.into()).await,
+                    postgres_query_launcher::launch::<T>(db_conn, stmt, params.as_ref()).await,
                 DatabaseType::SqlServer =>
                     todo!()
                     // sqlserver_query_launcher::launch::<T>(db_conn, stmt, params).await
@@ -81,7 +81,7 @@ pub trait CrudOperations<T>: Transaction<T>
     async fn __find_all<'a>(table_name: &'a str, datasource_name: &'a str)
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let stmt = format!("SELECT * FROM {}", table_name);
-        Self::query(stmt, vec![], datasource_name).await
+        Self::query(stmt, &[], datasource_name).await
     }
 
     fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
@@ -94,14 +94,14 @@ pub trait CrudOperations<T>: Transaction<T>
         where P: PrimaryKey<'a>
     {
         let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
-        Self::query(stmt, pk_value.to_vec(), datasource_name).await
+        Self::query(stmt, pk_value, datasource_name).await
     }
 
     /// Counts the total entries (rows) of elements of a database table
     async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let count = Self::query(
             format!("SELECT COUNT (*) FROM {}", table_name), 
-            vec![],
+            &[],
             datasource_name
         ).await;
         
