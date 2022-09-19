@@ -59,8 +59,8 @@ impl CanyonMemory {
         Self::create_memory().await;
         // Check database for the "memory data"
         let mem_results = Self::query(
-            "SELECT * FROM canyon_memory",
-            &[],
+            "SELECT * FROM canyon_memory".to_string(),
+            vec![],
             ""
         ).await
         .ok()
@@ -238,8 +238,8 @@ impl CanyonMemory {
             "CREATE TABLE IF NOT EXISTS canyon_memory \
             ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
-            )", 
-            &[],
+            )".to_string(), 
+            vec![],
             ""
         ).await
         .ok()

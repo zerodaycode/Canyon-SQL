@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 
 use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
@@ -37,9 +37,10 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         return quote! {};
     };
 
-    let insert_turbofish = if let Some(pk_data) = &pk_ident_type {
+    let pk_type = if let Some(pk_data) = &pk_ident_type {
         let t = &pk_data.1;
-        quote! { __insert::<#t> }
+        println!("Rust datatype for the insert call: {:?}", t.to_token_stream().to_string());
+        quote! { #t }
     } else { 
         // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
         return quote! {}; 
@@ -100,7 +101,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the value of the field declared as `primary_key`
         /// ```
         #vis async fn insert(&mut self) -> () {
-            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
+            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name,
                 #pk,
                 &mut #column_names, 
@@ -116,7 +117,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
             ).wrapper
             .get(0)
             .unwrap()
-            .get(#pk);
+            .get::<&str, #pk_type>(#pk)
+            .to_owned();
         }
 
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -172,7 +174,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the value of the field declared as `primary_key`
         /// ```
         #vis async fn insert_datasource(&mut self, datasource_name: &str) -> () {
-            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
+            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name,
                 #pk,
                 &mut #column_names, 
@@ -188,7 +190,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
             ).wrapper
             .get(0)
             .unwrap()
-            .get(#pk);
+            .get::<&str, #pk_type>(#pk)
+            .to_owned();
         }
     }
 }
@@ -229,9 +232,9 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         return quote! {};
     };
 
-    let insert_turbofish = if let Some(pk_type_) = &pk_ident_type {
+    let pk_type = if let Some(pk_type_) = &pk_ident_type {
         let t = &pk_type_.1;
-        quote! { __insert::<#t> }
+        quote! { #t }
     } else {
         // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
         return quote! {};
@@ -276,8 +279,10 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// }
         /// ```
         /// 
-        #vis async fn insert_result(&mut self) -> Result<(), canyon_sql::tokio_postgres::Error> {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
+        #vis async fn insert_result(&mut self) 
+            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name,
                 #pk,
                 #column_names, 
@@ -298,7 +303,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
                     ).wrapper
                     .get(0)
                     .unwrap()
-                    .get(#pk);
+                    .get::<&str, #pk_type>(#pk);
 
                 Ok(())
             }
@@ -342,8 +347,10 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// }
         /// ```
         /// 
-        #vis async fn insert_result_datasource(&mut self, datasource_name: &str) -> Result<(), canyon_sql::tokio_postgres::Error> {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::#insert_turbofish(
+        #vis async fn insert_result_datasource(&mut self, datasource_name: &str)
+            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
+        {
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
                 #table_name,
                 #pk,
                 #column_names, 
@@ -364,7 +371,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
                     ).wrapper
                     .get(0)
                     .unwrap()
-                    .get(#pk);
+                    .get::<&str, #pk_type>(#pk);
 
                 Ok(())
             }

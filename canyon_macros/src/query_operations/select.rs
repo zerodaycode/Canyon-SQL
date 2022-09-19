@@ -18,8 +18,9 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
-        #vis async fn find_all() -> Vec<#ty>{
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+        #vis async fn find_all<'a>() -> Vec<#ty>{
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            __find_all(
                 #table_name,
                 ""
             ).await
@@ -37,7 +38,8 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
         #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            __find_all(
                 #table_name,
                 datasource_name
             ).await
@@ -59,10 +61,11 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
-        #vis async fn find_all_result() -> 
-            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+        #vis async fn find_all_result<'a>() -> 
+            Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            __find_all(
                 #table_name,
                 ""
             ).await;
@@ -87,9 +90,10 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
         /// querying the database, or, if no errors happens, a Vec<T> containing
         /// the data found.
         #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
-            Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+            Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all(
+            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            __find_all(
                 #table_name,
                 datasource_name
             ).await;
@@ -217,7 +221,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                pk_value,
+                &[pk_value],
                 ""
             ).await;
                 
@@ -253,7 +257,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                pk_value,
+                &[pk_value],
                 datasource_name
             ).await;
                 
@@ -304,7 +308,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                pk_value,
+                &[pk_value],
                 ""
             ).await;
                 
@@ -347,7 +351,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk, 
-                pk_value,
+                &[pk_value],
                 datasource_name
             ).await;
                 
