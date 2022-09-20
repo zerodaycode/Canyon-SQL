@@ -257,7 +257,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // // The find_all_query impl
             // #_find_all_query_tokens
 
-            // // The COUNT(*) impl
+            // The COUNT(*) impl
             // #_count_tokens
 
             // // The COUNT(*) as result impl

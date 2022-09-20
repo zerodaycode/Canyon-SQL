@@ -28,7 +28,7 @@ pub trait Transaction<T: Debug> {
     async fn query<'a, Z>(stmt: String, params: Z, datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
         where Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send
-        {
+    {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
         } else { // Get the specified one
@@ -134,15 +134,18 @@ pub trait CrudOperations<T>: Transaction<T>
         // Making sense of the primary_key attributte.
         let mut fields = fields.to_string();
         let mut values = params.to_vec();
+        
         if primary_key != "" { 
             let mut splitted = fields.split(", ")
-            .collect::<Vec<&str>>();
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>();
+
             let index = splitted.iter()
-                .position(|pk| *pk == primary_key)
+                .position(|pk| *pk == format!("\"{primary_key}\""))
                 .unwrap();
             values.remove(index);
 
-            splitted.retain(|pk| *pk != primary_key);
+            splitted.retain(|pk| *pk != format!("\"{primary_key}\""));
             fields = splitted.join(", ").to_string();
         } else {
             // Converting the fields column names to case-insensitive
@@ -163,9 +166,6 @@ pub trait CrudOperations<T>: Transaction<T>
             field_values_placeholders,
             primary_key
         );
-        println!("Insert stmt: {:?}", &stmt);
-        // println!("Insert params: {:?}", &params);
-        // println!("Insert values: {:?}", &values);
 
         let result = Self::query(
             stmt, 
@@ -510,7 +510,6 @@ mod postgres_query_launcher {
 
 mod sqlserver_query_launcher {
     use std::fmt::Debug;
-    use canyon_connection::tiberius::IntoSql;
 
     use crate::{
         canyon_connection::{
