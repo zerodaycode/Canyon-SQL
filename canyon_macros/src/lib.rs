@@ -258,16 +258,16 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // #_find_all_query_tokens
 
             // The COUNT(*) impl
-            // #_count_tokens
+            #_count_tokens
 
-            // // The COUNT(*) as result impl
-            // #_count_result_tokens
+            // The COUNT(*) as result impl
+            #_count_result_tokens
 
-            // // The find_by_pk impl
-            // #_find_by_pk_tokens
+            // The find_by_pk impl
+            #_find_by_pk_tokens
 
-            // // The find_by_pk as result impl
-            // #_find_by_pk_result_tokens
+            // The find_by_pk as result impl
+            #_find_by_pk_result_tokens
 
             // The insert impl
             #_insert_tokens

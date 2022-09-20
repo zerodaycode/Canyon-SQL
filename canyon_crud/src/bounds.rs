@@ -92,7 +92,7 @@ impl<'a> PrimaryKey<'a> for i32 {}
 
 /// Defines a trait for represent type bounds against the allowed
 /// datatypes supported by Canyon to be used as query parameters.
-pub trait QueryParameters<'a>: Sync + Send {
+pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
 }

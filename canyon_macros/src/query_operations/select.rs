@@ -179,7 +179,7 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
 
     quote! {
         /// TODO docs
-        #vis async fn count_result() -> Result<i64, canyon_sql::tokio_postgres::Error> {
+        #vis async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name,
                 ""
@@ -187,7 +187,7 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
         }
 
         /// TODO docs
-        #vis async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, canyon_sql::tokio_postgres::Error> {
+        #vis async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
                 #table_name,
                 datasource_name
@@ -215,13 +215,14 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// 
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
-        #vis async fn find_by_pk<P>(pk_value: P) -> Option<#ty> 
-            where P: canyon_sql::canyon_crud::bounds::PrimaryKey
-        {
+        #vis async fn find_by_pk<'a>(
+            pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>
+        ) -> Option<#ty> {
+            
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                &[pk_value],
+                pk_value,
                 ""
             ).await;
                 
@@ -250,14 +251,15 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// 
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
-        #vis async fn find_by_pk_datasource<'a, P>(pk_value: P, datasource_name: &'a str) -> Option<#ty> 
-            where P: canyon_sql::canyon_crud::bounds::PrimaryKey
-        {
+        #vis async fn find_by_pk_datasource<'a>(
+            pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+            datasource_name: &'a str
+        ) -> Option<#ty> {
             /// TODO docs
             let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                &[pk_value],
+                pk_value,
                 datasource_name
             ).await;
                 
@@ -301,14 +303,13 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        #vis async fn find_by_pk_result<P>(pk_value: P) -> 
-            Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where P: canyon_sql::canyon_crud::bounds::PrimaryKey
+        #vis async fn find_by_pk_result<'a>(pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>) -> 
+            Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk,
-                &[pk_value],
+                pk_value,
                 ""
             ).await;
                 
@@ -344,14 +345,14 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        #vis async fn find_by_pk_result_datasource<'a, P>(pk_value: P, datasource_name: &'a str) -> 
-            Result<Option<#ty>, canyon_sql::tokio_postgres::Error> 
-                where P: canyon_sql::canyon_crud::bounds::PrimaryKey
-        {
+        #vis async fn find_by_pk_result_datasource<'a>(
+            pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+            datasource_name: &'a str
+        ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
                 #table_name,
                 #pk, 
-                &[pk_value],
+                pk_value,
                 datasource_name
             ).await;
                 
