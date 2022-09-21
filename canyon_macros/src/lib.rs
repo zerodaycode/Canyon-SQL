@@ -296,15 +296,15 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // // The delete as querybuilder impl
             // // #_delete_query_tokens
 
-            // // The search by FK impl
-            // #_search_by_fk_tokens
-            // // The search by FK as result impl
-            // #_search_by_fk_result_tokens
+            // The search by FK impl
+            #_search_by_fk_tokens
+            // The search by FK as result impl
+            #_search_by_fk_result_tokens
 
-            // // // The search by reverse side of the FK impl
-            // #(#_search_by_revese_fk_tokens),*
-            // // The search by reverse side of the FK as result impl
-            // #(#_search_by_revese_fk_result_tokens),*
+            // The search by reverse side of the FK impl
+            #(#_search_by_revese_fk_tokens),*
+            // The search by reverse side of the FK as result impl
+            #(#_search_by_revese_fk_result_tokens),*
         }
 
         // #_generated_enum_type_for_fields

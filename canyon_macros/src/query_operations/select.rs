@@ -533,7 +533,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                     return quote! {
                         // Searches the parent entity (if exists) for this type
                         pub async fn #quoted_method_name(&self) -> 
-                            Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                            Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                         {
                             let lookage_value = #field_value.to_string();
                             let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
@@ -557,7 +557,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                         }
 
                         pub async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> 
-                            Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                            Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                         {
                             let lookage_value = #field_value.to_string();
                             let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
@@ -586,7 +586,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                         /// does not matches the other side of the relation, an error will be
                         /// generated
                         pub async fn belongs_to_result<T>(value: &T) ->
-                            Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                            Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                         {
                             let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
@@ -611,7 +611,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                         }
 
                         pub async fn belongs_to_result_datasource<'a, T>(value: &T, datasource_name: &'a str) ->
-                            Result<Option<#fk_ty>, canyon_sql::tokio_postgres::Error> 
+                            Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                         {
                             let lookage_value = value.get_fk_column(#fk_column).expect("Column not found");
@@ -692,44 +692,28 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
 
                     foreign_keys_tokens.push(
                         quote! {
-                            #vis async fn #quoted_method_name<T>(value: &T) -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+                            #vis async fn #quoted_method_name<T>(value: &T) -> Vec<#ty> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
-                                        .await;
-
-                                if let Err(error) = result {
-                                    Err(error)
-                                } else { 
-                                    Ok(
-                                        result
-                                            .ok()
-                                            .unwrap()
-                                            .to_entity::<#ty>()
-                                    )
-                                }
+                                        .await
+                                        .ok()
+                                        .expect("Error looking for the related entities on the FK reverse search")
+                                        .to_entity::<#ty>()
                             }
 
-                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> Result<Vec<#ty>, canyon_sql::tokio_postgres::Error> 
+                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> Vec<#ty> 
                                 where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
-                                        .await;
-
-                                if let Err(error) = result {
-                                    Err(error)
-                                } else { 
-                                    Ok(
-                                        result
-                                            .ok()
-                                            .unwrap()
-                                            .to_entity::<#ty>()
-                                    )
-                                }
+                                        .await
+                                        .ok()
+                                        .expect("Error looking for the related entities on the FK reverse search ds")
+                                        .to_entity::<#ty>()
                             }
                         }
                     );
@@ -795,23 +779,35 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                     foreign_keys_tokens.push(
                         quote! {
                             #vis async fn #quoted_method_name<T>(value: &T) -> 
-                                Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+                                Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                                     where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
-                                        .await
+                                        .await;
+
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else {
+                                    Ok(result.ok().unwrap().to_entity::<#ty>())
+                                }
                             }
 
-                            #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> 
-                                Result<canyon_sql::result::DatabaseResult<#ty>, canyon_sql::tokio_postgres::Error> 
+                            #vis async fn #quoted_method_name_ds<'a, T>(value: &'a T, datasource_name: &'a str) -> 
+                                Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                                     where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
                             {
                                 let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
                                     __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
-                                        .await
+                                        .await;
+
+                                if let Err(error) = result {
+                                    Err(error)
+                                } else {
+                                    Ok(result.ok().unwrap().to_entity::<#ty>())
+                                }
                             }
                         }
                     );

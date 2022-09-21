@@ -351,19 +351,17 @@ pub trait CrudOperations<T>: Transaction<T>
     }
     
     /// Performs a search over some table pointed with a ForeignKey annotation
-    async fn __search_by_foreign_key<'a, P>(
+    async fn __search_by_foreign_key<'a>(
         related_table: &'a str, 
         related_column: &'a str,
         lookage_value: &'a str,
         datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where P: PrimaryKey<'a>
-    {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
         let stmt = format!(
             "SELECT * FROM {} WHERE {} = {}", 
             related_table,
-            related_table.to_owned() + "." + "\"" + related_column + "\"",
+            format!("\"{}\"", related_column).as_str(),
             lookage_value
         );
 
@@ -379,14 +377,12 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Performs a search over the side that contains the ForeignKey annotation
-    async fn __search_by_reverse_side_foreign_key<'a, P>(
+    async fn __search_by_reverse_side_foreign_key<'a>(
         table: &'a str,
         column: &'a str,
         lookage_value: String,
         datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where P: PrimaryKey<'a>
-    {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
         let stmt = format!(
             "SELECT * FROM {} WHERE \"{}\" = {}", 
@@ -394,6 +390,8 @@ pub trait CrudOperations<T>: Transaction<T>
             column,
             lookage_value
         );
+
+        println!("Reverse FK: {:?}", &stmt);
 
         let result = Self::query(
             stmt, 
