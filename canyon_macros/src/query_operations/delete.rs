@@ -125,7 +125,7 @@ pub fn generate_delete_query_tokens(macro_data: &MacroTokens) -> TokenStream {
     quote! {
         /// Deletes a record on a table for the target database that matches the value
         /// of the primary key of the instance
-        #vis fn delete_query<'a>(&self) -> query_elements::query_builder::QueryBuilder<'a, #ty> {
+        #vis fn delete_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete_query(
                 #table_name, ""
             )
@@ -133,7 +133,7 @@ pub fn generate_delete_query_tokens(macro_data: &MacroTokens) -> TokenStream {
 
         /// Deletes a record on a table for the target database with the specified
         /// values generated with the [`Querybuilder`] and with the
-        #vis fn delete_query_datasource<'a>(&self, datasource_name: &'a str) -> 
+        #vis fn delete_query_datasource<'a>(datasource_name: &'a str) -> 
             query_elements::query_builder::QueryBuilder<'a, #ty> 
         {
             <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__delete_query(

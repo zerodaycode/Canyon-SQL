@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseType;
 
-use crate::bounds::{PrimaryKey, QueryParameters};
+use crate::bounds::QueryParameters;
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
 use crate::query_elements::query::Query;
@@ -313,9 +313,7 @@ pub trait CrudOperations<T>: Transaction<T>
     /// if the user desires
     /// 
     /// Implemented as an associated function, not dependent on an instance
-    fn __update_query<'a, W>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> 
-        where W: PrimaryKey<'a>
-    {
+    fn __update_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         Query::new(format!("UPDATE {}", table_name), &[], datasource_name)
     }
     
@@ -344,9 +342,7 @@ pub trait CrudOperations<T>: Transaction<T>
     /// if the user desires
     /// 
     /// Implemented as an associated function, not dependent on an instance
-    fn __delete_query<'a, W>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T>
-        where W: PrimaryKey<'a>
-    {
+    fn __delete_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         Query::new(format!("DELETE FROM {}", table_name), &[], datasource_name)
     }
     

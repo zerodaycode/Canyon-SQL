@@ -91,7 +91,7 @@ impl<'a, T> QueryBuilder<'a, T>
         }
     }
 
-    pub fn where_clause<Z: FieldValueIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
+    pub fn r#where<Z: FieldValueIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
         let values = r#where.value()
             .to_string()
             .split(" ")
@@ -109,7 +109,7 @@ impl<'a, T> QueryBuilder<'a, T>
         self
     } 
 
-    pub fn and_clause<Z: FieldValueIdentifier>(mut self, r#and: Z, comp: Comp) -> Self {
+    pub fn and<Z: FieldValueIdentifier>(mut self, r#and: Z, comp: Comp) -> Self {
         let values = r#and.value()
             .to_string()
             .split(" ")
@@ -147,7 +147,7 @@ impl<'a, T> QueryBuilder<'a, T>
     }
 
     /// The SQL `SET` clause to especify the columns that must be updated in the sentence
-    pub fn set_clause<Z, S>(mut self, columns: &'a[(Z, S)]) -> Self 
+    pub fn set<Z, S>(mut self, columns: &'a[(Z, S)]) -> Self 
         where Z: FieldIdentifier + Clone, S: ToString 
     {
         if columns.len() == 0 {
