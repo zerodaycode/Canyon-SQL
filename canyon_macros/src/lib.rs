@@ -254,8 +254,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // The find_all_result impl
             #_find_all_result_tokens
 
-            // // // The find_all_query impl
-            // // #_find_all_query_tokens
+            // The find_all_query impl
+            #_find_all_query_tokens
 
             // The COUNT(*) impl
             #_count_tokens
@@ -307,9 +307,9 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             #(#_search_by_revese_fk_result_tokens),*
         }
 
-        // #_generated_enum_type_for_fields
+        #_generated_enum_type_for_fields
 
-        // #_generated_enum_type_for_fields_values
+        #_generated_enum_type_for_fields_values
     };
     
     // Pass the result back to the compiler
