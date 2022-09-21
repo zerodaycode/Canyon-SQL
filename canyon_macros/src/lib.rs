@@ -248,41 +248,41 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         impl #impl_generics #ty #ty_generics
             #where_clause
         {
-            // // The find_all impl
-            // #_find_all_tokens
+            // The find_all impl
+            #_find_all_tokens
 
-            // // The find_all_result impl
-            // #_find_all_result_tokens
+            // The find_all_result impl
+            #_find_all_result_tokens
 
             // // // The find_all_query impl
             // // #_find_all_query_tokens
 
-            // // The COUNT(*) impl
-            // #_count_tokens
+            // The COUNT(*) impl
+            #_count_tokens
 
-            // // The COUNT(*) as result impl
-            // #_count_result_tokens
+            // The COUNT(*) as result impl
+            #_count_result_tokens
 
-            // // The find_by_pk impl
-            // #_find_by_pk_tokens
+            // The find_by_pk impl
+            #_find_by_pk_tokens
 
-            // // The find_by_pk as result impl
-            // #_find_by_pk_result_tokens
+            // The find_by_pk as result impl
+            #_find_by_pk_result_tokens
 
-            // // The insert impl
-            // #_insert_tokens
+            // The insert impl
+            #_insert_tokens
 
-            // // The insert as a result impl
-            // #_insert_result_tokens
+            // The insert as a result impl
+            #_insert_result_tokens
 
             // The insert of multiple entities impl
             #_insert_multi_tokens
 
-            // // The update impl
-            // #_update_tokens
+            // The update impl
+            #_update_tokens
 
-            // // The update as result impl
-            // #_update_result_tokens
+            // The update as result impl
+            #_update_result_tokens
             
             // // The update as a querybuilder impl
             // // #_update_query_tokens

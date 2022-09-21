@@ -22,47 +22,52 @@ pub fn generate_update_tokens(macro_data: &MacroTokens) -> TokenStream {
     });
     let update_values_cloned = update_values.clone();
 
-    let pk = macro_data.get_primary_key_annotation()
-        .unwrap_or_default();
+    let pk = macro_data.get_primary_key_annotation();
 
-
-    quote! {
-        /// Updates a database record that matches the current instance of a T type
-        #vis async fn update(&self) -> () {
-            let a = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
-                #table_name,
-                #pk,
-                #column_names,
-                &[#(#update_values),*],
-                ""
-            ).await
-            .ok()
-            .expect(
-                format!(
-                    "Update operation failed for {:?}", 
-                    &self
-                ).as_str()
-            );
+    if let Some(primary_key) = pk {
+        quote! {
+            /// Updates a database record that matches the current instance of a T type
+            #vis async fn update(&self) -> () {
+                let a = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+                    #table_name,
+                    #primary_key,
+                    #column_names,
+                    &[#(#update_values),*],
+                    ""
+                ).await
+                .ok()
+                .expect(
+                    format!(
+                        "Update operation failed for {:?}", 
+                        &self
+                    ).as_str()
+                );
+            }
+    
+            /// Updates a database record that matches the current instance of a T type
+            #vis async fn update_datasource<'a>(&self, datasource_name: &'a str) {
+                let a = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+                    #table_name,
+                    #primary_key,
+                    #column_names,
+                    &[#(#update_values_cloned),*],
+                    datasource_name
+                ).await
+                .ok()
+                .expect(
+                    format!(
+                        "Update operation failed for {:?}", 
+                        &self
+                    ).as_str()
+                );
+            }
         }
-
-        /// Updates a database record that matches the current instance of a T type
-        #vis async fn update_datasource<'a>(&self, datasource_name: &'a str) {
-            let a = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
-                #table_name,
-                #pk,
-                #column_names,
-                &[#(#update_values_cloned),*],
-                datasource_name
-            ).await
-            .ok()
-            .expect(
-                format!(
-                    "Update operation failed for {:?}", 
-                    &self
-                ).as_str()
-            );
-        }
+    } else {
+        // If there's no primary key, update method over self won't be available.
+        // Use instead the update associated function of the querybuilder
+        quote! {}
     }
+
 }
 
 /// Generates the TokenStream for the __update() CRUD operation
@@ -84,46 +89,50 @@ pub fn generate_update_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     });
     let update_values_cloned = update_values.clone();
 
-    let pk = macro_data.get_primary_key_annotation()
-        .unwrap_or_default();
+    let pk = macro_data.get_primary_key_annotation();
 
-
-    quote! {
-        /// Updates a database record that matches
-        /// the current instance of a T type, returning a result
-        /// indicating a posible failure querying the database.
-        #vis async fn update_result(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
-                #table_name,
-                #pk,
-                #column_names,
-                &[#(#update_values),*],
-                ""
-            ).await;
-
-            if let Err(error) = result {
-                Err(error)
-            } else { Ok(()) }
+    if let Some(primary_key) = pk {
+        quote! {
+            /// Updates a database record that matches
+            /// the current instance of a T type, returning a result
+            /// indicating a posible failure querying the database.
+            #vis async fn update_result(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+                    #table_name,
+                    #primary_key,
+                    #column_names,
+                    &[#(#update_values),*],
+                    ""
+                ).await;
+    
+                if let Err(error) = result {
+                    Err(error)
+                } else { Ok(()) }
+            }
+    
+            /// Updates a database record with the specified datasource that matches
+            /// the current instance of a T type, returning a result with a posible 
+            /// failure querying the database, or unit type in the success case.
+            #vis async fn update_result_datasource<'a>(&self, datasource_name: &'a str) -> 
+                Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> 
+            {
+                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
+                    #table_name,
+                    #primary_key,
+                    #column_names,
+                    &[#(#update_values_cloned),*],
+                    datasource_name
+                ).await;
+    
+                if let Err(error) = result {
+                    Err(error)
+                } else { Ok(()) }
+            }
         }
-
-        /// Updates a database record with the specified datasource that matches
-        /// the current instance of a T type, returning a result with a posible 
-        /// failure querying the database, or unit type in the success case.
-        #vis async fn update_result_datasource<'a>(&self, datasource_name: &'a str) -> 
-            Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__update(
-                #table_name,
-                #pk,
-                #column_names,
-                &[#(#update_values_cloned),*],
-                datasource_name
-            ).await;
-
-            if let Err(error) = result {
-                Err(error)
-            } else { Ok(()) }
-        }
+    } else {
+        // If there's no primary key, update method over self won't be available.
+        // Use instead the update associated function of the querybuilder
+        quote! {}
     }
 }
 

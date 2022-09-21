@@ -1,5 +1,5 @@
 use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
+use quote::quote;
 
 use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
@@ -401,12 +401,10 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
     let macro_fields = fields.iter().map( |field| 
         quote! { &instance.#field } 
     );
-    println!("macro fields: {:?}", &macro_fields);
     let macro_fields_cloned = macro_fields.clone();
 
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
-    println!("Primary key for: {:?} => {:?}", &ty.to_string(), &pk);
     
     let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
@@ -414,7 +412,6 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
 
     let pk_ident = if let Some(pk_data) = &pk_ident_type {
         let i = &pk_data.0;
-        println!("Primary key ident: {:?}", i.to_string());
         quote! { #i }
     } else {
         // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
@@ -423,7 +420,6 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
 
     let pk_type = if let Some(pk_type_) = pk_ident_type {
         let t = pk_type_.1;
-        println!("Primary key type: {:?}\n", t.to_token_stream().to_string());
         quote! { #t }
     } else { 
         // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
