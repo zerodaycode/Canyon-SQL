@@ -320,19 +320,17 @@ pub trait CrudOperations<T>: Transaction<T>
     }
     
     /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete<'a, P>(
+    async fn __delete<'a>(
         table_name: &str, 
         pk_column_name: &'a str, 
-        pk_value: &'a[&'a dyn QueryParameters<'a>], 
+        pk_value: &'a [&'a dyn QueryParameters<'a>], 
         datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where P: PrimaryKey<'a>
-    {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
 
         let result = Self::query(
             stmt, 
-            pk_value.to_vec(),
+            pk_value,
             datasource_name
         ).await;
 

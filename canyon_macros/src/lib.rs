@@ -287,11 +287,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             // // The update as a querybuilder impl
             // // #_update_query_tokens
             
-            // // The delete impl
-            // #_delete_tokens
+            // The delete impl
+            #_delete_tokens
 
-            // // The delete as result impl
-            // #_delete_result_tokens
+            // The delete as result impl
+            #_delete_result_tokens
 
             // // The delete as querybuilder impl
             // // #_delete_query_tokens

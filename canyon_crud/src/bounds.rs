@@ -120,6 +120,15 @@ impl<'a> QueryParameters<'a> for i16 {
         ColumnData::I16(Some(*self))
     }
 }
+impl<'a> QueryParameters<'a> for &i16 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I16(Some(**self))
+    }
+}
 impl<'a> QueryParameters<'a> for Option<i16> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -127,6 +136,15 @@ impl<'a> QueryParameters<'a> for Option<i16> {
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I16(*self)
+    }
+}
+impl<'a> QueryParameters<'a> for Option<&i16> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I16(Some(*self.unwrap()))
     }
 }
 impl<'a> QueryParameters<'a> for i32 {
@@ -138,6 +156,15 @@ impl<'a> QueryParameters<'a> for i32 {
         ColumnData::I32(Some(*self))
     }
 }
+impl<'a> QueryParameters<'a> for &i32 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I32(Some(**self))
+    }
+}
 impl<'a> QueryParameters<'a> for Option<i32> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -145,6 +172,15 @@ impl<'a> QueryParameters<'a> for Option<i32> {
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I32(*self)
+    }
+}
+impl<'a> QueryParameters<'a> for Option<&i32> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I32(Some(*self.unwrap()))
     }
 }
 impl<'a> QueryParameters<'a> for i64 {
@@ -156,6 +192,15 @@ impl<'a> QueryParameters<'a> for i64 {
         ColumnData::I64(Some(*self))
     }
 }
+impl<'a> QueryParameters<'a> for &i64 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I64(Some(**self))
+    }
+}
 impl<'a> QueryParameters<'a> for Option<i64> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -163,6 +208,15 @@ impl<'a> QueryParameters<'a> for Option<i64> {
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I64(*self)
+    }
+}
+impl<'a> QueryParameters<'a> for Option<&i64> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I64(Some(*self.unwrap()))
     }
 }
 impl<'a> QueryParameters<'a> for String {
@@ -174,6 +228,15 @@ impl<'a> QueryParameters<'a> for String {
         ColumnData::String(Some(std::borrow::Cow::Owned(self.to_owned())))
     }
 }
+impl<'a> QueryParameters<'a> for &String {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::String(Some(std::borrow::Cow::Borrowed(self)))
+    }
+}
 impl<'a> QueryParameters<'a> for Option<String> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -183,6 +246,20 @@ impl<'a> QueryParameters<'a> for Option<String> {
         match self {
             Some(string) => ColumnData::String(
                 Some(std::borrow::Cow::Owned(string.to_owned()))
+            ),
+            None => ColumnData::String(None),
+        }
+    }
+}
+impl<'a> QueryParameters<'a> for Option<&String> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        match self {
+            Some(string) => ColumnData::String(
+                Some(std::borrow::Cow::Borrowed(string))
             ),
             None => ColumnData::String(None),
         }
