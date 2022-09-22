@@ -27,7 +27,7 @@ pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
     async fn query<'a, Z>(stmt: String, params: Z, datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-        where Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send
+        where Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
     {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -45,13 +45,12 @@ pub trait Transaction<T: Debug> {
         } else {
             // No errors
             let db_conn = database_connection.ok().unwrap();
-             
+
             match db_conn.database_type {
                 DatabaseType::PostgreSql => 
                     postgres_query_launcher::launch::<T>(db_conn, stmt, params.as_ref()).await,
                 DatabaseType::SqlServer =>
-                    todo!()
-                    // sqlserver_query_launcher::launch::<T>(db_conn, stmt, params).await
+                    sqlserver_query_launcher::launch::<T, Z>(db_conn, stmt, params).await
             }
         }
     }
@@ -81,6 +80,14 @@ pub trait CrudOperations<T>: Transaction<T>
     async fn __find_all<'a>(table_name: &'a str, datasource_name: &'a str)
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let stmt = format!("SELECT * FROM {}", table_name);
+        println!(
+            "Database type: {:?}", 
+            &DATASOURCES.iter()
+                .find( |ds| ds.name == datasource_name)
+                .expect(&format!("No datasource found with the specified parameter: `{}`", datasource_name))
+                .properties
+                .db_type
+        );
         Self::query(stmt, &[], datasource_name).await
     }
 
@@ -92,7 +99,7 @@ pub trait CrudOperations<T>: Transaction<T>
     async fn __find_by_pk<'a>(table_name: &'a str, pk: &'a str, pk_value: &'a dyn QueryParameters<'a>, datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
-        Self::query(stmt, &[pk_value], datasource_name).await
+        Self::query(stmt, vec![pk_value], datasource_name).await
     }
 
     /// Counts the total entries (rows) of elements of a database table
@@ -256,7 +263,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
         let result = Self::query(
             stmt, 
-            &v_arr[..],
+            v_arr,
             datasource_name
         ).await;
 
@@ -495,16 +502,17 @@ mod sqlserver_query_launcher {
         bounds::QueryParameters
     };
 
-    pub async fn _launch<'a, T>(
+    pub async fn launch<'a, T, Z>(
         db_conn: DatabaseConnection,
         stmt: String,
-        params: &'a [&'a dyn QueryParameters<'a>],
+        params: Z,
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where 
-            T: Debug
+            T: Debug,
+            Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
     {
         let mut sql_server_query = Query::new(stmt);
-        params.into_iter().for_each( |param| sql_server_query.bind( *param ));
+        params.as_ref().into_iter().for_each( |param| sql_server_query.bind( *param ));
 
         let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection
             .expect("Error querying the SqlServer database") // TODO Better msg?
@@ -515,7 +523,8 @@ mod sqlserver_query_launcher {
             .into_iter()
             .flatten()
             .collect::<Vec<_>>();
+        println!("Sql Server rows: {:?}", &_results);
 
-        Ok(DatabaseResult::new(vec![]))
+        Ok(DatabaseResult::new_sqlserver(_results))
     }
 }

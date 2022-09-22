@@ -8,7 +8,7 @@ use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{
-    DeriveInput, Fields, Visibility
+    DeriveInput, Fields, Visibility, Type
 };
 
 use query_operations::{
@@ -399,7 +399,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let ast: DeriveInput = syn::parse(input).unwrap();
 
     // Recovers the identifiers of the struct's members
-    let fields = filter_fields(
+    let fields = fields_with_types(
         match ast.data {
             syn::Data::Struct(ref s) => &s.fields,
             _ => return syn::Error::new(
@@ -411,10 +411,18 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     // Here it's where the incoming values of the DatabaseResult are wired into a new
     // instance, mapping the fields of the type against the columns
-    let init_field_values = fields.iter().map(|(_vis, ident)| {
+    let init_field_values = fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
         quote! {  
             #ident: row.try_get(#ident_name)
+                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+        }
+    });
+
+    let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
+        let ident_name = ident.to_string();
+        quote! {  
+            #ident: row.get::<#ty, &str>(#ident_name)
                 .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
         }
     });
@@ -430,6 +438,12 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                     #(#init_field_values),*
                 }
             }
+
+            fn deserialize_sqlserver(row: &canyon_sql::canyon_connection::tiberius::Row) -> #ty {
+                Self {
+                    #(#init_field_values_sqlserver),*
+                }
+            }
         }
     };
 
@@ -442,6 +456,19 @@ fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
         .iter()
         .map(|field| 
             (field.vis.clone(), field.ident.as_ref().unwrap().clone()) 
+        )
+        .collect::<Vec<_>>()
+}
+
+fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
+    fields
+        .iter()
+        .map(|field| 
+            (
+                field.vis.clone(),
+                field.ident.as_ref().unwrap().clone(),
+                field.ty.clone()
+            ) 
         )
         .collect::<Vec<_>>()
 }

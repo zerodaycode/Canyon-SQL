@@ -19,14 +19,20 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
         #vis async fn find_all<'a>() -> Vec<#ty>{
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            let r = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
             __find_all(
                 #table_name,
                 ""
             ).await
                 .ok()
-                .unwrap()
-                .to_entity::<#ty>()
+                .unwrap();
+
+            match r.active_ds {
+                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::PostgreSql =>
+                    r.to_entity::<#ty>(),
+                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::SqlServer =>
+                    r.from_sql_server::<#ty>()
+            }
         }
 
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -38,14 +44,28 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
         #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            let r = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
             __find_all(
                 #table_name,
                 datasource_name
             ).await
                 .ok()
-                .unwrap()
-                .to_entity::<#ty>()
+                .unwrap();
+                
+            println!("Active Datasource: {:?}", &r.active_ds);    
+            match r.active_ds {
+                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::PostgreSql =>
+                    {
+                        println!("Parsing a postgresql result: {:?}", &r);
+                        r.to_entity::<#ty>()
+                    },
+                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::SqlServer =>
+                    {
+                        println!("Parsing a sqlserver result: {:?}", &r);
+                        r.from_sql_server::<#ty>()
+                    },
+                _ => todo!()
+            }
         }
     }   
 }
