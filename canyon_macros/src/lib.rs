@@ -419,11 +419,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
-    fields.iter().for_each(|(_vis, ident, _ty)| {
-        let ident_name = ident.to_string();
-        println!("Field: {:?}, type: {:?}", &ident_name.to_string(), get_field_type_as_string(_ty))
-    });
-
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
         let quote = if get_field_type_as_string(ty) == "String" {

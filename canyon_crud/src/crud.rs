@@ -79,16 +79,7 @@ pub trait CrudOperations<T>: Transaction<T>
     /// Given a table name, extracts all db records for the table
     async fn __find_all<'a>(table_name: &'a str, datasource_name: &'a str)
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let stmt = format!("SELECT * FROM {}", table_name);
-        println!(
-            "Database type: {:?}", 
-            &DATASOURCES.iter()
-                .find( |ds| ds.name == datasource_name)
-                .expect(&format!("No datasource found with the specified parameter: `{}`", datasource_name))
-                .properties
-                .db_type
-        );
-        Self::query(stmt, &[], datasource_name).await
+        Self::query(format!("SELECT * FROM {}", table_name), &[], datasource_name).await
     }
 
     fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
@@ -96,10 +87,17 @@ pub trait CrudOperations<T>: Transaction<T>
     }
 
     /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_pk<'a>(table_name: &'a str, pk: &'a str, pk_value: &'a dyn QueryParameters<'a>, datasource_name: &'a str) 
-        -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_name, pk);
-        Self::query(stmt, vec![pk_value], datasource_name).await
+    async fn __find_by_pk<'a>(
+        table_name: &'a str,
+        pk: &'a str,
+        pk_value: &'a dyn QueryParameters<'a>,
+        datasource_name: &'a str
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        Self::query(
+            format!("SELECT * FROM {} WHERE {} = $1", table_name, pk), 
+            vec![pk_value], 
+            datasource_name
+        ).await
     }
 
     /// Counts the total entries (rows) of elements of a database table
@@ -136,9 +134,7 @@ pub trait CrudOperations<T>: Transaction<T>
         params: &'a[&'a dyn QueryParameters<'a>],
         datasource_name: &'a str
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        println!("HEre primo!");
-        
-        // Making sense of the primary_key attributte.
+
         let mut fields = fields.to_string();
         let mut values = params.to_vec();
 
@@ -393,8 +389,6 @@ pub trait CrudOperations<T>: Transaction<T>
             column,
             lookage_value
         );
-
-        println!("Reverse FK: {:?}", &stmt);
 
         let result = Self::query(
             stmt, 

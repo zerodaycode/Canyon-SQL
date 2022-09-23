@@ -83,17 +83,6 @@ pub trait ForeignKeyable {
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
 pub trait InClauseValues: ToSql + ToString {}
 
-/// Defines a trait to join types that can represent
-/// PrimaryKey type.
-/// 
-/// Canyon only accepts values of i32, i64 
-/// + any Rust String type that can work 
-/// as any Rust string variation.
-/// TODO Unimplement it. 
-pub trait PrimaryKey<'a>: IntoSql<'a> + ToSql + Sync + Send + Clone + QueryParameters<'a> {}
-impl<'a> PrimaryKey<'a> for i32 {}
-
-
 /// Defines a trait for represent type bounds against the allowed
 /// datatypes supported by Canyon to be used as query parameters.
 pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {

@@ -52,7 +52,6 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                 .ok()
                 .unwrap();
                 
-            println!("Active Datasource: {:?}", &r.active_ds);    
             match r.active_ds {
                 canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::PostgreSql =>
                     {
@@ -60,7 +59,6 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
                     },
                 canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::SqlServer =>
                     {
-                        println!("\nParsing a sqlserver result: {:?}", &r);
                         r.from_sql_server::<#ty>()
                     },
                 _ => todo!()
