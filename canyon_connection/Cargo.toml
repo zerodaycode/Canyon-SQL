@@ -5,10 +5,10 @@ edition = "2021"
 
 [dependencies]
 tokio = { version = "1.9.0", features = ["full"] }
-tokio-postgres = { version = "0.7.2", features=["with-chrono-0_4"] }
+tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
 
-tiberius = "0.10.0"
-async-std = {version = "1.12.0"}
+tiberius = { version = "0.10.0", features = ["tds73", "chrono"] }
+async-std = { version = "1.12.0" }
 
 lazy_static = "1.4.0"
 

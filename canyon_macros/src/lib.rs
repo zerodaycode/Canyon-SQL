@@ -429,7 +429,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         let quote = if get_field_type_as_string(ty) == "String" {
             quote! {  
                 #ident: row.get::<&str, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
                     .to_string()
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
@@ -437,10 +437,28 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                 #ident: row.get::<&str, &str>(#ident_name)
                     .map( |x| x.to_owned() )
             }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveDate" {
+            quote! {  
+                #ident: row.get::<NaiveDate, &str>(#ident_name)
+                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
+            quote! {  
+                #ident: row.get::<NaiveDate, &str>(#ident_name)
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveDateTime" {
+            quote! {  
+                #ident: row.get::<NaiveDateTime, &str>(#ident_name)
+                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
+            quote! {  
+                #ident: row.get::<NaiveDateTime, &str>(#ident_name)
+            }
         } else {
             quote! {  
                 #ident: row.get::<#ty, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         };
 
