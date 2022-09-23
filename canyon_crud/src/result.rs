@@ -30,7 +30,6 @@ impl<T: Debug> DatabaseResult<T> {
     }
 
     pub fn new_sqlserver(results: Vec<tiberius::Row>) -> Self {
-        println!("Sql Server new called!");
         Self {
             wrapper: vec![],
             sqlserver: results,
@@ -66,7 +65,6 @@ impl<T: Debug> DatabaseResult<T> {
     pub fn from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
         where T: Transaction<T> 
     {
-        println!("FROM Sql Server new called!");
         let mut results = Vec::new();
         
         self.sqlserver.iter().for_each( |row| {

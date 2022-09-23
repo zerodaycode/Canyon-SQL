@@ -6,7 +6,7 @@ mod utils;
 
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{
     DeriveInput, Fields, Visibility, Type
 };
@@ -419,12 +419,32 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
+    fields.iter().for_each(|(_vis, ident, _ty)| {
+        let ident_name = ident.to_string();
+        println!("Field: {:?}, type: {:?}", &ident_name.to_string(), get_field_type_as_string(_ty))
+    });
+
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
-        quote! {  
-            #ident: row.get::<#ty, &str>(#ident_name)
-                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
-        }
+        let quote = if get_field_type_as_string(ty) == "String" {
+            quote! {  
+                #ident: row.get::<&str, &str>(#ident_name)
+                    .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+                    .to_string()
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
+            quote! {  
+                #ident: row.get::<&str, &str>(#ident_name)
+                    .map( |x| x.to_owned() )
+            }
+        } else {
+            quote! {  
+                #ident: row.get::<#ty, &str>(#ident_name)
+                    .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+            }
+        };
+
+        quote
     });
 
     // The type of the Struct
@@ -471,4 +491,25 @@ fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
             ) 
         )
         .collect::<Vec<_>>()
+}
+
+fn get_field_type_as_string(typ: &Type) -> String {
+    match typ {
+        Type::Array(type_) => type_.to_token_stream().to_string(),
+        Type::BareFn(type_) => type_.to_token_stream().to_string(),
+        Type::Group(type_) => type_.to_token_stream().to_string(),
+        Type::ImplTrait(type_) => type_.to_token_stream().to_string(),
+        Type::Infer(type_) => type_.to_token_stream().to_string(),
+        Type::Macro(type_) => type_.to_token_stream().to_string(),
+        Type::Never(type_) => type_.to_token_stream().to_string(),
+        Type::Paren(type_) => type_.to_token_stream().to_string(),
+        Type::Path(type_) => type_.to_token_stream().to_string(),
+        Type::Ptr(type_) => type_.to_token_stream().to_string(),
+        Type::Reference(type_) => type_.to_token_stream().to_string(),
+        Type::Slice(type_) => type_.to_token_stream().to_string(),
+        Type::TraitObject(type_) => type_.to_token_stream().to_string(),
+        Type::Tuple(type_) => type_.to_token_stream().to_string(),
+        Type::Verbatim(type_) => type_.to_token_stream().to_string(),
+        _ => "".to_owned(),
+    }
 }

@@ -523,7 +523,6 @@ mod sqlserver_query_launcher {
             .into_iter()
             .flatten()
             .collect::<Vec<_>>();
-        println!("Sql Server rows: {:?}", &_results);
 
         Ok(DatabaseResult::new_sqlserver(_results))
     }

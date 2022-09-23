@@ -56,12 +56,11 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
             match r.active_ds {
                 canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::PostgreSql =>
                     {
-                        println!("Parsing a postgresql result: {:?}", &r);
                         r.to_entity::<#ty>()
                     },
                 canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::SqlServer =>
                     {
-                        println!("Parsing a sqlserver result: {:?}", &r);
+                        println!("\nParsing a sqlserver result: {:?}", &r);
                         r.from_sql_server::<#ty>()
                     },
                 _ => todo!()
