@@ -44,8 +44,7 @@ use query_operations::{
 
 use utils::{
     function_parser::FunctionParser,
-    macro_tokens::MacroTokens, 
-    helpers::database_table_name_from_entity_name
+    macro_tokens::MacroTokens
 };
 use canyon_macro::{wire_queries_to_execute, parse_canyon_macro_attributes};
 
