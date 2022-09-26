@@ -7,7 +7,7 @@ use canyon_connection::{
     }
 };
 
-use chrono::{NaiveDate, Datelike, NaiveDateTime};
+use chrono::{NaiveDate, Datelike, NaiveDateTime, NaiveTime};
 
 
 /// Created for retrieve the field's name of a field of a struct, giving 
@@ -285,15 +285,7 @@ impl<'a> QueryParameters<'_> for NaiveDate {
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::Date(
-            Some(
-                Date::new(
-                    self.num_days_from_ce()
-                        .try_into()
-                        .expect("Failed to convert a NaiveDate to a Date")
-                )
-            )
-        )
+        self.into_sql()
     }
 }
 impl<'a> QueryParameters<'a> for Option<NaiveDate> {
@@ -302,18 +294,25 @@ impl<'a> QueryParameters<'a> for Option<NaiveDate> {
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::Date(
-            Some(
-                Date::new(
-                    match self {
-                        Some(v) => {
-                            v.num_days_from_ce() as u32
-                        },
-                        None => 0 as u32,
-                    }
-                )
-            )
-        )
+        self.into_sql()
+    }
+}
+impl<'a> QueryParameters<'_> for NaiveTime {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        self.into_sql()
+    }
+}
+impl<'a> QueryParameters<'a> for Option<NaiveTime> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        self.into_sql()
     }
 }
 impl<'a> QueryParameters<'_> for NaiveDateTime {
@@ -322,13 +321,7 @@ impl<'a> QueryParameters<'_> for NaiveDateTime {
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::DateTime(
-            Some(
-                DateTime::new(
-                    self.num_days_from_ce(), 0 as u32 // TODO This is a ñapazo
-                )
-            )
-        )
+        self.into_sql()
     }
 }
 impl<'a> QueryParameters<'a> for Option<NaiveDateTime> {
@@ -337,10 +330,42 @@ impl<'a> QueryParameters<'a> for Option<NaiveDateTime> {
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::DateTime(
-            Some( // TODO Check this one
-                DateTime::new((*self).unwrap().num_days_from_ce(), 0 as u32)
-            )
-        )
+        self.into_sql()
     }
 }
+// impl<'a> QueryParameters<'_> for chrono::DateTime<FixedOffset> {
+//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+//         self
+//     }
+
+//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
+//         self.into_sql()
+//     }
+// }
+// impl<'a> QueryParameters<'a> for Option<chrono::DateTime<FixedOffset>> {
+//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+//         self
+//     }
+
+//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
+//         self.into_sql()
+//     }
+// }
+// impl<'a> QueryParameters<'_> for chrono::DateTime<Utc> {
+//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+//         self
+//     }
+
+//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
+//         self.into_sql()
+//     }
+// }
+// impl<'a> QueryParameters<'a> for Option<chrono::DateTime<Utc>> {
+//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+//         self
+//     }
+
+//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
+//         self.into_sql()
+//     }
+// }

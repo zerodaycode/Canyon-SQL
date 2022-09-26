@@ -7,3 +7,5 @@ pub mod query_elements;
 pub mod bounds;
 
 pub use query_elements::operators::*;
+
+pub use chrono;

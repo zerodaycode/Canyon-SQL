@@ -441,6 +441,15 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             quote! {  
                 #ident: row.get::<NaiveDate, &str>(#ident_name)
             }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveTime" {
+            quote! {  
+                #ident: row.get::<NaiveTime, &str>(#ident_name)
+                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
+            quote! {  
+                #ident: row.get::<NaiveTime, &str>(#ident_name)
+            }
         } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveDateTime" {
             quote! {  
                 #ident: row.get::<NaiveDateTime, &str>(#ident_name)
