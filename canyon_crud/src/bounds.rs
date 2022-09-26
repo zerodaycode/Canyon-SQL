@@ -2,12 +2,11 @@ use canyon_connection::{
     tokio_postgres::types::ToSql, 
     tiberius::{
         IntoSql,
-        ColumnData,
-        time::{Date, DateTime},
+        ColumnData
     }
 };
 
-use chrono::{NaiveDate, Datelike, NaiveDateTime, NaiveTime};
+use chrono::{NaiveDate, NaiveDateTime, NaiveTime, DateTime, FixedOffset, Utc};
 
 
 /// Created for retrieve the field's name of a field of a struct, giving 
@@ -333,39 +332,39 @@ impl<'a> QueryParameters<'a> for Option<NaiveDateTime> {
         self.into_sql()
     }
 }
-// impl<'a> QueryParameters<'_> for chrono::DateTime<FixedOffset> {
-//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-//         self
-//     }
+impl<'a> QueryParameters<'_> for DateTime<FixedOffset> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
 
-//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-//         self.into_sql()
-//     }
-// }
-// impl<'a> QueryParameters<'a> for Option<chrono::DateTime<FixedOffset>> {
-//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-//         self
-//     }
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        self.into_sql()
+    }
+}
+impl<'a> QueryParameters<'a> for Option<DateTime<FixedOffset>> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
 
-//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-//         self.into_sql()
-//     }
-// }
-// impl<'a> QueryParameters<'_> for chrono::DateTime<Utc> {
-//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-//         self
-//     }
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        self.into_sql()
+    }
+}
+impl<'a> QueryParameters<'_> for DateTime<Utc> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
 
-//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-//         self.into_sql()
-//     }
-// }
-// impl<'a> QueryParameters<'a> for Option<chrono::DateTime<Utc>> {
-//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-//         self
-//     }
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        self.into_sql()
+    }
+}
+impl<'a> QueryParameters<'a> for Option<DateTime<Utc>> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
 
-//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-//         self.into_sql()
-//     }
-// }
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        self.into_sql()
+    }
+}

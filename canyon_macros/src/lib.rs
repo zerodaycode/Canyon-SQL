@@ -434,30 +434,39 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveDate" {
             quote! {  
-                #ident: row.get::<NaiveDate, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDate, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
             quote! {  
-                #ident: row.get::<NaiveDate, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDate, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveTime" {
             quote! {  
-                #ident: row.get::<NaiveTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
             quote! {  
-                #ident: row.get::<NaiveTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveTime, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "NaiveDateTime" {
             quote! {  
-                #ident: row.get::<NaiveDateTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
             quote! {  
-                #ident: row.get::<NaiveDateTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDateTime, &str>(#ident_name)
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "DateTime" {
+            quote! {  
+                #ident: row.get::<canyon_sql::canyon_crud::chrono::DateTime, &str>(#ident_name)
+                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
+            quote! {  
+                #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
             }
         } else {
             quote! {  
