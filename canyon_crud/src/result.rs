@@ -1,18 +1,14 @@
 use std::{marker::PhantomData, fmt::Debug};
-
-use canyon_connection::{tokio_postgres::Row, tiberius, canyon_database_connector::DatabaseType};
-
+use canyon_connection::{tokio_postgres, tiberius, canyon_database_connector::DatabaseType};
 use crate::{mapper::RowMapper, crud::Transaction};
 
-pub trait DatabaseRow {}
-impl DatabaseRow for Row {}
 
 /// Represents a database result after a query, by wrapping the `Vec<Row>` types that comes with the
 /// results after the query.
 /// and providing methods to deserialize this result into a **user defined struct**
 #[derive(Debug)]
 pub struct DatabaseResult<T: Debug> {
-    pub wrapper: Vec<Row>,
+    pub wrapper: Vec<tokio_postgres::Row>,
     pub sqlserver: Vec<tiberius::Row>,
     pub active_ds: DatabaseType,
     _phantom_data: std::marker::PhantomData<T>
@@ -20,7 +16,7 @@ pub struct DatabaseResult<T: Debug> {
 
 impl<T: Debug> DatabaseResult<T> {
     
-    pub fn new(result: Vec<Row>) -> Self {
+    pub fn new_postgresql(result: Vec<tokio_postgres::Row>) -> Self {
         Self {
             wrapper: result,
             sqlserver: vec![],
@@ -41,45 +37,37 @@ impl<T: Debug> DatabaseResult<T> {
     /// Returns a Vec<T> filled with instances of the type T.
     /// Z param it's used to constrait the types that can call this method.
     /// 
-    /// Also, provides a way to statically call `Z::deserialize` method,
+    /// Also, provides a way to statically call `Z::deserialize_<db>` method,
     /// which it's a complex implementation used by the macros to automatically
     /// map database columns into the fields for T.
-    pub fn to_entity<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    pub fn get_entities<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+        where T: Transaction<T> 
+    {
+        match self.active_ds {
+            DatabaseType::PostgreSql => self.from_postgresql::<Z>(),
+            DatabaseType::SqlServer => self.from_sql_server::<Z>(),
+        }
+    }
+
+    fn from_postgresql<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
         where T: Transaction<T> 
     {
         let mut results = Vec::new();
         
         self.wrapper.iter().for_each( |row| {
-            results.push( Z::deserialize( row ) )
+            results.push( Z::deserialize_postgresql( row ) )
         });
 
         results
     }
 
-    /// Returns a Vec<T> filled with instances of the type T.
-    /// Z param it's used to constrait the types that can call this method.
-    /// 
-    /// Also, provides a way to statically call `Z::deserialize` method,
-    /// which it's a complex implementation used by the macros to automatically
-    /// map database columns into the fields for T.
-    pub fn from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
         where T: Transaction<T> 
     {
         let mut results = Vec::new();
         
         self.sqlserver.iter().for_each( |row| {
             results.push( Z::deserialize_sqlserver( row ) )
-        });
-
-        results
-    }
-
-    /// Literally returns the same results as the `tokio::postgres` crate would do.
-    pub fn get_results(self) -> Vec<Row> {
-        let mut results = Vec::new();
-        
-        self.wrapper.into_iter().for_each( |row| {
-            results.push( row )
         });
 
         results

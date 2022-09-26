@@ -478,7 +478,7 @@ mod postgres_query_launcher {
         if let Err(error) = query_result { 
             Err(Box::new(error)) 
         } else {
-            Ok(DatabaseResult::new(query_result.expect("A really bad error happened")))
+            Ok(DatabaseResult::new_postgresql(query_result.expect("A really bad error happened")))
         }
     }
 }

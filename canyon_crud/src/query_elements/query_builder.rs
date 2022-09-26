@@ -76,7 +76,7 @@ impl<'a, T> QueryBuilder<'a, T>
 
         if let Err(error) = result {
             Err(error)
-        } else { Ok(result.ok().unwrap().to_entity::<T>()) }
+        } else { Ok(result.ok().unwrap().get_entities::<T>()) }
     }
 
     pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {

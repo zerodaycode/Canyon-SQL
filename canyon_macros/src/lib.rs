@@ -160,7 +160,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
     let e = Box::leak(
-        database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
+        // database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
+        entity.struct_name.to_string()
             .into_boxed_str()
     );
     new_entity.entity_name = e;
@@ -484,7 +485,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let tokens = quote! {
         impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty
         {
-            fn deserialize(row: &Row) -> #ty {
+            fn deserialize_postgresql(row: &canyon_sql::canyon_connection::tokio_postgres::Row) -> #ty {
                 Self {
                     #(#init_field_values),*
                 }

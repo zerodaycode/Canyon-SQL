@@ -8,7 +8,7 @@ use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function
-pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     // Destructure macro_tokens into raw data
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
@@ -19,20 +19,14 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
         #vis async fn find_all<'a>() -> Vec<#ty>{
-            let r = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
             __find_all(
                 #table_name,
                 ""
             ).await
                 .ok()
-                .unwrap();
-
-            match r.active_ds {
-                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::PostgreSql =>
-                    r.to_entity::<#ty>(),
-                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::SqlServer =>
-                    r.from_sql_server::<#ty>()
-            }
+                .unwrap()
+                .get_entities::<#ty>()
         }
 
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -44,32 +38,21 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
         #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
-            let r = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
+            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
             __find_all(
                 #table_name,
                 datasource_name
             ).await
                 .ok()
-                .unwrap();
-                
-            match r.active_ds {
-                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::PostgreSql =>
-                    {
-                        r.to_entity::<#ty>()
-                    },
-                canyon_sql::canyon_connection::canyon_database_connector::DatabaseType::SqlServer =>
-                    {
-                        r.from_sql_server::<#ty>()
-                    },
-                _ => todo!()
-            }
+                .unwrap()
+                .get_entities::<#ty>()
         }
     }   
 }
 
 /// Generates the TokenStream for build the __find_all_result() CRUD 
 /// associated function
-pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
@@ -90,7 +73,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             if let Err(error) = result {
                 Err(error)
             } else {
-                Ok(result.ok().unwrap().to_entity::<#ty>())
+                Ok(result.ok().unwrap().get_entities::<#ty>())
             }
         }
 
@@ -118,14 +101,14 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens) -> TokenStream 
             if let Err(error) = result {
                 Err(error)
             } else {
-                Ok(result.ok().unwrap().to_entity::<#ty>())
+                Ok(result.ok().unwrap().get_entities::<#ty>())
             }
         }
     }
 }
 
 /// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
-pub fn generate_find_all_query_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
@@ -214,7 +197,7 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream
 }
 
 /// Generates the TokenStream for build the __find_by_pk() CRUD operation
-pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
@@ -250,7 +233,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
                         response
                             .ok()
                             .unwrap()
-                            .to_entity::<#ty>()[0]
+                            .get_entities::<#ty>()[0]
                             .clone()
                     )
                 }
@@ -287,7 +270,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
                         response
                             .ok()
                             .unwrap()
-                            .to_entity::<#ty>()[0]
+                            .get_entities::<#ty>()[0]
                             .clone()
                     )
                 }
@@ -297,7 +280,7 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens) -> TokenStream {
 }
 
 /// Generates the TokenStream for build the __find_by_pk() CRUD operation
-pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let (vis, ty) = (macro_data.vis, macro_data.ty);
     let table_name = database_table_name_from_struct(ty);
 
@@ -339,7 +322,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
                         result
                             .ok()
                             .unwrap()
-                            .to_entity::<#ty>()[0]
+                            .get_entities::<#ty>()[0]
                             .clone()
                     ))
                 } 
@@ -382,7 +365,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
                         result
                             .ok()
                             .unwrap()
-                            .to_entity::<#ty>()[0]
+                            .get_entities::<#ty>()[0]
                             .clone()
                     ))
                 } 
@@ -395,7 +378,7 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens) -> TokenStrea
 /// of a T type of as an associated function of same T type, but wrapped as a Result<T, Err>, representing
 /// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
 /// derive macro on the parent side of the relation
-pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     // let mut foreign_keys_tokens = Vec::new();
     let mut column_name = String::new();
 
@@ -459,7 +442,7 @@ pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens) -> TokenStr
                                         response
                                             .ok()
                                             .unwrap()
-                                            .to_entity::<#fk_ty>()[0]
+                                            .get_entities::<#fk_ty>()[0]
                                             .clone()
                                     )
                                 }
@@ -480,7 +463,7 @@ pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens) -> TokenStr
                                         response
                                             .ok()
                                             .unwrap()
-                                            .to_entity::<#fk_ty>()[0]
+                                            .get_entities::<#fk_ty>()[0]
                                             .clone()
                                     )
                                 }
@@ -497,7 +480,7 @@ pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens) -> TokenStr
 
 /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
 /// of a T type of as an associated function of same T type
-pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> TokenStream {
+pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
     let mut column_name = String::new();
     let current_entity = CANYON_REGISTER_ENTITIES.lock().unwrap();
 
@@ -566,7 +549,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                                         result
                                             .ok()
                                             .unwrap()
-                                            .to_entity::<#fk_ty>()[0]
+                                            .get_entities::<#fk_ty>()[0]
                                             .clone()
                                     ))
                                 } 
@@ -590,7 +573,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                                         result
                                             .ok()
                                             .unwrap()
-                                            .to_entity::<#fk_ty>()[0]
+                                            .get_entities::<#fk_ty>()[0]
                                             .clone()
                                     ))
                                 } 
@@ -620,7 +603,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                                         result
                                             .ok()
                                             .unwrap()
-                                            .to_entity::<#fk_ty>()[0]
+                                            .get_entities::<#fk_ty>()[0]
                                             .clone()
                                     ))
                                 } 
@@ -645,7 +628,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
                                         result
                                             .ok()
                                             .unwrap()
-                                            .to_entity::<#fk_ty>()[0]
+                                            .get_entities::<#fk_ty>()[0]
                                             .clone()
                                     ))
                                 } 
@@ -662,7 +645,7 @@ pub fn generate_find_by_foreign_key_result_tokens(macro_data: &MacroTokens) -> T
 
 /// Generates the TokenStream for build the __search_by_foreign_key() CRUD 
 /// associated function
-pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> Vec<TokenStream> {
+pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> Vec<TokenStream> {
     let mut foreign_keys_tokens = Vec::new();
 
     let (vis, ty) = (macro_data.vis, macro_data.ty);
@@ -718,7 +701,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                                         .await
                                         .ok()
                                         .expect("Error looking for the related entities on the FK reverse search")
-                                        .to_entity::<#ty>()
+                                        .get_entities::<#ty>()
                             }
 
                             #vis async fn #quoted_method_name_ds<'a, T>(value: &T, datasource_name: &'a str) -> Vec<#ty> 
@@ -730,7 +713,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
                                         .await
                                         .ok()
                                         .expect("Error looking for the related entities on the FK reverse search ds")
-                                        .to_entity::<#ty>()
+                                        .get_entities::<#ty>()
                             }
                         }
                     );
@@ -746,7 +729,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens) -> 
 /// associated function, but wrapped as a Result<T, Err>, representing
 /// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
 /// derive macro on the parent side of the relation
-pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroTokens) -> Vec<TokenStream> {
+pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroTokens<'_>) -> Vec<TokenStream> {
     let mut foreign_keys_tokens = Vec::new();
 
     let (vis, ty) = (macro_data.vis, macro_data.ty);
@@ -807,7 +790,7 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                                 if let Err(error) = result {
                                     Err(error)
                                 } else {
-                                    Ok(result.ok().unwrap().to_entity::<#ty>())
+                                    Ok(result.ok().unwrap().get_entities::<#ty>())
                                 }
                             }
 
@@ -823,7 +806,7 @@ pub fn generate_find_by_reverse_foreign_key_result_tokens(macro_data: &MacroToke
                                 if let Err(error) = result {
                                     Err(error)
                                 } else {
-                                    Ok(result.ok().unwrap().to_entity::<#ty>())
+                                    Ok(result.ok().unwrap().get_entities::<#ty>())
                                 }
                             }
                         }
