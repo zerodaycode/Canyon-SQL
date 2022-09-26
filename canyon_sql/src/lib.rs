@@ -32,5 +32,7 @@ pub use tokio_postgres::Row;
 
 /// Module for reexport the `chrono` crate with the allowed public and available types in Canyon
 pub mod date_time {
-    pub use canyon_crud::chrono::*;
+    pub use canyon_crud::chrono::{
+        NaiveDate, NaiveTime, NaiveDateTime
+    };
 }

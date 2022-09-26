@@ -427,6 +427,10 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
                     .to_string()
             }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
+            quote! {  
+                #ident: row.get::<i64, &str>(#ident_name)
+            }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
             quote! {  
                 #ident: row.get::<&str, &str>(#ident_name)
