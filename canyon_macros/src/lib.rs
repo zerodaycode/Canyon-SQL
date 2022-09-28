@@ -4,7 +4,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
-use proc_macro::TokenStream as CompilerTokenStream;
+use proc_macro::{TokenStream as CompilerTokenStream, Span};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{
@@ -138,6 +138,59 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 /// your type
 #[proc_macro_attribute]
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
+
+    let mut table_name: Option<String> = None;
+    let mut schema_name: Option<String> = None;
+
+    let mut parsing_attribute_error: Option<TokenStream> = None;
+
+    for element in &attrs {
+        match element {
+            syn::NestedMeta::Meta(m) => {
+                match m {
+                    syn::Meta::NameValue(nv) => {
+                        println!("Found meta nv: {:?}", nv.path.get_ident());
+                        println!("Found meta nv: {:?}", nv.lit);
+                        let attr_arg_ident = nv.path.get_ident()
+                            .expect("Something went wrong parsing the `table_name` argument")
+                            .to_string();
+                        
+                        if attr_arg_ident == "table_name" || attr_arg_ident == "schema" {
+                            table_name = Some(attr_arg_ident);
+                            match nv.lit {
+                                syn::Lit::Str(ref l) => schema_name = Some(l.value().to_string()),
+                                _ => {
+                                    parsing_attribute_error = Some(syn::Error::new(
+                                        Span::call_site().into(),
+                                        format!("Only string literals are valid values for the attributes")
+                                    ).into_compile_error());
+                                }
+                            }
+                        } else {
+                            parsing_attribute_error = Some(syn::Error::new(
+                                Span::call_site().into(),
+                                format!("Argument: `{:?}` are not allowed in the canyon_macro attr", &attr_arg_ident)
+                            ).into_compile_error());
+                        }
+                    },
+                    _ => {
+                        parsing_attribute_error = Some(syn::Error::new(
+                            Span::call_site().into(),
+                            "Only argument identifiers with a value after an `=` sign are allowed on the `canyon_macros::canyon_entity` proc macro"
+                        ).into_compile_error());
+                    }
+                }
+            },
+            syn::NestedMeta::Lit(_) => {
+                parsing_attribute_error = Some(syn::Error::new(
+                    Span::call_site().into(),
+                    "No literal values allowed on the `canyon_macros::canyon_entity` proc macro"
+                ).into_compile_error());
+            },
+        }
+    }
+
     let input_cloned = input.clone();
     let entity_res = syn::parse::<CanyonEntity>(input);
 
@@ -313,7 +366,14 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     };
     
     // Pass the result back to the compiler
-    tokens.into()
+    if let Some(macro_error) = parsing_attribute_error {
+        quote! { 
+            #macro_error
+            #generated_user_struct 
+        }.into()
+    } else{
+        tokens.into()
+    }
 }
 
 /// Allows the implementors to auto-derive the `CrudOperations` trait, which defines the methods
