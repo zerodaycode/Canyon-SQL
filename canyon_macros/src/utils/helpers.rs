@@ -1,91 +1,80 @@
-// use std::collections::HashMap;
+use proc_macro2::{Ident, TokenStream, Span};
+use syn::{
+    Token, 
+    punctuated::Punctuated, 
+    MetaNameValue
+};
 
-// use proc_macro::TokenStream as TokenStream1;
-use proc_macro2::Ident;
-// use syn::{NestedMeta, Lit};
+use super::macro_tokens::MacroTokens;
 
-// use quote::quote;
+/// If the `canyon_entity` macro has valid attributes attached, and those attrs are the
+/// user's desired `table_name` and/or the `schema_name`, this method returns its 
+/// correct form to be wired as the table name that the CRUD methods requires for generate
+/// the queries
+pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, TokenStream> {
+    let mut table_name: Option<String> = None;
+    let mut schema: Option<String> = None;
 
-// // #[derive(Debug)]
-// /// Utilery struct for wrapping the content and result of parsing the attributes on the `canyon` macro
-// pub struct MacroAttributesParser<'a> {
-//     pub attributes: HashMap<&'a str, &'a dyn ToString>,
-//     pub error: Option<TokenStream1>
-// }
+    for attr in macro_data.attrs {
+        let name_values: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
+            attr.parse_args_with(Punctuated::parse_terminated);
+        
+        if let Err(_) = name_values {
+            return Ok(macro_data.ty.to_string());
+        }
 
-// /// Parses the [`syn::NestedMeta::Meta`] or [`syn::NestedMeta::Lit`] attached to the `canyon` macro
-// pub fn parse_macro_attributes<'a>(_meta: &'a Vec<NestedMeta>, macro_name: &'a str) -> MacroAttributesParser<'a> {
-//     let mut res = MacroAttributesParser { 
-//         attributes: HashMap::new(), 
-//         error: None 
-//     };
+        for nv in name_values.ok().expect("Failure parsing canyon_entity macro attributes") {
+            let ident = nv.path.get_ident();
+            if let Some(i) = ident {
+                let identifier = i.to_string();
+                match &nv.lit {
+                    syn::Lit::Str(s) => {
+                        if identifier == "table_name" {
+                            table_name = Some(s.value())
+                        } else if identifier == "schema" {
+                            schema = Some(s.value())
+                        } else {
+                            return Err(
+                                syn::Error::new_spanned(
+                                    Ident::new(&identifier, i.span().into()), 
+                                    "Only string literals are valid values for the attribute arguments"
+                                    ).into_compile_error()
+                            );
+                        }
+                    },
+                    _ => return Err(
+                        syn::Error::new_spanned(
+                            Ident::new(&identifier, i.span().into()), 
+                            "Only string literals are valid values for the attribute arguments"
+                            ).into_compile_error()
+                    ),
+                }
+            } else {
+                return Err(
+                    syn::Error::new(
+                        Span::call_site(), 
+                        "Only string literals are valid values for the attribute arguments"
+                    ).into_compile_error()
+                );
+            }
+        }
+    }
 
-//     for nested_meta in _meta {
-//         match nested_meta {
-//             syn::NestedMeta::Meta(m) => determine_allowed_attributes(m, &mut res, None),
-//             syn::NestedMeta::Lit(lit) => match lit {
-//                 syn::Lit::Str(ref l) => {
-//                     match macro_name {
-//                         "canyon" => res.error = Some(report_literals_not_allowed(&l.value(), lit)),
-//                         "canyon_entity" => res.attributes.get_mut("table_name")
-//                     }
-//                 },
-//                 syn::Lit::ByteStr(ref l) => res.error = Some(report_literals_not_allowed(&String::from_utf8_lossy(&l.value()), &lit)),
-//                 syn::Lit::Byte(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), lit)),
-//                 syn::Lit::Char(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), lit)),
-//                 syn::Lit::Int(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), lit)),
-//                 syn::Lit::Float(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), lit)),
-//                 syn::Lit::Bool(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), lit)) ,
-//                 syn::Lit::Verbatim(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), lit))
-//             }
-//         }
-//     };
+    let mut final_table_name = String::new();
+        if schema.is_some() { 
+            final_table_name.push_str(
+                format!("{}.", schema.unwrap()).as_str()
+            ) 
+        }
+        if table_name.is_some() {
+            final_table_name.push_str(table_name.unwrap().as_str())
+        } else {
+            final_table_name.push_str(macro_data.ty.to_string().as_str())
+        }
+        
 
-//     res
-// }
-
-
-// /// Determines whenever a [`syn::NestedMeta::Meta`] it's classified as a valid argument of some macro attribute
-// fn determine_allowed_attributes(meta: &syn::Meta, cma: &mut MacroAttributesParser, val: Option<Lit>) {
-//     const ALLOWED_ATTRS: [&'static str; 1] = ["enable_migrations"];
-    
-//     let attr_ident = meta.path().get_ident().unwrap();
-//     let attr_ident_str = attr_ident.to_string();
-    
-//     if attr_ident_str.as_str() == "enable_migrations" {
-//         cma.attributes.insert("enable_migrations", &true);
-//     } else if attr_ident_str.as_str() == "table_name" {
-//         cma.attributes.insert("table_name", &true);
-//     } else {
-//         let error = syn::Error::new_spanned(
-//             Ident::new(&attr_ident_str, attr_ident.span().into()), 
-//         format!(
-//                 "No `{attr_ident_str}` arguments allowed in the `Canyon` macro attributes.\n\
-//                 Allowed ones are: {:?}", ALLOWED_ATTRS
-//             )
-//         ).into_compile_error();
-//         cma.error = Some(
-//            quote! {
-//                 #error
-//                 fn main() {}
-//            }.into()
-//         )
-//     }
-// }
-
-
-// /// Creates a custom error for report not allowed literals on the attribute
-// /// args of the `canyon` proc macro
-// fn report_literals_not_allowed(ident: &str, s: &Lit) -> TokenStream1 {
-//     let error = syn::Error::new_spanned(Ident::new(ident, s.span().into()), 
-//         "No literals allowed in the `Canyon` macro"
-//     ).into_compile_error();
-    
-//     quote! {
-//         #error
-//         fn main() {}
-//    }.into()
-// }
+    Ok(final_table_name)
+}
 
 
 /// Parses a syn::Identifier to get a snake case database name from the type identifier

@@ -1,14 +1,11 @@
-use proc_macro2::{Ident, TokenStream, Span};
+use proc_macro2::Ident;
 use syn::{
     Visibility, 
     Generics, 
     DeriveInput, 
     Fields, 
     Type, 
-    Attribute, 
-    Token, 
-    punctuated::Punctuated, 
-    MetaNameValue
+    Attribute
 };
 
 /// Provides a convenient way of store the data for the TokenStream 
@@ -33,75 +30,6 @@ impl<'a> MacroTokens<'a> {
                 _ => panic!("This derive macro can only be automatically derived for structs"),
             }
         }
-    }
-
-    /// If the `canyon_entity` macro has valid attributes attached, and those attrs are the
-    /// user's desired `table_name` and/or the `schema_name`, this method returns its 
-    /// correct form to be wired as the table name that the CRUD methods requires for generate
-    /// the queries
-    pub fn get_desired_table_name(&self) -> Result<String, TokenStream> {
-        let mut table_name: Option<String> = None;
-        let mut schema: Option<String> = None;
-
-        for attr in self.attrs {
-            let name_values: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
-                attr.parse_args_with(Punctuated::parse_terminated);
-            
-            if let Err(_) = name_values {
-                return Ok(self.ty.to_string());
-            }
-
-            for nv in name_values.ok().expect("Failure parsing canyon_entity macro attributes") {
-                let ident = nv.path.get_ident();
-                if let Some(i) = ident {
-                    let identifier = i.to_string();
-                    match &nv.lit {
-                        syn::Lit::Str(s) => {
-                            if identifier == "table_name" {
-                                table_name = Some(s.value())
-                            } else if identifier == "schema" {
-                                schema = Some(s.value())
-                            } else {
-                                return Err(
-                                    syn::Error::new_spanned(
-                                        Ident::new(&identifier, i.span().into()), 
-                                        "Only string literals are valid values for the attribute arguments"
-                                        ).into_compile_error()
-                                );
-                            }
-                        },
-                        _ => return Err(
-                            syn::Error::new_spanned(
-                                Ident::new(&identifier, i.span().into()), 
-                                "Only string literals are valid values for the attribute arguments"
-                                ).into_compile_error()
-                        ),
-                    }
-                } else {
-                    return Err(
-                        syn::Error::new(
-                            Span::call_site(), 
-                            "Only string literals are valid values for the attribute arguments"
-                        ).into_compile_error()
-                    );
-                }
-            }
-        }
-
-        let mut final_table_name = String::new();
-            if schema.is_some() { 
-                final_table_name.push_str(
-                    format!("{}.", schema.unwrap()).as_str()
-                ) 
-            }
-            if table_name.is_some() {
-                final_table_name.push_str(table_name.unwrap().as_str())
-            } else {
-                final_table_name.push_str(self.ty.to_string().as_str())
-            }
-            
-    
-        Ok(final_table_name)
     }
 
     /// Gives a Vec ot tuples that contains the visibilty, the name and

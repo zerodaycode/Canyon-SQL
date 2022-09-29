@@ -44,7 +44,7 @@ use query_operations::{
 
 use utils::{
     function_parser::FunctionParser,
-    macro_tokens::MacroTokens
+    macro_tokens::MacroTokens, helpers
 };
 use canyon_macro::{wire_queries_to_execute, parse_canyon_macro_attributes};
 
@@ -269,18 +269,26 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         .expect("Error parsing `Canyon Entity for generate the CRUD methods");
     let macro_data = MacroTokens::new(&ast);
 
+    let table_name_res = helpers::table_schema_parser(&macro_data);
+    
+    let table_schema_data = if let Err(err) = table_name_res {
+        return err.into()
+    } else {
+        table_name_res.ok().unwrap()
+    };
+
     // Build the trait implementation
-    impl_crud_operations_trait_for_struct(&macro_data)
+    impl_crud_operations_trait_for_struct(&macro_data, table_schema_data)
 }
 
 
-fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>) -> proc_macro::TokenStream {
+fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_schema_data: String) -> proc_macro::TokenStream {
     let ty = macro_data.ty;
 
     // Builds the find_all() query
-    let _find_all_tokens = generate_find_all_tokens(&macro_data);
+    let _find_all_tokens = generate_find_all_tokens(&macro_data, &table_schema_data);
     // Builds the find_all_result() query
-    let _find_all_result_tokens = generate_find_all_result_tokens(&macro_data);
+    let _find_all_result_tokens = generate_find_all_result_tokens(&macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
     let _find_all_query_tokens = generate_find_all_query_tokens(&macro_data);
     

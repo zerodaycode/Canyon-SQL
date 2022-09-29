@@ -8,17 +8,9 @@ use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function
-pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
+pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
-    let table_name_res = macro_data.get_desired_table_name();
-    
-    let table_name = if let Err(err) = table_name_res {
-        return err
-    } else {
-        table_name_res.ok().unwrap()
-    };
-
-    let stmt = format!("SELECT * FROM {}", table_name);
+    let stmt = format!("SELECT * FROM {}", table_schema_data);
 
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -59,17 +51,10 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
 
 /// Generates the TokenStream for build the __find_all_result() CRUD 
 /// associated function
-pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
+pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
-    let table_name_res = macro_data.get_desired_table_name();
-    
-    let table_name = if let Err(err) = table_name_res {
-        return err
-    } else {
-        table_name_res.ok().unwrap()
-    };
 
-    let stmt = format!("SELECT * FROM {}", table_name);
+    let stmt = format!("SELECT * FROM {}", table_schema_data);
 
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
