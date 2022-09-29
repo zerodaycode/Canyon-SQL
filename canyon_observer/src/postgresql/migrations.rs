@@ -326,7 +326,7 @@ impl DatabaseSyncOperations {
             .expect(format!("Failed to retrieve query from the register at index: {}", i).as_str());
 
             Self::query(
-                query_to_execute.to_string(),
+                query_to_execute,
                 vec![],
                 ""
             ).await

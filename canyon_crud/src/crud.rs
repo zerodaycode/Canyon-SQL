@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseType;
@@ -25,9 +25,11 @@ use canyon_connection::{
 #[async_trait]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
-    async fn query<'a, Z>(stmt: String, params: Z, datasource_name: &'a str) 
+    async fn query<'a, S, Z>(stmt: S, params: Z, datasource_name: &'a str) 
         -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-        where Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
+        where
+            S: AsRef<str> + Display + Sync + Send + 'a, 
+            Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
     {
         let database_connection = if datasource_name == "" {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
@@ -48,9 +50,9 @@ pub trait Transaction<T: Debug> {
 
             match db_conn.database_type {
                 DatabaseType::PostgreSql => 
-                    postgres_query_launcher::launch::<T>(db_conn, stmt, params.as_ref()).await,
+                    postgres_query_launcher::launch::<T>(db_conn, stmt.to_string(), params.as_ref()).await,
                 DatabaseType::SqlServer =>
-                    sqlserver_query_launcher::launch::<T, Z>(db_conn, stmt, params).await
+                    sqlserver_query_launcher::launch::<T, Z>(db_conn, stmt.to_string(), params).await
             }
         }
     }
@@ -75,331 +77,332 @@ pub trait Transaction<T: Debug> {
 pub trait CrudOperations<T>: Transaction<T> 
     where T: Debug + CrudOperations<T> + RowMapper<T>
 {
-    /// The implementation of the most basic database usage pattern.
-    /// Given a table name, extracts all db records for the table
-    async fn __find_all<'a>(table_name: &'a str, datasource_name: &'a str)
-        -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        Self::query(format!("SELECT * FROM {}", table_name), &[], datasource_name).await
-    }
+    async fn find_all<'a>() -> Vec<T>;
+    
+    async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
+    
+    async fn find_all_result<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    
+    async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
     fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         Query::new(format!("SELECT * FROM {}", table_name), &[], datasource_name)
     }
 
-    /// Queries the database and try to find an item on the most common pk
-    async fn __find_by_pk<'a>(
-        table_name: &'a str,
-        pk: &'a str,
-        pk_value: &'a dyn QueryParameters<'a>,
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        Self::query(
-            format!("SELECT * FROM {} WHERE {} = $1", table_name, pk), 
-            vec![pk_value], 
-            datasource_name
-        ).await
-    }
+    // /// Queries the database and try to find an item on the most common pk
+    // async fn __find_by_pk<'a>(
+    //     table_name: &'a str,
+    //     pk: &'a str,
+    //     pk_value: &'a dyn QueryParameters<'a>,
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    //     Self::query(
+    //         format!("SELECT * FROM {} WHERE {} = $1", table_name, pk), 
+    //         vec![pk_value], 
+    //         datasource_name
+    //     ).await
+    // }
 
-    /// Counts the total entries (rows) of elements of a database table
-    async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let count = Self::query(
-            format!("SELECT COUNT (*) FROM {}", table_name), 
-            &[],
-            datasource_name
-        ).await;
+    // /// Counts the total entries (rows) of elements of a database table
+    // async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    //     let count = Self::query(
+    //         format!("SELECT COUNT (*) FROM {}", table_name), 
+    //         &[],
+    //         datasource_name
+    //     ).await;
         
-        if let Err(error) = count {
-            Err(error)
-        } else {
-            Ok(count.ok().unwrap().wrapper.get(0).unwrap().get("count"))
-        }
-    }
+    //     if let Err(error) = count {
+    //         Err(error)
+    //     } else {
+    //         Ok(count.ok().unwrap().wrapper.get(0).unwrap().get("count"))
+    //     }
+    // }
 
-    /// Inserts the values of an structure in the desired table
-    /// 
-    /// The insert operation over some type it's primary key agnostic unless
-    /// there's a primary key in the model (and if it's configured as autoincremental). 
-    /// So, if there's a slice different of he empty one, we must remove the primary key value.
-    /// 
-    /// When it's called over T, gets all data on every field that T has but,
-    ///  removing the pk field, because the insert operation by default in Canyon leads to a place 
-    /// where the primary key it's created by the database as a unique element being
-    /// autoincremental for every new record inserted on the table, if the attribute
-    /// is configured to support this case. If there's no PK, or it's configured as NOT autoincremental,
-    /// just performns an insert.
-    async fn __insert<'a>(
-        table_name: &'a str,
-        primary_key: &'a str,
-        fields: &'a str,
-        params: &'a[&'a dyn QueryParameters<'a>],
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    // /// Inserts the values of an structure in the desired table
+    // /// 
+    // /// The insert operation over some type it's primary key agnostic unless
+    // /// there's a primary key in the model (and if it's configured as autoincremental). 
+    // /// So, if there's a slice different of he empty one, we must remove the primary key value.
+    // /// 
+    // /// When it's called over T, gets all data on every field that T has but,
+    // ///  removing the pk field, because the insert operation by default in Canyon leads to a place 
+    // /// where the primary key it's created by the database as a unique element being
+    // /// autoincremental for every new record inserted on the table, if the attribute
+    // /// is configured to support this case. If there's no PK, or it's configured as NOT autoincremental,
+    // /// just performns an insert.
+    // async fn __insert<'a>(
+    //     table_name: &'a str,
+    //     primary_key: &'a str,
+    //     fields: &'a str,
+    //     params: &'a[&'a dyn QueryParameters<'a>],
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
-        let mut fields = fields.to_string();
-        let mut values = params.to_vec();
+    //     let mut fields = fields.to_string();
+    //     let mut values = params.to_vec();
 
-        if primary_key != "" { 
-            let mut splitted = fields.split(", ")
-                .map( |column_name| format!("\"{}\"", column_name))
-                .collect::<Vec<String>>();
+    //     if primary_key != "" { 
+    //         let mut splitted = fields.split(", ")
+    //             .map( |column_name| format!("\"{}\"", column_name))
+    //             .collect::<Vec<String>>();
 
-            let index = splitted.iter()
-                .position(|pk| *pk == format!("\"{primary_key}\""))
-                .unwrap();
-            values.remove(index);
+    //         let index = splitted.iter()
+    //             .position(|pk| *pk == format!("\"{primary_key}\""))
+    //             .unwrap();
+    //         values.remove(index);
 
-            splitted.retain(|pk| *pk != format!("\"{primary_key}\""));
-            fields = splitted.join(", ").to_string();
-        } else {
-            // Converting the fields column names to case-insensitive
-            fields = fields
-                .split(", ")
-                .map( |column_name| format!("\"{}\"", column_name))
-                .collect::<Vec<String>>()
-                .join(", ");
-        }
+    //         splitted.retain(|pk| *pk != format!("\"{primary_key}\""));
+    //         fields = splitted.join(", ").to_string();
+    //     } else {
+    //         // Converting the fields column names to case-insensitive
+    //         fields = fields
+    //             .split(", ")
+    //             .map( |column_name| format!("\"{}\"", column_name))
+    //             .collect::<Vec<String>>()
+    //             .join(", ");
+    //     }
 
-        let mut field_values_placeholders = String::new();
-        crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
+    //     let mut field_values_placeholders = String::new();
+    //     crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
 
-        let stmt = format!(
-            "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
-            table_name, 
-            fields, 
-            field_values_placeholders,
-            primary_key
-        );
+    //     let stmt = format!(
+    //         "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
+    //         table_name, 
+    //         fields, 
+    //         field_values_placeholders,
+    //         primary_key
+    //     );
 
-        let result = Self::query(
-            stmt, 
-            values,
-            datasource_name
-        ).await;
+    //     let result = Self::query(
+    //         stmt, 
+    //         values,
+    //         datasource_name
+    //     ).await;
 
-        if let Err(error) = result {
-            Err(error)
-        } else {
-            Ok(result.ok().unwrap())
-        }
-    }
+    //     if let Err(error) = result {
+    //         Err(error)
+    //     } else {
+    //         Ok(result.ok().unwrap())
+    //     }
+    // }
 
-    /// Same as the [`fn@__insert`], but as an associated function of some T type.
-    async fn __insert_multi<'a>(
-        table_name: &'a str,
-        primary_key: &'a str,
-        fields: &'a str, 
-        values_arr: &mut Vec<Vec<&'a dyn QueryParameters<'a>>>,
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    // /// Same as the [`fn@__insert`], but as an associated function of some T type.
+    // async fn __insert_multi<'a>(
+    //     table_name: &'a str,
+    //     primary_key: &'a str,
+    //     fields: &'a str, 
+    //     values_arr: &mut Vec<Vec<&'a dyn QueryParameters<'a>>>,
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         
-        // Removes the pk from the insert operation if there's some
-        // autogenerated primary_key on the table
-        let mut fields = fields.to_string();
-        // Converting the fields column names to case-insensitive
-        fields = fields
-            .split(", ")
-            .map( |column_name| format!("\"{}\"", column_name))
-            .collect::<Vec<String>>()
-            .join(", ");
+    //     // Removes the pk from the insert operation if there's some
+    //     // autogenerated primary_key on the table
+    //     let mut fields = fields.to_string();
+    //     // Converting the fields column names to case-insensitive
+    //     fields = fields
+    //         .split(", ")
+    //         .map( |column_name| format!("\"{}\"", column_name))
+    //         .collect::<Vec<String>>()
+    //         .join(", ");
 
-        let mut splitted = fields.split(", ")
-            .collect::<Vec<&str>>();
+    //     let mut splitted = fields.split(", ")
+    //         .collect::<Vec<&str>>();
         
-        let pk_value_index = splitted.iter()
-            .position(|pk| *pk == format!("\"{}\"", primary_key).as_str())
-            .expect("Error. No primary key found when should be there");
-        splitted.retain(|pk| *pk != format!("\"{}\"", primary_key).as_str());
-        fields = splitted.join(", ").to_string();
+    //     let pk_value_index = splitted.iter()
+    //         .position(|pk| *pk == format!("\"{}\"", primary_key).as_str())
+    //         .expect("Error. No primary key found when should be there");
+    //     splitted.retain(|pk| *pk != format!("\"{}\"", primary_key).as_str());
+    //     fields = splitted.join(", ").to_string();
 
-        let mut fields_values = String::new();
+    //     let mut fields_values = String::new();
 
-        let mut elements_counter = 0;
-        let mut values_counter = 1;
-        let values_arr_len = values_arr.len();
+    //     let mut elements_counter = 0;
+    //     let mut values_counter = 1;
+    //     let values_arr_len = values_arr.len();
 
-        for vector in values_arr.iter_mut() {
-            let mut inner_counter = 0;
-            fields_values.push('(');
-            vector.remove(pk_value_index);
+    //     for vector in values_arr.iter_mut() {
+    //         let mut inner_counter = 0;
+    //         fields_values.push('(');
+    //         vector.remove(pk_value_index);
             
-            for _value in vector.iter() {
-                if inner_counter < vector.len() - 1 {
-                    fields_values.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
-                } else {
-                    fields_values.push_str(&("$".to_owned() + &values_counter.to_string()));
-                }
+    //         for _value in vector.iter() {
+    //             if inner_counter < vector.len() - 1 {
+    //                 fields_values.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
+    //             } else {
+    //                 fields_values.push_str(&("$".to_owned() + &values_counter.to_string()));
+    //             }
 
-                inner_counter += 1;
-                values_counter += 1;
-            }
+    //             inner_counter += 1;
+    //             values_counter += 1;
+    //         }
 
-            elements_counter += 1;
+    //         elements_counter += 1;
 
-            if elements_counter < values_arr_len {
-                fields_values.push_str("), ");
-            } else {
-                fields_values.push(')');
-            }
-        }
+    //         if elements_counter < values_arr_len {
+    //             fields_values.push_str("), ");
+    //         } else {
+    //             fields_values.push(')');
+    //         }
+    //     }
 
-        let stmt = format!(
-            "INSERT INTO {} ({}) VALUES {} RETURNING {}", 
-            table_name, 
-            &fields, 
-            fields_values,
-            primary_key
-        );
+    //     let stmt = format!(
+    //         "INSERT INTO {} ({}) VALUES {} RETURNING {}", 
+    //         table_name, 
+    //         &fields, 
+    //         fields_values,
+    //         primary_key
+    //     );
 
-        let mut v_arr = Vec::new();
-        for arr in values_arr.iter() {
-            for value in arr {
-                v_arr.push(*value)
-            }
-        }
+    //     let mut v_arr = Vec::new();
+    //     for arr in values_arr.iter() {
+    //         for value in arr {
+    //             v_arr.push(*value)
+    //         }
+    //     }
 
-        let result = Self::query(
-            stmt, 
-            v_arr,
-            datasource_name
-        ).await;
+    //     let result = Self::query(
+    //         stmt, 
+    //         v_arr,
+    //         datasource_name
+    //     ).await;
 
-        if let Err(error) = result {
-            Err(error)
-        } else { Ok(result.ok().unwrap()) }
-    }
+    //     if let Err(error) = result {
+    //         Err(error)
+    //     } else { Ok(result.ok().unwrap()) }
+    // }
 
-    /// Updates an entity from the database that belongs to a current instance
-    async fn __update<'a>(
-        table_name: &'a str,
-        primary_key: &'a str,
-        fields: &'a str, 
-        values: &'a [&'a dyn QueryParameters<'a>],
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let mut vec_columns_values:Vec<String> = Vec::new();
+    // /// Updates an entity from the database that belongs to a current instance
+    // async fn __update<'a>(
+    //     table_name: &'a str,
+    //     primary_key: &'a str,
+    //     fields: &'a str, 
+    //     values: &'a [&'a dyn QueryParameters<'a>],
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    //     let mut vec_columns_values:Vec<String> = Vec::new();
         
-        for (i, column_name) in fields.split(", ").enumerate() {
-            let column_equal_value = format!(
-                "\"{}\" = ${}", column_name.to_owned(), i + 1
-            );
-            vec_columns_values.push(column_equal_value)
-        }
+    //     for (i, column_name) in fields.split(", ").enumerate() {
+    //         let column_equal_value = format!(
+    //             "\"{}\" = ${}", column_name.to_owned(), i + 1
+    //         );
+    //         vec_columns_values.push(column_equal_value)
+    //     }
 
-        let pk_index = fields.split(", ")
-            .collect::<Vec<&str>>()
-            .iter()
-            .position(|pk| *pk == primary_key)
-            .unwrap();
+    //     let pk_index = fields.split(", ")
+    //         .collect::<Vec<&str>>()
+    //         .iter()
+    //         .position(|pk| *pk == primary_key)
+    //         .unwrap();
 
-        vec_columns_values.remove(pk_index);
+    //     vec_columns_values.remove(pk_index);
 
-        let str_columns_values = vec_columns_values.join(",");
+    //     let str_columns_values = vec_columns_values.join(",");
 
-        let stmt = format!(
-            "UPDATE {} SET {} WHERE {} = ${:?}",
-            table_name, str_columns_values, primary_key, pk_index + 1
-        );
+    //     let stmt = format!(
+    //         "UPDATE {} SET {} WHERE {} = ${:?}",
+    //         table_name, str_columns_values, primary_key, pk_index + 1
+    //     );
 
-        let result = Self::query(
-            stmt, 
-            values.to_vec(),
-            datasource_name
-        ).await;
+    //     let result = Self::query(
+    //         stmt, 
+    //         values.to_vec(),
+    //         datasource_name
+    //     ).await;
 
-        if let Err(error) = result {
-            Err(error)
-        } else { Ok(result.ok().unwrap()) }
-    }
+    //     if let Err(error) = result {
+    //         Err(error)
+    //     } else { Ok(result.ok().unwrap()) }
+    // }
 
-    /// Performns an UPDATE CRUD operation over some table. It is constructed
-    /// as a [QueryBuilder], so the conditions will be appended with the builder
-    /// if the user desires
-    /// 
-    /// Implemented as an associated function, not dependent on an instance
-    fn __update_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
-        Query::new(format!("UPDATE {}", table_name), &[], datasource_name)
-    }
+    // /// Performns an UPDATE CRUD operation over some table. It is constructed
+    // /// as a [QueryBuilder], so the conditions will be appended with the builder
+    // /// if the user desires
+    // /// 
+    // /// Implemented as an associated function, not dependent on an instance
+    // fn __update_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+    //     Query::new(format!("UPDATE {}", table_name), &[], datasource_name)
+    // }
     
-    /// Deletes the entity from the database that belongs to a current instance
-    async fn __delete<'a>(
-        table_name: &str, 
-        pk_column_name: &'a str, 
-        pk_value: &'a [&'a dyn QueryParameters<'a>], 
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
+    // /// Deletes the entity from the database that belongs to a current instance
+    // async fn __delete<'a>(
+    //     table_name: &str, 
+    //     pk_column_name: &'a str, 
+    //     pk_value: &'a [&'a dyn QueryParameters<'a>], 
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    //     let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_name, pk_column_name);
 
-        let result = Self::query(
-            stmt, 
-            pk_value,
-            datasource_name
-        ).await;
+    //     let result = Self::query(
+    //         stmt, 
+    //         pk_value,
+    //         datasource_name
+    //     ).await;
 
-        if let Err(error) = result {
-            Err(error)
-        } else { Ok(result.ok().unwrap()) }
-    }
+    //     if let Err(error) = result {
+    //         Err(error)
+    //     } else { Ok(result.ok().unwrap()) }
+    // }
 
-    /// Performns a DELETE CRUD operation over some table. It is constructed
-    /// as a [QueryBuilder], so the conditions will be appended with the builder
-    /// if the user desires
-    /// 
-    /// Implemented as an associated function, not dependent on an instance
-    fn __delete_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
-        Query::new(format!("DELETE FROM {}", table_name), &[], datasource_name)
-    }
+    // /// Performns a DELETE CRUD operation over some table. It is constructed
+    // /// as a [QueryBuilder], so the conditions will be appended with the builder
+    // /// if the user desires
+    // /// 
+    // /// Implemented as an associated function, not dependent on an instance
+    // fn __delete_query<'a>(table_name: &'a str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+    //     Query::new(format!("DELETE FROM {}", table_name), &[], datasource_name)
+    // }
     
-    /// Performs a search over some table pointed with a ForeignKey annotation
-    async fn __search_by_foreign_key<'a>(
-        related_table: &'a str, 
-        related_column: &'a str,
-        lookage_value: &'a str,
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    // /// Performs a search over some table pointed with a ForeignKey annotation
+    // async fn __search_by_foreign_key<'a>(
+    //     related_table: &'a str, 
+    //     related_column: &'a str,
+    //     lookage_value: &'a str,
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
-        let stmt = format!(
-            "SELECT * FROM {} WHERE {} = {}", 
-            related_table,
-            format!("\"{}\"", related_column).as_str(),
-            lookage_value
-        );
+    //     let stmt = format!(
+    //         "SELECT * FROM {} WHERE {} = {}", 
+    //         related_table,
+    //         format!("\"{}\"", related_column).as_str(),
+    //         lookage_value
+    //     );
 
-        let result = Self::query(
-            stmt, 
-            &[],
-            datasource_name
-        ).await;
+    //     let result = Self::query(
+    //         stmt, 
+    //         &[],
+    //         datasource_name
+    //     ).await;
 
-        if let Err(error) = result {
-            Err(error)
-        } else { Ok(result.ok().unwrap()) }
-    }
+    //     if let Err(error) = result {
+    //         Err(error)
+    //     } else { Ok(result.ok().unwrap()) }
+    // }
 
-    /// Performs a search over the side that contains the ForeignKey annotation
-    async fn __search_by_reverse_side_foreign_key<'a>(
-        table: &'a str,
-        column: &'a str,
-        lookage_value: String,
-        datasource_name: &'a str
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    // /// Performs a search over the side that contains the ForeignKey annotation
+    // async fn __search_by_reverse_side_foreign_key<'a>(
+    //     table: &'a str,
+    //     column: &'a str,
+    //     lookage_value: String,
+    //     datasource_name: &'a str
+    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
-        let stmt = format!(
-            "SELECT * FROM {} WHERE \"{}\" = {}", 
-            table,
-            column,
-            lookage_value
-        );
+    //     let stmt = format!(
+    //         "SELECT * FROM {} WHERE \"{}\" = {}", 
+    //         table,
+    //         column,
+    //         lookage_value
+    //     );
 
-        let result = Self::query(
-            stmt, 
-            &[],
-            datasource_name
-        ).await;
+    //     let result = Self::query(
+    //         stmt, 
+    //         &[],
+    //         datasource_name
+    //     ).await;
 
-        if let Err(error) = result {
-            Err(error)
-        } else { Ok(result.ok().unwrap()) }
-    }
+    //     if let Err(error) = result {
+    //         Err(error)
+    //     } else { Ok(result.ok().unwrap()) }
+    // }
 }
 
 
@@ -427,7 +430,7 @@ mod crud_algorythms {
     }
 
     /// Construct the String that holds the '$num' placeholders for the values to insert
-    pub fn generate_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
+    pub fn _generate_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
         for num in 0..*total_values {
             if num < total_values - 1 {
                 placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
@@ -456,7 +459,9 @@ mod postgres_query_launcher {
         stmt: String,
         params: &'a [&'a dyn QueryParameters<'_>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where T: Debug
+        where 
+            T: Debug,
+
     {
         let postgres_connection = db_conn.postgres_connection.unwrap();
         let (client, connection) =

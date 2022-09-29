@@ -9,19 +9,26 @@ use crate::utils::macro_tokens::MacroTokens;
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function
 pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    // Destructure macro_tokens into raw data
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
+    let ty = macro_data.ty;
+    let table_name_res = macro_data.get_desired_table_name();
+    
+    let table_name = if let Err(err) = table_name_res {
+        return err
+    } else {
+        table_name_res.ok().unwrap()
+    };
+
+    let stmt = format!("SELECT * FROM {}", table_name);
 
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
-        #vis async fn find_all<'a>() -> Vec<#ty>{
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all(
-                #table_name,
+        async fn find_all<'a>() -> Vec<#ty> {
+            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 ""
             ).await
                 .ok()
@@ -37,10 +44,10 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
-        #vis async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all(
-                #table_name,
+        async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
+            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 datasource_name
             ).await
                 .ok()
@@ -53,20 +60,28 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
 /// Generates the TokenStream for build the __find_all_result() CRUD 
 /// associated function
 pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
+    let ty = macro_data.ty;
+    let table_name_res = macro_data.get_desired_table_name();
+    
+    let table_name = if let Err(err) = table_name_res {
+        return err
+    } else {
+        table_name_res.ok().unwrap()
+    };
+
+    let stmt = format!("SELECT * FROM {}", table_name);
 
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
-        #vis async fn find_all_result<'a>() -> 
+        async fn find_all_result<'a>() -> 
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all(
-                #table_name,
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 ""
             ).await;
 
@@ -89,12 +104,12 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStr
         /// Also, returns a [`Vec<T>, Error>`], wrapping a possible failure
         /// querying the database, or, if no errors happens, a Vec<T> containing
         /// the data found.
-        #vis async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
+        async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-            __find_all(
-                #table_name,
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 datasource_name
             ).await;
 

@@ -74,7 +74,7 @@ impl CanyonHandler {
     /// Too see all the columns that will be mapeed, see the [`struct@RowTable`]
     async fn fetch_postgres_database_status<'b>() -> Vec<DatabaseTable<'b>> {
         let results = Self::query(
-            super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA.to_string(), 
+            super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
             vec![],
             ""
         ).await.ok().unwrap().wrapper;

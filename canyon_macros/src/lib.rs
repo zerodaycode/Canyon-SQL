@@ -140,26 +140,27 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
 
-    let mut table_name: Option<String> = None;
-    let mut schema_name: Option<String> = None;
+    let mut table_name: Option<&str> = None;
+    let mut schema_name: Option<&str> = None;
 
     let mut parsing_attribute_error: Option<TokenStream> = None;
 
+    // The parse of the available options to configure the Canyon Entity
     for element in &attrs {
         match element {
             syn::NestedMeta::Meta(m) => {
                 match m {
                     syn::Meta::NameValue(nv) => {
-                        println!("Found meta nv: {:?}", nv.path.get_ident());
-                        println!("Found meta nv: {:?}", nv.lit);
+                        // println!("Found meta nv: {:?}", nv.path.get_ident());
+                        // println!("Found meta nv: {:?}", nv.lit);
                         let attr_arg_ident = nv.path.get_ident()
                             .expect("Something went wrong parsing the `table_name` argument")
                             .to_string();
                         
                         if attr_arg_ident == "table_name" || attr_arg_ident == "schema" {
-                            table_name = Some(attr_arg_ident);
+                            table_name = Some(Box::leak(attr_arg_ident.into_boxed_str()));
                             match nv.lit {
-                                syn::Lit::Str(ref l) => schema_name = Some(l.value().to_string()),
+                                syn::Lit::Str(ref l) => schema_name = Some(Box::leak(l.value().into_boxed_str())),
                                 _ => {
                                     parsing_attribute_error = Some(syn::Error::new(
                                         Span::call_site().into(),
@@ -191,7 +192,6 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         }
     }
 
-    let input_cloned = input.clone();
     let entity_res = syn::parse::<CanyonEntity>(input);
 
     if entity_res.is_err() {
@@ -212,14 +212,15 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::new();
     let e = Box::leak(
-        // database_table_name_from_entity_name(entity.struct_name.to_string().as_ref())
         entity.struct_name.to_string()
             .into_boxed_str()
     );
     new_entity.entity_name = e;
+    new_entity.user_table_name = table_name;
+    new_entity.user_schema_name = schema_name;
 
     // The entity fields
-    for field in entity.attributes.iter() {
+    for field in entity.fields.iter() {
         let mut new_entity_field = CanyonRegisterEntityField::new();
         new_entity_field.field_name = field.name.to_string();
         new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
@@ -237,13 +238,44 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         .expect("Error adquiring Mutex guard on Canyon Entity macro")
         .push(new_entity);
 
-    // Struct name as Ident for wire in the macro
-    let ty = entity.struct_name;
+    // Assemble everything
+    let tokens = quote! {
+        #generated_user_struct
+        #_generated_enum_type_for_fields
+        #_generated_enum_type_for_fields_values
+    };
+    
+    // Pass the result back to the compiler
+    if let Some(macro_error) = parsing_attribute_error {
+        quote! { 
+            #macro_error
+            #generated_user_struct 
+        }.into()
+    } else{
+        tokens.into()
+    }
+}
+
+/// Allows the implementors to auto-derive the `CrudOperations` trait, which defines the methods
+/// that will perform the database communication and the implementation of the queries for every
+/// type, as defined in the `CrudOperations` + `Transaction` traits.
+#[proc_macro_derive(CanyonCrud)]
+pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    // Construct a representation of Rust code as a syntax tree
+    // that we can manipulate
 
     // Calls the helper struct to build the tokens that generates the final CRUD methos
-    let ast: DeriveInput = syn::parse(input_cloned)
+    let ast: DeriveInput = syn::parse(input)
         .expect("Error parsing `Canyon Entity for generate the CRUD methods");
     let macro_data = MacroTokens::new(&ast);
+
+    // Build the trait implementation
+    impl_crud_operations_trait_for_struct(&macro_data)
+}
+
+
+fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>) -> proc_macro::TokenStream {
+    let ty = macro_data.ty;
 
     // Builds the find_all() query
     let _find_all_tokens = generate_find_all_tokens(&macro_data);
@@ -289,123 +321,73 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let _search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
     let _search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
 
-    
-    // Get the generics identifiers
-    let (impl_generics, ty_generics, where_clause) = 
-    macro_data.generics.split_for_impl();
-        
-    // Assemble everything
     let tokens = quote! {
-        #generated_user_struct
-
-        impl #impl_generics #ty #ty_generics
-            #where_clause
-        {
+        #[async_trait]
+        impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
             // The find_all impl
             #_find_all_tokens
 
             // The find_all_result impl
             #_find_all_result_tokens
-
-            // The find_all_query impl
-            #_find_all_query_tokens
-
-            // The COUNT(*) impl
-            #_count_tokens
-
-            // The COUNT(*) as result impl
-            #_count_result_tokens
-
-            // The find_by_pk impl
-            #_find_by_pk_tokens
-
-            // The find_by_pk as result impl
-            #_find_by_pk_result_tokens
-
-            // The insert impl
-            #_insert_tokens
-
-            // The insert as a result impl
-            #_insert_result_tokens
-
-            // The insert of multiple entities impl
-            #_insert_multi_tokens
-
-            // The update impl
-            #_update_tokens
-
-            // The update as result impl
-            #_update_result_tokens
-            
-            // The update as a querybuilder impl
-            #_update_query_tokens
-            
-            // The delete impl
-            #_delete_tokens
-
-            // The delete as result impl
-            #_delete_result_tokens
-
-            // The delete as querybuilder impl
-            #_delete_query_tokens
-
-            // The search by FK impl
-            #_search_by_fk_tokens
-            // The search by FK as result impl
-            #_search_by_fk_result_tokens
-
-            // The search by reverse side of the FK impl
-            #(#_search_by_revese_fk_tokens),*
-            // The search by reverse side of the FK as result impl
-            #(#_search_by_revese_fk_result_tokens),*
         }
-
-        #_generated_enum_type_for_fields
-
-        #_generated_enum_type_for_fields_values
-    };
-    
-    // Pass the result back to the compiler
-    if let Some(macro_error) = parsing_attribute_error {
-        quote! { 
-            #macro_error
-            #generated_user_struct 
-        }.into()
-    } else{
-        tokens.into()
-    }
-}
-
-/// Allows the implementors to auto-derive the `CrudOperations` trait, which defines the methods
-/// that will perform the database communication and the implementation of the queries for every
-/// type, as defined in the `CrudOperations` + `Transaction` traits.
-#[proc_macro_derive(CanyonCrud)]
-pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Construct a representation of Rust code as a syntax tree
-    // that we can manipulate
-    let ast: DeriveInput = syn::parse(input).unwrap();
-    
-    // Checks that this macro is on a struct
-    match ast.data {
-        syn::Data::Struct(ref _s) => (),
-        _ => return syn::Error::new(
-            ast.ident.span(), 
-            "CanyonCrud only works with Structs"
-        ).to_compile_error().into()
-    }
-
-    // Build the trait implementation
-    impl_crud_operations_trait_for_struct(&ast)
-}
-
-
-fn impl_crud_operations_trait_for_struct(ast: &syn::DeriveInput) -> proc_macro::TokenStream {
-    let ty = &ast.ident;
-    let tokens = quote! {
-        #[async_trait]
-        impl canyon_crud::crud::CrudOperations<#ty> for #ty { }
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
+
+
+        
+
+        // // The find_all_query impl
+        // #_find_all_query_tokens
+
+        // // The COUNT(*) impl
+        // #_count_tokens
+
+        // // The COUNT(*) as result impl
+        // #_count_result_tokens
+
+        // // The find_by_pk impl
+        // #_find_by_pk_tokens
+
+        // // The find_by_pk as result impl
+        // #_find_by_pk_result_tokens
+
+        // // The insert impl
+        // #_insert_tokens
+
+        // // The insert as a result impl
+        // #_insert_result_tokens
+
+        // // The insert of multiple entities impl
+        // #_insert_multi_tokens
+
+        // // The update impl
+        // #_update_tokens
+
+        // // The update as result impl
+        // #_update_result_tokens
+        
+        // // The update as a querybuilder impl
+        // #_update_query_tokens
+        
+        // // The delete impl
+        // #_delete_tokens
+
+        // // The delete as result impl
+        // #_delete_result_tokens
+
+        // // The delete as querybuilder impl
+        // #_delete_query_tokens
+
+        // // The search by FK impl
+        // #_search_by_fk_tokens
+        // // The search by FK as result impl
+        // #_search_by_fk_result_tokens
+
+        // // The search by reverse side of the FK impl
+        // #(#_search_by_revese_fk_tokens),*
+        // // The search by reverse side of the FK as result impl
+        // #(#_search_by_revese_fk_result_tokens),*
     };
+
     tokens.into()
 }
 

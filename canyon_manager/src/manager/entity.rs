@@ -11,9 +11,11 @@ use super::entity_fields::EntityField;
 #[derive(PartialDebug, Clone)]
 pub struct CanyonEntity {
     pub struct_name: Ident,
+    pub user_table_name: Option<String>,
+    pub user_schema_name: Option<String>,
     pub vis: Visibility,
     pub generics: Generics,
-    pub attributes: Vec<EntityField>
+    pub fields: Vec<EntityField>
 }
 
 unsafe impl Send for CanyonEntity {}
@@ -25,7 +27,7 @@ impl CanyonEntity {
     /// stored in [`CanyonEntity`]
     /// of the corresponding field
     pub fn get_fields_as_enum_variants(&self) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -41,7 +43,7 @@ impl CanyonEntity {
     /// Makes a variant `#field_name(#ty)` where `#ty` it's the type
     /// of the corresponding field
     pub fn get_fields_as_enum_variants_with_type(&self) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -55,7 +57,7 @@ impl CanyonEntity {
     /// is being requested when the method `.field_name_as_str(self)` it's invoked over some
     /// instance that implements the `canyon_sql::bounds::FieldIdentifier` trait
     pub fn create_match_arm_for_get_variant_as_string(&self, enum_name: &Ident) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -72,7 +74,7 @@ impl CanyonEntity {
     /// is being requested when the method `.value()` it's invoked over some
     /// instance that implements the `canyon_sql::bounds::FieldValueIdentifier` trait
     pub fn create_match_arm_for_relate_fields_with_values(&self, enum_name: &Ident) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -97,7 +99,7 @@ impl CanyonEntity {
     }
 
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map(|f| {
                 let name = &f.name;
@@ -126,9 +128,11 @@ impl Parse for CanyonEntity {
         Ok(
             Self {
                 struct_name: _struct.ident,
+                user_table_name: None,
+                user_schema_name: None,
                 vis: _vis,
                 generics: _generics,
-                attributes: parsed_fields
+                fields: parsed_fields
             }
         )
     }

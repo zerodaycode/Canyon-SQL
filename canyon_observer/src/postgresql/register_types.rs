@@ -13,6 +13,8 @@ use crate::constants::{
 #[derive(Debug, Clone)]
 pub struct CanyonRegisterEntity<'a> {
     pub entity_name: &'a str,
+    pub user_table_name: Option<&'a str>,
+    pub user_schema_name: Option<&'a str>,
     pub entity_fields: Vec<CanyonRegisterEntityField>,
 }
 
@@ -20,6 +22,8 @@ impl<'a> CanyonRegisterEntity<'a> {
     pub fn new() -> Self {
         Self {
             entity_name: "",
+            user_table_name: None,
+            user_schema_name: None,
             entity_fields: Vec::new(),
         }
     }
