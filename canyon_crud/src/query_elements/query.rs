@@ -20,10 +20,10 @@ impl<'a, T> Query<'a, T>
     where
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
-    pub fn new(sql: String, params: &'a[&'a dyn QueryParameters<'a>], datasource_name: &'a str) -> QueryBuilder<'a, T> {
+    pub fn new(sql: String, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         let self_ = Self {
             sql: sql,
-            params: params,
+            params: &[],
             marker: PhantomData
         };
         QueryBuilder::<T>::new(self_, datasource_name)

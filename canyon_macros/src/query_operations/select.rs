@@ -53,7 +53,6 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data:
 /// associated function
 pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
-
     let stmt = format!("SELECT * FROM {}", table_schema_data);
 
     quote! {
@@ -108,9 +107,8 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>, table_schem
 }
 
 /// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
-pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
+pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
 
     quote! {
         /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
@@ -118,10 +116,8 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>) -> TokenStre
         /// 
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention.
-        #vis fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
-                #table_name, ""
-            )
+        fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
+            query_elements::query::Query::new(format!("SELECT * FROM {}", #table_schema_data), "")
         }
 
         /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
@@ -133,12 +129,10 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>) -> TokenStre
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
-        #vis fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
+        fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
             query_elements::query_builder::QueryBuilder<'a, #ty> 
         {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_all_query(
-                #table_name, datasource_name
-            )
+            query_elements::query::Query::new(format!("SELECT * FROM {}", #table_schema_data), datasource_name)
         }
     }
 }

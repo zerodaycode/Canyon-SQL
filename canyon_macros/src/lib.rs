@@ -290,7 +290,7 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     // Builds the find_all_result() query
     let _find_all_result_tokens = generate_find_all_result_tokens(&macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
-    let _find_all_query_tokens = generate_find_all_query_tokens(&macro_data);
+    let _find_all_query_tokens = generate_find_all_query_tokens(&macro_data, &table_schema_data);
     
     // Builds a COUNT(*) query over some table
     let _count_tokens = generate_count_tokens(&macro_data);
@@ -337,14 +337,11 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The find_all_result impl
             #_find_all_result_tokens
+
+            // The find_all_query impl
+            #_find_all_query_tokens
         }
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
-
-
-        
-
-        // // The find_all_query impl
-        // #_find_all_query_tokens
 
         // // The COUNT(*) impl
         // #_count_tokens

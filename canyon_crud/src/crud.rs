@@ -85,9 +85,9 @@ pub trait CrudOperations<T>: Transaction<T>
     
     async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    fn __find_all_query<'a>(table_name: &str, datasource_name: &'a str) -> QueryBuilder<'a, T> {
-        Query::new(format!("SELECT * FROM {}", table_name), &[], datasource_name)
-    }
+    fn find_all_query<'a>() -> QueryBuilder<'a, T>;
+    
+    fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 
     // /// Queries the database and try to find an item on the most common pk
     // async fn __find_by_pk<'a>(
