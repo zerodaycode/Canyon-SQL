@@ -89,6 +89,14 @@ pub trait CrudOperations<T>: Transaction<T>
     
     fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 
+    async fn count() -> i64;
+    
+    async fn count_datasource<'a>(datasource_name: &'a str) -> i64;
+    
+    async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    
+    async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+
     // /// Queries the database and try to find an item on the most common pk
     // async fn __find_by_pk<'a>(
     //     table_name: &'a str,

@@ -138,54 +138,81 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>, table_schema
 }
 
 /// Performs a COUNT(*) query over some table
-pub fn generate_count_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
+pub fn generate_count_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
+    let stmt = format!("SELECT COUNT (*) FROM {}", table_schema_data);
 
     quote! {
-        /// TODO docs
-        #vis async fn count() -> i64 {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name,
+        /// Returns the number of rows present on the table mapped to the Canyon Entity
+        async fn count() -> i64 {
+            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 ""
             ).await
             .ok()
             .unwrap()
+            .wrapper
+            .get(0)
+            .unwrap()
+            .get("count")
         }
 
-        /// TODO docs
-        #vis async fn count_datasource<'a>(datasource_name: &'a str) -> i64 {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name,
+        /// Returns the number of rows present on the table mapped to the Canyon Entity with
+        /// the specified datasource
+        async fn count_datasource<'a>(datasource_name: &'a str) -> i64 {
+            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 datasource_name
             ).await
             .ok()
             .unwrap()
+            .wrapper
+            .get(0)
+            .unwrap()
+            .get("count")
         }
     }
 }
 
 /// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
 /// a posible success or error coming from the database
-pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
+pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
+    let stmt = format!("SELECT COUNT (*) FROM {}", table_schema_data);
 
     quote! {
-        /// TODO docs
-        #vis async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name,
+        /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
+        /// wrapping a posible success or error coming from the database
+        async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+            let count = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 ""
-            ).await
+            ).await;
+
+            if let Err(error) = count {
+                Err(error)
+            } else {
+                Ok(count.ok().unwrap().wrapper.get(0).unwrap().get("count"))
+            }
         }
 
-        /// TODO docs
-        #vis async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__count(
-                #table_name,
+        /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
+        /// wrapping a posible success or error coming from the database with the specified datasource
+        async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+            let count = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                &[],
                 datasource_name
-            ).await
+            ).await;
+
+            if let Err(error) = count {
+                Err(error)
+            } else {
+                Ok(count.ok().unwrap().wrapper.get(0).unwrap().get("count"))
+            }
         }
     }
 }
