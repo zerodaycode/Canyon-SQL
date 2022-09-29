@@ -218,12 +218,11 @@ pub fn generate_count_result_tokens(macro_data: &MacroTokens<'_>, table_schema_d
 }
 
 /// Generates the TokenStream for build the __find_by_pk() CRUD operation
-pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
-
+pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
+    let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_schema_data, pk);
 
     // Disabled if there's no `primary_key` annotation
     if pk == "" { return quote! {}; }
@@ -236,14 +235,13 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
         /// 
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
-        #vis async fn find_by_pk<'a>(
-            pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>
+        async fn find_by_pk<'a>(
+            value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>
         ) -> Option<#ty> {
             
-            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name,
-                #pk,
-                pk_value,
+            let response = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                vec![value],
                 ""
             ).await;
                 
@@ -272,15 +270,13 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
         /// 
         /// This operation it's only available if the [`CanyonEntity`] contains
         /// a field declared as primary key.
-        #vis async fn find_by_pk_datasource<'a>(
-            pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+        async fn find_by_pk_datasource<'a>(
+            value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
             datasource_name: &'a str
         ) -> Option<#ty> {
-            /// TODO docs
-            let response = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name,
-                #pk,
-                pk_value,
+            let response = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                vec![value],
                 datasource_name
             ).await;
                 
@@ -301,12 +297,11 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
 }
 
 /// Generates the TokenStream for build the __find_by_pk() CRUD operation
-pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens<'_>) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_struct(ty);
-
+pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
+    let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_schema_data, pk);
 
     // Disabled if there's no `primary_key` annotation
     if pk == "" { return quote! {}; }
@@ -324,13 +319,12 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens<'_>) -> TokenS
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        #vis async fn find_by_pk_result<'a>(pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>) -> 
+        async fn find_by_pk_result<'a>(value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>) -> 
             Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name,
-                #pk,
-                pk_value,
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt,
+                vec![value],
                 ""
             ).await;
                 
@@ -366,14 +360,13 @@ pub fn generate_find_by_pk_result_tokens(macro_data: &MacroTokens<'_>) -> TokenS
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        #vis async fn find_by_pk_result_datasource<'a>(
-            pk_value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+        async fn find_by_pk_result_datasource<'a>(
+            value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
             datasource_name: &'a str
         ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__find_by_pk(
-                #table_name,
-                #pk, 
-                pk_value,
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                #stmt, 
+                vec![value],
                 datasource_name
             ).await;
                 

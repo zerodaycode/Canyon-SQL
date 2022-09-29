@@ -298,9 +298,9 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let _count_result_tokens = generate_count_result_tokens(&macro_data, &table_schema_data);
    
     // Builds the find_by_pk() query
-    let _find_by_pk_tokens = generate_find_by_pk_tokens(&macro_data);
+    let _find_by_pk_tokens = generate_find_by_pk_tokens(&macro_data, &table_schema_data);
     // Builds the find_by_pk_result() query
-    let _find_by_pk_result_tokens = generate_find_by_pk_result_tokens(&macro_data);
+    let _find_by_pk_result_tokens = generate_find_by_pk_result_tokens(&macro_data, &table_schema_data);
     
     // Builds the insert() query
     let _insert_tokens = generate_insert_tokens(&macro_data);
@@ -346,17 +346,15 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The COUNT(*) as result impl
             #_count_result_tokens
+
+            // The find_by_pk impl
+            #_find_by_pk_tokens
+
+            // The find_by_pk as result impl
+            #_find_by_pk_result_tokens
         }
-        impl canyon_crud::crud::Transaction<#ty> for #ty { }
-
         
-
-        // // The find_by_pk impl
-        // #_find_by_pk_tokens
-
-        // // The find_by_pk as result impl
-        // #_find_by_pk_result_tokens
-
+        impl canyon_crud::crud::Transaction<#ty> for #ty { }
         // // The insert impl
         // #_insert_tokens
 

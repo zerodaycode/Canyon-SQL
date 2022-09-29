@@ -97,34 +97,20 @@ pub trait CrudOperations<T>: Transaction<T>
     
     async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    // /// Queries the database and try to find an item on the most common pk
-    // async fn __find_by_pk<'a>(
-    //     table_name: &'a str,
-    //     pk: &'a str,
-    //     pk_value: &'a dyn QueryParameters<'a>,
-    //     datasource_name: &'a str
-    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-    //     Self::query(
-    //         format!("SELECT * FROM {} WHERE {} = $1", table_name, pk), 
-    //         vec![pk_value], 
-    //         datasource_name
-    //     ).await
-    // }
+    async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>) -> Option<T>;
 
-    // /// Counts the total entries (rows) of elements of a database table
-    // async fn __count(table_name: &str, datasource_name: &str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-    //     let count = Self::query(
-    //         format!("SELECT COUNT (*) FROM {}", table_name), 
-    //         &[],
-    //         datasource_name
-    //     ).await;
-        
-    //     if let Err(error) = count {
-    //         Err(error)
-    //     } else {
-    //         Ok(count.ok().unwrap().wrapper.get(0).unwrap().get("count"))
-    //     }
-    // }
+    async fn find_by_pk_datasource<'a>(
+        value: &'a dyn QueryParameters<'a>,
+        datasource_name: &'a str
+    ) -> Option<T>;
+
+    async fn find_by_pk_result<'a>(value: &'a dyn QueryParameters<'a>)
+        -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    
+    async fn find_by_pk_result_datasource<'a>(
+        value: &'a dyn QueryParameters<'a>,
+        datasource_name: &'a str
+    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
     // /// Inserts the values of an structure in the desired table
     // /// 
