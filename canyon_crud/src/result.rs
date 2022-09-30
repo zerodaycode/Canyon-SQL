@@ -73,6 +73,11 @@ impl<T: Debug> DatabaseResult<T> {
         results
     }
 
+    /// Returns the active datasource
+    pub fn get_active_ds(&self) -> &DatabaseType {
+        &self.active_ds
+    }
+
     /// Returns how many rows contains the result of the query
     pub fn get_number_of_results(&self) -> i32 {
         self.wrapper.len() as i32

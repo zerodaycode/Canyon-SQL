@@ -5,11 +5,8 @@ use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the _insert() CRUD operation
-pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-
-    // Gets the name of the table in the database that maps the annotated Struct
-    let table_name = database_table_name_from_struct(ty);
+pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
 
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data.get_struct_fields_as_strings();
@@ -22,30 +19,99 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
     });
     let insert_values_cloned = insert_values.clone();
 
-    let pk = macro_data.get_primary_key_annotation()
-        .unwrap_or_default();
+    let primary_key = macro_data.get_primary_key_annotation();
     
     let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
-        .find( |(i, _t)| i.to_string() == pk);
+        .find( |(i, _t)| Some(i.to_string()) == primary_key);
     
-    let pk_ident = if let Some(pk_data) = &pk_ident_type {
-        let i = &pk_data.0;
-        quote! { #i }
+    let insert_transaction = if let Some(pk_data) = &pk_ident_type {
+        let pk_ident = &pk_data.0;
+        let pk_type = &pk_data.1;
+
+        quote! {
+            let mut splitted = #column_names.split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>();
+
+            let index = splitted.iter()
+                .position( |pk| *pk == format!("\"{}\"", #primary_key))
+                .unwrap();
+            values.remove(index);
+
+            splitted.retain(|pk| *pk != format!("\"{}\"", #primary_key));
+            mapped_fields = splitted.join(", ").to_string();
+
+            let mut placeholders = String::new();
+            for num in 0..values.len() {
+                if num < values.len() - 1 {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
+                } else {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
+                }
+            }
+
+            let stmt = format!(
+                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
+                #table_schema_data, 
+                mapped_fields, 
+                placeholders,
+                #primary_key
+            );
+
+            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                stmt,
+                values,
+                datasource_name
+            ).await
+            .ok()
+            .expect(
+                format!("Insert operation failed for {:?}", &self).as_str()
+            ).wrapper
+            .get(0)
+            .unwrap()
+            .get::<&str, #pk_type>(#primary_key)
+            .to_owned();
+        }
     } else {
-        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
-        return quote! {};
+        quote! {
+            let mut mapped_fields: String = String::new();
+
+            // Converting the fields column names to case-insensitive
+            mapped_fields = #column_names
+                .split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>()
+                .join(", ");
+
+            let mut placeholders = String::new();
+            for num in 0..values.len() {
+                if num < values.len() - 1 {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
+                } else {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
+                }
+            }
+
+            let stmt = format!(
+                "INSERT INTO {} ({}) VALUES ({})", 
+                #table_schema_data, 
+                mapped_fields, 
+                placeholders,
+                #primary_key
+            );
+
+            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                stmt,
+                values,
+                datasource_name
+            ).await
+            .ok()
+            .expect(
+                format!("Insert operation failed for {:?}", &self).as_str()
+            );
+        }
     };
-
-    let pk_type = if let Some(pk_data) = &pk_ident_type {
-        let t = &pk_data.1;
-        quote! { #t }
-    } else { 
-        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
-        return quote! {}; 
-    };
-
-
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -99,37 +165,22 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// Remember that after the insert operation, your instance will have updated
         /// the value of the field declared as `primary_key`
         /// ```
-        #vis async fn insert(&mut self) -> () {
-            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-                #table_name,
-                #pk,
-                &mut #column_names, 
-                &[#(#insert_values),*],
-                ""
-            ).await
-            .ok()
-            .expect(
-                format!(
-                    "Insert operation failed for {:?}", 
-                    &self
-                ).as_str()
-            ).wrapper
-            .get(0)
-            .unwrap()
-            .get::<&str, #pk_type>(#pk)
-            .to_owned();
+        async fn insert<'a>(&mut self) {
+            let datasource_name = "";
+            let mut mapped_fields: String = String::new();
+            let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
+            #insert_transaction
         }
 
-        /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
-        /// datasource by it's `datasouce name`, defined in the configuration file.
+        /// Inserts into a database entity the current data in `self`, with the specified datasource,
+        /// generating a new entry (row), returning the value of the autogenerated `PRIMARY KEY` = `self.<pk_field>`.
         /// 
         /// This `insert` operation needs a `&mut` reference. That's because typically, 
         /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the  
+        /// inserted, the database will generate a unique new value for the 
         /// `pk` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
-        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
+        /// automatically assign that returned id to `self.<pk_field>`. So, after the `insert`
+        /// operation, you instance will have the value of the *PRIMARY KEY*
         /// of the database row that represents.
         /// 
         /// ## *Examples*
@@ -172,38 +223,18 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// Remember that after the insert operation, your instance will have updated
         /// the value of the field declared as `primary_key`
         /// ```
-        #vis async fn insert_datasource(&mut self, datasource_name: &str) -> () {
-            self.#pk_ident = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-                #table_name,
-                #pk,
-                &mut #column_names, 
-                &[#(#insert_values_cloned),*],
-                datasource_name
-            ).await
-            .ok()
-            .expect(
-                format!(
-                    "Insert operation failed for {:?}", 
-                    &self
-                ).as_str()
-            ).wrapper
-            .get(0)
-            .unwrap()
-            .get::<&str, #pk_type>(#pk)
-            .to_owned();
+        async fn insert_datasource<'a>(&mut self, datasource_name: &'a str) {
+            let mut mapped_fields: String = String::new();
+            let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
+            #insert_transaction
         }
     }
 }
 
 
 /// Generates the TokenStream for the _insert_result() CRUD operation
-pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
-
-    // Destructure macro_tokens into raw data
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-
-    // Gets the name of the table in the database that maps the annotated Struct
-    let table_name = database_table_name_from_struct(ty);
+pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
 
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data.get_struct_fields_as_strings();
@@ -216,27 +247,117 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
     });
     let insert_values_cloned = insert_values.clone();
 
-    let pk = macro_data.get_primary_key_annotation()
-        .unwrap_or_default();
-
+    let primary_key = macro_data.get_primary_key_annotation();
+    
     let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
-        .find( |(i, _t)| i.to_string() == pk);
+        .find( |(i, _t)| Some(i.to_string()) == primary_key);
+    
+    let insert_transaction = if let Some(pk_data) = &pk_ident_type {
+        let pk_ident = &pk_data.0;
+        let pk_type = &pk_data.1;
 
-    let pk_ident = if let Some(pk_data) = &pk_ident_type {
-        let i = &pk_data.0;
-        quote! { #i }
-    } else {
-        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
-        return quote! {};
-    };
+        quote! {
+            let mut splitted = #column_names.split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>();
 
-    let pk_type = if let Some(pk_type_) = &pk_ident_type {
-        let t = &pk_type_.1;
-        quote! { #t }
+            let index = splitted.iter()
+                .position( |pk| *pk == format!("\"{}\"", #primary_key))
+                .unwrap();
+            values.remove(index);
+
+            splitted.retain(|pk| *pk != format!("\"{}\"", #primary_key));
+            mapped_fields = splitted.join(", ").to_string();
+
+            let mut placeholders = String::new();
+            for num in 0..values.len() {
+                if num < values.len() - 1 {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
+                } else {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
+                }
+            }
+
+            let stmt = format!(
+                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
+                #table_schema_data, 
+                mapped_fields, 
+                placeholders,
+                #primary_key
+            );
+
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                stmt,
+                values,
+                datasource_name
+            ).await;
+
+            match result {
+                Ok(res) => {
+                    match res.get_active_ds() {
+                        canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
+                            self.#pk_ident = res.wrapper.get(0)
+                                .expect("No value found on the returning clause")
+                                .get::<&str, #pk_type>(#primary_key)
+                                .to_owned();
+
+                            Ok(())
+                        },
+                        canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                            self.#pk_ident = res.sqlserver.get(0)
+                                .expect("No value found on the returning clause")
+                                .get::<#pk_type, &str>(#primary_key)
+                                .expect("SQL Server primary key type failed to be setted as value")
+                                .to_owned();
+
+                            Ok(())
+                        }
+                    }
+                },
+                Err(e) => Err(e)
+            }
+        }
     } else {
-        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
-        return quote! {};
+        quote! {
+            let mut mapped_fields: String = String::new();
+
+            // Converting the fields column names to case-insensitive
+            mapped_fields = #column_names
+                .split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>()
+                .join(", ");
+
+            let mut placeholders = String::new();
+            for num in 0..values.len() {
+                if num < values.len() - 1 {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
+                } else {
+                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
+                }
+            }
+
+            let stmt = format!(
+                "INSERT INTO {} ({}) VALUES ({})", 
+                #table_schema_data, 
+                mapped_fields, 
+                placeholders,
+                #primary_key
+            );
+
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                stmt,
+                values,
+                datasource_name
+            ).await;
+
+            if let Err(error) = result {
+                Err(error)
+            } else {
+                Ok(())
+            }
+        }
     };
 
     quote! {
@@ -278,34 +399,13 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         /// }
         /// ```
         /// 
-        #vis async fn insert_result(&mut self) 
+        async fn insert_result<'a>(&mut self) 
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-                #table_name,
-                #pk,
-                #column_names, 
-                &[#(#insert_values),*],
-                ""
-            ).await;
-
-            if let Err(error) = result {
-                Err(error)
-            } else {
-                self.#pk_ident = result  
-                    .ok()
-                    .expect(
-                        format!(
-                            "Insert operation failed for {:?}", 
-                            &self
-                        ).as_str()
-                    ).wrapper
-                    .get(0)
-                    .unwrap()
-                    .get::<&str, #pk_type>(#pk);
-
-                Ok(())
-            }
+            let datasource_name = "";
+            let mut mapped_fields: String = String::new();
+            let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
+            #insert_transaction
         }
 
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -345,36 +445,15 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens) -> TokenStream {
         ///     eprintln!("{:?}", ins_result.err())
         /// }
         /// ```
-        /// 
-        #vis async fn insert_result_datasource(&mut self, datasource_name: &str)
+        ///
+        async fn insert_result_datasource<'a>(&mut self, datasource_name: &'a str) 
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert(
-                #table_name,
-                #pk,
-                #column_names, 
-                &[#(#insert_values_cloned),*],
-                datasource_name
-            ).await;
-
-            if let Err(error) = result {
-                Err(error)
-            } else {
-                self.#pk_ident = result  
-                    .ok()
-                    .expect(
-                        format!(
-                            "Insert operation failed for {:?}", 
-                            &self
-                        ).as_str()
-                    ).wrapper
-                    .get(0)
-                    .unwrap()
-                    .get::<&str, #pk_type>(#pk);
-
-                Ok(())
-            }
+            let mut mapped_fields: String = String::new();
+            let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
+            #insert_transaction
         }
+    
     }
 }
 
@@ -426,6 +505,8 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
         return quote! {};
     };
 
+
+    // params: &'a[&'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>]
     quote! {
         /// Inserts multiple instances of some type `T` into its related table.
         /// 

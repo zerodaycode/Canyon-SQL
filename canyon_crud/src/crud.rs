@@ -6,7 +6,6 @@ use canyon_connection::canyon_database_connector::DatabaseType;
 use crate::bounds::QueryParameters;
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
-use crate::query_elements::query::Query;
 use crate::query_elements::query_builder::QueryBuilder;
 
 use canyon_connection::{
@@ -52,7 +51,7 @@ pub trait Transaction<T: Debug> {
                 DatabaseType::PostgreSql => 
                     postgres_query_launcher::launch::<T>(db_conn, stmt.to_string(), params.as_ref()).await,
                 DatabaseType::SqlServer =>
-                    sqlserver_query_launcher::launch::<T, Z>(db_conn, stmt.to_string(), params).await
+                    sqlserver_query_launcher::launch::<T, Z>(db_conn, &mut stmt.to_string(), params).await
             }
         }
     }
@@ -77,40 +76,50 @@ pub trait Transaction<T: Debug> {
 pub trait CrudOperations<T>: Transaction<T> 
     where T: Debug + CrudOperations<T> + RowMapper<T>
 {
-    async fn find_all<'a>() -> Vec<T>;
+    // async fn find_all<'a>() -> Vec<T>;
     
-    async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
+    // async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
     
-    async fn find_all_result<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn find_all_result<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    fn find_all_query<'a>() -> QueryBuilder<'a, T>;
+    // fn find_all_query<'a>() -> QueryBuilder<'a, T>;
     
-    fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
+    // fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 
-    async fn count() -> i64;
+    // async fn count() -> i64;
     
-    async fn count_datasource<'a>(datasource_name: &'a str) -> i64;
+    // async fn count_datasource<'a>(datasource_name: &'a str) -> i64;
     
-    async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>) -> Option<T>;
+    // async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>) -> Option<T>;
 
-    async fn find_by_pk_datasource<'a>(
-        value: &'a dyn QueryParameters<'a>,
-        datasource_name: &'a str
-    ) -> Option<T>;
+    // async fn find_by_pk_datasource<'a>(
+    //     value: &'a dyn QueryParameters<'a>,
+    //     datasource_name: &'a str
+    // ) -> Option<T>;
 
-    async fn find_by_pk_result<'a>(value: &'a dyn QueryParameters<'a>)
-        -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn find_by_pk_result<'a>(value: &'a dyn QueryParameters<'a>)
+    //     -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn find_by_pk_result_datasource<'a>(
-        value: &'a dyn QueryParameters<'a>,
-        datasource_name: &'a str
-    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn find_by_pk_result_datasource<'a>(
+    //     value: &'a dyn QueryParameters<'a>,
+    //     datasource_name: &'a str
+    // ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+
+    async fn insert<'a>(&mut self);
+
+    async fn insert_datasource<'a>(&mut self, datasource_name: &'a str);
+
+    async fn insert_result<'a>(&mut self) 
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+
+    async fn insert_result_datasource<'a>(&mut self, datasource_name: &'a str)
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
     // /// Inserts the values of an structure in the desired table
     // /// 
@@ -132,46 +141,46 @@ pub trait CrudOperations<T>: Transaction<T>
     //     datasource_name: &'a str
     // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
-    //     let mut fields = fields.to_string();
-    //     let mut values = params.to_vec();
+        // let mut fields = fields.to_string();
+        // let mut values = params.to_vec();
 
-    //     if primary_key != "" { 
-    //         let mut splitted = fields.split(", ")
-    //             .map( |column_name| format!("\"{}\"", column_name))
-    //             .collect::<Vec<String>>();
+        // if primary_key != "" { 
+        //     let mut splitted = fields.split(", ")
+        //         .map( |column_name| format!("\"{}\"", column_name))
+        //         .collect::<Vec<String>>();
 
-    //         let index = splitted.iter()
-    //             .position(|pk| *pk == format!("\"{primary_key}\""))
-    //             .unwrap();
-    //         values.remove(index);
+        //     let index = splitted.iter()
+        //         .position(|pk| *pk == format!("\"{primary_key}\""))
+        //         .unwrap();
+        //     values.remove(index);
 
-    //         splitted.retain(|pk| *pk != format!("\"{primary_key}\""));
-    //         fields = splitted.join(", ").to_string();
-    //     } else {
-    //         // Converting the fields column names to case-insensitive
-    //         fields = fields
-    //             .split(", ")
-    //             .map( |column_name| format!("\"{}\"", column_name))
-    //             .collect::<Vec<String>>()
-    //             .join(", ");
-    //     }
+        //     splitted.retain(|pk| *pk != format!("\"{primary_key}\""));
+        //     fields = splitted.join(", ").to_string();
+        // } else {
+        //     // Converting the fields column names to case-insensitive
+        //     fields = fields
+        //         .split(", ")
+        //         .map( |column_name| format!("\"{}\"", column_name))
+        //         .collect::<Vec<String>>()
+        //         .join(", ");
+        // }
 
-    //     let mut field_values_placeholders = String::new();
-    //     crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
+        // let mut field_values_placeholders = String::new();
+        // crud_algorythms::generate_insert_placeholders(&mut field_values_placeholders, &values.len());
 
-    //     let stmt = format!(
-    //         "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
-    //         table_name, 
-    //         fields, 
-    //         field_values_placeholders,
-    //         primary_key
-    //     );
+        // let stmt = format!(
+        //     "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
+        //     table_name, 
+        //     fields, 
+        //     field_values_placeholders,
+        //     primary_key
+        // );
 
-    //     let result = Self::query(
-    //         stmt, 
-    //         values,
-    //         datasource_name
-    //     ).await;
+        // let result = Self::query(
+        //     stmt, 
+        //     values,
+        //     datasource_name
+        // ).await;
 
     //     if let Err(error) = result {
     //         Err(error)
@@ -400,47 +409,47 @@ pub trait CrudOperations<T>: Transaction<T>
 }
 
 
-/// Utilities for adecuating some data coming from macros to the generated SQL
-mod crud_algorythms {
-    use canyon_connection::{tokio_postgres::types::ToSql, tiberius::IntoSql};
+// /// Utilities for adecuating some data coming from macros to the generated SQL
+// mod crud_algorythms {
+//     use canyon_connection::{tokio_postgres::types::ToSql, tiberius::IntoSql};
 
-    /// Operates over the data of the insert operations to generate the insert
-    /// SQL depending of it's a `primary_key` annotation, if it's setted as 
-    /// autogenerated (discards the pk field and value from the insert)
-    pub fn _manage_primary_key<'a>(
-        primary_key: &'a str,
-        fields: &'a mut String,
-        values: &'a mut Vec<impl ToSql + IntoSql<'a> + Clone + Sync + Send>
-    ) { 
-        let mut splitted = fields.split(", ")
-            .collect::<Vec<&str>>();
-        let index = splitted.iter()
-            .position(|pk| *pk == primary_key)
-            .unwrap();
-        values.remove(index);
+//     /// Operates over the data of the insert operations to generate the insert
+//     /// SQL depending of it's a `primary_key` annotation, if it's setted as 
+//     /// autogenerated (discards the pk field and value from the insert)
+//     pub fn _manage_primary_key<'a>(
+//         primary_key: &'a str,
+//         fields: &'a mut String,
+//         values: &'a mut Vec<impl ToSql + IntoSql<'a> + Clone + Sync + Send>
+//     ) { 
+//         let mut splitted = fields.split(", ")
+//             .collect::<Vec<&str>>();
+//         let index = splitted.iter()
+//             .position(|pk| *pk == primary_key)
+//             .unwrap();
+//         values.remove(index);
 
-        splitted.retain(|pk| *pk != primary_key);
-        *fields = splitted.join(", ").to_string();
-    }
+//         splitted.retain(|pk| *pk != primary_key);
+//         *fields = splitted.join(", ").to_string();
+//     }
 
-    /// Construct the String that holds the '$num' placeholders for the values to insert
-    pub fn _generate_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
-        for num in 0..*total_values {
-            if num < total_values - 1 {
-                placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
-            } else {
-                placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
-            }
-        }
-    }
+//     /// Construct the String that holds the '$num' placeholders for the values to insert
+//     pub fn _generate_insert_placeholders<'a>(placeholders: &'a mut String, total_values: &usize) {
+//         for num in 0..*total_values {
+//             if num < total_values - 1 {
+//                 placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
+//             } else {
+//                 placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
+//             }
+//         }
+//     }
 
-    /// Construct the String that holds the '$num' placeholders for the multi values to insert
-    pub fn _generate_multi_insert_placeholders<'a>(
-        // args
-    ) {
-        todo!() // TODO impl for unit test
-    }
-}
+//     /// Construct the String that holds the '$num' placeholders for the multi values to insert
+//     pub fn _generate_multi_insert_placeholders<'a>(
+//         // args
+//     ) {
+//         todo!() // TODO impl for unit test
+//     }
+// }
 
 mod postgres_query_launcher {
     use std::fmt::Debug;
@@ -497,14 +506,25 @@ mod sqlserver_query_launcher {
 
     pub async fn launch<'a, T, Z>(
         db_conn: DatabaseConnection,
-        stmt: String,
+        mut stmt: &mut String,
         params: Z,
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where 
             T: Debug,
             Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
     {
-        let mut sql_server_query = Query::new(stmt);
+        // Re-generate de insert statement to adecuate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
+        if stmt.contains("RETURNING") {
+            let c = stmt.clone();
+            let temp = c.split_once("RETURNING")
+                .expect("An error happened generating an INSERT statement for a SQL SERVER client");
+            let temp2 = temp.0.split_once("VALUES")
+                .expect("An error happened generating an INSERT statement for a SQL SERVER client [1]");
+
+            *stmt = format!("{} OUTPUT inserted.{} VALUES {}", temp2.0.trim(), temp.1.trim(), temp2.1.trim());
+        }
+
+        let mut sql_server_query = Query::new(stmt.to_owned().replace("$", "@P"));
         params.as_ref().into_iter().for_each( |param| sql_server_query.bind( *param ));
 
         let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection

@@ -241,8 +241,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Assemble everything
     let tokens = quote! {
         #generated_user_struct
-        #_generated_enum_type_for_fields
-        #_generated_enum_type_for_fields_values
+        // #_generated_enum_type_for_fields
+        // #_generated_enum_type_for_fields_values
     };
     
     // Pass the result back to the compiler
@@ -303,9 +303,9 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let _find_by_pk_result_tokens = generate_find_by_pk_result_tokens(&macro_data, &table_schema_data);
     
     // Builds the insert() query
-    let _insert_tokens = generate_insert_tokens(&macro_data);
+    let _insert_tokens = generate_insert_tokens(&macro_data, &table_schema_data);
     // Builds the insert() query as a result
-    let _insert_result_tokens = generate_insert_result_tokens(&macro_data);
+    let _insert_result_tokens = generate_insert_result_tokens(&macro_data, &table_schema_data);
     // // Builds the insert_multi() query
     let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
     
@@ -332,34 +332,36 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let tokens = quote! {
         #[async_trait]
         impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
-            // The find_all impl
-            #_find_all_tokens
+            // // The find_all impl
+            // #_find_all_tokens
 
-            // The find_all_result impl
-            #_find_all_result_tokens
+            // // The find_all_result impl
+            // #_find_all_result_tokens
 
-            // The find_all_query impl
-            #_find_all_query_tokens
+            // // The find_all_query impl
+            // #_find_all_query_tokens
 
-            // The COUNT(*) impl
-            #_count_tokens
+            // // The COUNT(*) impl
+            // #_count_tokens
 
-            // The COUNT(*) as result impl
-            #_count_result_tokens
+            // // The COUNT(*) as result impl
+            // #_count_result_tokens
 
-            // The find_by_pk impl
-            #_find_by_pk_tokens
+            // // The find_by_pk impl
+            // #_find_by_pk_tokens
 
-            // The find_by_pk as result impl
-            #_find_by_pk_result_tokens
+            // // The find_by_pk as result impl
+            // #_find_by_pk_result_tokens
+
+            // The insert impl
+            #_insert_tokens
+
+            // The insert as a result impl
+            #_insert_result_tokens
         }
-        
-        impl canyon_crud::crud::Transaction<#ty> for #ty { }
-        // // The insert impl
-        // #_insert_tokens
 
-        // // The insert as a result impl
-        // #_insert_result_tokens
+        impl canyon_crud::crud::Transaction<#ty> for #ty { }
+        
 
         // // The insert of multiple entities impl
         // #_insert_multi_tokens
@@ -477,6 +479,14 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
             quote! {  
                 #ident: row.get::<i64, &str>(#ident_name)
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
+            quote! {  
+                #ident: row.get::<f32, &str>(#ident_name)
+            }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
+            quote! {  
+                #ident: row.get::<f64, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
             quote! {  

@@ -175,6 +175,78 @@ impl<'a> QueryParameters<'a> for Option<&i32> {
         ColumnData::I32(Some(*self.unwrap()))
     }
 }
+impl<'a> QueryParameters<'a> for f32 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F32(Some(*self))
+    }
+}
+impl<'a> QueryParameters<'a> for &f32 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F32(Some(**self))
+    }
+}
+impl<'a> QueryParameters<'a> for Option<f32> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F32(*self)
+    }
+}
+impl<'a> QueryParameters<'a> for Option<&f32> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F32(Some(*self.unwrap()))
+    }
+}
+impl<'a> QueryParameters<'a> for f64 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F64(Some(*self))
+    }
+}
+impl<'a> QueryParameters<'a> for &f64 {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F64(Some(**self))
+    }
+}
+impl<'a> QueryParameters<'a> for Option<f64> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F64(*self)
+    }
+}
+impl<'a> QueryParameters<'a> for Option<&f64> {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::F64(Some(*self.unwrap()))
+    }
+}
 impl<'a> QueryParameters<'a> for i64 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
