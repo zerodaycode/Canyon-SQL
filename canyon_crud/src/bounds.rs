@@ -208,7 +208,7 @@ impl<'a> QueryParameters<'a> for Option<&f32> {
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::F32(Some(*self.unwrap()))
+        ColumnData::F32(Some(*self.expect("Error on an f32 value on QueryParameters<'_>")))
     }
 }
 impl<'a> QueryParameters<'a> for f64 {
@@ -244,7 +244,7 @@ impl<'a> QueryParameters<'a> for Option<&f64> {
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::F64(Some(*self.unwrap()))
+        ColumnData::F64(Some(*self.expect("Error on an f64 value on QueryParameters<'_>")))
     }
 }
 impl<'a> QueryParameters<'a> for i64 {
