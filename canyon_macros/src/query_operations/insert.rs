@@ -1,7 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the _insert() CRUD operation
@@ -476,13 +475,8 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
 /// 
 /// This, also lets the user to have the option to be able to insert multiple
 /// [`T`] objects in only one query
-pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream {
-
-    // Destructure macro_tokens into raw data
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-
-    // Gets the name of the table in the database that maps the annotated Struct
-    let table_name = database_table_name_from_struct(ty);
+pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+    let ty = macro_data.ty;
 
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data.get_struct_fields_as_strings();
@@ -502,24 +496,177 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
         .into_iter()
         .find( |(i, _t)| i.to_string() == pk);
 
-    let pk_ident = if let Some(pk_data) = &pk_ident_type {
-        let i = &pk_data.0;
-        quote! { #i }
+    let multi_insert_transaction = if let Some(pk_data) = &pk_ident_type {
+        let pk_ident = &pk_data.0;
+        let pk_type = &pk_data.1;
+
+        quote! {
+            mapped_fields = #column_names
+                .split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>()
+                .join(", ");
+
+            let mut splitted = mapped_fields.split(", ")
+                .collect::<Vec<&str>>();
+            
+            let pk_value_index = splitted.iter()
+                .position(|pk| *pk == format!("\"{}\"", #pk).as_str())
+                .expect("Error. No primary key found when should be there");
+            splitted.retain(|pk| *pk != format!("\"{}\"", #pk).as_str());
+            mapped_fields = splitted.join(", ").to_string();
+
+            let mut fields_placeholders = String::new();
+
+            let mut elements_counter = 0;
+            let mut values_counter = 1;
+            let values_arr_len = final_values.len();
+
+            for vector in final_values.iter_mut() {
+                let mut inner_counter = 0;
+                fields_placeholders.push('(');
+                vector.remove(pk_value_index);
+                
+                for _value in vector.iter() {
+                    if inner_counter < vector.len() - 1 {
+                        fields_placeholders.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
+                    } else {
+                        fields_placeholders.push_str(&("$".to_owned() + &values_counter.to_string()));
+                    }
+
+                    inner_counter += 1;
+                    values_counter += 1;
+                }
+
+                elements_counter += 1;
+
+                if elements_counter < values_arr_len {
+                    fields_placeholders.push_str("), ");
+                } else {
+                    fields_placeholders.push(')');
+                }
+            }
+
+            let stmt = format!(
+                "INSERT INTO {} ({}) VALUES {} RETURNING {}", 
+                #table_schema_data, 
+                mapped_fields,
+                fields_placeholders,
+                #pk
+            );
+
+            let mut v_arr = Vec::new();
+            for arr in final_values.iter() {
+                for value in arr {
+                    v_arr.push(*value)
+                }
+            }
+
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                stmt, 
+                v_arr,
+                datasource_name
+            ).await;
+
+            match result {
+                Ok(res) => {
+                    match res.get_active_ds() {
+                        canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
+                            for (idx, instance) in instances.iter_mut().enumerate() {
+                                instance.#pk_ident = res
+                                    .wrapper
+                                    .get(idx)
+                                    .expect("Failed getting the returned IDs for a multi insert")
+                                    .get::<&str, #pk_type>(#pk);
+                            }
+
+                            Ok(())
+                        },
+                        canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                            for (idx, instance) in instances.iter_mut().enumerate() {
+                                instance.#pk_ident = res
+                                    .sqlserver
+                                    .get(idx)
+                                    .expect("Failed getting the returned IDs for a multi insert")
+                                    .get::<#pk_type, &str>(#pk)
+                                    .expect("SQL Server primary key type failed to be setted as value");
+                            }
+
+                            Ok(())
+                        }
+                    }
+                },
+                Err(e) => Err(e)
+            }
+        }
     } else {
-        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
-        return quote! {};
+        quote! {
+            mapped_fields = #column_names
+                .split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>()
+                .join(", ");
+
+            let mut splitted = mapped_fields.split(", ")
+                .collect::<Vec<&str>>();
+
+            let mut fields_placeholders = String::new();
+
+            let mut elements_counter = 0;
+            let mut values_counter = 1;
+            let values_arr_len = final_values.len();
+
+            for vector in final_values.iter_mut() {
+                let mut inner_counter = 0;
+                fields_placeholders.push('(');
+                
+                for _value in vector.iter() {
+                    if inner_counter < vector.len() - 1 {
+                        fields_placeholders.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
+                    } else {
+                        fields_placeholders.push_str(&("$".to_owned() + &values_counter.to_string()));
+                    }
+
+                    inner_counter += 1;
+                    values_counter += 1;
+                }
+
+                elements_counter += 1;
+
+                if elements_counter < values_arr_len {
+                    fields_placeholders.push_str("), ");
+                } else {
+                    fields_placeholders.push(')');
+                }
+            }
+
+            let stmt = format!(
+                "INSERT INTO {} ({}) VALUES {}", 
+                #table_schema_data, 
+                mapped_fields,
+                fields_placeholders
+            );
+
+            let mut v_arr = Vec::new();
+            for arr in final_values.iter() {
+                for value in arr {
+                    v_arr.push(*value)
+                }
+            }
+
+            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                stmt, 
+                v_arr,
+                datasource_name
+            ).await;
+
+            match result {
+                Ok(res) => Ok(()),
+                Err(e) => Err(e)
+            }
+        }
     };
 
-    let pk_type = if let Some(pk_type_) = pk_ident_type {
-        let t = pk_type_.1;
-        quote! { #t }
-    } else { 
-        // If there's no pk annotation, Canyon won't generate the delete CRUD operation as a method of the implementor.
-        return quote! {};
-    };
-
-
-    // params: &'a[&'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>]
     quote! {
         /// Inserts multiple instances of some type `T` into its related table.
         /// 
@@ -554,13 +701,14 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
         /// ).await
         /// .ok();
         /// ```
-        #vis async fn multi_insert(values: & mut [& mut #ty]) -> (
+        async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
         ) {
             use crate::bounds::QueryParameters;
+            let datasource_name = "";
             
             let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
-            for instance in values.iter() {
+            for instance in instances.iter() {
                 let intermediate: &[&dyn QueryParameters<'_>] = &[#(#macro_fields),*];
                 
                 let mut longer_lived: Vec<&dyn QueryParameters<'_>> = Vec::new();
@@ -570,31 +718,10 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
 
                 final_values.push(longer_lived)
             }
+
+            let mut mapped_fields: String = String::new();
             
-            let autogenerated_ids = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert_multi(
-                #table_name,
-                #pk,
-                #column_names, 
-                &mut final_values,
-                ""
-            ).await;
-
-            if let Err(error) = autogenerated_ids {
-                Err(error)
-            } else {
-                for (idx, instance) in values.iter_mut().enumerate() {
-                    instance.#pk_ident = autogenerated_ids
-                        .as_ref()
-                        .ok()
-                        .unwrap()
-                        .wrapper
-                        .get(idx)
-                        .expect("Failed getting the returned IDs for a multi insert")
-                        .get::<&str, #pk_type>(#pk);
-                }
-
-                Ok(())
-            }
+            #multi_insert_transaction
         }
 
         /// Inserts multiple instances of some type `T` into its related table with the specified
@@ -631,13 +758,13 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
         /// ).await
         /// .ok();
         /// ```
-        #vis async fn multi_insert_datasource<'a>(values: &'a mut [&'a mut #ty], datasource_name: &str) -> (
+        async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
         ) {
             use crate::bounds::QueryParameters;
             
             let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
-            for instance in values.iter() {
+            for instance in instances.iter() {
                 let intermediate: &[&dyn QueryParameters<'_>] = &[#(#macro_fields_cloned),*];
                 
                 let mut longer_lived: Vec<&dyn QueryParameters<'_>> = Vec::new();
@@ -647,31 +774,10 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens) -> TokenStream 
 
                 final_values.push(longer_lived)
             }
+
+            let mut mapped_fields: String = String::new();
             
-            let autogenerated_ids = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::__insert_multi(
-                #table_name,
-                #pk,
-                #column_names, 
-                &mut final_values,
-                datasource_name
-            ).await;
-
-            if let Err(error) = autogenerated_ids {
-                Err(error)
-            } else {
-                for (idx, instance) in values.iter_mut().enumerate() {
-                    instance.#pk_ident = autogenerated_ids
-                        .as_ref()
-                        .ok()
-                        .unwrap()
-                        .wrapper
-                        .get(idx)
-                        .expect("Failed getting the returned IDs for a multi insert")
-                        .get::<&str, #pk_type>(#pk);
-                }
-
-                Ok(())
-            }
+            #multi_insert_transaction
         }
     }
 }

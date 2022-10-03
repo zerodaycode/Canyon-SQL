@@ -7,7 +7,7 @@ edition = "2021"
 tokio = { version = "1.9.0", features = ["full"] }
 tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
 
-tiberius = { version = "0.11.2", features = ["tds73", "chrono"] }
+tiberius = { path = "C:\\Users\\amarcos\\Desktop\\EcoMT\\Code\\OTEA\\Rust\\tiberius-fork", features = ["tds73", "chrono"] }
 async-std = { version = "1.12.0" }
 
 lazy_static = "1.4.0"

@@ -307,7 +307,7 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     // Builds the insert() query as a result
     let _insert_result_tokens = generate_insert_result_tokens(&macro_data, &table_schema_data);
     // // Builds the insert_multi() query
-    let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data);
+    let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data, &table_schema_data);
     
     // Builds the update() query
     let _update_tokens = generate_update_tokens(&macro_data);
@@ -358,13 +358,12 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The insert as a result impl
             #_insert_result_tokens
+
+            // The insert of multiple entities impl
+            #_insert_multi_tokens
         }
 
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
-        
-
-        // // The insert of multiple entities impl
-        // #_insert_multi_tokens
 
         // // The update impl
         // #_update_tokens
@@ -468,11 +467,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
-    println!("Parsing: {:?} entity", ast.ident.to_string());
-    fields.iter().for_each(|(_vis, _ident, _ty)| {
-        println!("Field: {:?}", get_field_type_as_string(_ty).replace(' ', ""));
-    });
-
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
         let quote = if get_field_type_as_string(ty) == "String" {
@@ -486,13 +480,11 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                 #ident: row.get::<i64, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
-            println!("RowMapper for an f32 tiberius value.");
             quote! {  
                 #ident: row.get::<f32, &str>(#ident_name)
                     // .map( |x| x as f32 )
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
-            println!("RowMapper for an f64 tiberius value.");
             quote! {  
                 #ident: row.get::<f64, &str>(#ident_name)
                     // .map( |x| x as f64 )
