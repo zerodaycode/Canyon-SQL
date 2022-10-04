@@ -93,7 +93,7 @@ impl<'a> MacroTokens<'a> {
     /// to the same behaviour.
     /// 
     /// Returns every field if there's no PK, or if it's present but autoincremental = false 
-    pub fn get_column_names_for_insert(&self) -> Vec<String> {
+    pub fn get_column_names_pk_parsed(&self) -> Vec<String> {
         self.fields
             .iter()
             .filter( |field| {

@@ -32,7 +32,6 @@ use query_operations::{
     }, 
     update::{
         generate_update_tokens,
-        generate_update_result_tokens,
         generate_update_query_tokens
     },
     delete::{
@@ -241,8 +240,8 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     // Assemble everything
     let tokens = quote! {
         #generated_user_struct
-        // #_generated_enum_type_for_fields
-        // #_generated_enum_type_for_fields_values
+        #_generated_enum_type_for_fields
+        #_generated_enum_type_for_fields_values
     };
     
     // Pass the result back to the compiler
@@ -309,12 +308,10 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     // // Builds the insert_multi() query
     let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data, &table_schema_data);
     
-    // Builds the update() query
-    let _update_tokens = generate_update_tokens(&macro_data);
-    // Builds the update() query as a result
-    let _update_result_tokens = generate_update_result_tokens(&macro_data);
+    // Builds the update() queries
+    let _update_tokens = generate_update_tokens(&macro_data, &table_schema_data);
     // Builds the update() query as a QueryBuilder
-    let _update_query_tokens = generate_update_query_tokens(&macro_data);
+    let _update_query_tokens = generate_update_query_tokens(&macro_data, &table_schema_data);
 
     // Builds the delete() query
     let _delete_tokens = generate_delete_tokens(&macro_data);
@@ -338,20 +335,20 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
             // The find_all_result impl
             #_find_all_result_tokens
 
-            // // The find_all_query impl
-            // #_find_all_query_tokens
+            // The find_all_query impl
+            #_find_all_query_tokens
 
-            // // The COUNT(*) impl
-            // #_count_tokens
+            // The COUNT(*) impl
+            #_count_tokens
 
-            // // The COUNT(*) as result impl
-            // #_count_result_tokens
+            // The COUNT(*) as result impl
+            #_count_result_tokens
 
-            // // The find_by_pk impl
-            // #_find_by_pk_tokens
+            // The find_by_pk impl
+            #_find_by_pk_tokens
 
-            // // The find_by_pk as result impl
-            // #_find_by_pk_result_tokens
+            // The find_by_pk as result impl
+            #_find_by_pk_result_tokens
 
             // The insert impl
             #_insert_tokens
@@ -361,15 +358,16 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The insert of multiple entities impl
             #_insert_multi_tokens
+
+            // The update impl
+            #_update_tokens
+
+            // The update as a querybuilder impl
+            #_update_query_tokens
+
         }
 
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
-
-        // // The update impl
-        // #_update_tokens
-
-        // // The update as result impl
-        // #_update_result_tokens
         
         // // The update as a querybuilder impl
         // #_update_query_tokens

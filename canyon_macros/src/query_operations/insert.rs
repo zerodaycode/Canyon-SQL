@@ -9,7 +9,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     // Retrieves the fields of the Struct as a collection of Strings, already parsed
     // the condition of remove the primary key if it's present and it's autoincremental
-    let insert_columns = macro_data.get_column_names_for_insert()
+    let insert_columns = macro_data.get_column_names_pk_parsed()
         .join(", ");
 
     // Returns a String with the generic $x placeholder for the query parameters.
@@ -223,7 +223,7 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
 
     // Retrieves the fields of the Struct as a collection of Strings, already parsed
     // the condition of remove the primary key if it's present and it's autoincremental
-    let insert_columns = macro_data.get_column_names_for_insert()
+    let insert_columns = macro_data.get_column_names_pk_parsed()
         .join(", ");
 
     // Returns a String with the generic $x placeholder for the query parameters.
