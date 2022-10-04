@@ -83,6 +83,37 @@ impl<'a> MacroTokens<'a> {
         ).collect::<Vec<String>>()
     }
 
+    /// Returns a Vec populated with the name of the fields of the struct
+    /// already quote scaped for avoid the upper case column name mangling.
+    /// 
+    /// If the type contains a `#[primary_key]` annotation (and), returns the
+    /// name of the columns without the fields that maps against the column designed as
+    /// primary key (if its present and its autoincremental attribute is setted to true)
+    /// (autoincremental = true) or its without the autoincremental attribute, which leads
+    /// to the same behaviour.
+    /// 
+    /// Returns every field if there's no PK, or if it's present but autoincremental = false 
+    pub fn get_column_names_for_insert(&self) -> Vec<String> {
+        self.fields
+            .iter()
+            .filter( |field| {
+                    if field.attrs.len() > 0 {
+                        field.attrs.iter().any( |attr| 
+                            {   
+                                let a = attr.path.segments[0].clone().ident;
+                                let b = attr.tokens.to_string();
+                                if a.to_string() == "primary_key" || b.to_string().contains("false") {
+                                    false
+                                } else { true }
+                            }
+                        )
+                    } else { true }
+                }
+            ).map( |c| 
+                format!( "\"{}\"", c.ident.as_ref().unwrap().to_string() )
+            ).collect::<Vec<String>>()
+    }
+
     /// Retrieves the fields of the Struct as continuous String, comma separated
     pub fn get_struct_fields_as_strings(&self) -> String {
         let column_names: String = self.get_struct_fields()
@@ -101,6 +132,18 @@ impl<'a> MacroTokens<'a> {
         column_names_as_chars.as_str().to_owned()
     }
 
+    /// 
+    pub fn get_pk_index(&self) -> Option<usize> {
+        let mut pk_index = None;
+        for (idx, field) in self.fields.iter().enumerate() {
+            for attr in &field.attrs {
+                if attr.path.segments[0].clone().ident.to_string() == "primary_key" {
+                    pk_index = Some(idx);
+                }
+            }
+        }
+        pk_index
+    }
 
     /// Utility for find the primary key attribute (if exists) and the
     /// column name (field) which belongs
@@ -110,14 +153,58 @@ impl<'a> MacroTokens<'a> {
             .find( |field| 
                 field.attrs.iter()
                     .map( |attr| 
-                        attr.path.segments[0].clone().ident
+                            attr.path.segments[0].clone().ident
                     ).map( |ident| 
                         ident.to_string()
-                    ).find ( |field_name| 
-                        field_name == "primary_key"
+                    ).find( |a| 
+                            a == "primary_key"
                     ) == Some("primary_key".to_string())
             );
 
         f.map( |v| v.ident.clone().unwrap().to_string())
+    }
+
+    /// Boolean that returns true if the type contains a `#[primary_key]`
+    /// annotation. False otherwise.
+    pub fn type_has_primary_key(&self) -> bool {
+        self.fields.iter()
+            .any( |field| 
+                field.attrs.iter()
+                    .map( |attr| 
+                        attr.path.segments[0].clone().ident
+                    ).map( |ident| 
+                        ident.to_string()
+                    ).find ( |a| 
+                        a == "primary_key"
+                    ) == Some("primary_key".to_string())
+            )
+    }
+
+    /// Returns an String ready to be inserted on the VALUES Sql clause
+    /// representing generic query parameters ($x).
+    /// 
+    /// Already returns the correct number of placeholders, skipping one
+    /// entry in the type contains a `#[primary_key]`
+    pub fn placeholders_generator(&self) -> String {
+        let mut placeholders = String::new();
+        if self.type_has_primary_key() {
+            for num in 1..self.fields.len() {
+                if num < self.fields.len() - 1 {
+                    placeholders.push_str(&("$".to_owned() + &(num).to_string() + ", "));
+                } else {
+                    placeholders.push_str(&("$".to_owned() + &(num).to_string()));
+                }
+            }
+        } else {
+            for num in 1..self.fields.len() + 1 {
+                if num < self.fields.len() {
+                    placeholders.push_str(&("$".to_owned() + &(num).to_string() + ", "));
+                } else {
+                    placeholders.push_str(&("$".to_owned() + &(num).to_string()));
+                }
+            }
+        }
+
+        placeholders
     }
 }

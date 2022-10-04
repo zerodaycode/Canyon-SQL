@@ -7,8 +7,13 @@ use crate::utils::macro_tokens::MacroTokens;
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
 
-    // Retrieves the fields of the Struct as continuous String
-    let column_names = macro_data.get_struct_fields_as_strings();
+    // Retrieves the fields of the Struct as a collection of Strings, already parsed
+    // the condition of remove the primary key if it's present and it's autoincremental
+    let insert_columns = macro_data.get_column_names_for_insert()
+        .join(", ");
+
+    // Returns a String with the generic $x placeholder for the query parameters.
+    let placeholders = macro_data.placeholders_generator();
 
     // Retrives the fields of the Struct
     let fields = macro_data.get_struct_fields();
@@ -17,6 +22,10 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         quote! { &self.#ident }
     });
     let insert_values_cloned = insert_values.clone();
+
+    let remove_pk_value_from_fn_entry = if let Some(pk_index) = macro_data.get_pk_index() {
+        quote! { values.remove(#pk_index) }
+    } else { quote! {} };
 
     let primary_key = macro_data.get_primary_key_annotation();
     
@@ -29,34 +38,17 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         let pk_type = &pk_data.1;
 
         quote! {
-            let mut splitted = #column_names.split(", ")
-                .map( |column_name| format!("\"{}\"", column_name))
-                .collect::<Vec<String>>();
-
-            let index = splitted.iter()
-                .position( |pk| *pk == format!("\"{}\"", #primary_key))
-                .unwrap();
-            values.remove(index);
-
-            splitted.retain(|pk| *pk != format!("\"{}\"", #primary_key));
-            mapped_fields = splitted.join(", ").to_string();
-
-            let mut placeholders = String::new();
-            for num in 0..values.len() {
-                if num < values.len() - 1 {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
-                }
-            }
+            #remove_pk_value_from_fn_entry;
 
             let stmt = format!(
                 "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
                 #table_schema_data, 
-                mapped_fields, 
-                placeholders,
+                #insert_columns, 
+                #placeholders,
                 #primary_key
             );
+
+            println!("Stmt with PK: {:?}", &stmt);
 
             let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
                 stmt,
@@ -82,36 +74,19 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                         }
                     }
                 },
-                Err(e) => todo!()
+                Err(e) => {eprintln!("Error on the insert stmt: {:?}", e)}
             };
         }
     } else {
         quote! {
-            let mut mapped_fields: String = String::new();
-
-            // Converting the fields column names to case-insensitive
-            mapped_fields = #column_names
-                .split(", ")
-                .map( |column_name| format!("\"{}\"", column_name))
-                .collect::<Vec<String>>()
-                .join(", ");
-
-            let mut placeholders = String::new();
-            for num in 0..values.len() {
-                if num < values.len() - 1 {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
-                }
-            }
-
             let stmt = format!(
                 "INSERT INTO {} ({}) VALUES ({})", 
                 #table_schema_data, 
-                mapped_fields, 
-                placeholders,
+                #insert_columns, 
+                #placeholders,
                 #primary_key
             );
+
 
             <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
                 stmt,
@@ -179,7 +154,6 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// ```
         async fn insert<'a>(&mut self) {
             let datasource_name = "";
-            let mut mapped_fields: String = String::new();
             let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
@@ -236,7 +210,6 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// the value of the field declared as `primary_key`
         /// ```
         async fn insert_datasource<'a>(&mut self, datasource_name: &'a str) {
-            let mut mapped_fields: String = String::new();
             let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
@@ -248,8 +221,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
 
-    // Retrieves the fields of the Struct as continuous String
-    let column_names = macro_data.get_struct_fields_as_strings();
+    // Retrieves the fields of the Struct as a collection of Strings, already parsed
+    // the condition of remove the primary key if it's present and it's autoincremental
+    let insert_columns = macro_data.get_column_names_for_insert()
+        .join(", ");
+
+    // Returns a String with the generic $x placeholder for the query parameters.
+    let placeholders = macro_data.placeholders_generator();
 
     // Retrives the fields of the Struct
     let fields = macro_data.get_struct_fields();
@@ -260,6 +238,10 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
     let insert_values_cloned = insert_values.clone();
 
     let primary_key = macro_data.get_primary_key_annotation();
+
+    let remove_pk_value_from_fn_entry = if let Some(pk_index) = macro_data.get_pk_index() {
+        quote! { values.remove(#pk_index) }
+    } else { quote! {} };
     
     let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
@@ -270,32 +252,13 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
         let pk_type = &pk_data.1;
 
         quote! {
-            let mut splitted = #column_names.split(", ")
-                .map( |column_name| format!("\"{}\"", column_name))
-                .collect::<Vec<String>>();
-
-            let index = splitted.iter()
-                .position( |pk| *pk == format!("\"{}\"", #primary_key))
-                .unwrap();
-            values.remove(index);
-
-            splitted.retain(|pk| *pk != format!("\"{}\"", #primary_key));
-            mapped_fields = splitted.join(", ").to_string();
-
-            let mut placeholders = String::new();
-            for num in 0..values.len() {
-                if num < values.len() - 1 {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
-                }
-            }
+            #remove_pk_value_from_fn_entry;
 
             let stmt = format!(
                 "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
                 #table_schema_data, 
-                mapped_fields, 
-                placeholders,
+                #insert_columns, 
+                #placeholders,
                 #primary_key
             );
 
@@ -332,29 +295,11 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
         }
     } else {
         quote! {
-            let mut mapped_fields: String = String::new();
-
-            // Converting the fields column names to case-insensitive
-            mapped_fields = #column_names
-                .split(", ")
-                .map( |column_name| format!("\"{}\"", column_name))
-                .collect::<Vec<String>>()
-                .join(", ");
-
-            let mut placeholders = String::new();
-            for num in 0..values.len() {
-                if num < values.len() - 1 {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string() + ","));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num + 1).to_string()));
-                }
-            }
-
             let stmt = format!(
                 "INSERT INTO {} ({}) VALUES ({})", 
                 #table_schema_data, 
-                mapped_fields, 
-                placeholders,
+                #insert_columns, 
+                #placeholders,
                 #primary_key
             );
 
@@ -415,7 +360,6 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
         {
             let datasource_name = "";
-            let mut mapped_fields: String = String::new();
             let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
@@ -461,7 +405,6 @@ pub fn generate_insert_result_tokens(macro_data: &MacroTokens, table_schema_data
         async fn insert_result_datasource<'a>(&mut self, datasource_name: &'a str) 
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
         {
-            let mut mapped_fields: String = String::new();
             let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
