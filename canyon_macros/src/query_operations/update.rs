@@ -1,7 +1,6 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the __update() CRUD operation

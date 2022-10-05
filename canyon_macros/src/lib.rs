@@ -36,7 +36,6 @@ use query_operations::{
     },
     delete::{
         generate_delete_tokens,
-        generate_delete_result_tokens,
         generate_delete_query_tokens
     }
 };
@@ -313,12 +312,11 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     // Builds the update() query as a QueryBuilder
     let _update_query_tokens = generate_update_query_tokens(&macro_data, &table_schema_data);
 
-    // Builds the delete() query
-    let _delete_tokens = generate_delete_tokens(&macro_data);
-    // Builds the delete() query as a result
-    let _delete_result_tokens = generate_delete_result_tokens(&macro_data);
+    // Builds the delete() queries
+    let _delete_tokens = generate_delete_tokens(&macro_data, &table_schema_data);
+
     // Builds the delete() query as a QueryBuilder
-    let _delete_query_tokens = generate_delete_query_tokens(&macro_data);
+    let _delete_query_tokens = generate_delete_query_tokens(&macro_data, &table_schema_data);
     
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
     let _search_by_fk_tokens: TokenStream = generate_find_by_foreign_key_tokens(&macro_data);
@@ -365,22 +363,15 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
             // The update as a querybuilder impl
             #_update_query_tokens
 
+            // // The delete impl
+            // #_delete_tokens
+
+            // The delete as querybuilder impl
+            #_delete_query_tokens
+
         }
 
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
-        
-        // // The update as a querybuilder impl
-        // #_update_query_tokens
-        
-        // // The delete impl
-        // #_delete_tokens
-
-        // // The delete as result impl
-        // #_delete_result_tokens
-
-        // // The delete as querybuilder impl
-        // #_delete_query_tokens
-
         // // The search by FK impl
         // #_search_by_fk_tokens
         // // The search by FK as result impl

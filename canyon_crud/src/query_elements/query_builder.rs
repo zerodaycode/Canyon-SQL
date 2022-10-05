@@ -81,13 +81,13 @@ impl<'a, T> QueryBuilder<'a, T>
 
     pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
         Self {
-            query: query,
+            query,
             where_clause: String::new(),
             and_clause: String::new(),
             in_clause: &[],
             order_by_clause: String::new(),
             set_clause: String::new(),
-            datasource_name: datasource_name
+            datasource_name
         }
     }
 
