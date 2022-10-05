@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use canyon_connection::{
     tokio_postgres::types::ToSql, 
     tiberius::{
@@ -7,6 +9,8 @@ use canyon_connection::{
 };
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, DateTime, FixedOffset, Utc};
+
+use crate::{crud::{CrudOperations, Transaction}, mapper::RowMapper};
 
 
 /// Created for retrieve the field's name of a field of a struct, giving 
@@ -31,7 +35,9 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime, DateTime, FixedOffset, Utc};
 /// 
 /// // Something like:
 /// `let struct_field_name_from_variant = StructField::some_field.field_name_as_str();`
-pub trait FieldIdentifier {
+pub trait FieldIdentifier<T> 
+    where T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug
+{
     fn field_name_as_str(self) -> String;
 }
 
@@ -56,11 +62,15 @@ pub trait FieldIdentifier {
 /// ```
 /// so, the `.value(self)` method it's called over `self`, gets the value for that variant
 /// (or another specified in the logic) and returns that value as an [`String`]
-pub trait FieldValueIdentifier {
+pub trait FieldValueIdentifier<T> 
+    where T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug
+{
     fn value(self) -> String;
 }
 
-impl FieldValueIdentifier for &str {
+impl<T> FieldValueIdentifier<T> for &str 
+    where T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug
+{
     fn value(self) -> String {
         self.to_string()
     }

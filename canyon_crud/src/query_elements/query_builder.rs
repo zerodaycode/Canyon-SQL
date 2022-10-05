@@ -91,7 +91,7 @@ impl<'a, T> QueryBuilder<'a, T>
         }
     }
 
-    pub fn r#where<Z: FieldValueIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
+    pub fn r#where<Z: FieldValueIdentifier<T>>(mut self, r#where: Z, comp: Comp) -> Self {
         let values = r#where.value()
             .to_string()
             .split(" ")
@@ -109,7 +109,7 @@ impl<'a, T> QueryBuilder<'a, T>
         self
     } 
 
-    pub fn and<Z: FieldValueIdentifier>(mut self, r#and: Z, comp: Comp) -> Self {
+    pub fn and<Z: FieldValueIdentifier<T>>(mut self, r#and: Z, comp: Comp) -> Self {
         let values = r#and.value()
             .to_string()
             .split(" ")
@@ -132,7 +132,7 @@ impl<'a, T> QueryBuilder<'a, T>
         self
     } 
 
-    pub fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
+    pub fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
         let desc = if desc { String::from(" DESC ") 
             } else { "".to_owned() };
 
@@ -148,7 +148,9 @@ impl<'a, T> QueryBuilder<'a, T>
 
     /// The SQL `SET` clause to especify the columns that must be updated in the sentence
     pub fn set<Z, S>(mut self, columns: &'a[(Z, S)]) -> Self 
-        where Z: FieldIdentifier + Clone, S: ToString 
+        where 
+            Z: FieldIdentifier<T> + Clone, 
+            S: ToString 
     {
         if columns.len() == 0 {
             return self;
