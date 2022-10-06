@@ -17,13 +17,10 @@ use query_operations::{
         generate_find_all_result_tokens,
         generate_find_all_query_tokens,
         generate_count_tokens,
-        generate_count_result_tokens,
         generate_find_by_pk_tokens,
-        generate_find_by_pk_result_tokens,
         generate_find_by_foreign_key_tokens,
-        generate_find_by_foreign_key_result_tokens,
-        generate_find_by_reverse_foreign_key_tokens,
-        generate_find_by_reverse_foreign_key_result_tokens
+        generate_find_by_reverse_foreign_key_tokens
+        
     },
     insert::{
         generate_insert_tokens,
@@ -292,19 +289,15 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     
     // Builds a COUNT(*) query over some table
     let _count_tokens = generate_count_tokens(&macro_data, &table_schema_data);
-    // Builds a COUNT(*) query over some table
-    let _count_result_tokens = generate_count_result_tokens(&macro_data, &table_schema_data);
-   
+ 
     // Builds the find_by_pk() query
     let _find_by_pk_tokens = generate_find_by_pk_tokens(&macro_data, &table_schema_data);
-    // Builds the find_by_pk_result() query
-    let _find_by_pk_result_tokens = generate_find_by_pk_result_tokens(&macro_data, &table_schema_data);
     
     // Builds the insert() query
     let _insert_tokens = generate_insert_tokens(&macro_data, &table_schema_data);
     // Builds the insert() query as a result
     let _insert_result_tokens = generate_insert_result_tokens(&macro_data, &table_schema_data);
-    // // Builds the insert_multi() query
+    // Builds the insert_multi() query
     let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data, &table_schema_data);
     
     // Builds the update() queries
@@ -320,9 +313,7 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
     let _search_by_fk_tokens: TokenStream = generate_find_by_foreign_key_tokens(&macro_data);
-    let _search_by_fk_result_tokens: TokenStream = generate_find_by_foreign_key_result_tokens(&macro_data);
     let _search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
-    let _search_by_revese_fk_result_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_result_tokens(&macro_data);
 
     let tokens = quote! {
         #[async_trait]
@@ -339,14 +330,8 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
             // The COUNT(*) impl
             #_count_tokens
 
-            // The COUNT(*) as result impl
-            #_count_result_tokens
-
             // The find_by_pk impl
             #_find_by_pk_tokens
-
-            // The find_by_pk as result impl
-            #_find_by_pk_result_tokens
 
             // The insert impl
             #_insert_tokens
@@ -363,8 +348,8 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
             // The update as a querybuilder impl
             #_update_query_tokens
 
-            // // The delete impl
-            // #_delete_tokens
+            // The delete impl
+            #_delete_tokens
 
             // The delete as querybuilder impl
             #_delete_query_tokens
@@ -374,13 +359,9 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
         // // The search by FK impl
         // #_search_by_fk_tokens
-        // // The search by FK as result impl
-        // #_search_by_fk_result_tokens
 
         // // The search by reverse side of the FK impl
         // #(#_search_by_revese_fk_tokens),*
-        // // The search by reverse side of the FK as result impl
-        // #(#_search_by_revese_fk_result_tokens),*
     };
 
     tokens.into()

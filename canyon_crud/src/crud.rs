@@ -86,26 +86,15 @@ pub trait CrudOperations<T>: Transaction<T>
     fn find_all_query<'a>() -> QueryBuilder<'a, T>;
     
     fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
-
-    async fn count() -> i64;
     
-    async fn count_datasource<'a>(datasource_name: &'a str) -> i64;
+    async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn count_result() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
-    
-    async fn count_result_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn count_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>) -> Option<T>;
-
-    async fn find_by_pk_datasource<'a>(
-        value: &'a dyn QueryParameters<'a>,
-        datasource_name: &'a str
-    ) -> Option<T>;
-
-    async fn find_by_pk_result<'a>(value: &'a dyn QueryParameters<'a>)
+    async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>)
         -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn find_by_pk_result_datasource<'a>(
+    async fn find_by_pk_datasource<'a>(
         value: &'a dyn QueryParameters<'a>,
         datasource_name: &'a str
     ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
@@ -142,10 +131,10 @@ pub trait CrudOperations<T>: Transaction<T>
 
     fn update_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 
-    // async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    // async fn delete_datasource<'a>(&self, datasource_name: &'a str)
-    //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn delete_datasource<'a>(&self, datasource_name: &'a str)
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
     
     fn delete_query<'a>() -> QueryBuilder<'a, T>;
 
