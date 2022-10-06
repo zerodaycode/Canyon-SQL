@@ -75,13 +75,13 @@ pub trait Transaction<T: Debug> {
 pub trait CrudOperations<T>: Transaction<T> 
     where T: Debug + CrudOperations<T> + RowMapper<T>
 {
-    async fn find_all<'a>() -> Vec<T>;
+    async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
+    async fn find_all_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn find_all_result<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_all_unchecked<'a>() -> Vec<T>;
     
-    async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
     fn find_all_query<'a>() -> QueryBuilder<'a, T>;
     

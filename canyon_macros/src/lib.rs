@@ -13,8 +13,8 @@ use syn::{
 
 use query_operations::{
     select::{
+        generate_find_all_unchecked_tokens,
         generate_find_all_tokens,
-        generate_find_all_result_tokens,
         generate_find_all_query_tokens,
         generate_count_tokens,
         generate_find_by_pk_tokens,
@@ -280,9 +280,9 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let ty = macro_data.ty;
 
     // Builds the find_all() query
-    let _find_all_tokens = generate_find_all_tokens(&macro_data, &table_schema_data);
+    let _find_all_unchecked_tokens = generate_find_all_unchecked_tokens(&macro_data, &table_schema_data);
     // Builds the find_all_result() query
-    let _find_all_result_tokens = generate_find_all_result_tokens(&macro_data, &table_schema_data);
+    let _find_all_tokens = generate_find_all_tokens(&macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
     let _find_all_query_tokens = generate_find_all_query_tokens(&macro_data, &table_schema_data);
     
@@ -315,11 +315,11 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let tokens = quote! {
         #[async_trait]
         impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
-            // The find_all impl
-            #_find_all_tokens
-
             // The find_all_result impl
-            #_find_all_result_tokens
+            #_find_all_tokens
+            
+            // The find_all impl
+            #_find_all_unchecked_tokens
 
             // The find_all_query impl
             #_find_all_query_tokens
@@ -347,7 +347,6 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The delete as querybuilder impl
             #_delete_query_tokens
-
         }
 
         impl canyon_crud::crud::Transaction<#ty> for #ty { }

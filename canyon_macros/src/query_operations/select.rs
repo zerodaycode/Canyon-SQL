@@ -8,7 +8,7 @@ use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for build the __find_all() CRUD 
 /// associated function
-pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+pub fn generate_find_all_unchecked_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
     let stmt = format!("SELECT * FROM {}", table_schema_data);
 
@@ -17,7 +17,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data:
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
-        async fn find_all<'a>() -> Vec<#ty> {
+        async fn find_all_unchecked<'a>() -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
@@ -36,7 +36,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data:
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
-        async fn find_all_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
+        async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
             <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
@@ -51,7 +51,7 @@ pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data:
 
 /// Generates the TokenStream for build the __find_all_result() CRUD 
 /// associated function
-pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
+pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
     let stmt = format!("SELECT * FROM {}", table_schema_data);
 
@@ -60,7 +60,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>, table_schem
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
-        async fn find_all_result<'a>() -> 
+        async fn find_all<'a>() -> 
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
@@ -88,7 +88,7 @@ pub fn generate_find_all_result_tokens(macro_data: &MacroTokens<'_>, table_schem
         /// Also, returns a [`Vec<T>, Error>`], wrapping a possible failure
         /// querying the database, or, if no errors happens, a Vec<T> containing
         /// the data found.
-        async fn find_all_result_datasource<'a>(datasource_name: &'a str) -> 
+        async fn find_all_datasource<'a>(datasource_name: &'a str) -> 
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
