@@ -16,7 +16,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         let pk_field = fields.iter()
             .find( |f| *f.to_string() == primary_key)
             .expect("Something really bad happened finding the syn::Ident for the pk field of the delete");
-        let pk_field_value = quote! { &self.#pk_field as &dyn canyon_sql::bounds::QueryParameters<'a> };
+        let pk_field_value = quote! { &self.#pk_field as &dyn canyon_sql::bounds::QueryParameters<'_> };
 
         quote! {
             /// Deletes from a database entity the row that matches

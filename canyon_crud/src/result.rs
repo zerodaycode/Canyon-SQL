@@ -79,7 +79,10 @@ impl<T: Debug> DatabaseResult<T> {
     }
 
     /// Returns how many rows contains the result of the query
-    pub fn get_number_of_results(&self) -> i32 {
-        self.wrapper.len() as i32
+    pub fn number_of_results(&self) -> usize {
+        match self.active_ds {
+            DatabaseType::PostgreSql => self.wrapper.len(),
+            DatabaseType::SqlServer => self.sqlserver.len(),
+        }
     }
 }
