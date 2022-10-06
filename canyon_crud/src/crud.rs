@@ -113,14 +113,10 @@ pub trait CrudOperations<T>: Transaction<T>
         datasource_name: &'a str
     ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    async fn update(&self);
-
-    async fn update_datasource<'a>(&self, datasource_name: &'a str);
-    
-    async fn update_result(&self) 
+    async fn update(&self) 
         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
     
-    async fn update_result_datasource<'a>(&self, datasource_name: &'a str) 
+    async fn update_datasource<'a>(&self, datasource_name: &'a str) 
         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
     
     fn update_query<'a>() -> QueryBuilder<'a, T>;
