@@ -99,14 +99,10 @@ pub trait CrudOperations<T>: Transaction<T>
         datasource_name: &'a str
     ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    async fn insert<'a>(&mut self);
-
-    async fn insert_datasource<'a>(&mut self, datasource_name: &'a str);
-
-    async fn insert_result<'a>(&mut self) 
+    async fn insert<'a>(&mut self) 
         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    async fn insert_result_datasource<'a>(&mut self, datasource_name: &'a str)
+    async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
     async fn multi_insert<'a>(instances: &'a mut [&'a mut T])

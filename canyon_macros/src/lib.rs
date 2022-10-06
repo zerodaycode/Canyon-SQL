@@ -24,7 +24,6 @@ use query_operations::{
     },
     insert::{
         generate_insert_tokens,
-        generate_insert_result_tokens,
         generate_multiple_insert_tokens
     }, 
     update::{
@@ -295,8 +294,6 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     
     // Builds the insert() query
     let _insert_tokens = generate_insert_tokens(&macro_data, &table_schema_data);
-    // Builds the insert() query as a result
-    let _insert_result_tokens = generate_insert_result_tokens(&macro_data, &table_schema_data);
     // Builds the insert_multi() query
     let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data, &table_schema_data);
     
@@ -335,9 +332,6 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The insert impl
             #_insert_tokens
-
-            // The insert as a result impl
-            #_insert_result_tokens
 
             // The insert of multiple entities impl
             #_insert_multi_tokens
