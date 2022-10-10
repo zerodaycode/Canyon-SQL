@@ -309,7 +309,7 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let _delete_query_tokens = generate_delete_query_tokens(&macro_data, &table_schema_data);
     
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
-    let _search_by_fk_tokens: TokenStream = generate_find_by_foreign_key_tokens(&macro_data);
+    let _search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens(&macro_data, &table_schema_data);
     let _search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
 
     let tokens = quote! {
@@ -347,14 +347,16 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
             // The delete as querybuilder impl
             #_delete_query_tokens
+
+            // The search by FK impl
+            #(#_search_by_fk_tokens),*
+
+            // // The search by reverse side of the FK impl
+            // #(#_search_by_revese_fk_tokens),*
         }
 
         impl canyon_crud::crud::Transaction<#ty> for #ty { }
-        // // The search by FK impl
-        // #_search_by_fk_tokens
-
-        // // The search by reverse side of the FK impl
-        // #(#_search_by_revese_fk_tokens),*
+        
     };
 
     tokens.into()

@@ -1,3 +1,6 @@
+use std::convert::TryFrom;
+
+use canyon_manager::manager::field_annotation::EntityFieldAnnotation;
 use proc_macro2::Ident;
 use syn::{
     Visibility, 
@@ -162,6 +165,33 @@ impl<'a> MacroTokens<'a> {
             );
 
         f.map( |v| v.ident.clone().unwrap().to_string())
+    }
+
+    /// Utility for find the `foreign_key` attributes (if exists) 
+    pub fn get_fk_annotations(&self) -> Vec<(&Ident, EntityFieldAnnotation)> {
+        let mut foreign_key_annotations = Vec::new();
+
+        self.fields
+            .iter()
+            .for_each( |field| {
+                    let attrs = field.attrs.iter()
+                        .filter( |attr| 
+                            attr.path.segments[0].clone().ident.to_string() == "foreign_key"
+                        );
+                    attrs.for_each( 
+                        |attr| {
+                            let fk_parse =  EntityFieldAnnotation::try_from(&attr);
+                            if let Ok(fk_annotation) = fk_parse {
+                                foreign_key_annotations.push(
+                                    (field.ident.as_ref().unwrap(), fk_annotation)
+                                )
+                            }
+                        }
+                    );
+                }
+            );
+
+        foreign_key_annotations
     }
 
     /// Boolean that returns true if the type contains a `#[primary_key]`

@@ -132,31 +132,31 @@ pub trait CrudOperations<T>: Transaction<T>
 
     fn delete_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 
-    // /// Performs a search over some table pointed with a ForeignKey annotation
-    // async fn __search_by_foreign_key<'a>(
-    //     related_table: &'a str, 
-    //     related_column: &'a str,
-    //     lookage_value: &'a str,
-    //     datasource_name: &'a str
-    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    /// Performs a search over some table pointed with a ForeignKey annotation
+    async fn __search_by_foreign_key<'a>(
+        related_table: &'a str, 
+        related_column: &'a str,
+        lookage_value: &'a str,
+        datasource_name: &'a str
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
-    //     let stmt = format!(
-    //         "SELECT * FROM {} WHERE {} = {}", 
-    //         related_table,
-    //         format!("\"{}\"", related_column).as_str(),
-    //         lookage_value
-    //     );
+        let stmt = format!(
+            "SELECT * FROM {} WHERE {} = {}", 
+            related_table,
+            format!("\"{}\"", related_column).as_str(),
+            lookage_value
+        );
 
-    //     let result = Self::query(
-    //         stmt, 
-    //         &[],
-    //         datasource_name
-    //     ).await;
+        let result = Self::query(
+            stmt, 
+            &[],
+            datasource_name
+        ).await;
 
-    //     if let Err(error) = result {
-    //         Err(error)
-    //     } else { Ok(result.ok().unwrap()) }
-    // }
+        if let Err(error) = result {
+            Err(error)
+        } else { Ok(result.ok().unwrap()) }
+    }
 
     // /// Performs a search over the side that contains the ForeignKey annotation
     // async fn __search_by_reverse_side_foreign_key<'a>(
