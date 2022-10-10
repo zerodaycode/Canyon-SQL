@@ -309,55 +309,131 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let _delete_query_tokens = generate_delete_query_tokens(&macro_data, &table_schema_data);
     
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
-    let _search_by_fk_tokens: Vec<TokenStream> = generate_find_by_foreign_key_tokens(&macro_data, &table_schema_data);
+    let _search_by_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_foreign_key_tokens(&macro_data);
+    let len_tokens = _search_by_fk_tokens.len();
+
+    let method_signatures = _search_by_fk_tokens
+        .iter()
+        .map( |(sign, _)| { sign });
+    let method_implementations = _search_by_fk_tokens
+        .iter()
+        .map( |(_, m_impl)| { m_impl });
+
+
     let _search_by_revese_fk_tokens: Vec<TokenStream> = generate_find_by_reverse_foreign_key_tokens(&macro_data);
 
-    let tokens = quote! {
-        #[async_trait]
-        impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
-            // The find_all_result impl
-            #_find_all_tokens
+    let fk_trait_ident = proc_macro2::Ident::new(
+        &format!(
+            "{}FkOperations", &ty.to_string()
+        ), 
+        proc_macro2::Span::call_site()
+    );
+
+    let tokens = if len_tokens > 0 {
+        quote! {
+            #[async_trait]
+            impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
+                // The find_all_result impl
+                // #_find_all_tokens
+                
+                // // The find_all impl
+                // #_find_all_unchecked_tokens
+    
+                // // The find_all_query impl
+                // #_find_all_query_tokens
+    
+                // // The COUNT(*) impl
+                // #_count_tokens
+    
+                // // The find_by_pk impl
+                // #_find_by_pk_tokens
+    
+                // // The insert impl
+                // #_insert_tokens
+    
+                // // The insert of multiple entities impl
+                // #_insert_multi_tokens
+    
+                // // The update impl
+                // #_update_tokens
+    
+                // // The update as a querybuilder impl
+                // #_update_query_tokens
+    
+                // // The delete impl
+                // #_delete_tokens
+    
+                // // The delete as querybuilder impl
+                // #_delete_query_tokens
+            }
             
-            // The find_all impl
-            #_find_all_unchecked_tokens
-
-            // The find_all_query impl
-            #_find_all_query_tokens
-
-            // The COUNT(*) impl
-            #_count_tokens
-
-            // The find_by_pk impl
-            #_find_by_pk_tokens
-
-            // The insert impl
-            #_insert_tokens
-
-            // The insert of multiple entities impl
-            #_insert_multi_tokens
-
-            // The update impl
-            #_update_tokens
-
-            // The update as a querybuilder impl
-            #_update_query_tokens
-
-            // The delete impl
-            #_delete_tokens
-
-            // The delete as querybuilder impl
-            #_delete_query_tokens
-
-            // The search by FK impl
-            #(#_search_by_fk_tokens),*
-
-            // // The search by reverse side of the FK impl
-            // #(#_search_by_revese_fk_tokens),*
-        }
-
-        impl canyon_crud::crud::Transaction<#ty> for #ty { }
+            impl canyon_crud::crud::Transaction<#ty> for #ty {}
+            
+            /// Hidden trait for generate the foreign key operations available
+            /// in Canyon without have to define them before hand in CrudOperations
+            /// because it's just imposible with the actual system (where the methods
+            /// are generated dynamically based on some properties of the `foreign_key`
+            /// annotation)
+                #[async_trait]
+                pub trait FkTestFkOperations<T> 
+                    where T: 
+                        std::fmt::Debug +
+                        canyon_sql::canyon_crud::crud::CrudOperations<T> +
+                        canyon_sql::canyon_crud::mapper::RowMapper<T>
+                {
+                    // Available definitions for the #ty
+                    #(#method_signatures),*
+    
+                    // // The search by reverse side of the FK impl
+                    // #(#_search_by_revese_fk_tokens),*
+                }
+                #[async_trait]
+                impl FkTestFkOperations<#ty> for FkTest {
+                    #(#method_implementations),*
+                }
+            }
+        } else {
+            quote! {
+                #[async_trait]
+                impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
+                    // The find_all_result impl
+                    // #_find_all_tokens
+                    
+                    // // The find_all impl
+                    // #_find_all_unchecked_tokens
         
-    };
+                    // // The find_all_query impl
+                    // #_find_all_query_tokens
+        
+                    // // The COUNT(*) impl
+                    // #_count_tokens
+        
+                    // // The find_by_pk impl
+                    // #_find_by_pk_tokens
+        
+                    // // The insert impl
+                    // #_insert_tokens
+        
+                    // // The insert of multiple entities impl
+                    // #_insert_multi_tokens
+        
+                    // // The update impl
+                    // #_update_tokens
+        
+                    // // The update as a querybuilder impl
+                    // #_update_query_tokens
+        
+                    // // The delete impl
+                    // #_delete_tokens
+        
+                    // // The delete as querybuilder impl
+                    // #_delete_query_tokens
+                }
+                
+                impl canyon_crud::crud::Transaction<#ty> for #ty {}
+            }   
+        };
+    
 
     tokens.into()
 }
