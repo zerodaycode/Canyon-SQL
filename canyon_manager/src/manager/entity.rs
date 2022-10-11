@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use proc_macro2::{Ident, TokenStream};
-use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics, DeriveInput, Fields};
-use quote::{quote};
+use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
+use quote::quote;
 use partialdebug::placeholder::PartialDebug;
 
 use super::entity_fields::EntityField;
@@ -11,51 +11,23 @@ use super::entity_fields::EntityField;
 #[derive(PartialDebug, Clone)]
 pub struct CanyonEntity {
     pub struct_name: Ident,
+    pub user_table_name: Option<String>,
+    pub user_schema_name: Option<String>,
     pub vis: Visibility,
     pub generics: Generics,
-    pub attributes: Vec<EntityField>
+    pub fields: Vec<EntityField>
 }
 
 unsafe impl Send for CanyonEntity {}
 unsafe impl Sync for CanyonEntity {}
 
 impl CanyonEntity {
-    
-    pub fn new(_struct: &DeriveInput) -> Self {
-        let mut parsed_fields: Vec<EntityField> = Vec::new();
-        let fields = match _struct.data {
-            syn::Data::Struct(ref s) => &s.fields,
-            _ => todo!()
-        };
-        for field in fields {
-            // println!("[MACRO ENTITY ENTITY FIELD PARSING] - Entity field: {:?}", field.clone().ident.unwrap().to_string());
-            let struct_attribute: _ = EntityField::try_from(field)
-                .ok()
-                .expect(
-                    format!("Error parsing the field: {:?} for the struct: {:?}", 
-                    &field.ident.as_ref().unwrap().to_string(),
-                    &_struct.ident.to_string()).as_str()
-                );
-            parsed_fields.push(struct_attribute)
-        }
-
-        let _struct = _struct.clone();
-
-        Self {
-            struct_name: _struct.ident,
-            vis: _struct.vis,
-            generics: _struct.generics,
-            attributes: parsed_fields
-        }
-    }
-
-
     /// Generates as many variants for the enum as fields has the type
     /// which this enum is related to, and that type it's the entity
     /// stored in [`CanyonEntity`]
     /// of the corresponding field
     pub fn get_fields_as_enum_variants(&self) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -71,7 +43,7 @@ impl CanyonEntity {
     /// Makes a variant `#field_name(#ty)` where `#ty` it's the type
     /// of the corresponding field
     pub fn get_fields_as_enum_variants_with_type(&self) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -85,7 +57,7 @@ impl CanyonEntity {
     /// is being requested when the method `.field_name_as_str(self)` it's invoked over some
     /// instance that implements the `canyon_sql::bounds::FieldIdentifier` trait
     pub fn create_match_arm_for_get_variant_as_string(&self, enum_name: &Ident) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -102,7 +74,7 @@ impl CanyonEntity {
     /// is being requested when the method `.value()` it's invoked over some
     /// instance that implements the `canyon_sql::bounds::FieldValueIdentifier` trait
     pub fn create_match_arm_for_relate_fields_with_values(&self, enum_name: &Ident) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map( |f| {
                 let field_name = &f.name;
@@ -127,7 +99,7 @@ impl CanyonEntity {
     }
 
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {
-        self.attributes
+        self.fields
             .iter()
             .map(|f| {
                 let name = &f.name;
@@ -156,9 +128,11 @@ impl Parse for CanyonEntity {
         Ok(
             Self {
                 struct_name: _struct.ident,
+                user_table_name: None,
+                user_schema_name: None,
                 vis: _vis,
                 generics: _generics,
-                attributes: parsed_fields
+                fields: parsed_fields
             }
         )
     }

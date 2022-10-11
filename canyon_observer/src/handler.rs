@@ -75,7 +75,7 @@ impl CanyonHandler {
     async fn fetch_postgres_database_status<'b>() -> Vec<DatabaseTable<'b>> {
         let results = Self::query(
             super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
-            &[],
+            vec![],
             ""
         ).await.ok().unwrap().wrapper;
 

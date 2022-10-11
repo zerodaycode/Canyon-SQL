@@ -327,7 +327,7 @@ impl DatabaseSyncOperations {
 
             Self::query(
                 query_to_execute,
-                &[],
+                vec![],
                 ""
             ).await
                 .ok()

@@ -1,5 +1,5 @@
 use std::fmt::Debug;
-use tokio_postgres::Row;
+use canyon_connection::{tokio_postgres, tiberius};
 
 use crate::crud::Transaction;
 
@@ -8,5 +8,7 @@ use crate::crud::Transaction;
 pub trait RowMapper<T: Debug + Transaction<T>>: Sized {
 
     /// Deserializes a database Row result into Self
-    fn deserialize(row: &Row) -> T;
+    fn deserialize_postgresql(row: &tokio_postgres::Row) -> T;
+
+    fn deserialize_sqlserver(row: &tiberius::Row) -> T;
 }

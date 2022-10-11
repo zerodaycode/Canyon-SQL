@@ -60,7 +60,7 @@ impl CanyonMemory {
         // Check database for the "memory data"
         let mem_results = Self::query(
             "SELECT * FROM canyon_memory",
-            &[],
+            vec![],
             ""
         ).await
         .ok()
@@ -239,7 +239,7 @@ impl CanyonMemory {
             ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
             )", 
-            &[],
+            vec![],
             ""
         ).await
         .ok()

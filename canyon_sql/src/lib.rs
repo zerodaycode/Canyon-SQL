@@ -29,3 +29,10 @@ pub use canyon_crud::*;
 pub use canyon_connection::*;
 pub use async_trait::*;
 pub use tokio_postgres::Row;
+
+/// Module for reexport the `chrono` crate with the allowed public and available types in Canyon
+pub mod date_time {
+    pub use canyon_crud::chrono::{
+        DateTime, NaiveDate, NaiveTime, NaiveDateTime, Utc, FixedOffset
+    };
+}

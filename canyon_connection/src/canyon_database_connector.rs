@@ -5,6 +5,22 @@ use tokio_postgres::{Client, Connection, NoTls, Socket, tls::NoTlsStream};
 
 use crate::datasources::DatasourceProperties;
 
+/// Represents the current supported databases by Canyon
+#[derive(Debug)]
+pub enum DatabaseType {
+    PostgreSql,
+    SqlServer
+}
+
+impl DatabaseType {
+    pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
+        match datasource.db_type {
+            "postgresql" => Self::PostgreSql,
+            "sqlserver" => Self::SqlServer,
+            _ => todo!() // TODO Change for boxed dyn error type
+        }
+    }
+}
 
 /// A connection with a `PostgreSQL` database
 pub struct PostgreSqlConnection {
@@ -20,7 +36,8 @@ pub struct SqlServerConnection {
 /// The Canyon database connection handler.
 pub struct DatabaseConnection {
     pub postgres_connection: Option<PostgreSqlConnection>,
-    pub sqlserver_connection: Option<SqlServerConnection>
+    pub sqlserver_connection: Option<SqlServerConnection>,
+    pub database_type: DatabaseType
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -33,10 +50,11 @@ impl DatabaseConnection {
                 let (new_client, new_connection) =
                     tokio_postgres::connect(
                     &format!(
-                        "postgres://{user}:{pswd}@{host}/{db}",
+                        "postgres://{user}:{pswd}@{host}:{port}/{db}",
                             user = datasource.username,
                             pswd = datasource.password,
                             host = datasource.host,
+                            port = datasource.port,
                             db = datasource.db_name
                         )[..], 
                     NoTls
@@ -47,18 +65,21 @@ impl DatabaseConnection {
                         client: new_client,
                         connection: new_connection
                     }),
-                    sqlserver_connection: None
+                    sqlserver_connection: None,
+                    database_type: DatabaseType::from_datasource(&datasource)
                 })
             },
             "sqlserver" => {
                 let mut config = Config::new();
 
-                config.host("ecomt.database.windows.net");
-                config.port(1433);
-                config.database("OteaCenterDes");
+                config.host(datasource.host);
+                config.port(datasource.port);
+                config.database(datasource.db_name);
 
                 // Using SQL Server authentication.
-                config.authentication(AuthMethod::sql_server("administrador", "ny0crzlp@"));
+                config.authentication(
+                    AuthMethod::sql_server(datasource.username, datasource.password)
+                );
 
                 // on production, it is not a good idea to do this
                 config.trust_cert();
@@ -78,8 +99,9 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: client.ok().expect("Fallo en la conexión a la BBDD")
-                    })
+                        client: client.ok().expect("A failure happened connecting to the database")
+                    }),
+                    database_type: DatabaseType::from_datasource(&datasource)
                 })
             },
             &_ => return Err(

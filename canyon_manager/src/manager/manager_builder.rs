@@ -28,6 +28,7 @@ pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 /// will be called though macro code to obtain the &str representation
 /// of the field name.
 pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
+    let ty = &canyon_entity.struct_name;
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new(
         (struct_name + "Field").as_str(),
@@ -78,7 +79,7 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
             #(#fields_names),*
         }
 
-        impl canyon_sql::bounds::FieldIdentifier for #generics #enum_name #generics {
+        impl #generics canyon_sql::bounds::FieldIdentifier<#ty> for #generics #enum_name #generics {
             fn field_name_as_str(self) -> String {
                 match self {
                     #(#match_arms),*
@@ -100,6 +101,7 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
 /// The type of the inner value `(Enum::Variant(SomeType))` is the same
 /// that the field that the variant represents
 pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenStream {
+    let ty = &canyon_entity.struct_name;
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new(
         (struct_name + "FieldValue").as_str(),
@@ -141,7 +143,7 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
             #(#fields_names),*
         }
 
-        impl canyon_sql::bounds::FieldValueIdentifier for #generics #enum_name #generics {
+        impl #generics canyon_sql::bounds::FieldValueIdentifier<#ty> for #generics #enum_name #generics {
             fn value(self) -> String {
                 match self {
                     #(#match_arms),*
