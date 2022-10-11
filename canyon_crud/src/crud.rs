@@ -75,114 +75,62 @@ pub trait Transaction<T: Debug> {
 pub trait CrudOperations<T>: Transaction<T> 
     where T: Debug + CrudOperations<T> + RowMapper<T>
 {
-    // async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    // async fn find_all_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_all_datasource<'a>(datasource_name: &'a str) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    // async fn find_all_unchecked<'a>() -> Vec<T>;
+    async fn find_all_unchecked<'a>() -> Vec<T>;
     
-    // async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
+    async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
-    // fn find_all_query<'a>() -> QueryBuilder<'a, T>;
+    fn find_all_query<'a>() -> QueryBuilder<'a, T>;
     
-    // fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
+    fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
     
-    // async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    // async fn count_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn count_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    // async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>)
-    //     -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_by_pk<'a>(value: &'a dyn QueryParameters<'a>)
+        -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    // async fn find_by_pk_datasource<'a>(
-    //     value: &'a dyn QueryParameters<'a>,
-    //     datasource_name: &'a str
-    // ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_by_pk_datasource<'a>(
+        value: &'a dyn QueryParameters<'a>,
+        datasource_name: &'a str
+    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    // async fn insert<'a>(&mut self) 
-    //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn insert<'a>(&mut self) 
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    // async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
-    //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    // async fn multi_insert<'a>(instances: &'a mut [&'a mut T])
-    //     -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn multi_insert<'a>(instances: &'a mut [&'a mut T])
+        -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    // async fn multi_insert_datasource<'a>(
-    //     instances: &'a mut [&'a mut T],
-    //     datasource_name: &'a str
-    // ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn multi_insert_datasource<'a>(
+        instances: &'a mut [&'a mut T],
+        datasource_name: &'a str
+    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
-    // async fn update(&self) 
-    //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn update(&self) 
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
     
-    // async fn update_datasource<'a>(&self, datasource_name: &'a str) 
-    //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn update_datasource<'a>(&self, datasource_name: &'a str) 
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
     
-    // fn update_query<'a>() -> QueryBuilder<'a, T>;
+    fn update_query<'a>() -> QueryBuilder<'a, T>;
 
-    // fn update_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
+    fn update_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 
-    // async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    // async fn delete_datasource<'a>(&self, datasource_name: &'a str)
-    //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn delete_datasource<'a>(&self, datasource_name: &'a str)
+        -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
     
-    // fn delete_query<'a>() -> QueryBuilder<'a, T>;
+    fn delete_query<'a>() -> QueryBuilder<'a, T>;
 
-    // fn delete_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
-
-    // Performs a search over some table pointed with a ForeignKey annotation
-    // async fn __search_by_foreign_key<'a>(
-    //     related_table: &'a str, 
-    //     related_column: &'a str,
-    //     lookage_value: &'a str,
-    //     datasource_name: &'a str
-    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-
-    //     let stmt = format!(
-    //         "SELECT * FROM {} WHERE {} = {}", 
-    //         related_table,
-    //         format!("\"{}\"", related_column).as_str(),
-    //         lookage_value
-    //     );
-
-    //     let result = Self::query(
-    //         stmt, 
-    //         &[],
-    //         datasource_name
-    //     ).await;
-
-    //     if let Err(error) = result {
-    //         Err(error)
-    //     } else { Ok(result.ok().unwrap()) }
-    // }
-
-    // /// Performs a search over the side that contains the ForeignKey annotation
-    // async fn __search_by_reverse_side_foreign_key<'a>(
-    //     table: &'a str,
-    //     column: &'a str,
-    //     lookage_value: String,
-    //     datasource_name: &'a str
-    // ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-
-    //     let stmt = format!(
-    //         "SELECT * FROM {} WHERE \"{}\" = {}", 
-    //         table,
-    //         column,
-    //         lookage_value
-    //     );
-
-    //     let result = Self::query(
-    //         stmt, 
-    //         &[],
-    //         datasource_name
-    //     ).await;
-
-    //     if let Err(error) = result {
-    //         Err(error)
-    //     } else { Ok(result.ok().unwrap()) }
-    // }
+    fn delete_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
 }
 
 mod postgres_query_launcher {
@@ -194,7 +142,7 @@ mod postgres_query_launcher {
     pub async fn launch<'a, T>(
         db_conn: DatabaseConnection,
         stmt: String,
-        params: &'a [&'a dyn QueryParameters<'_>],
+        params: &'a [&'_ dyn QueryParameters<'_>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
         where 
             T: Debug,

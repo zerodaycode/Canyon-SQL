@@ -83,11 +83,11 @@ impl<T> FieldValueIdentifier<T> for &str
 /// 
 /// Usually, it's used on the Canyon macros to retrieve the column that 
 /// this side of the relation it's representing
-pub trait ForeignKeyable {
+pub trait ForeignKeyable<T> {
+    // type Output; // TODO as
     /// Retrieves the field related to the column passed in
-    fn get_fk_column(&self, column: &str) -> Option<String>;
+    fn get_fk_column<'a>(&self, column: &'a str) -> Option<String>;
 }
-
 
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
 pub trait InClauseValues: ToSql + ToString {}
@@ -98,6 +98,7 @@ pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
 }
+
 
 /// The implementation of the [`tiberius`] [`IntoSql`] for the
 /// query parameters.

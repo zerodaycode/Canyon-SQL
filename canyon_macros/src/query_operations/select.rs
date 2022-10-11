@@ -1,5 +1,4 @@
 use canyon_manager::manager::field_annotation::EntityFieldAnnotation;
-use canyon_observer::CANYON_REGISTER_ENTITIES;
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -293,12 +292,12 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>, table_schema_dat
 pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> Vec<(TokenStream, TokenStream)>{
     let mut fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
 
-    let ty = macro_data.ty;
-
     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
             let method_name = "search_".to_owned() + table;
 
+            // TODO this is not a good implementation. We must try to capture the
+            // related entity in some way, and compare it with something else
             let fk_ty = database_table_name_to_struct_ident(table);
 
             // Generate and identifier for the method based on the convention of "search_related_types" 
@@ -311,145 +310,69 @@ pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> Vec<
             );
             let quoted_method_signature: TokenStream = quote! { 
                 async fn #method_name_ident(&self) -> 
-                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
-            }.into();
-            let quoted_method_signature_brace: TokenStream = quote! { 
-                async fn #method_name_ident(&self) -> 
-                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-            }.into();
-
-            let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
-            
-            
-            let field_value = quote! { &self.#field_ident as &dyn canyon_sql::bounds::QueryParameters<'_> };
+                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+            };
+            let quoted_datasource_method_signature: TokenStream = quote! { 
+                async fn #method_name_ident_ds<'a>(&self, datasource_name: &'a str) -> 
+                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+            };
 
             let stmt = format!(
                 "SELECT * FROM {} WHERE {} = $1", 
                 table,
                 format!("\"{}\"", column).as_str(),
             );
+            let result_handler = quote! {
+                if let Err(error) = result {
+                    Err(error)
+                } else { 
+                    match result.as_ref().ok().unwrap() {
+                        n if n.number_of_results() == 0 => Ok(None),
+                        _ => Ok(Some(
+                            result
+                                .ok()
+                                .unwrap()
+                                .get_entities::<#fk_ty>()[0]
+                                .clone()
+                        ))
+                    } 
+                }
+            };
     
             fk_quotes.push((
-                quoted_method_signature.clone(),
+                quote!{ #quoted_method_signature; },
                 quote! {
-                    // Searches the parent entity (if exists) for this type
-                    #quoted_method_signature_brace {
+                    /// Searches the parent entity (if exists) for this type
+                    #quoted_method_signature {
                         let result = <#fk_ty as canyon_sql::canyon_crud::crud::Transaction<#fk_ty>>::query(
                             #stmt, 
-                            &[#field_value],
+                            &[&self.#field_ident as &dyn canyon_sql::bounds::QueryParameters<'_>],
                             ""
                         ).await;
                         
-                        if let Err(error) = result {
-                            Err(error)
-                        } else { 
-                            match result.as_ref().ok().unwrap() {
-                                n if n.wrapper.len() == 0 => Ok(None),
-                                _ => Ok(Some(
-                                    result
-                                        .ok()
-                                        .unwrap()
-                                        .get_entities::<#fk_ty>()[0]
-                                        .clone()
-                                ))
-                            } 
-                        }
+                        #result_handler
                     }
                 }
             ));
+            
+            fk_quotes.push((
+                quote! { #quoted_datasource_method_signature; },
+                quote! {
+                    /// Searches the parent entity (if exists) for this type with the specified datasource
+                    #quoted_datasource_method_signature {
+                        let result = <#fk_ty as canyon_sql::canyon_crud::crud::Transaction<#fk_ty>>::query(
+                            #stmt, 
+                            &[&self.#field_ident as &dyn canyon_sql::bounds::QueryParameters<'_>],
+                            datasource_name
+                        ).await;
 
-                    // // Searches the parent entity (if exists) for this type with the specified datasource
-                    // async fn #quoted_method_name_ds<'a>(&self, datasource_name: &'a str) -> 
-                    //     Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                    // {
-                    //     let lookage_value = #field_value.to_string();
-                    //     let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                    //         __search_by_foreign_key(#table_schema_data, #column, &lookage_value, datasource_name)
-                    //             .await;
-                        
-                    //     if let Err(error) = result {
-                    //         Err(error)
-                    //     } else { 
-                    //         match result.as_ref().ok().unwrap() {
-                    //             n if n.wrapper.len() == 0 => Ok(None),
-                    //             _ => Ok(Some(
-                    //                 result
-                    //                     .ok()
-                    //                     .unwrap()
-                    //                     .get_entities::<#fk_ty>()[0]
-                    //                     .clone()
-                    //             ))
-                    //         } 
-                    //     }
-                    // }
-
-                    // /// Searches the parent entity (if exists) for the type &T passed in
-                    // /// 
-                    // /// Note that if you pass an instance of some ForeignKeyable type that
-                    // /// does not matches the other side of the relation, an error will be
-                    // /// generated
-                    // async fn belongs_to<T>(value: &T) ->
-                    //     Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                    //         where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
-                    // {
-                    //     let lookage_value = value.get_fk_column(#column).expect("Column not found");
-                    //     let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                    //         __search_by_foreign_key(#table_schema_data, #column, &lookage_value, "")
-                    //             .await;
-                
-                    //     if let Err(error) = result {
-                    //         Err(error)
-                    //     } else { 
-                    //         match result.as_ref().ok().unwrap() {
-                    //             n if n.wrapper.len() == 0 => Ok(None),
-                    //             _ => Ok(Some(
-                    //                 result
-                    //                     .ok()
-                    //                     .unwrap()
-                    //                     .get_entities::<#fk_ty>()[0]
-                    //                     .clone()
-                    //             ))
-                    //         } 
-                    //     }
-                    // }
-
-                    // /// Searches the parent entity (if exists) for the type &T passed in
-                    // /// pointing to the database specified in the datasource
-                    // /// 
-                    // /// Note that if you pass an instance of some ForeignKeyable type that
-                    // /// does not matches the other side of the relation, an error will be
-                    // /// generated
-                    // async fn belongs_to_datasource<'a, T>(value: &T, datasource_name: &'a str) ->
-                    //     Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                    //         where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
-                    // {
-                    //     let lookage_value = value.get_fk_column(#column).expect("Column not found");
-                    //     let result = <#fk_ty as canyon_sql::canyon_crud::crud::CrudOperations<#fk_ty>>::
-                    //         __search_by_foreign_key(#table_schema_data, #column, &lookage_value, datasource_name)
-                    //             .await;
-                
-                    //     if let Err(error) = result {
-                    //         Err(error)
-                    //     } else { 
-                    //         match result.as_ref().ok().unwrap() {
-                    //             n if n.wrapper.len() == 0 => Ok(None),
-                    //             _ => Ok(Some(
-                    //                 result
-                    //                     .ok()
-                    //                     .unwrap()
-                    //                     .get_entities::<#fk_ty>()[0]
-                    //                     .clone()
-                    //             ))
-                    //         } 
-                    //     }
-                    // }
-                // }
-            // fk_quotes.push(quote! {});
-            // );
+                        #result_handler
+                    }
+                }
+            ));
         }
     }
     
-    println!("Total of methods generated for: {} => {}", &macro_data.ty.to_string(), &fk_quotes.len());
     fk_quotes
 }
 
@@ -457,99 +380,105 @@ pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> Vec<
 /// associated function, but wrapped as a Result<T, Err>, representing
 /// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
 /// derive macro on the parent side of the relation
-pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> Vec<TokenStream> {
-    let mut foreign_keys_tokens = Vec::new();
+pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> Vec<(TokenStream, TokenStream)> {
+    let mut rev_fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
+    let ty = macro_data.ty;
 
-    let (vis, ty) = (macro_data.vis, macro_data.ty);
-    let table_name = database_table_name_from_entity_name(&macro_data.ty.to_string());
+    for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
+        if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
+            let method_name = format!("search_{table}_childrens");
 
-    let mut column_name = String::new();
-    let mut lookage_value_column = String::new();
+            // Generate and identifier for the method based on the convention of "search_by__" (note the double underscore)
+            // plus the 'table_name' property of the ForeignKey annotation
+            let method_name_ident = proc_macro2::Ident::new(
+                &method_name, proc_macro2::Span::call_site()
+            );
+            let method_name_ident_ds = proc_macro2::Ident::new(
+                &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
+            );
+            let quoted_method_signature: TokenStream = quote! { 
+                async fn #method_name_ident<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) -> 
+                    Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
+                        // where <F as canyon_sql::canyon_crud::bounds::ForeignKeyable<F>>::Output: canyon_sql::bounds::QueryParameters<'a>
+            };
+            let quoted_datasource_method_signature: TokenStream = quote! { 
+                async fn #method_name_ident_ds<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>(value: &F, datasource_name: &'a str) -> 
+                    Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
+                        // where <F as canyon_sql::canyon_crud::bounds::ForeignKeyable<F>>::Output: canyon_sql::bounds::QueryParameters<'a>
+            };
 
-    // Find what relation belongs to the data passed in
-    let current_entity = CANYON_REGISTER_ENTITIES.lock().unwrap();
-
-    if let Some(entity) = &current_entity.iter()
-        .find( |e| 
-            e.entity_name == &table_name
-        ) 
-    {
-        for field in &entity.entity_fields {
-            // Get the annotations
-            for annotation in &field.annotations {
-                if annotation.starts_with("Annotation: ForeignKey") {
-                    column_name.push_str(&field.field_name);
-                    let fk_table_column = &annotation.split(",")
-                        .map( |x| 
-                            x.split(":")
-                            .collect::<Vec<&str>>()
-                            .get(1)
-                            .unwrap()
-                            .to_owned()
-                        ).collect::<Vec<&str>>()[1..].to_owned();
-            
-                    lookage_value_column.push_str(fk_table_column.get(1).unwrap().trim());
-                    let method_name = "search_by__".to_owned() + 
-                        fk_table_column.get(0).unwrap().trim()
-                        + "_result";
-
-                    // Generate and identifier for the method based on the convention of "search_by__" (note the double underscore)
-                    // plus the 'table_name' property of the ForeignKey annotation
-                    let method_name_ident = proc_macro2::Ident::new(
-                        &method_name, proc_macro2::Span::call_site()
-                    );
-                    let method_name_ident_ds = proc_macro2::Ident::new(
-                        &format!("{}_datasource", &method_name), proc_macro2::Span::call_site()
-                    );
-                    let quoted_method_name: TokenStream = quote! { #method_name_ident }.into();
-                    let quoted_method_name_ds: TokenStream = quote! { #method_name_ident_ds }.into();
-
-                    foreign_keys_tokens.push(
-                        quote! {
-                            #vis async fn #quoted_method_name<T>(value: &T) -> 
-                                Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
-                            {
-                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, "")
-                                        .await;
-
-                                if let Err(error) = result {
-                                    Err(error)
-                                } else {
-                                    Ok(result.ok().unwrap().get_entities::<#ty>())
-                                }
-                            }
-
-                            #vis async fn #quoted_method_name_ds<'a, T>(value: &'a T, datasource_name: &'a str) -> 
-                                Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                                    where T: canyon_sql::canyon_crud::bounds::ForeignKeyable 
-                            {
-                                let lookage_value = value.get_fk_column(#lookage_value_column).expect("Column not found");
-                                let result = <#ty as canyon_sql::canyon_crud::crud::CrudOperations<#ty>>::
-                                    __search_by_reverse_side_foreign_key(#table_name, #column_name, lookage_value, datasource_name)
-                                        .await;
-
-                                if let Err(error) = result {
-                                    Err(error)
-                                } else {
-                                    Ok(result.ok().unwrap().get_entities::<#ty>())
-                                }
-                            }
-                        }
-                    );
+            let result_handler = quote! {
+                if let Err(error) = result {
+                    Err(error)
+                } else { 
+                    Ok(result.ok().unwrap().get_entities::<#ty>())
                 }
-            }
+            };
+            let f_ident = field_ident.to_string();
+
+            rev_fk_quotes.push((
+                quote!{ #quoted_method_signature; },
+                quote! {
+                    /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
+                    /// performns a search to find the childs that belong to that concrete parent.
+                    #quoted_method_signature 
+                    {
+                        let lookage_value = value.get_fk_column(#column)
+                        .expect(format!(
+                            "Column: {:?} not found in type: {:?}", #column, #table
+                            ).as_str());
+
+                        let stmt = format!(
+                            "SELECT * FROM {} WHERE {} = {}", 
+                            #table_schema_data,
+                            format!("\"{}\"", #f_ident).as_str(),
+                            lookage_value
+                        );
+                        
+                        let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                            stmt, 
+                            &[],
+                            ""
+                        ).await;
+                        
+                        #result_handler
+                    }
+                }
+            ));
+
+            rev_fk_quotes.push((
+                quote! { #quoted_datasource_method_signature; },
+                quote! {
+                    /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
+                    /// performns a search to find the childs that belong to that concrete parent
+                    /// with the specified datasource.
+                    #quoted_datasource_method_signature
+                    {
+                        let lookage_value = value.get_fk_column(#column)
+                            .expect(format!(
+                                "Column: {:?} not found in type: {:?}", #column, #table
+                            ).as_str());
+
+                        let stmt = format!(
+                            "SELECT * FROM {} WHERE {} = {}", 
+                            #table_schema_data,
+                            format!("\"{}\"", #f_ident).as_str(),
+                            lookage_value  // TODO The unique non-parametrized query parameter
+                            // We must convert it to QueryParameters
+                        );
+
+                        let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                            stmt, 
+                            &[&lookage_value as &dyn canyon_sql::bounds::QueryParameters<'_>],
+                            datasource_name
+                        ).await;
+                        
+                        #result_handler
+                    }
+                }
+            ));
         }
     }
-
-    foreign_keys_tokens
-}
-
-/// Helper to get the plural noun of a given table identifier
-fn _make_related_table_plural(singular: &str) -> String {
-    // TODO Generate the correct forms of the plural for a given identifier
-    // For brevity, and for now, just adds an 's' to the end of the noun
-    singular.to_owned() + "s"
+                    
+    rev_fk_quotes
 }
