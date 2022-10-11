@@ -402,7 +402,8 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens<'_>,
                         // where <F as canyon_sql::canyon_crud::bounds::ForeignKeyable<F>>::Output: canyon_sql::bounds::QueryParameters<'a>
             };
             let quoted_datasource_method_signature: TokenStream = quote! { 
-                async fn #method_name_ident_ds<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>(value: &F, datasource_name: &'a str) -> 
+                async fn #method_name_ident_ds<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>
+                    (value: &F, datasource_name: &'a str) -> 
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
                         // where <F as canyon_sql::canyon_crud::bounds::ForeignKeyable<F>>::Output: canyon_sql::bounds::QueryParameters<'a>
             };
@@ -469,7 +470,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens<'_>,
 
                         let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
                             stmt, 
-                            &[&lookage_value as &dyn canyon_sql::bounds::QueryParameters<'_>],
+                            &[],
                             datasource_name
                         ).await;
                         
