@@ -207,7 +207,36 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>, table_schema_dat
     let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_schema_data, pk);
 
     // Disabled if there's no `primary_key` annotation
-    if pk == "" { return quote! {}; }
+    if pk == "" { 
+        return quote! {
+            async fn find_by_pk<'a>(value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>) 
+                -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+            {
+                Err(
+                    std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        "You can't use the 'find_by_pk' associated function on a \
+                        CanyonEntity that does not have a #[primary_key] annotation. \
+                        If you need to perform an specific search, use the Querybuilder instead."
+                    ).into_inner().unwrap()
+                )
+            }
+
+            async fn find_by_pk_datasource<'a>(
+                value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+                datasource_name: &'a str
+            ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+                Err(
+                    std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        "You can't use the 'find_by_pk_datasource' associated function on a \
+                        CanyonEntity that does not have a #[primary_key] annotation. \
+                        If you need to perform an specific search, use the Querybuilder instead."
+                    ).into_inner().unwrap()
+                )
+            }
+        }; 
+    }
 
     let result_handling = quote! {
         if let Err(error) = result {

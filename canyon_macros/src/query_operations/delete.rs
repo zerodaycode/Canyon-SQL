@@ -58,7 +58,29 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     } else {
         // Delete operation over an instance isn't available without declaring a primary key.
         // The delete querybuilder variant must be used for the case when there's no pk declared
-        quote! {}
+        quote! {
+            async fn delete(&self) 
+                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "You can't use the 'delete' method on a \
+                    CanyonEntity that does not have a #[primary_key] annotation. \
+                    If you need to perform an specific search, use the Querybuilder instead."
+                ).into_inner().unwrap())
+            }
+
+            async fn delete_datasource<'a>(&self, datasource_name: &'a str) 
+                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            {
+                Err(std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "You can't use the 'delete_datasource' method on a \
+                    CanyonEntity that does not have a #[primary_key] annotation. \
+                    If you need to perform an specific search, use the Querybuilder instead."
+                ).into_inner().unwrap())
+            }
+        }
     }
 }
 

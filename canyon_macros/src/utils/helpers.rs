@@ -17,46 +17,56 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
 
     for attr in macro_data.attrs {
         if attr.path.segments.iter().any(
-            |seg| seg.ident.to_string() == "canyon_macros" || seg.ident.to_string() == "canyon_entity"
+            |seg| {
+                println!("Segment: {:?}", &seg);
+                seg.ident.to_string() == "canyon_macros" || seg.ident.to_string() == "canyon_entity"
+            }
         ) { 
-            let name_values: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
+            let name_values_result: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
             attr.parse_args_with(Punctuated::parse_terminated);
 
-            for nv in name_values.ok().expect("Failure parsing canyon_entity macro attributes") {
-                let ident = nv.path.get_ident();
-                if let Some(i) = ident {
-                    let identifier = i.to_string();
-                    match &nv.lit {
-                        syn::Lit::Str(s) => {
-                            if identifier == "table_name" {
-                                table_name = Some(s.value())
-                            } else if identifier == "schema" {
-                                schema = Some(s.value())
-                            } else {
-                                return Err(
-                                    syn::Error::new_spanned(
-                                        Ident::new(&identifier, i.span().into()), 
-                                        "Only string literals are valid values for the attribute arguments"
-                                        ).into_compile_error()
-                                );
+            println!("MetaNameValues: {:?}", &name_values_result);
+
+            match name_values_result {
+                Ok(meta_name_values) => {
+                    for nv in meta_name_values {
+                        let ident = nv.path.get_ident();
+                        if let Some(i) = ident {
+                            let identifier = i.to_string();
+                            match &nv.lit {
+                                syn::Lit::Str(s) => {
+                                    if identifier == "table_name" {
+                                        table_name = Some(s.value())
+                                    } else if identifier == "schema" {
+                                        schema = Some(s.value())
+                                    } else {
+                                        return Err(
+                                            syn::Error::new_spanned(
+                                                Ident::new(&identifier, i.span().into()), 
+                                                "Only string literals are valid values for the attribute arguments"
+                                                ).into_compile_error()
+                                        );
+                                    }
+                                },
+                                _ => 
+                                    return Err(
+                                        syn::Error::new_spanned(
+                                            Ident::new(&identifier, i.span().into()), 
+                                            "Only string literals are valid values for the attribute arguments"
+                                            ).into_compile_error()
+                                    ),
                             }
-                        },
-                        _ => 
+                        } else {
                             return Err(
-                                syn::Error::new_spanned(
-                                    Ident::new(&identifier, i.span().into()), 
+                                syn::Error::new(
+                                    Span::call_site(), 
                                     "Only string literals are valid values for the attribute arguments"
-                                    ).into_compile_error()
-                            ),
+                                ).into_compile_error()
+                            );
+                        }
                     }
-                } else {
-                    return Err(
-                        syn::Error::new(
-                            Span::call_site(), 
-                            "Only string literals are valid values for the attribute arguments"
-                        ).into_compile_error()
-                    );
-                }
+                },
+                Err(_) => return Ok(macro_data.ty.to_string()),
             }
 
             let mut final_table_name = String::new();

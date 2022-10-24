@@ -77,7 +77,35 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     } else {
         // If there's no primary key, update method over self won't be available.
         // Use instead the update associated function of the querybuilder
-        quote! {}
+
+        // TODO Returning an error should be a provisional way of doing this
+        quote! {
+            async fn update(&self) 
+                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            {
+                Err(
+                    std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        "You can't use the 'update' method on a \
+                        CanyonEntity that does not have a #[primary_key] annotation. \
+                        If you need to perform an specific search, use the Querybuilder instead."
+                    ).into_inner().unwrap()
+                )
+            }
+
+            async fn update_datasource<'a>(&self, datasource_name: &'a str) 
+                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            {
+                Err(
+                    std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        "You can't use the 'update_datasource' method on a \
+                        CanyonEntity that does not have a #[primary_key] annotation. \
+                        If you need to perform an specific search, use the Querybuilder instead."
+                    ).into_inner().unwrap()
+                )
+            }
+        }
     }
 
 }
