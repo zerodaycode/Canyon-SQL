@@ -90,6 +90,10 @@ impl DatabaseSyncOperations {
                                         Self::add_primary_key::<&str>(
                                             self, table_name, field.clone()
                                         );
+
+                                        Self::add_identity::<&str>(
+                                            self, table_name, field.clone()
+                                        );
                                     }
                                 }
                             );
@@ -105,13 +109,12 @@ impl DatabaseSyncOperations {
 
                 // For each field (name, type) in this table of the register
                 for field in canyon_register_entity.entity_fields.clone() {
-
                     // Case when the column doesn't exist on the database
                     // We push a new column operation to the collection for each one
                     if !columns_in_table.contains(&field.field_name) {
                         Self::add_column_to_table::<&str>(self, &table_name, field.clone());
 
-                        // We added the founded contraints on the field attributes
+                        // We added the founded constraints on the field attributes
                         for attr in &field.annotations {
                             if attr.starts_with("Annotation: ForeignKey") {
                                 Self::add_foreign_key_with_annotation::<&str, &String>(
@@ -119,14 +122,22 @@ impl DatabaseSyncOperations {
                                 );
                             }
                             if attr.starts_with("Annotation: PrimaryKey") {
+
                                 Self::add_primary_key::<&str>(
-                                    self, table_name, field.clone()
+                                    self, table_name, field.clone(),
+                                );
+
+                                Self::add_identity::<&str>(
+                                    self, table_name, field.clone(),
                                 );
                             }
                         }
+
+
                     }
                     // Case when the column exist on the database
                     else {
+
                         let d = database_tables.clone();
                         let database_table = d
                             .into_iter()
@@ -175,45 +186,50 @@ impl DatabaseSyncOperations {
                             Self::change_column_type(self, table_name, field.clone());
                         }
 
-                        // TODO Pending the implementation as a list of the attributes on DATABASE
 
+                        let field_is_primary_key = field.annotations.iter()
+                            .any(|anno| anno.starts_with("Annotation: PrimaryKey"));
 
-                        let field_is_primary_key = field.annotations.iter().any(|anno| anno.starts_with("Annotation: PrimaryKey"));
-
-                        let field_is_foreign_key = field.annotations.iter().any(|anno| anno.starts_with("Annotation: ForeignKey"));
-
-
+                        let field_is_foreign_key = field.annotations.iter()
+                            .any(|anno| anno.starts_with("Annotation: ForeignKey"));
                         // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
                         // TODO Evaluate changing the name of the primary key if it already exists in the database
 
                         // -------- PRIMARY KEY CASE ----------------------------
 
                         // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
-                        if field_is_primary_key && database_field.primary_key_name.is_none() {
-                            println!("Annotation: PrimaryKey found on fill_operations, case when column exists on DB");
-                            Self::add_foreign_key_with_annotation::<&str, &String>(
-                                self, &field.annotations, table_name, &field.field_name,
-                            )
+                        if field_is_primary_key && database_field.primary_key_info.is_none() {
+                            Self::add_primary_key::<&str>(
+                                self, table_name, field.clone(),
+                            );
+                            Self::add_identity::<&str>(
+                                self, table_name, field.clone(),
+                            );
                         }
 
                         // Case when field don't contains a primary key annotation, but there is already one in the database column
-                        else if !field_is_primary_key && database_field.foreign_key_name.is_some() {
-                         Self::drop_primary_key::<String>(
-                                    self,
-                                    table_name.to_string(),
-                                    database_field.primary_key_name
-                                        .as_ref()
-                                        .expect("PrimaryKey constrain name not found")
-                                        .to_string()
-                                );
-                        }
+                        else if !field_is_primary_key && database_field.primary_key_info.is_some() {
+                            Self::drop_primary_key::<String>(
+                                self,
+                                table_name.to_string(),
+                                database_field.primary_key_name
+                                    .as_ref()
+                                    .expect("PrimaryKey constrain name not found")
+                                    .to_string(),
+                            );
 
+                            if database_field.is_identity {
+                                Self::drop_identity::<&str>(
+                                            self, table_name, field.clone()
+                                        );
+                            }
+
+                        }
 
                         // -------- FOREIGN KEY CASE ----------------------------
 
                         // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
                         if field_is_foreign_key && database_field.foreign_key_name.is_none() {
-                            println!("Annotation ForeignKey found on fill_operations, case when column exists on DB");
                             if database_field.foreign_key_name.is_none() {
                                 Self::add_foreign_key_with_annotation::<&str, &String>(
                                     self, &field.annotations, table_name, &field.field_name,
@@ -311,7 +327,7 @@ impl DatabaseSyncOperations {
 
             Self::query(
                 query_to_execute,
-                &[],
+                vec![],
                 ""
             ).await
                 .ok()
@@ -388,31 +404,36 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn extract_foreign_key_annotation<'b>(field_annotations: &Vec<String>) -> (String, String)
+    fn extract_foreign_key_annotation(field_annotations: &Vec<String>) -> (String, String)
     {
-        let annotation_data: Vec<String> = field_annotations.iter().
-            find(|anno| anno.starts_with("Annotation: ForeignKey")).expect("Can't find foreign key annotation")
-            .split(',')
-            // TODO check change (x.contains previously contained a negation)
-            .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
-            .map(|x|
-                x.split(':').collect::<Vec<&str>>()
-                    .get(1)
-                    .expect("Error. Unable to split annotations")
-                    .trim()
-                    .to_string()
-            ).collect::<Vec<String>>();
+        let opt_fk_annotation = field_annotations.iter().
+            find(|anno| anno.starts_with("Annotation: ForeignKey"));
+        if let Some(fk_annotation) = opt_fk_annotation {
+            let annotation_data = fk_annotation
+                .split(',')
+                .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                .map(|x|
+                    x.split(':').collect::<Vec<&str>>()
+                        .get(1)
+                        .expect("Error. Unable to split annotations")
+                        .trim()
+                        .to_string()
+                ).collect::<Vec<String>>();
 
-        let table_to_reference = annotation_data
-            .get(0)
-            .expect("Error extracting table ref from FK annotation")
-            .to_string();
-        let column_to_reference = annotation_data
-            .get(1)
-            .expect("Error extracting column ref from FK annotation")
-            .to_string();
+            let table_to_reference = annotation_data
+                .get(0)
+                .expect("Error extracting table ref from FK annotation")
+                .to_string();
+            let column_to_reference = annotation_data
+                .get(1)
+                .expect("Error extracting column ref from FK annotation")
+                .to_string();
 
-        (table_to_reference, column_to_reference)
+            (table_to_reference, column_to_reference)
+        } else {
+            panic!("Detected a Foreign Key attribute when does not exists on the user's code");
+        }
+            
     }
 
     fn add_foreign_key_with_annotation<'a, U, V>(
@@ -502,6 +523,40 @@ impl DatabaseSyncOperations {
             Box::new(
                 TableOperation::DeleteTablePrimaryKey::<T, T, T, T, T>(
                     table_name, primary_key_name
+                )
+            )
+        );
+    }
+
+    fn add_identity<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
+        where T: Into<String> + Debug + Display + Sync + 'static
+    {
+
+
+        self.constrains_operations.push(
+            Box::new(
+                ColumnOperation::AlterColumnAddIdentity(
+                    table_name.to_string(), field.clone(),
+                )
+            )
+        );
+
+        self.constrains_operations.push(
+            Box::new(
+                SequenceOperation::ModifySequence(
+                    table_name, field,
+                )
+            )
+        );
+    }
+
+    fn drop_identity<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
+        where T: Into<String> + Debug + Display + Sync + 'static
+    {
+        self.constrains_operations.push(
+            Box::new(
+                ColumnOperation::AlterColumnDropIdentity(
+                    table_name, field,
                 )
             )
         );
@@ -617,9 +672,8 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
                 table_name,
                 entity_field
             ) => format!(
-                "ALTER TABLE {} ADD {} (\"{}\");",
+                "ALTER TABLE {} ADD PRIMARY KEY (\"{}\");",
                 table_name,
-                entity_field.define_primary_key_syntax(),
                 entity_field.field_name
             ),
 
@@ -627,7 +681,7 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
                 table_name,
                 primary_key_name
             ) => format!(
-                "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name};"
+                "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"
             ),
 
         };
@@ -644,7 +698,11 @@ enum ColumnOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
     // AlterColumnName,
     AlterColumnType(T, CanyonRegisterEntityField),
     AlterColumnDropNotNull(T, CanyonRegisterEntityField),
-    AlterColumnSetNotNull(T, CanyonRegisterEntityField)
+    AlterColumnSetNotNull(T, CanyonRegisterEntityField),
+    // TODO if implement throught annotations, modify for both GENERATED {ALWAYS,BY DEFAULT}
+    AlterColumnAddIdentity(T, CanyonRegisterEntityField),
+    AlterColumnDropIdentity(T, CanyonRegisterEntityField)
+
 }
 
 impl<T> Transaction<Self> for ColumnOperation<T> 
@@ -683,10 +741,54 @@ impl<T> DatabaseOperation for ColumnOperation<T>
                     "ALTER TABLE {} ALTER COLUMN \"{}\" SET NOT NULL;",
                     table_name,
                     entity_field.field_name
-                )
-                
+                ),
+
+            ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;",
+                    table_name,
+                    entity_field.field_name
+                ),
+
+            ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) =>
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" DROP IDENTITY;",
+                    table_name,
+                    entity_field.field_name
+                ),
+
         };
 
+        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
+    }
+}
+
+
+/// Helper for operations involving sequences
+#[derive(Debug)]
+enum SequenceOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
+    ModifySequence(T, CanyonRegisterEntityField),
+}
+
+impl<T> Transaction<Self> for SequenceOperation<T>
+    where T: Into<String> + std::fmt::Debug + Display + Sync
+{}
+
+#[async_trait]
+impl<T> DatabaseOperation for SequenceOperation<T>
+    where T: Into<String> + std::fmt::Debug + Display + Sync
+{
+    async fn execute(&self) {
+        let stmt = match &*self {
+            SequenceOperation::ModifySequence(table_name, entity_field) =>
+                format!(
+                    "SELECT setval(pg_get_serial_sequence('{}', '{}'), max(\"{}\")) from {};",
+                    table_name,
+                    entity_field.field_name,
+                    entity_field.field_name,
+                    table_name
+                )
+        };
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
     }
 }

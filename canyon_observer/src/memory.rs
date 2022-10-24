@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use walkdir::WalkDir;
 use std::fs;
-use canyon_crud::{crud::Transaction, bounds::PrimaryKey};
+use canyon_crud::crud::Transaction;
 
 use crate::QUERIES_TO_EXECUTE;
 
@@ -60,7 +60,7 @@ impl CanyonMemory {
         // Check database for the "memory data"
         let mem_results = Self::query(
             "SELECT * FROM canyon_memory",
-            &[],
+            vec![],
             ""
         ).await
         .ok()
@@ -74,7 +74,6 @@ impl CanyonMemory {
         // Tremendísima query con WHERE IN (45)
         for row in mem_results {
             let db_row = CanyonMemoryDatabaseRow {
-                /// TODO Generify the value of the ID over PrimaryKey
                 id: row.get::<&str, i32>("id"),
                 filename: row.get::<&str, String>("filename"),
                 struct_name: row.get::<&str, String>("struct_name"),
@@ -201,7 +200,7 @@ impl CanyonMemory {
                                 .unwrap_or(&"FAILED")
                         )
                     }
-                    if line.contains("#[") && line.contains("canyon_entity]") 
+                    if line.contains("#[") && line.contains("canyon_entity") 
                         && !line.starts_with("//") 
                     {
                         canyon_entity_macro_counter += 1;
@@ -240,7 +239,7 @@ impl CanyonMemory {
             ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
               filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
             )", 
-            &[],
+            vec![],
             ""
         ).await
         .ok()
@@ -252,8 +251,8 @@ impl CanyonMemory {
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryDatabaseRow<T: PrimaryKey> {
-    id: T,
+struct CanyonMemoryDatabaseRow {
+    id: i32,
     filename: String,
     struct_name: String
 }

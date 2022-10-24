@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use tokio_postgres::Error;
-
 use crate::{
     query_elements::query::Query,
     query_elements::operators::Comp,
@@ -19,8 +17,11 @@ use crate::{
 
 
 /// Builder for a query while chaining SQL clauses
-#[derive(Debug, Clone)]
-pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
+#[derive(Clone)]
+pub struct QueryBuilder<'a, T> 
+    where
+        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
     query: Query<'a, T>,
     where_clause: String,
     and_clause: String,
@@ -29,10 +30,14 @@ pub struct QueryBuilder<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowM
     set_clause: String,
     datasource_name: &'a str
 }
-impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuilder<'a, T> {
-
+impl<'a, T> QueryBuilder<'a, T> 
+    where 
+        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
     // Generates a Query object that contains the necessary data to performn a query
-    pub async fn query(&mut self) -> Result<Vec<T>, Error> {
+    pub async fn query(&'a mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
         if self.query.sql.contains("UPDATE") && self.set_clause != "" {
@@ -63,36 +68,30 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
 
         self.query.sql.push(';');
 
-        
-        let mut unboxed_params = Vec::new();
-        for element in self.query.params {
-            unboxed_params.push(&**element);
-        }
-
         let result = T::query(
-            &self.query.sql[..], 
-            &unboxed_params,
+            self.query.sql.clone(), 
+            self.query.params,
             self.datasource_name
         ).await;
 
         if let Err(error) = result {
             Err(error)
-        } else { Ok(result.ok().unwrap().to_entity::<T>()) }
+        } else { Ok(result.ok().unwrap().get_entities::<T>()) }
     }
 
     pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
         Self {
-            query: query,
+            query,
             where_clause: String::new(),
             and_clause: String::new(),
             in_clause: &[],
             order_by_clause: String::new(),
             set_clause: String::new(),
-            datasource_name: datasource_name
+            datasource_name
         }
     }
 
-    pub fn where_clause<Z: FieldValueIdentifier>(mut self, r#where: Z, comp: Comp) -> Self {
+    pub fn r#where<Z: FieldValueIdentifier<T>>(mut self, r#where: Z, comp: Comp) -> Self {
         let values = r#where.value()
             .to_string()
             .split(" ")
@@ -110,7 +109,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         self
     } 
 
-    pub fn and_clause<Z: FieldValueIdentifier>(mut self, r#and: Z, comp: Comp) -> Self {
+    pub fn and<Z: FieldValueIdentifier<T>>(mut self, r#and: Z, comp: Comp) -> Self {
         let values = r#and.value()
             .to_string()
             .split(" ")
@@ -133,7 +132,7 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
         self
     } 
 
-    pub fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
+    pub fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
         let desc = if desc { String::from(" DESC ") 
             } else { "".to_owned() };
 
@@ -148,8 +147,10 @@ impl<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> QueryBuil
     }
 
     /// The SQL `SET` clause to especify the columns that must be updated in the sentence
-    pub fn set_clause<Z, S>(mut self, columns: &'a[(Z, S)]) -> Self 
-        where Z: FieldIdentifier + Clone, S: ToString 
+    pub fn set<Z, S>(mut self, columns: &'a[(Z, S)]) -> Self 
+        where 
+            Z: FieldIdentifier<T> + Clone, 
+            S: ToString 
     {
         if columns.len() == 0 {
             return self;

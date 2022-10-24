@@ -19,7 +19,9 @@ pub mod postgresql_queries {
             CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'PRIMARY KEY')
             	THEN CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) ELSE NULL END AS primary_key_info,
             CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'PRIMARY KEY')
-            	THEN con.conname ELSE NULL END AS primary_key_name
+            	THEN con.conname ELSE NULL END AS primary_key_name,
+            gi.is_identity,
+            gi.identity_generation
         FROM
             information_schema.columns AS gi
         LEFT JOIN pg_catalog.pg_constraint AS con on

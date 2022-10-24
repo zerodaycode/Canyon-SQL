@@ -1,4 +1,8 @@
-pub mod postgresql_connector;
+pub extern crate tokio_postgres;
+pub extern crate tiberius;
+pub extern crate async_std;
+
+pub mod canyon_database_connector;
 mod datasources;
 
 use std::fs;
