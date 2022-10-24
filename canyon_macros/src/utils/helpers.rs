@@ -17,15 +17,11 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
 
     for attr in macro_data.attrs {
         if attr.path.segments.iter().any(
-            |seg| {
-                println!("Segment: {:?}", &seg);
+            |seg|
                 seg.ident.to_string() == "canyon_macros" || seg.ident.to_string() == "canyon_entity"
-            }
         ) { 
             let name_values_result: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
             attr.parse_args_with(Punctuated::parse_terminated);
-
-            println!("MetaNameValues: {:?}", &name_values_result);
 
             match name_values_result {
                 Ok(meta_name_values) => {
