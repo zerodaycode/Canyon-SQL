@@ -264,7 +264,6 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     let macro_data = MacroTokens::new(&ast);
 
     let table_name_res = helpers::table_schema_parser(&macro_data);
-    println!("TABLE SCHEMA: {:?}", &table_name_res);
     
     let table_schema_data = if let Err(err) = table_name_res {
         return err.into()
