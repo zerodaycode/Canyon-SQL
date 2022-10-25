@@ -16,9 +16,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
-    - name: Change directory to the root crate
-      run: cd canyon_sql
     - name: Build
+      working-directory: ./canyon_sql
       run: cargo build --verbose
     - name: Run tests
+      working-directory: ./canyon_sql
       run: cargo test --verbose
