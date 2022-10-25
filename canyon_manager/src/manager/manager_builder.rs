@@ -1,5 +1,6 @@
 use proc_macro2::{TokenStream, Ident, Span};
 use quote::quote;
+use syn::{Attribute, Generics, Visibility};
 
 use super::entity::CanyonEntity;
 
@@ -7,11 +8,13 @@ use super::entity::CanyonEntity;
 pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
     let fields = &canyon_entity.get_attrs_as_token_stream();
 
-    let struct_name = &canyon_entity.struct_name;
-    let struct_visibility = &canyon_entity.vis;
-    let struct_generics = &canyon_entity.generics;
+    let struct_name: &Ident = &canyon_entity.struct_name;
+    let struct_visibility: &Visibility = &canyon_entity.vis;
+    let struct_generics: &Generics = &canyon_entity.generics;
+    let struct_attrs: &Vec<Attribute> = &canyon_entity.attrs;
 
     quote! {
+        #(#struct_attrs)*
         #struct_visibility struct #struct_name #struct_generics {
             #(#fields),*
         }

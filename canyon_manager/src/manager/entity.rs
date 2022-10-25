@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use proc_macro2::{Ident, TokenStream};
-use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics};
+use syn::{parse::{Parse, ParseBuffer}, ItemStruct, Visibility, Generics, Attribute};
 use quote::quote;
 use partialdebug::placeholder::PartialDebug;
 
@@ -15,7 +15,8 @@ pub struct CanyonEntity {
     pub user_schema_name: Option<String>,
     pub vis: Visibility,
     pub generics: Generics,
-    pub fields: Vec<EntityField>
+    pub fields: Vec<EntityField>,
+    pub attrs: Vec<Attribute>
 }
 
 unsafe impl Send for CanyonEntity {}
@@ -113,10 +114,6 @@ impl CanyonEntity {
 impl Parse for CanyonEntity {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
         let _struct = input.parse::<ItemStruct>()?;
-        // Retrieve the struct's visibility
-        let _vis = _struct.vis;
-        // Retrieve the generics attached to this struct
-        let _generics = _struct.generics;
         
         // Retrive the struct fields
         let mut parsed_fields: Vec<EntityField> = Vec::new();
@@ -130,9 +127,10 @@ impl Parse for CanyonEntity {
                 struct_name: _struct.ident,
                 user_table_name: None,
                 user_schema_name: None,
-                vis: _vis,
-                generics: _generics,
-                fields: parsed_fields
+                vis: _struct.vis,
+                generics: _struct.generics,
+                fields: parsed_fields,
+                attrs: _struct.attrs
             }
         )
     }
