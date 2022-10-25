@@ -1,7 +1,7 @@
 [package]
 name = "canyon_macros"
 version = "1.0.0"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 syn = { version = "1.0.86", features = ["full"] }
