@@ -1,3 +1,4 @@
+pub extern crate tokio;
 pub extern crate tokio_postgres;
 pub extern crate tiberius;
 pub extern crate async_std;

@@ -54,7 +54,7 @@ impl DatabaseConnection {
                             user = datasource.username,
                             pswd = datasource.password,
                             host = datasource.host,
-                            port = datasource.port,
+                            port = datasource.port.unwrap_or_default(),
                             db = datasource.db_name
                         )[..], 
                     NoTls
@@ -73,7 +73,7 @@ impl DatabaseConnection {
                 let mut config = Config::new();
 
                 config.host(datasource.host);
-                config.port(datasource.port);
+                config.port(datasource.port.unwrap_or_default());
                 config.database(datasource.db_name);
 
                 // Using SQL Server authentication.
