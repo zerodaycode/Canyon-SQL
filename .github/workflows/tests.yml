@@ -56,3 +56,10 @@ jobs:
         - uses: actions-rs/grcov@v0.1
           with:
             config: .github/workflows/tests.yml
+            output-type: xml
+            output-path: ./test_results
+        - name: Publish Test Results
+          uses: EnricoMi/publish-unit-test-result-action@v2
+          if: always()
+          with:
+            junit_files: "test-results/**/*.xml"
