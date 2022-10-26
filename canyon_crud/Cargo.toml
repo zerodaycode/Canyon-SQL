@@ -3,11 +3,8 @@ name = "canyon_crud"
 version = "1.0.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
-tokio = { version = "1.9.0", features = ["full"] }
 async-trait = { version = "0.1.50" }
 
 canyon_connection = { path = "../canyon_connection" }
