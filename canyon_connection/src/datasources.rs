@@ -34,7 +34,6 @@ fn load_ds_config_from_array() {
         assert_eq!(ds_1.properties.port, Some(3340));
         assert_eq!(ds_1.properties.db_name, "triforce2");
 }
-
 /// ```
 #[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig<'a> {

@@ -45,33 +45,34 @@ impl CanyonHandler {
         ).await;
     }
 
+    /**
+    Fetches the *information schema* of the *public schema* of a `PostgreSQL` database,
+    in order to retrieve the relation between the tables and it's columns, constraints
+    configurations...
 
-    /// Fetches the *information schema* of the *public schema* of a `PostgreSQL` database,
-    /// in order to retrieve the relation between the tables and it's columns, constraints
-    /// configurations... indexed in this table.
-    /// 
-    /// ```
-    /// table_name      column_name     data_type           is_nullable
-    /// ---------------------------------------------------------------
-    /// canyon_memory   filename        character varying   NO				
-    /// canyon_memory   id              integer             NO
-    /// canyon_memory   struct_name     character varying   NO
-    /// league          ext_id          bigint              YES
-    /// league          id              integer             NO
-    /// league          image_url       text                YES
-    /// league          name            text                YES
-    /// league          region          text                YES
-    /// league          slug            text                YES
-    /// tournament      end_date        date                YES
-    /// tournament      ext_id          bigint              YES
-    /// tournament      id              integer             NO
-    /// tournament      league          integer             YES
-    /// tournament      slug            text                YES
-    /// tournament      start_date      date                YES
-    /// ```
-    /// Not all columns included in the example table. 
-    /// 
-    /// Too see all the columns that will be mapeed, see the [`struct@RowTable`]
+    ```ignore
+    table_name      column_name     data_type           is_nullable
+    ---------------------------------------------------------------
+    canyon_memory   filename        character varying   NO				
+    canyon_memory   id              integer             NO
+    canyon_memory   struct_name     character varying   NO
+    league          ext_id          bigint              YES
+    league          id              integer             NO
+    league          image_url       text                YES
+    league          name            text                YES
+    league          region          text                YES
+    league          slug            text                YES
+    tournament      end_date        date                YES
+    tournament      ext_id          bigint              YES
+    tournament      id              integer             NO
+    tournament      league          integer             YES
+    tournament      slug            text                YES
+    tournament      start_date      date                YES
+    ```
+    Not all columns included in the example table. 
+
+    Too see all the columns that will be mapeed, see the [`struct@RowTable`]
+    */
     async fn fetch_postgres_database_status<'b>() -> Vec<DatabaseTable<'b>> {
         let results = Self::query(
             super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 

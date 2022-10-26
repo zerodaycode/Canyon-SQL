@@ -31,25 +31,6 @@ impl<'a> CanyonRegisterEntity<'a> {
     /// Returns the String representation for the current "CanyonRegisterEntity" instance.
     /// Being "CanyonRegisterEntity" the representation of a table, the String will be formed by each of its "CanyonRegisterEntityField",
     /// formatting each as "name of the column" "postgres representation of the type" "parameters for the column"
-    ///
-    ///
-    /// ```
-    /// let my_id_field = CanyonRegisterEntityField {
-    ///                       field_name: "id",
-    ///                       field_type: "i32".to_string(),
-    ///                       annotation: None
-    ///                   };
-    ///
-    /// let my_name_field = CanyonRegisterEntityField {
-    ///                          field_name: "name",
-    ///                          field_type: "String".to_string(),
-    ///                          annotation: None
-    ///                     };
-    ///
-    /// let expected_result = "id INTEGER NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY, name TEXT NOT NULL";
-    ///
-    /// assert_eq!(expected_result, my_canyon_register_entity.entity_fields_as_string());
-    /// ```
     pub fn entity_fields_as_string(&self) -> String {
 
         let mut fields_strings:Vec<String> = Vec::new();
@@ -84,28 +65,6 @@ impl CanyonRegisterEntityField {
     }
 
     /// Return the postgres datatype and parameters to create a column for a given rust type
-    /// # Examples:
-    ///
-    /// Basic use:
-    /// ```
-    /// let my_name_field =  CanyonRegisterEntityField {
-    ///                          field_name: "name".to_string(),
-    ///                          field_type: "String".to_string(),
-    ///                          annotation: None
-    ///                      };
-    ///
-    /// assert_eq!("TEXT NOT NULL", to_postgres_syntax.field_type_to_postgres());
-    /// ```
-    /// Also support Option:
-    /// ```
-    /// let my_age_field =  CanyonRegisterEntityField {
-    ///                        field_name: "age".to_string(),
-    ///                        field_type: "Option<i32>".to_string(),
-    ///                        annotation: None
-    ///                     };
-    ///
-    /// assert_eq!("INTEGER", to_postgres_syntax.field_type_to_postgres());
-    /// ```
     fn to_postgres_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ',"");
         let rs_type_is_optional =  self.field_type.to_uppercase().starts_with("OPTION");
