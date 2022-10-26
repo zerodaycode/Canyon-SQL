@@ -36,10 +36,10 @@ jobs:
 
   gcov:
       runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: ./canyon_sql
       steps:
-        defaults:
-          run:
-            working-directory: ./canyon_sql
         - uses: actions/checkout@v3
         - uses: actions-rs/toolchain@v1
           with:
