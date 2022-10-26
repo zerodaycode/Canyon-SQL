@@ -1,10 +1,10 @@
-name: Test and Build
+name: Run the tests for the project
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "*" ]
+    branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,29 +14,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build
-      working-directory: ./canyon_sql
-      run: cargo build
-    - name: Run tests
+    - name: Run tests Unix
       working-directory: ./canyon_sql
       run: cargo test --verbose
+    
   build-test-windows:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build
-      working-directory: ./canyon_sql
-      run: cargo build
-    - name: Run tests
+    - name: Run tests for Windows
       working-directory: ./canyon_sql
       run: cargo test --verbose
+
   build-test-macos:
     runs-on: macos-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build
-      working-directory: ./canyon_sql
-      run: cargo build
-    - name: Run tests
+    - name: Run tests for macOS
       working-directory: ./canyon_sql
       run: cargo test --verbose
