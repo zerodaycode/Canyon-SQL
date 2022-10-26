@@ -152,7 +152,7 @@ mod postgres_query_launcher {
         let (client, connection) =
             (postgres_connection.client, postgres_connection.connection);
 
-        tokio::spawn(async move {
+        canyon_connection::tokio::spawn(async move {
             if let Err(e) = connection.await {
                 eprintln!("An error occured while trying to connect to the database: {}", e);
             }
