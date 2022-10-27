@@ -48,16 +48,19 @@ jobs:
             CARGO_INCREMENTAL: '0'
             RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
             RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-        - uses: actions-rs/grcov@v0.1
-          with:
-            config: .github/workflows/configs/gcov-config.yml
+        # - uses: actions-rs/grcov@v0.1
+        #   with:
+        #     config: .github/workflows/configs/gcov-config.yml
+        - name: Generate code coverage report
+          run: |
+            grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage/
+            grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage/
         - name: Publish Test Results
           uses: EnricoMi/publish-unit-test-result-action@v2
           if: always()
           with:
-            junit_files: "test-results/*.xml"
+            junit_files: "./target/debug/coverage/*.xml"
         - name: Show me directories
           if: always()
           run: |
-            ls -la
-            ls -la ./test-results
+            ls -la ./target/debug/coverage
