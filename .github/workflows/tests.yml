@@ -49,8 +49,8 @@ jobs:
             rustup override set nightly
         - name: Run tests
           run: |
-          cargo build
-          cargo test --all-features --no-fail-fast
+            cargo build
+            cargo test --all-features --no-fail-fast
         # - uses: actions-rs/grcov@v0.1
         #   with:
         #     config: .github/workflows/configs/gcov-config.yml
