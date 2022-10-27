@@ -57,6 +57,7 @@ jobs:
           with:
             junit_files: "test-results/*.xml"
         - name: Show me directories
+          if: always()
           run: |
             ls -la
             ls -la ./test-results
