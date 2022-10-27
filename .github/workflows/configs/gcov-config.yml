@@ -2,7 +2,7 @@ branch: true
 ignore-not-existing: true
 llvm: true
 filter: covered
-output-type: xml
+output-type: cobertura
 output-path: ./test_results/tr.xml
 prefix-dir: ./
 ignore:
