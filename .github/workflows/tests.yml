@@ -55,11 +55,13 @@ jobs:
             RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
         - uses: actions-rs/grcov@v0.1
           with:
-            config: .github/workflows/tests.yml
-            output-type: xml
-            output-path: ./test_results
+            config: .github/workflows/configs/gcov-config.yml
         - name: Publish Test Results
           uses: EnricoMi/publish-unit-test-result-action@v2
           if: always()
           with:
-            junit_files: "test-results/**/*.xml"
+            junit_files: "test-results/*.xml"
+        - name: Show me directories
+          run: |
+            ls -la
+            ls -la ./test-results
