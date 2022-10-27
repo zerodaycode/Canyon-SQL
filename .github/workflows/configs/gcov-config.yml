@@ -3,4 +3,4 @@ ignore-not-existing: true
 llvm: true
 filter: covered
 output-type: cobertura
-output-path: ./test_results/tr.xml
+output-path: ./tr.xml
