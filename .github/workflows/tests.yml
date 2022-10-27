@@ -36,18 +36,13 @@ jobs:
 
   gcov:
       runs-on: ubuntu-latest
-      defaults:
-        run:
-          working-directory: ./canyon_sql
       steps:
         - uses: actions/checkout@v3
         - name: Use nightly toolchain
-          working-directory: ./canyon_sql
           run: |
             rustup toolchain install nightly
             rustup override set nightly
         - name: Run tests
-          working-directory: ./canyon_sql
           run: cargo test --all-features --no-fail-fast
           env:
             CARGO_INCREMENTAL: '0'
