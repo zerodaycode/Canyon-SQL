@@ -36,6 +36,11 @@ jobs:
 
   gcov:
       runs-on: ubuntu-latest
+      default:
+        env:
+            CARGO_INCREMENTAL: '0'
+            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+            RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
       steps:
         - uses: actions/checkout@v3
         - name: Use nightly toolchain
@@ -43,11 +48,9 @@ jobs:
             rustup toolchain install nightly
             rustup override set nightly
         - name: Run tests
-          run: cargo test --all-features --no-fail-fast
-          env:
-            CARGO_INCREMENTAL: '0'
-            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-            RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          run: |
+          cargo build
+          cargo test --all-features --no-fail-fast
         # - uses: actions-rs/grcov@v0.1
         #   with:
         #     config: .github/workflows/configs/gcov-config.yml
