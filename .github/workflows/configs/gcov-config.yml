@@ -4,11 +4,3 @@ llvm: true
 filter: covered
 output-type: cobertura
 output-path: ./test_results/tr.xml
-prefix-dir: ./
-ignore:
-  - "/*"
-  - "C:/*"
-  - "../*"
-path-mapping:
-  - "/path1"
-  - "/path2"
