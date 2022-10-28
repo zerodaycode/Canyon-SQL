@@ -72,4 +72,4 @@ jobs:
         - name: Show me directories
           if: always()
           run: |
-            ls -la ./target/debug/coverage
+            ls -la .
