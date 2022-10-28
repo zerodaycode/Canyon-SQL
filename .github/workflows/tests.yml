@@ -74,3 +74,5 @@ jobs:
           run: |
             ls -la .
             ls -la ./target/debug
+            ls -la /tmp
+            du -hs /tmp/*
