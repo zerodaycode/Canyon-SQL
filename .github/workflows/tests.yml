@@ -49,13 +49,9 @@ jobs:
               RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
           run: |
             cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu
-            mkdir test_results
         - uses: actions-rs/grcov@v0.1
           # with:
           #   config: .github/workflows/configs/gcov-config.yml
-        - name: Show me the report
-          run:
-            cat tr.xml
         - name: Generate code coverage report
           if: always()
           env:
@@ -74,3 +70,4 @@ jobs:
           if: always()
           run: |
             ls -la ./target/debug
+            ls -la ./target/debug/coverage
