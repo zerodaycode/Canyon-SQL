@@ -76,3 +76,4 @@ jobs:
             ls -la ./target
             ls -la ./target/debug
             ls -la ./target/x86_64-unknown-linux-gnu
+            ls -la ./target/x86_64-unknown-linux-gnu/debug
