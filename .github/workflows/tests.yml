@@ -73,6 +73,5 @@ jobs:
           if: always()
           run: |
             ls -la .
+            ls -la ./target
             ls -la ./target/debug
-            ls -la /tmp
-            du -hs /tmp/*
