@@ -59,13 +59,13 @@ jobs:
               RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
               RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
           run: |
-            grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage/code_cov.xml
+            grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage
             grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
         - name: Publish Test Results
           uses: EnricoMi/publish-unit-test-result-action@v2
           if: always()
           with:
-            junit_files: "./target/debug/coverage/code_cov.xml"
+            junit_files: "./target/debug/coverage"
         - name: Show me directories
           if: always()
           run: |
