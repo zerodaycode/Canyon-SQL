@@ -2,7 +2,7 @@ name: Run the tests for the project
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main, development" ]
   pull_request:
     branches: [ "main" ]
 
@@ -41,11 +41,11 @@ jobs:
           grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
           grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage/code_cov.xml
       
-      - name: Publish Test Results from XML
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          junit_files: "./target/debug/coverage/code_cov.xml"
+      # - name: Publish Test Results from XML
+      #   uses: EnricoMi/publish-unit-test-result-action@v2
+      #   if: always()
+      #   with:
+      #     junit_files: "./target/debug/coverage/code_cov.xml"
       
       - name: Show me directories
         if: always()
