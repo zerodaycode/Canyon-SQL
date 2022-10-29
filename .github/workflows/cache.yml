@@ -1,0 +1,35 @@
+name: Caching Cargo events
+
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Cache Cargo
+        id: cache-cargo
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-cargo
+        with:
+          path: cache-folder
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
+        name: Install grcov
+        continue-on-error: true
+        run: cargo install grcov
+
+      - name: Build
+        run: cargo build
+
+      - name: Test
+        run: cargo test
+
+      # TODO we need to pass the OS flags correctly

@@ -1,8 +1,5 @@
 # This is the root Cargo.toml file that serves as manager for the workspace of the project
 
-[profile.dev]
-panic = "abort"
-
 [workspace]
 
 members = [
