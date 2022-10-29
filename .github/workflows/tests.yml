@@ -1,0 +1,91 @@
+name: Run the tests for the project
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # tests-unix:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - name: Run tests Unix
+  #     working-directory: ./canyon_sql
+  #     run: cargo test --verbose
+    
+  # tests-windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+  #   - name: Run tests for Windows
+  #     working-directory: ./canyon_sql
+  #     run: cargo test --verbose
+
+  # tests-macos:
+  #   runs-on: macos-latest
+  #   steps:
+  #   - uses: actions/checkout@v3
+    # - name: Run tests for macOS
+    #   working-directory: ./canyon_sql
+    #   run: cargo test --verbose
+
+  gcov:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - name: Use nightly toolchain
+          run: |
+            rustup toolchain install nightly
+            rustup override set nightly
+        - name: Run tests
+          env:
+              CARGO_INCREMENTAL: '0'
+              RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+              RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          run: |
+            cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu
+        - uses: actions-rs/grcov@v0.1
+          # with:
+          #   config: .github/workflows/configs/gcov-config.yml
+        - name: Generate code coverage report
+          if: always()
+          env:
+              CARGO_INCREMENTAL: '0'
+              RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+              RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+          run: |
+            grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage
+            grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
+            
+        - name: Publish Test Results
+          uses: EnricoMi/publish-unit-test-result-action@v2
+          if: always()
+          with:
+            junit_files: "./target/debug/coverage"
+        - name: Upload Test Results
+          if: always()
+          uses: actions/upload-artifact@v2
+          with:
+            name: Unit Test Results
+            path: |
+              ./target/debug/coverage/*.xml
+        - name: Show me directories
+          if: always()
+          run: |
+            ls -la ./target/debug
+            ls -la ./target/debug/coverage
+
+  event_file:
+    name: "Event File"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Upload
+      uses: actions/upload-artifact@v2
+      with:
+        name: Event File
+        path: ${{ github.event_path }}
