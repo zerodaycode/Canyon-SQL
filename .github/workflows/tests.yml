@@ -10,54 +10,65 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  # tests-unix:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - name: Run tests Unix
-  #     working-directory: ./canyon_sql
-  #     run: cargo test --verbose
-    
-  # tests-windows:
-  #   runs-on: windows-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - name: Run tests for Windows
-  #     working-directory: ./canyon_sql
-  #     run: cargo test --verbose
-
-  # tests-macos:
-  #   runs-on: macos-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-    # - name: Run tests for macOS
-    #   working-directory: ./canyon_sql
-    #   run: cargo test --verbose
-
   gcov:
-      runs-on: ubuntu-latest
-      steps:
-        - uses: actions/checkout@v3
-        - name: Use nightly toolchain
-          run: |
-            rustup toolchain install nightly
-            rustup override set nightly
-        - name: Run tests
-          run: cargo test --all-features --no-fail-fast
-          env:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Use nightly toolchain
+        run: |
+          rustup toolchain install nightly
+          rustup override set nightly
+
+      - name: Install grcov
+        run: cargo install grcov
+
+      - name: Run tests
+        env:
             CARGO_INCREMENTAL: '0'
             RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
             RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-        - uses: actions-rs/grcov@v0.1
-          with:
-            config: .github/workflows/configs/gcov-config.yml
-        - name: Publish Test Results
-          uses: EnricoMi/publish-unit-test-result-action@v2
-          if: always()
-          with:
-            junit_files: "test-results/*.xml"
-        - name: Show me directories
-          if: always()
-          run: |
-            ls -la
-            ls -la ./test-results
+        run: |
+          cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu
+
+      - name: Generate code coverage report
+        if: always()
+        env:
+            CARGO_INCREMENTAL: '0'
+            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+            RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+        run: |
+          grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
+          grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage/code_cov.xml
+      
+      - name: Publish Test Results from XML
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          junit_files: "./target/debug/coverage/code_cov.xml"
+      
+      - name: Show me directories
+        if: always()
+        run: |
+          ls -la ./target/debug
+          ls -la ./target/debug/coverage
+          ls -la ./target/debug/coverage/badges
+
+      - name: Upload
+        uses: actions/upload-artifact@v3
+        with:
+          name: Event File
+          path: ${{ github.event_path }}
+      - name: Publish Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: Unit Test Results
+          path: |
+            ./target/debug/coverage/code_cov.xml
+            ./target/debug/coverage/index.html
+
+      - name: Publish coverage report to GitHub Pages
+        if: ${{ github.ref == 'refs/heads/main' }}
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: ./target/debug/coverage
