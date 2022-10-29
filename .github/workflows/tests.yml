@@ -61,14 +61,31 @@ jobs:
           run: |
             grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage
             grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
+            
         - name: Publish Test Results
           uses: EnricoMi/publish-unit-test-result-action@v2
           if: always()
           with:
             junit_files: "./target/debug/coverage"
+        - name: Upload Test Results
+          if: always()
+          uses: actions/upload-artifact@v2
+          with:
+            name: Unit Test Results
+            path: |
+              ./target/debug/coverage/*.xml
         - name: Show me directories
           if: always()
           run: |
             ls -la ./target/debug
             ls -la ./target/debug/coverage
-            ls -la ./target/debug/coverage/badges
+
+  event_file:
+  name: "Event File"
+  runs-on: ubuntu-latest
+  steps:
+  - name: Upload
+    uses: actions/upload-artifact@v2
+    with:
+      name: Event File
+      path: ${{ github.event_path }}
