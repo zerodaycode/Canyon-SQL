@@ -1,4 +1,4 @@
-name: Run the tests for the project
+name: CI
 
 on:
   push:
@@ -10,7 +10,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  gcov:
+  code-coverage:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -19,7 +21,6 @@ jobs:
         run: |
           rustup toolchain install nightly
           rustup override set nightly
-
       - name: Install grcov
         run: cargo install grcov
 
@@ -30,7 +31,6 @@ jobs:
             RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
         run: |
           cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu
-
       - name: Generate code coverage report
         if: always()
         env:
@@ -40,25 +40,12 @@ jobs:
         run: |
           grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
           grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage/code_cov.xml
-      
-      - name: Publish Test Results from XML
-        uses: EnricoMi/publish-unit-test-result-action@v2
-        if: always()
-        with:
-          junit_files: "./target/debug/coverage/code_cov.xml"
-      
-      - name: Show me directories
-        if: always()
-        run: |
-          ls -la ./target/debug
-          ls -la ./target/debug/coverage
-          ls -la ./target/debug/coverage/badges
-
-      - name: Upload
+      - name: Upload results as an artifact
         uses: actions/upload-artifact@v3
         with:
           name: Event File
           path: ${{ github.event_path }}
+
       - name: Publish Test Results
         uses: actions/upload-artifact@v3
         with:
@@ -66,9 +53,9 @@ jobs:
           path: |
             ./target/debug/coverage/code_cov.xml
             ./target/debug/coverage/index.html
-
       - name: Publish coverage report to GitHub Pages
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: ./target/debug/coverage
+          token: ${{ secrets.GITHUB_TOKEN }}  # TODO handle permissions and apply them to the default token
