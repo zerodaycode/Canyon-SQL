@@ -2,8 +2,12 @@
 
 **A full written in `Rust` ORM for multiple databases.**
 
-[![Continuous Integration](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/tests.yml)
-[![Code Coverage](https://zerodaycode.github.io/Canyon-SQL/badges/flat.svg)](https://zerodaycode.github.io/Canyon-SQL)
+[![Coverage on nightly](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
+[![Code Coverage Measure](https://zerodaycode.github.io/Canyon-SQL/badges/flat.svg)](https://zerodaycode.github.io/Canyon-SQL)
+
+[![Tests on Linux](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/linux-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/linux-tests.yml)
+[![Tests on macOS](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/macos-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/macos-tests.yml)
+[![Tests on Windows](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/windows-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/windows-tests.yml)
 
 `Canyon-SQL` is a high level abstraction for working with multiple databases concurrently. Is build on top of the `async` language features
 to provide a high speed, high performant library to handling data access for consumers.

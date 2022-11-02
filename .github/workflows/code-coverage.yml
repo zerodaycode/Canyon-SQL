@@ -1,10 +1,8 @@
-name: CI
+name: Code Coverage
 
 on:
-  push:
-    branches: [ "main" ]
   pull_request:
-    branches: [ "main" ]
+      branches: [ "main" ]
 
 env:
   CARGO_TERM_COLOR: always
@@ -13,6 +11,10 @@ jobs:
   code-coverage:
     permissions:
       contents: write
+    env:
+      CARGO_INCREMENTAL: '0'
+      RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
+      RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -21,30 +23,23 @@ jobs:
         run: |
           rustup toolchain install nightly
           rustup override set nightly
-      - name: Install grcov
+      
+      - name: Caching cargo deps
+        id: project-cache
+        uses: Swatinem/rust-cache@v2
+      
+      - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
+        name: Install grcov
         run: cargo install grcov
 
       - name: Run tests
-        env:
-            CARGO_INCREMENTAL: '0'
-            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-            RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
         run: |
           cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu
+      
       - name: Generate code coverage report
-        if: always()
-        env:
-            CARGO_INCREMENTAL: '0'
-            RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
-            RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Cinline-threshold=0 -Clink-dead-code -Coverflow-checks=off -Cpanic=abort -Zpanic_abort_tests'
         run: |
           grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage
           grcov . -s . --binary-path ./target/debug/ -t cobertura --branch --ignore-not-existing -o ./target/debug/coverage/code_cov.xml
-      - name: Upload results as an artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Event File
-          path: ${{ github.event_path }}
 
       - name: Publish Test Results
         uses: actions/upload-artifact@v3
@@ -53,6 +48,7 @@ jobs:
           path: |
             ./target/debug/coverage/code_cov.xml
             ./target/debug/coverage/index.html
+      
       - name: Publish coverage report to GitHub Pages
         if: ${{ github.ref == 'refs/heads/main' }}
         uses: JamesIves/github-pages-deploy-action@v4

@@ -1,0 +1,27 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [ "*" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux-tests:
+    runs-on: ubuntu-latest
+    name: Tests for Linux
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Caching cargo deps
+        id: ci-cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Running tests for Windows OS targets
+        run: |
+          cargo test --all-features --workspace
