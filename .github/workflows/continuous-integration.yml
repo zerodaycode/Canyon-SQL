@@ -11,17 +11,17 @@ env:
 
 jobs:
   multiplatform-tests:
-    name: Test Rust ${{ matrix.rust }} on ${{ matrix.os }}
+    name: Testing on Rust ${{ matrix.rust }} for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
         - { rust: stable,            os: ubuntu-latest }
-        - { rust: nightly,            os: ubuntu-latest }
+        - { rust: nightly,           os: ubuntu-latest }
         - { rust: stable,            os: macos-latest }
         - { rust: stable,            os: windows-latest }
-        - { rust: nightly,            os: windows-latest }
+        - { rust: nightly,           os: windows-latest }
         - { rust: stable-x86_64-gnu, os: windows-latest }
         - { rust: stable-i686-msvc,  os: windows-latest }
         - { rust: stable-i686-gnu,   os: windows-latest }

@@ -10,9 +10,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  linux-tests:
-    runs-on: ubuntu-latest
-    name: Tests for Linux
+  windows-tests:
+    runs-on: windows-latest
+    name: Tests for Windows
     env:
       CARGO_TERM_COLOR: always
     steps:
