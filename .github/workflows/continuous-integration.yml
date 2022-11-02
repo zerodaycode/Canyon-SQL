@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: 'main'
+  pull_request:
+    branches: 'main'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  multiplatform-tests:
+    name: Test Rust ${{ matrix.rust }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - { rust: stable,            os: ubuntu-latest }
+        - { rust: nightly,            os: ubuntu-latest }
+        - { rust: stable,            os: macos-latest }
+        - { rust: stable,            os: windows-latest }
+        - { rust: nightly,            os: windows-latest }
+        - { rust: stable-x86_64-gnu, os: windows-latest }
+        - { rust: stable-i686-msvc,  os: windows-latest }
+        - { rust: stable-i686-gnu,   os: windows-latest }
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Caching cargo dependencies
+        id: project-cache
+        uses: Swatinem/rust-cache@v2
+
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: ${{ matrix.rust }}
+
+      - run: cargo test --verbose --workspace --all-features
+      - run: cargo test --verbose --workspace --no-default-features
+
+  sanitizer-test:
+    name: Test with -Zsanitizer=${{ matrix.sanitizer }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        sanitizer: [address, memory, thread, leak]
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: nightly
+          components: rust-src
+
+      - name: Test with sanitizer
+        env:
+          RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+          RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+          # only needed by asan
+          ASAN_OPTIONS: detect_stack_use_after_return=1
+          # Asan's leak detection occasionally complains
+          # about some small leaks if backtraces are captured,
+          # so ensure they're not
+          RUST_BACKTRACE: 0
+      run: |
+        cargo test -Zbuild-std --verbose --target=x86_64-unknown-linux-gnu --no-default-features
+        cargo test -Zbuild-std --verbose --target=x86_64-unknown-linux-gnu --all-features
