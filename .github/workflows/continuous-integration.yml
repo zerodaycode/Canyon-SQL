@@ -39,36 +39,36 @@ jobs:
       - run: cargo test --verbose --workspace --all-features
       - run: cargo test --verbose --workspace --no-default-features
 
-  sanitizer-test:
-    name: Test with -Zsanitizer=${{ matrix.sanitizer }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        sanitizer: [address, memory, thread, leak]
-    steps:
-      - uses: actions/checkout@v3
+  # sanitizer-test:
+  #   name: Test with -Zsanitizer=${{ matrix.sanitizer }}
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       sanitizer: [address, memory, thread, leak]
+  #   steps:
+  #     - uses: actions/checkout@v3
 
-      - name: Caching Rust dependencies
-        id: project-cache
-        uses: Swatinem/rust-cache@v2
+  #     - name: Caching Rust dependencies
+  #       id: project-cache
+  #       uses: Swatinem/rust-cache@v2
 
-      - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: nightly
-          components: rust-src
+  #     - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
+  #       uses: hecrj/setup-rust-action@v1
+  #       with:
+  #         rust-version: nightly
+  #         components: rust-src
 
-      - name: Test with sanitizer
-        env:
-          RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
-          RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
-          # only needed by asan
-          ASAN_OPTIONS: detect_stack_use_after_return=1
-          # Asan's leak detection occasionally complains
-          # about some small leaks if backtraces are captured,
-          # so ensure they're not
-          RUST_BACKTRACE: 0
-      run: |
-        cargo test -Zbuild-std --verbose --target=x86_64-unknown-linux-gnu --no-default-features
-        cargo test -Zbuild-std --verbose --target=x86_64-unknown-linux-gnu --all-features
+  #     - name: Test with sanitizer
+  #       env:
+  #         RUSTFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+  #         RUSTDOCFLAGS: -Zsanitizer=${{ matrix.sanitizer }}
+  #         # only needed by asan
+  #         ASAN_OPTIONS: detect_stack_use_after_return=1
+  #         # Asan's leak detection occasionally complains
+  #         # about some small leaks if backtraces are captured,
+  #         # so ensure they're not
+  #         RUST_BACKTRACE: 0
+  #     run: |
+  #       cargo test -Zbuild-std --verbose --target=x86_64-unknown-linux-gnu --no-default-features
+  #       cargo test -Zbuild-std --verbose --target=x86_64-unknown-linux-gnu --all-features
