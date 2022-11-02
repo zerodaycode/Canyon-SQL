@@ -15,6 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Caching project dependencies
+        id: project-cache
+        uses: Swatinem/rust-cache@v2
+
       - uses: hecrj/setup-rust-action@v1
         with:
           components: clippy
@@ -27,6 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Caching project dependencies
+        id: project-cache
+        uses: Swatinem/rust-cache@v2
 
       - uses: hecrj/setup-rust-action@v1
         with:
@@ -43,6 +51,10 @@ jobs:
         crate: [canyon_connection, canyon_crud, canyon_macros, canyon_observer, canyon_manager, canyon_observer, canyon_sql]
     steps:
       - uses: actions/checkout@v3
+
+      - name: Caching project dependencies
+        id: project-cache
+        uses: Swatinem/rust-cache@v2
 
       - uses: hecrj/setup-rust-action@v1
         with:

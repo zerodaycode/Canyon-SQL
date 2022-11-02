@@ -49,7 +49,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: hecrj/setup-rust-action@v1
+      - name: Caching Rust dependencies
+        id: project-cache
+        uses: Swatinem/rust-cache@v2
+
+      - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
+        uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
           components: rust-src
