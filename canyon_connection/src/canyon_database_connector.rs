@@ -66,7 +66,7 @@ impl DatabaseConnection {
                         connection: new_connection
                     }),
                     sqlserver_connection: None,
-                    database_type: DatabaseType::from_datasource(&datasource)
+                    database_type: DatabaseType::from_datasource(datasource)
                 })
             },
             "sqlserver" => {
@@ -87,11 +87,11 @@ impl DatabaseConnection {
                 // Taking the address from the configuration, using async-std's
                 // TcpStream to connect to the server.
                 let tcp = TcpStream::connect(config.get_addr()).await
-                    .ok().expect("Error instanciating the SqlServer TCP Stream");
+                    .expect("Error instanciating the SqlServer TCP Stream");
 
                 // We'll disable the Nagle algorithm. Buffering is handled
                 // internally with a `Sink`.
-                tcp.set_nodelay(true).ok().expect("Error in the SqlServer `nodelay` config");
+                tcp.set_nodelay(true).expect("Error in the SqlServer `nodelay` config");
 
                 // Handling TLS, login and other details related to the SQL Server.
                 let client = tiberius::Client::connect(config, tcp).await;
@@ -99,9 +99,9 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: client.ok().expect("A failure happened connecting to the database")
+                        client: client.expect("A failure happened connecting to the database")
                     }),
-                    database_type: DatabaseType::from_datasource(&datasource)
+                    database_type: DatabaseType::from_datasource(datasource)
                 })
             },
             &_ => return Err(

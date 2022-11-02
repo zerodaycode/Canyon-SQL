@@ -4,7 +4,7 @@ use serde::Deserialize;
 /// ```
 #[test]
 fn load_ds_config_from_array() {
-    const CONFIG_FILE_MOCK_ALT: &'static str = r#"
+    const CONFIG_FILE_MOCK_ALT: &str = r#"
         [canyon_sql]
         datasources = [
             {name = 'PostgresDS', properties.db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce'},

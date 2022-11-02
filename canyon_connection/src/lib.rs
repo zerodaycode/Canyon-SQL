@@ -11,7 +11,7 @@ use std::fs;
 use crate::datasources::{DatasourceConfig, CanyonSqlConfig};
 use lazy_static::lazy_static;
 
-const CONFIG_FILE_IDENTIFIER: &'static str = "canyon.toml";
+const CONFIG_FILE_IDENTIFIER: &str = "canyon.toml";
 
 
 lazy_static! {
