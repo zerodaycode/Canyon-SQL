@@ -22,7 +22,7 @@ impl<'a, T> Query<'a, T>
 {
     pub fn new(sql: String, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         let self_ = Self {
-            sql: sql,
+            sql,
             params: &[],
             marker: PhantomData
         };

@@ -29,22 +29,22 @@ pub trait Transaction<T: Debug> {
             S: AsRef<str> + Display + Sync + Send + 'a, 
             Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
     {
-        let database_connection = if datasource_name == "" {
+        let database_connection = if datasource_name.is_empty() {
             DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
         } else { // Get the specified one
             DatabaseConnection::new(
                 &DATASOURCES.iter()
-                .find( |ds| ds.name == datasource_name)
-                .expect(&format!("No datasource found with the specified parameter: `{}`", datasource_name))
-                .properties
+                .find(|ds| ds.name == datasource_name)
+                .unwrap_or_else(|| 
+                    panic!("No datasource found with the specified parameter: `{}`", datasource_name)
+                ).properties
             ).await
         };
 
         if let Err(_db_conn) = database_connection {
-            todo!();
+            return Err(_db_conn);
         } else {
-            // No errors
-            let db_conn = database_connection.ok().unwrap();
+            let db_conn = database_connection?;
 
             match db_conn.database_type {
                 DatabaseType::PostgreSql => 
@@ -85,7 +85,7 @@ pub trait CrudOperations<T>: Transaction<T>
 
     fn find_all_query<'a>() -> QueryBuilder<'a, T>;
     
-    fn find_all_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
+    fn find_all_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
     
     async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
     
@@ -121,7 +121,7 @@ pub trait CrudOperations<T>: Transaction<T>
     
     fn update_query<'a>() -> QueryBuilder<'a, T>;
 
-    fn update_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
+    fn update_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 
     async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
@@ -130,7 +130,7 @@ pub trait CrudOperations<T>: Transaction<T>
     
     fn delete_query<'a>() -> QueryBuilder<'a, T>;
 
-    fn delete_query_datasource<'a>(datasource_name: &'a str) -> QueryBuilder<'a, T>;
+    fn delete_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 }
 
 mod postgres_query_launcher {
@@ -139,15 +139,11 @@ mod postgres_query_launcher {
     use crate::bounds::QueryParameters;
     use crate::result::DatabaseResult;
 
-    pub async fn launch<'a, T>(
+    pub async fn launch<'a, T: Debug>(
         db_conn: DatabaseConnection,
         stmt: String,
         params: &'a [&'_ dyn QueryParameters<'_>],
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-        where 
-            T: Debug,
-
-    {
+    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let postgres_connection = db_conn.postgres_connection.unwrap();
         let (client, connection) =
             (postgres_connection.client, postgres_connection.connection);
@@ -206,8 +202,8 @@ mod sqlserver_query_launcher {
             *stmt = format!("{} OUTPUT inserted.{} VALUES {}", temp2.0.trim(), temp.1.trim(), temp2.1.trim());
         }
 
-        let mut sql_server_query = Query::new(stmt.to_owned().replace("$", "@P"));
-        params.as_ref().into_iter().for_each( |param| sql_server_query.bind( *param ));
+        let mut sql_server_query = Query::new(stmt.to_owned().replace('$', "@P"));
+        params.as_ref().iter().for_each(|param| sql_server_query.bind( *param ));
 
         let client: &mut Client<TcpStream> = &mut db_conn.sqlserver_connection
             .expect("Error querying the SqlServer database") // TODO Better msg?
