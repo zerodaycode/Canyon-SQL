@@ -21,6 +21,7 @@ use canyon_connection::{
 /// the result of the query and, if the user desires,
 /// automatically map it to an struct.
 #[async_trait]
+#[allow(clippy::question_mark)]
 pub trait Transaction<T: Debug> {
     /// Performs the necessary to execute a query against the database
     async fn query<'a, S, Z>(stmt: S, params: Z, datasource_name: &'a str) 

@@ -1,5 +1,6 @@
-use std::fmt::Debug;
+#![allow(clippy::extra_unused_lifetimes)]
 
+use std::fmt::Debug;
 use canyon_connection::{
     tokio_postgres::types::ToSql, 
     tiberius::{
@@ -7,9 +8,7 @@ use canyon_connection::{
         ColumnData
     }
 };
-
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime, DateTime, FixedOffset, Utc};
-
 use crate::{crud::{CrudOperations, Transaction}, mapper::RowMapper};
 
 
@@ -84,9 +83,8 @@ impl<T> FieldValueIdentifier<T> for &str
 /// Usually, it's used on the Canyon macros to retrieve the column that 
 /// this side of the relation it's representing
 pub trait ForeignKeyable<T> {
-    // type Output; // TODO as
     /// Retrieves the field related to the column passed in
-    fn get_fk_column<'a>(&self, column: &'a str) -> Option<String>;
+    fn get_fk_column(&self, column: &str) -> Option<String>;
 }
 
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
@@ -98,7 +96,6 @@ pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
 }
-
 
 /// The implementation of the [`tiberius`] [`IntoSql`] for the
 /// query parameters.
@@ -442,7 +439,7 @@ impl<'a> QueryParameters<'_> for DateTime<Utc> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'a> for Option<DateTime<Utc>> {
+impl<'a> QueryParameters<'_> for Option<DateTime<Utc>> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }

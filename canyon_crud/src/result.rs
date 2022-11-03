@@ -44,12 +44,12 @@ impl<T: Debug> DatabaseResult<T> {
         where T: Transaction<T> 
     {
         match self.active_ds {
-            DatabaseType::PostgreSql => self.from_postgresql::<Z>(),
-            DatabaseType::SqlServer => self.from_sql_server::<Z>(),
+            DatabaseType::PostgreSql => self.map_from_postgresql::<Z>(),
+            DatabaseType::SqlServer => self.map_from_sql_server::<Z>(),
         }
     }
 
-    fn from_postgresql<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn map_from_postgresql<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
         where T: Transaction<T> 
     {
         let mut results = Vec::new();
@@ -61,7 +61,7 @@ impl<T: Debug> DatabaseResult<T> {
         results
     }
 
-    fn from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn map_from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
         where T: Transaction<T> 
     {
         let mut results = Vec::new();

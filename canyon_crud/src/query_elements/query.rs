@@ -20,7 +20,7 @@ impl<'a, T> Query<'a, T>
     where
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
-    pub fn new(sql: String, datasource_name: &'a str) -> QueryBuilder<'a, T> {
+    pub fn generate(sql: String, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         let self_ = Self {
             sql,
             params: &[],

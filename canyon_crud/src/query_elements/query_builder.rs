@@ -34,25 +34,26 @@ impl<'a, T> QueryBuilder<'a, T>
     where 
         T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-    // Generates a Query object that contains the necessary data to performn a query
+    /// Generates a Query object that contains the necessary data to performn a query
+    #[allow(clippy::question_mark)]
     pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
-        if self.query.sql.contains("UPDATE") && self.set_clause != "" {
+        if self.query.sql.contains("UPDATE") && !self.set_clause.is_empty() {
             self.query.sql.push_str(&self.set_clause)
-        } else if !self.query.sql.contains("UPDATE") && self.set_clause != "" {
+        } else if !self.query.sql.contains("UPDATE") && !self.set_clause.is_empty() {
             panic!(
                 "'SET' SQL statement only must be used in `T::update_query() associated functions`"
             );
         }
         
-        if self.where_clause != "" {
+        if self.where_clause.is_empty() {
             self.query.sql.push_str(&self.where_clause)
         }
 
-        if self.and_clause != "" {
+        if self.and_clause.is_empty() {
             self.query.sql.push_str(&self.and_clause)
         }
 
@@ -62,7 +63,7 @@ impl<'a, T> QueryBuilder<'a, T>
             }
         }
 
-        if self.order_by_clause != "" {
+        if self.order_by_clause.is_empty() {
             self.query.sql.push_str(&self.order_by_clause)
         }
 
@@ -93,14 +94,15 @@ impl<'a, T> QueryBuilder<'a, T>
 
     pub fn r#where<Z: FieldValueIdentifier<T>>(mut self, r#where: Z, comp: Comp) -> Self {
         let values = r#where.value()
-            .to_string()
-            .split(" ")
-            .map( |el| String::from(el))
+            .split(' ')
+            .map(String::from)
             .collect::<Vec<String>>();
 
-        let where_ = values.get(0).unwrap().to_string() + 
-            &comp.as_string()[..] + "'" +
-            values.get(1).unwrap() + "'"; 
+        let where_ = values.get(0).unwrap().to_string() +
+            &comp.as_string()[..] +
+            "'" +
+            values.get(1).unwrap() +
+            "'"; 
         
         self.where_clause.push_str(
             &*(String::from(" WHERE ") + where_.as_str())
@@ -111,14 +113,15 @@ impl<'a, T> QueryBuilder<'a, T>
 
     pub fn and<Z: FieldValueIdentifier<T>>(mut self, r#and: Z, comp: Comp) -> Self {
         let values = r#and.value()
-            .to_string()
-            .split(" ")
-            .map( |el| String::from(el))
+            .split(' ')
+            .map(String::from)
             .collect::<Vec<String>>();
 
         let where_ = values.get(0).unwrap().to_string() + 
-            &comp.as_string()[..] + "'" +
-            values.get(1).unwrap() + "'"; 
+            &comp.as_string()[..] +
+            "'" +
+            values.get(1).unwrap() +
+            "'"; 
         
         self.where_clause.push_str(
             &*(String::from(" AND ") + where_.as_str())
@@ -152,10 +155,9 @@ impl<'a, T> QueryBuilder<'a, T>
             Z: FieldIdentifier<T> + Clone, 
             S: ToString 
     {
-        if columns.len() == 0 {
-            return self;
-        } else if columns.len() > 0 {
-            self.set_clause.push_str(" SET ")
+        match columns.len() {
+            0 => return self,
+            _ => self.set_clause.push_str(" SET ")
         }
 
         for (idx, column) in columns.iter().enumerate() {
