@@ -26,14 +26,14 @@ pub fn parse_canyon_macro_attributes(_meta: &Vec<NestedMeta>) -> CanyonMacroAttr
         match nested_meta {
             syn::NestedMeta::Meta(m) => determine_allowed_attributes(m, &mut res),
             syn::NestedMeta::Lit(lit) => match lit {
-                syn::Lit::Str(ref l) => res.error = Some(report_literals_not_allowed(&l.value(), &lit)),
-                syn::Lit::ByteStr(ref l) => res.error = Some(report_literals_not_allowed(&String::from_utf8_lossy(&l.value()), &lit)),
-                syn::Lit::Byte(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), &lit)),
-                syn::Lit::Char(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), &lit)),
-                syn::Lit::Int(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), &lit)),
-                syn::Lit::Float(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), &lit)),
-                syn::Lit::Bool(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), &lit)) ,
-                syn::Lit::Verbatim(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), &lit))
+                syn::Lit::Str(ref l) => res.error = Some(report_literals_not_allowed(&l.value(), lit)),
+                syn::Lit::ByteStr(ref l) => res.error = Some(report_literals_not_allowed(&String::from_utf8_lossy(&l.value()), lit)),
+                syn::Lit::Byte(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), lit)),
+                syn::Lit::Char(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), lit)),
+                syn::Lit::Int(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), lit)),
+                syn::Lit::Float(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), lit)),
+                syn::Lit::Bool(ref l) => res.error = Some(report_literals_not_allowed(&l.value().to_string(), lit)) ,
+                syn::Lit::Verbatim(ref l) => res.error = Some(report_literals_not_allowed(&l.to_string(), lit))
             }
         }
     };
@@ -44,7 +44,7 @@ pub fn parse_canyon_macro_attributes(_meta: &Vec<NestedMeta>) -> CanyonMacroAttr
 
 /// Determines whenever a [`syn::NestedMeta::Meta`] it's classified as a valid argument of the `canyon` macro
 fn determine_allowed_attributes(meta: &syn::Meta, cma: &mut CanyonMacroAttributes) {
-    const ALLOWED_ATTRS: [&'static str; 1] = ["enable_migrations"];
+    const ALLOWED_ATTRS: [&str; 1] = ["enable_migrations"];
     
     let attr_ident = meta.path().get_ident().unwrap();
     let attr_ident_str = attr_ident.to_string();
@@ -53,10 +53,10 @@ fn determine_allowed_attributes(meta: &syn::Meta, cma: &mut CanyonMacroAttribute
         cma.allowed_migrations = true;
     } else {
         let error = syn::Error::new_spanned(
-            Ident::new(&attr_ident_str, attr_ident.span().into()), 
+            Ident::new(&attr_ident_str, attr_ident.span()), 
         format!(
                 "No `{attr_ident_str}` arguments allowed in the `Canyon` macro attributes.\n\
-                Allowed ones are: {:?}", ALLOWED_ATTRS
+                Allowed ones are: {ALLOWED_ATTRS:?}"
             )
         ).into_compile_error();
         cma.error = Some(
@@ -71,7 +71,7 @@ fn determine_allowed_attributes(meta: &syn::Meta, cma: &mut CanyonMacroAttribute
 /// Creates a custom error for report not allowed literals on the attribute
 /// args of the `canyon` proc macro
 fn report_literals_not_allowed(ident: &str, s: &Lit) -> TokenStream1 {
-    let error = syn::Error::new_spanned(Ident::new(ident, s.span().into()), 
+    let error = syn::Error::new_spanned(Ident::new(ident, s.span()), 
         "No literals allowed in the `Canyon` macro"
     ).into_compile_error();
     

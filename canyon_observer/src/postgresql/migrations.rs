@@ -157,7 +157,7 @@ impl DatabaseSyncOperations {
                         }
                         
                         if database_field.is_nullable {
-                            database_field_postgres_type = format!("Option<{}>", database_field_postgres_type);
+                            database_field_postgres_type = format!("Option<{database_field_postgres_type}>");
                         }
                         
                         if field.field_type != database_field_postgres_type {
@@ -316,14 +316,10 @@ impl DatabaseSyncOperations {
             let query_to_execute = queries
             .get(i)
             .unwrap_or_else(||
-                panic!("Failed to retrieve query from the register at index: {}", i)
+                panic!("Failed to retrieve query from the register at index: {i}")
             );
 
-            Self::query(
-                query_to_execute,
-                &[],
-                ""
-            ).await
+            Self::query(query_to_execute, [], "").await
                 .ok()
                 .unwrap_or_else(|| 
                     panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
@@ -446,7 +442,7 @@ impl DatabaseSyncOperations {
         let table_to_reference = annotation_data.0;
         let column_to_reference = annotation_data.1;
 
-        let foreign_key_name = format!("{}_{}_fkey", table_name, &column_foreign_key);
+        let foreign_key_name = format!("{table_name}_{}_fkey", &column_foreign_key);
 
         self.constrains_operations.push(
             Box::new(

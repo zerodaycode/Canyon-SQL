@@ -29,7 +29,7 @@ impl<'a> CanyonRegisterEntity<'a> {
         for field in &self.entity_fields {
 
             let column_postgres_syntax = field.field_type_to_postgres();
-            let field_as_string = format!("{} {}", field.field_name, column_postgres_syntax);
+            let field_as_string = format!("{} {column_postgres_syntax}", field.field_name);
             fields_strings.push(field_as_string);
         }
 
@@ -130,9 +130,9 @@ impl CanyonRegisterEntityField {
         let postgres_datatype_syntax = Self::to_postgres_syntax(self);
 
         if numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental {
-            format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)
+            format!("{postgres_datatype_syntax} PRIMARY KEY GENERATED ALWAYS AS IDENTITY")
         } else {
-            format!("{} PRIMARY KEY", postgres_datatype_syntax)
+            format!("{postgres_datatype_syntax} PRIMARY KEY")
         }
     }
 

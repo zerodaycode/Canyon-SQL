@@ -10,7 +10,7 @@ use crate::utils::macro_tokens::MacroTokens;
 /// associated function
 pub fn generate_find_all_unchecked_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
-    let stmt = format!("SELECT * FROM {}", table_schema_data);
+    let stmt = format!("SELECT * FROM {table_schema_data}");
 
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -53,7 +53,7 @@ pub fn generate_find_all_unchecked_tokens(macro_data: &MacroTokens<'_>, table_sc
 /// associated function
 pub fn generate_find_all_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
-    let stmt = format!("SELECT * FROM {}", table_schema_data);
+    let stmt = format!("SELECT * FROM {table_schema_data}");
 
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -143,7 +143,7 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>, table_schema
 pub fn generate_count_tokens(macro_data: &MacroTokens<'_>, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
     let ty_str = &ty.to_string();
-    let stmt = format!("SELECT COUNT (*) FROM {}", table_schema_data);
+    let stmt = format!("SELECT COUNT (*) FROM {table_schema_data}");
 
     let result_handling = quote! {
         if let Err(error) = count {
@@ -204,10 +204,10 @@ pub fn generate_find_by_pk_tokens(macro_data: &MacroTokens<'_>, table_schema_dat
     let ty = macro_data.ty;
     let pk = macro_data.get_primary_key_annotation()
         .unwrap_or_default();
-    let stmt = format!("SELECT * FROM {} WHERE {} = $1", table_schema_data, pk);
+    let stmt = format!("SELECT * FROM {table_schema_data} WHERE {pk} = $1");
 
     // Disabled if there's no `primary_key` annotation
-    if pk == "" { 
+    if pk.is_empty() { 
         return quote! {
             async fn find_by_pk<'a>(value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>) 
                 -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
@@ -350,7 +350,7 @@ pub fn generate_find_by_foreign_key_tokens(macro_data: &MacroTokens<'_>) -> Vec<
             let stmt = format!(
                 "SELECT * FROM {} WHERE {} = $1", 
                 table,
-                format!("\"{}\"", column).as_str(),
+                format!("\"{column}\"").as_str(),
             );
             let result_handler = quote! {
                 if let Err(error) = result {

@@ -113,7 +113,7 @@ impl CanyonMemory {
                 );
             if !already_in_db {
                 values_to_insert.push_str(
-                    format!("('{}', '{}'),", filename, struct_name).as_str()
+                    format!("('{filename}', '{struct_name}'),").as_str()
                 );
             }
             // When the struct or the filename it's already on db but one of the two has been modified

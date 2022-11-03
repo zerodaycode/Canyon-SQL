@@ -15,9 +15,9 @@ impl EntityFieldAnnotation {
     pub fn get_as_string(&self) -> String {
         match self {
             Self::PrimaryKey(autoincremental) => 
-                format!("Annotation: PrimaryKey, Autoincremental: {}", autoincremental),
+                format!("Annotation: PrimaryKey, Autoincremental: {autoincremental}"),
             Self::ForeignKey(table, column) => 
-                format!("Annotation: ForeignKey, Table: {}, Column: {}", table, column),
+                format!("Annotation: ForeignKey, Table: {table}, Column: {column}"),
         }
     }
 
@@ -83,7 +83,7 @@ impl EntityFieldAnnotation {
                             return Err(
                                 syn::Error::new_spanned(
                                     nv.path.clone(), 
-                                    format!("Only string literals are supported for the `{}` attribute", attr_value_ident)
+                                    format!("Only string literals are supported for the `{attr_value_ident}` attribute")
                                 )
                             )
                         }

@@ -37,7 +37,7 @@ pub trait Transaction<T: Debug> {
                 &DATASOURCES.iter()
                 .find(|ds| ds.name == datasource_name)
                 .unwrap_or_else(|| 
-                    panic!("No datasource found with the specified parameter: `{}`", datasource_name)
+                    panic!("No datasource found with the specified parameter: `{datasource_name}`")
                 ).properties
             ).await
         };
@@ -151,7 +151,7 @@ mod postgres_query_launcher {
 
         canyon_connection::tokio::spawn(async move {
             if let Err(e) = connection.await {
-                eprintln!("An error occured while trying to connect to the database: {}", e);
+                eprintln!("An error occured while trying to connect to the database: {e}");
             }
         });
 

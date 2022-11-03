@@ -18,7 +18,7 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
     for attr in macro_data.attrs {
         if attr.path.segments.iter().any(
             |seg|
-                seg.ident.to_string() == "canyon_macros" || seg.ident.to_string() == "canyon_entity"
+                seg.ident == "canyon_macros" || seg.ident == "canyon_entity"
         ) { 
             let name_values_result: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> = 
             attr.parse_args_with(Punctuated::parse_terminated);
@@ -38,7 +38,7 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
                                     } else {
                                         return Err(
                                             syn::Error::new_spanned(
-                                                Ident::new(&identifier, i.span().into()), 
+                                                Ident::new(&identifier, i.span()), 
                                                 "Only string literals are valid values for the attribute arguments"
                                                 ).into_compile_error()
                                         );
@@ -47,7 +47,7 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
                                 _ => 
                                     return Err(
                                         syn::Error::new_spanned(
-                                            Ident::new(&identifier, i.span().into()), 
+                                            Ident::new(&identifier, i.span()), 
                                             "Only string literals are valid values for the attribute arguments"
                                             ).into_compile_error()
                                     ),
@@ -71,8 +71,9 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
                         format!("{}.", schema.unwrap()).as_str()
                     ) 
                 }
-                if table_name.is_some() {
-                    final_table_name.push_str(table_name.unwrap().as_str())
+
+                if let Some(t_name) = table_name {
+                    final_table_name.push_str(t_name.as_str())
                 } else {
                     final_table_name.push_str(macro_data.ty.to_string().as_str())
                 }
@@ -89,7 +90,7 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
 /// TODO: #[macro(table_name = 'user_defined_db_table_name)]' 
 pub fn _database_table_name_from_struct(ty: &Ident) -> String {
 
-    let struct_name: String = String::from(ty.to_string());
+    let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();
     
     let mut index = 0;
@@ -115,7 +116,7 @@ pub fn _database_table_name_from_struct(ty: &Ident) -> String {
 /// TODO: #[macro(table_name = 'user_defined_db_table_name)]' 
 pub fn _database_table_name_from_entity_name(ty: &str) -> String {
 
-    let struct_name: String = String::from(ty.to_string());
+    let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();
     
     let mut index = 0;

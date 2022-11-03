@@ -87,8 +87,8 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     
     // TODO check if the `canyon` macro it's attached only to main? 
     let func = func_res.ok().unwrap();
-    let sign = func.clone().sig;
-    let body = func.clone().block.stmts;
+    let sign = func.sig;
+    let body = func.block.stmts;
 
     if attrs_parse_result.allowed_migrations {
         // The migrations
@@ -158,7 +158,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
                                 _ => {
                                     parsing_attribute_error = Some(syn::Error::new(
                                         Span::call_site().into(),
-                                        format!("Only string literals are valid values for the attributes")
+                                        "Only string literals are valid values for the attributes"
                                     ).into_compile_error());
                                 }
                             }
@@ -189,14 +189,14 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let entity_res = syn::parse::<CanyonEntity>(input);
 
     if entity_res.is_err() {
-        return entity_res.err()
-            .expect("Unexpected error parsing the struct")
+        return entity_res
+            .expect_err("Unexpected error parsing the struct")
             .into_compile_error()
             .into()
     }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
-    let entity = entity_res.ok().expect("Unexpected error parsing the struct");
+    let entity = entity_res.expect("Unexpected error parsing the struct");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
@@ -204,7 +204,7 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
 
     // The identifier of the entities
-    let mut new_entity = CanyonRegisterEntity::new();
+    let mut new_entity = CanyonRegisterEntity::default();
     let e = Box::leak(
         entity.struct_name.to_string()
             .into_boxed_str()
@@ -215,9 +215,11 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
 
     // The entity fields
     for field in entity.fields.iter() {
-        let mut new_entity_field = CanyonRegisterEntityField::new();
-        new_entity_field.field_name = field.name.to_string();
-        new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
+        let mut new_entity_field = CanyonRegisterEntityField { 
+            field_name: field.name.to_string(),
+            field_type: field.get_field_type_as_string().replace(' ', ""),
+            ..Default::default() 
+        };
         
         field.attributes.iter().for_each(
             |attr|
@@ -280,36 +282,36 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     let ty = macro_data.ty;
 
     // Builds the find_all() query
-    let _find_all_unchecked_tokens = generate_find_all_unchecked_tokens(&macro_data, &table_schema_data);
+    let _find_all_unchecked_tokens = generate_find_all_unchecked_tokens(macro_data, &table_schema_data);
     // Builds the find_all_result() query
-    let _find_all_tokens = generate_find_all_tokens(&macro_data, &table_schema_data);
+    let _find_all_tokens = generate_find_all_tokens(macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
-    let _find_all_query_tokens = generate_find_all_query_tokens(&macro_data, &table_schema_data);
+    let _find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
     
     // Builds a COUNT(*) query over some table
-    let _count_tokens = generate_count_tokens(&macro_data, &table_schema_data);
+    let _count_tokens = generate_count_tokens(macro_data, &table_schema_data);
  
     // Builds the find_by_pk() query
-    let _find_by_pk_tokens = generate_find_by_pk_tokens(&macro_data, &table_schema_data);
+    let _find_by_pk_tokens = generate_find_by_pk_tokens(macro_data, &table_schema_data);
     
     // Builds the insert() query
-    let _insert_tokens = generate_insert_tokens(&macro_data, &table_schema_data);
+    let _insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
     // Builds the insert_multi() query
-    let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data, &table_schema_data);
+    let _insert_multi_tokens = generate_multiple_insert_tokens(macro_data, &table_schema_data);
     
     // Builds the update() queries
-    let _update_tokens = generate_update_tokens(&macro_data, &table_schema_data);
+    let _update_tokens = generate_update_tokens(macro_data, &table_schema_data);
     // Builds the update() query as a QueryBuilder
-    let _update_query_tokens = generate_update_query_tokens(&macro_data, &table_schema_data);
+    let _update_query_tokens = generate_update_query_tokens(macro_data, &table_schema_data);
 
     // Builds the delete() queries
-    let _delete_tokens = generate_delete_tokens(&macro_data, &table_schema_data);
+    let _delete_tokens = generate_delete_tokens(macro_data, &table_schema_data);
 
     // Builds the delete() query as a QueryBuilder
-    let _delete_query_tokens = generate_delete_query_tokens(&macro_data, &table_schema_data);
+    let _delete_query_tokens = generate_delete_query_tokens(macro_data, &table_schema_data);
     
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
-    let _search_by_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_foreign_key_tokens(&macro_data);
+    let _search_by_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_foreign_key_tokens(macro_data);
     let fk_method_signatures = _search_by_fk_tokens
         .iter()
         .map( |(sign, _)| { sign });
@@ -319,7 +321,7 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
 
     // The tokens for generating the methods that enable Canyon to retrive the child entities that are of T type
     // given a parent entity U: ForeignKeyable, as an associated function for the child type (T)
-    let _search_by_revese_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_reverse_foreign_key_tokens(&macro_data, &table_schema_data);
+    let _search_by_revese_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_reverse_foreign_key_tokens(macro_data, &table_schema_data);
     let rev_fk_method_signatures = _search_by_revese_fk_tokens
         .iter()
         .map( |(sign, _)| { sign });
@@ -368,7 +370,7 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
         #_delete_query_tokens
     };
 
-    let tokens = if _search_by_fk_tokens.len() > 0 {
+    let tokens = if !_search_by_fk_tokens.is_empty() {
         quote! {
             #[async_trait]
             impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
@@ -498,7 +500,8 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
-        let quote = if get_field_type_as_string(ty) == "String" {
+        
+        if get_field_type_as_string(ty) == "String" {
             quote! {  
                 #ident: row.get::<&str, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
@@ -562,9 +565,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                 #ident: row.get::<#ty, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        };
-
-        quote
+        }
     });
 
     // The type of the Struct

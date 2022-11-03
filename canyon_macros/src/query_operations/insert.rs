@@ -223,7 +223,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
     
     let pk_ident_type = macro_data._fields_with_types()
         .into_iter()
-        .find( |(i, _t)| i.to_string() == pk);
+        .find( |(i, _t)| *i == pk);
 
     let multi_insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;

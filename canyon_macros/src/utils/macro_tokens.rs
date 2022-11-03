@@ -100,20 +100,18 @@ impl<'a> MacroTokens<'a> {
         self.fields
             .iter()
             .filter( |field| {
-                    if field.attrs.len() > 0 {
+                    if !field.attrs.is_empty() {
                         field.attrs.iter().any( |attr| 
                             {   
                                 let a = attr.path.segments[0].clone().ident;
                                 let b = attr.tokens.to_string();
-                                if a.to_string() == "primary_key" || b.to_string().contains("false") {
-                                    false
-                                } else { true }
+                                !(a == "primary_key" || b.contains("false"))
                             }
                         )
                     } else { true }
                 }
             ).map( |c| 
-                format!( "\"{}\"", c.ident.as_ref().unwrap().to_string() )
+                format!( "\"{}\"", c.ident.as_ref().unwrap() )
             ).collect::<Vec<String>>()
     }
 
@@ -140,7 +138,7 @@ impl<'a> MacroTokens<'a> {
         let mut pk_index = None;
         for (idx, field) in self.fields.iter().enumerate() {
             for attr in &field.attrs {
-                if attr.path.segments[0].clone().ident.to_string() == "primary_key" {
+                if attr.path.segments[0].clone().ident == "primary_key" {
                     pk_index = Some(idx);
                 }
             }
@@ -176,7 +174,7 @@ impl<'a> MacroTokens<'a> {
             .for_each( |field| {
                     let attrs = field.attrs.iter()
                         .filter( |attr| 
-                            attr.path.segments[0].clone().ident.to_string() == "foreign_key"
+                            attr.path.segments[0].clone().ident == "foreign_key"
                         );
                     attrs.for_each( 
                         |attr| {

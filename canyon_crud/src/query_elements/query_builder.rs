@@ -105,7 +105,7 @@ impl<'a, T> QueryBuilder<'a, T>
             "'"; 
         
         self.where_clause.push_str(
-            &*(String::from(" WHERE ") + where_.as_str())
+            &(String::from(" WHERE ") + where_.as_str())
         );
         
         self
@@ -124,7 +124,7 @@ impl<'a, T> QueryBuilder<'a, T>
             "'"; 
         
         self.where_clause.push_str(
-            &*(String::from(" AND ") + where_.as_str())
+            &(String::from(" AND ") + where_.as_str())
         );
 
         self
@@ -140,7 +140,7 @@ impl<'a, T> QueryBuilder<'a, T>
             } else { "".to_owned() };
 
         self.order_by_clause.push_str(
-            &*(
+            &(
                 String::from(" ORDER BY ") + 
                 order_by.field_name_as_str().as_str() + 
                 &desc
