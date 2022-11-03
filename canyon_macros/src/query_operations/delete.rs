@@ -93,13 +93,13 @@ pub fn generate_delete_query_tokens(macro_data: &MacroTokens, table_schema_data:
         /// Deletes a record on a table for the target database that matches the value
         /// of the primary key of the instance
         fn delete_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::new(format!("DELETE FROM {}", #table_schema_data), "")
+            query_elements::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), "")
         }
 
         /// Deletes a record on a table for the target database with the specified
         /// values generated with the [`Querybuilder`] and with the
-        fn delete_query_datasource<'a>(datasource_name: &'a str) -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::new(format!("DELETE FROM {}", #table_schema_data), datasource_name)
+        fn delete_query_datasource(datasource_name: &str) -> query_elements::query_builder::QueryBuilder<'_, #ty> {
+            query_elements::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), datasource_name)
         }
     }
 }

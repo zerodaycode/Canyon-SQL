@@ -82,7 +82,7 @@ impl CanyonEntity {
                 let field_name_as_string = f.name.to_string();
                 let field_type_as_string = f.get_field_type_as_string();
 
-                let quote = if field_type_as_string.contains("Option") {
+                if field_type_as_string.contains("Option") {
                     quote! { 
                         #enum_name::#field_name(v) => 
                             format!("{} {}", #field_name_as_string.to_string(), v.unwrap().to_string())
@@ -92,9 +92,7 @@ impl CanyonEntity {
                         #enum_name::#field_name(v) => 
                             format!("{} {}", #field_name_as_string.clone().to_string(), v.to_string())
                     }
-                }; 
-
-                quote
+                }
             })
         .collect::<Vec<_>>()
     }

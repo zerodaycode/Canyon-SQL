@@ -118,7 +118,7 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>, table_schema
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention.
         fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::new(format!("SELECT * FROM {}", #table_schema_data), "")
+            query_elements::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), "")
         }
 
         /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
@@ -130,10 +130,10 @@ pub fn generate_find_all_query_tokens(macro_data: &MacroTokens<'_>, table_schema
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`] 
         /// passed as parameter.
-        fn find_all_query_datasource<'a>(datasource_name: &'a str) -> 
-            query_elements::query_builder::QueryBuilder<'a, #ty> 
+        fn find_all_query_datasource(datasource_name: &str) -> 
+            query_elements::query_builder::QueryBuilder<'_, #ty> 
         {
-            query_elements::query::Query::new(format!("SELECT * FROM {}", #table_schema_data), datasource_name)
+            query_elements::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), datasource_name)
         }
     }
 }
@@ -429,13 +429,11 @@ pub fn generate_find_by_reverse_foreign_key_tokens(macro_data: &MacroTokens<'_>,
             let quoted_method_signature: TokenStream = quote! { 
                 async fn #method_name_ident<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) -> 
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                        // where <F as canyon_sql::canyon_crud::bounds::ForeignKeyable<F>>::Output: canyon_sql::bounds::QueryParameters<'a>
             };
             let quoted_datasource_method_signature: TokenStream = quote! { 
                 async fn #method_name_ident_ds<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>
                     (value: &F, datasource_name: &'a str) -> 
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
-                        // where <F as canyon_sql::canyon_crud::bounds::ForeignKeyable<F>>::Output: canyon_sql::bounds::QueryParameters<'a>
             };
 
             let result_handler = quote! {

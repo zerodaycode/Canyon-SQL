@@ -50,7 +50,7 @@ impl EntityField {
             Self {
                 name: name.clone(),
                 field_type: ty.clone(),
-                attributes: attributes
+                attributes
             }
         )
     }
@@ -71,6 +71,6 @@ impl TryFrom<&Field> for EntityField {
                 )
             })?;
         
-        Self::new(&name, &field.attrs, &field.ty)
+        Self::new(name, &field.attrs, &field.ty)
     }
 }

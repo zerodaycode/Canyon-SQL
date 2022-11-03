@@ -44,7 +44,9 @@ unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
 
 impl DatabaseConnection {
-    pub async fn new(datasource: &DatasourceProperties<'_>) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    pub async fn new(datasource: &DatasourceProperties<'_>) 
+        -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> 
+    {
         match datasource.db_type {
             "postgresql" => {
                 let (new_client, new_connection) =

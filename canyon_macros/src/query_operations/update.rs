@@ -118,14 +118,14 @@ pub fn generate_update_query_tokens(macro_data: &MacroTokens, table_schema_data:
     quote! {
         /// TODO docs
         fn update_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::new(format!("UPDATE {}", #table_schema_data), "")
+            query_elements::query::Query::generate(format!("UPDATE {}", #table_schema_data), "")
         }
 
         /// TODO docs
-        fn update_query_datasource<'a>(datasource_name: &'a str) 
-            -> query_elements::query_builder::QueryBuilder<'a, #ty> 
+        fn update_query_datasource(datasource_name: &str) 
+            -> query_elements::query_builder::QueryBuilder<'_, #ty> 
         {
-            query_elements::query::Query::new(format!("UPDATE {}", #table_schema_data), datasource_name)
+            query_elements::query::Query::generate(format!("UPDATE {}", #table_schema_data), datasource_name)
         }
     }
 }

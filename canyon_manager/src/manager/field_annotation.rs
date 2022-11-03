@@ -13,7 +13,7 @@ pub enum EntityFieldAnnotation {
 impl EntityFieldAnnotation {
     /// Returns the data of the [`EntityFieldAnnotation`] in a understandable format for `Canyon`
     pub fn get_as_string(&self) -> String {
-        match &*self {
+        match self {
             Self::PrimaryKey(autoincremental) => 
                 format!("Annotation: PrimaryKey, Autoincremental: {}", autoincremental),
             Self::ForeignKey(table, column) => 
@@ -118,7 +118,7 @@ impl EntityFieldAnnotation {
                     )
                 )
             },
-            Err(_) => return Err(
+            Err(_) => Err(
                 syn::Error::new_spanned(
                     ident, 
                     "Error generating the Foreign Key".to_string()
@@ -138,7 +138,7 @@ impl TryFrom<&&Attribute> for EntityFieldAnnotation {
             attribute.parse_args_with(Punctuated::parse_terminated);
 
         Ok(
-            match ident.clone().to_string().as_str() {
+            match ident.to_string().as_str() {
                 "primary_key" => 
                     EntityFieldAnnotation::primary_key_parser(&ident, &name_values)?,
                 "foreign_key" => 

@@ -450,7 +450,7 @@ pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc
         /// Implementation of the trait `ForeignKeyable` for the type 
         /// calling this derive proc macro
         impl canyon_sql::canyon_crud::bounds::ForeignKeyable<Self> for #ty {
-            fn get_fk_column<'a>(&self, column: &'a str) -> Option<String> {
+            fn get_fk_column(&self, column: &str) -> Option<String> {
                 match column {
                     #(#field_idents),*,
                     _ => None
