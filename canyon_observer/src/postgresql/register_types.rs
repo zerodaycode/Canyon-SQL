@@ -10,7 +10,7 @@ use crate::constants::{
 
 /// Gets the necessary identifiers of a CanyonEntity to make it the comparative
 /// against the database schemas
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CanyonRegisterEntity<'a> {
     pub entity_name: &'a str,
     pub user_table_name: Option<&'a str>,
@@ -19,15 +19,6 @@ pub struct CanyonRegisterEntity<'a> {
 }
 
 impl<'a> CanyonRegisterEntity<'a> {
-    pub fn new() -> Self {
-        Self {
-            entity_name: "",
-            user_table_name: None,
-            user_schema_name: None,
-            entity_fields: Vec::new(),
-        }
-    }
-
     /// Returns the String representation for the current "CanyonRegisterEntity" instance.
     /// Being "CanyonRegisterEntity" the representation of a table, the String will be formed by each of its "CanyonRegisterEntityField",
     /// formatting each as "name of the column" "postgres representation of the type" "parameters for the column"
@@ -48,7 +39,7 @@ impl<'a> CanyonRegisterEntity<'a> {
 
 /// Complementary type for a field that represents a struct field that maps
 /// some real database column data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CanyonRegisterEntityField {
     pub field_name: String,
     pub field_type: String,
@@ -56,13 +47,13 @@ pub struct CanyonRegisterEntityField {
 }
 
 impl CanyonRegisterEntityField {
-    pub fn new() -> CanyonRegisterEntityField {
-        Self {
-            field_name: String::new(),
-            field_type: String::new(),
-            annotations: Vec::new()
-        }
-    }
+    // pub fn new() -> CanyonRegisterEntityField {
+    //     Self {
+    //         field_name: String::new(),
+    //         field_type: String::new(),
+    //         annotations: Vec::new()
+    //     }
+    // }
 
     /// Return the postgres datatype and parameters to create a column for a given rust type
     fn to_postgres_syntax(&self) -> String {
@@ -167,8 +158,8 @@ impl CanyonRegisterEntityField {
         );
         
         match is_pk {
-            Some(_) => Self::to_postgres_id_syntax(&self),
-            None => Self::to_postgres_syntax(&self)
+            Some(_) => Self::to_postgres_id_syntax(self),
+            None => Self::to_postgres_syntax(self)
         }
     }
 }

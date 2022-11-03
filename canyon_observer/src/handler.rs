@@ -37,10 +37,11 @@ impl CanyonHandler {
     /// and the database table with the memory of Canyon to perform the
     /// Migrations to completly handle the necessary database actions 
     pub async fn run() {
-        let mut db_operation = DatabaseSyncOperations::new();
+        let mut db_operation = DatabaseSyncOperations::default();
+        let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
         db_operation.fill_operations(
             CanyonMemory::remember().await,
-            CANYON_REGISTER_ENTITIES.lock().unwrap().clone(),
+            canyon_tables,
             Self::fetch_postgres_database_status().await
         ).await;
     }
@@ -53,7 +54,7 @@ impl CanyonHandler {
     ```ignore
     table_name      column_name     data_type           is_nullable
     ---------------------------------------------------------------
-    canyon_memory   filename        character varying   NO				
+    canyon_memory   filename        character varying   NO
     canyon_memory   id              integer             NO
     canyon_memory   struct_name     character varying   NO
     league          ext_id          bigint              YES

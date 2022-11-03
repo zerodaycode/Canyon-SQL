@@ -48,7 +48,7 @@ pub mod rows_to_table_mapper {
     }
 
     /// Represents the *metadata* associated with a column that belongs to a `PostgreSQL` table.
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     pub struct DatabaseTableColumn<'a> {
         pub column_name: String,
         pub postgres_datatype: String,

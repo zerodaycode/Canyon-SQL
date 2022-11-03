@@ -16,7 +16,7 @@ use super::register_types::{CanyonRegisterEntityField, CanyonRegisterEntity};
 
 /// Responsible of generating the queries to sync the database status with the
 /// Rust source code managed by Canyon, for succesfully make the migrations
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct DatabaseSyncOperations {
     operations: Vec<Box<dyn DatabaseOperation>>,
     drop_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
@@ -27,15 +27,6 @@ pub struct DatabaseSyncOperations {
 impl Transaction<Self> for DatabaseSyncOperations {}
 
 impl DatabaseSyncOperations {
-    pub fn new() -> Self {
-        Self {
-            operations: Vec::new(),
-            drop_primary_key_operations: Vec::new(),
-            set_primary_key_operations: Vec::new(),
-            constrains_operations: Vec::new()
-        }
-    }
-
     pub async fn fill_operations<'a>(
         &mut self,
         canyon_memory: CanyonMemory,
@@ -48,12 +39,12 @@ impl DatabaseSyncOperations {
             let table_name = canyon_register_entity.entity_name;
 
             // true if this table on the register is already on the database
-            let table_on_database = Self::check_table_on_database(&table_name, &database_tables);
+            let table_on_database = Self::check_table_on_database(table_name, &database_tables);
 
             // If the table isn't on the database we push a new operation to the collection,
             // either to create a new table or to rename an existing one.
             if !table_on_database {
-                let table_renamed = canyon_memory.table_rename.contains_key(&*table_name);
+                let table_renamed = canyon_memory.table_rename.contains_key(table_name);
 
                 // canyon_memory holds a hashmap of the tables who must changed their name.
                 // If this table name is present, we dont create a new one, just rename
@@ -61,7 +52,7 @@ impl DatabaseSyncOperations {
                     // let old_table_name = data.canyon_memory.table_rename.to_owned().get(&table_name.to_owned());
                     let otn = canyon_memory.table_rename.get(table_name).unwrap().to_owned().clone();
 
-                    Self::push_table_rename::<String, &str>(self, otn,&table_name);
+                    Self::push_table_rename::<String, &str>(self, otn,table_name);
 
                     // TODO Change foreign_key constrain name on database
                     continue;
@@ -76,7 +67,7 @@ impl DatabaseSyncOperations {
                 for field in cloned_fields
                     .iter()
                     .filter( 
-                        |column| column.annotations.len() > 0
+                        |column| !column.annotations.is_empty()
                     ) {
                         field.annotations.iter()
                             .for_each( |attr|
@@ -104,7 +95,7 @@ impl DatabaseSyncOperations {
                 let columns_in_table = Self::columns_in_table(
                     canyon_register_entity.entity_fields.clone(),
                     &database_tables,
-                    &table_name,
+                    table_name,
                 );
 
                 // For each field (name, type) in this table of the register
@@ -112,7 +103,7 @@ impl DatabaseSyncOperations {
                     // Case when the column doesn't exist on the database
                     // We push a new column operation to the collection for each one
                     if !columns_in_table.contains(&field.field_name) {
-                        Self::add_column_to_table::<&str>(self, &table_name, field.clone());
+                        Self::add_column_to_table::<&str>(self, table_name, field.clone());
 
                         // We added the founded constraints on the field attributes
                         for attr in &field.annotations {
@@ -289,7 +280,7 @@ impl DatabaseSyncOperations {
                 let columns_to_remove: Vec<String> = Self::columns_to_remove(
                     &database_tables,
                     canyon_register_entity.entity_fields.clone(),
-                    &table_name,
+                    table_name,
                 );
 
                 // If we have columns to remove, we push a new operation to the vector for each one
@@ -317,32 +308,37 @@ impl DatabaseSyncOperations {
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
+    #[allow(clippy::await_holding_lock)]
     pub async fn from_query_register() {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
 
         for i in 0..queries.len() - 1 {
             let query_to_execute = queries
             .get(i)
-            .expect(format!("Failed to retrieve query from the register at index: {}", i).as_str());
+            .unwrap_or_else(||
+                panic!("Failed to retrieve query from the register at index: {}", i)
+            );
 
             Self::query(
                 query_to_execute,
-                vec![],
+                &[],
                 ""
             ).await
                 .ok()
-                .expect(format!("Failed the migration query: {:?}", queries.get(i).unwrap()).as_str());
+                .unwrap_or_else(|| 
+                    panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
+                );
                 // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
                 // TODO Ask for user input?
         }
     }
 
     fn check_table_on_database<'a>(
-        table_name: &'a str, database_tables: &Vec<DatabaseTable<'_>>
+        table_name: &'a str, database_tables: &[DatabaseTable<'_>]
     ) -> bool {
         database_tables
             .iter()
-            .any(|v| &v.table_name == table_name)
+            .any(|v| v.table_name == table_name)
     }
 
     fn columns_in_table(
@@ -404,7 +400,7 @@ impl DatabaseSyncOperations {
         );
     }
 
-    fn extract_foreign_key_annotation(field_annotations: &Vec<String>) -> (String, String)
+    fn extract_foreign_key_annotation(field_annotations: &[String]) -> (String, String)
     {
         let opt_fk_annotation = field_annotations.iter().
             find(|anno| anno.starts_with("Annotation: ForeignKey"));
@@ -436,16 +432,15 @@ impl DatabaseSyncOperations {
             
     }
 
-    fn add_foreign_key_with_annotation<'a, U, V>(
+    fn add_foreign_key_with_annotation<U, V>(
         &mut self,
-        field_annotations: &'a Vec<String>,
+        field_annotations: &[String],
         table_name: U,
         column_foreign_key: V,
     ) where 
         U: Into<String> + Debug + Display + Sync,
         V: Into<String> + Debug + Display + Sync  
     {
-
         let annotation_data = Self::extract_foreign_key_annotation(field_annotations);
 
         let table_to_reference = annotation_data.0;
@@ -642,7 +637,7 @@ impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
         X: Into<String> + Debug + Display + Sync
 {
     async fn execute(&self) {
-        let stmt = match &*self {
+        let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) =>
                 format!(
                     "CREATE TABLE {table_name} ({:?});",
@@ -714,7 +709,7 @@ impl<T> DatabaseOperation for ColumnOperation<T>
     where T: Into<String> + std::fmt::Debug + Display + Sync
 {
     async fn execute(&self) {
-        let stmt = match &*self {
+        let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
                 format!(
                     "ALTER TABLE {table_name} ADD COLUMN \"{}\" {};", 
@@ -779,7 +774,7 @@ impl<T> DatabaseOperation for SequenceOperation<T>
     where T: Into<String> + std::fmt::Debug + Display + Sync
 {
     async fn execute(&self) {
-        let stmt = match &*self {
+        let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) =>
                 format!(
                     "SELECT setval(pg_get_serial_sequence('{}', '{}'), max(\"{}\")) from {};",

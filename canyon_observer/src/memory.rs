@@ -53,8 +53,10 @@ pub struct CanyonMemory {
 impl Transaction<Self> for CanyonMemory {}
 
 impl CanyonMemory {
+    /// Queries the database to retrieve internal data about the structures
+    /// tracked by `CanyonSQL`
+    #[allow(clippy::nonminimal_bool)]
     pub async fn remember() -> Self {
-
         // Creates the memory table if not exists
         Self::create_memory().await;
         // Check database for the "memory data"
@@ -63,9 +65,9 @@ impl CanyonMemory {
             vec![],
             ""
         ).await
-        .ok()
         .expect("Error querying Canyon Memory")
-        .wrapper;
+        .wrapper;  // TODO Change it for the correct db type when migrations
+        // supports more databases that just `PostgreSQL`
 
         // Manually maps the results
         let mut memory_db_rows = Vec::new();
@@ -117,12 +119,12 @@ impl CanyonMemory {
             // When the struct or the filename it's already on db but one of the two has been modified
             let need_to_update = memory_db_rows
                 .iter()
-                .filter( |el| 
+                .find( |el| 
                     {
                         (el.filename == *filename || el.struct_name == *struct_name) &&
                         !(el.filename == *filename && el.struct_name == *struct_name)
                     }
-                ).next();
+                );
 
             if let Some(update) = need_to_update {
                 updates.push(struct_name);
@@ -146,7 +148,7 @@ impl CanyonMemory {
 
         if values_to_insert != String::new() {
             values_to_insert.pop();
-            values_to_insert.push_str(";");
+            values_to_insert.push(';');
             
             QUERIES_TO_EXECUTE.lock().unwrap().push(
                 format!(
@@ -191,13 +193,13 @@ impl CanyonMemory {
 
                 let mut canyon_entity_macro_counter = 0;
                 let mut struct_name = String::new();
-                for line in contents.split("\n") {
+                for line in contents.split('\n') {
                     if line.starts_with("pub struct") {
                         struct_name.push_str(
-                            line.split_whitespace()
-                                .collect::<Vec<&str>>()
-                                .get(2)
-                                .unwrap_or(&"FAILED")
+                        line.split_whitespace()
+                            .collect::<Vec<&str>>()
+                            .get(2)
+                            .unwrap_or(&"FAILED")
                         )
                     }
                     if line.contains("#[") && line.contains("canyon_entity") 
@@ -208,25 +210,26 @@ impl CanyonMemory {
                 }
 
                 // If more than two, we panic!
-                if canyon_entity_macro_counter > 1 {
-                    panic!(
-                        r"Canyon does not support having multiple structs annotated\ 
-                        with `#[canyon::entity]` on the same file when the `#[canyon]`\  
-                        macro it's present on the program"
-                    )
-                } else if canyon_entity_macro_counter == 1 {
-                    self.memory.insert(
+                match canyon_entity_macro_counter {
+                    1 => {
+                        self.memory.insert(
                         file.path()
                             .display()
                             .to_string()
-                            .replace("\\", "/")
-                            .split("/")
+                            .replace('\\', "/")
+                            .split('/')
                             .collect::<Vec<&str>>()
                             .last()
                             .unwrap_or(&"FAILED")
                             .to_string(),
                         struct_name
-                    );
+                        );
+                    },
+                    _ => panic!(
+                        r"Canyon does not support having multiple structs annotated\ 
+                        with `#[canyon::entity]` on the same file when the `#[canyon]`\  
+                        macro it's present on the program"
+                    )
                 }
             }
         }
@@ -242,9 +245,7 @@ impl CanyonMemory {
             vec![],
             ""
         ).await
-        .ok()
-        .expect("Error creating the 'canyon_memory' table")
-        .wrapper;
+        .expect("Error creating the 'canyon_memory' table");
     }
 }
 
