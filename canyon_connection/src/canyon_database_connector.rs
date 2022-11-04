@@ -3,16 +3,18 @@ use async_std::net::TcpStream;
 use tiberius::{AuthMethod, Config};
 use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
 
-use crate::datasources::DatasourceProperties;
+use crate::datasources::{DatasourceProperties, CanyonSqlConfig};
 
 /// Represents the current supported databases by Canyon
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum DatabaseType {
     PostgreSql,
     SqlServer,
 }
 
 impl DatabaseType {
+    /// Returns a variant from Self given [`DatasourceProperties`] representing
+    /// some of the available databases in `Canyon-SQL`
     pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
         match datasource.db_type {
             "postgresql" => Self::PostgreSql,
@@ -33,7 +35,18 @@ pub struct SqlServerConnection {
     pub client: tiberius::Client<TcpStream>,
 }
 
-/// The Canyon database connection handler.
+/// The Canyon database connection handler. When a new query is launched,
+/// the `new` associated function returns `Self`, containing in one of its
+/// members an active connection against the matched database type on the
+/// datasource triggering this process
+/// 
+/// !! Future of this impl. Two aspect to discuss:
+/// - Should we store the active connections? And not triggering 
+///   this process on every query? Or it's better to open and close
+///   the connection with the database on every query?
+/// 
+/// - Now that `Mutex` allow const initializations, we should
+///   refactor the initialization in a real static handler?
 pub struct DatabaseConnection {
     pub postgres_connection: Option<PostgreSqlConnection>,
     pub sqlserver_connection: Option<SqlServerConnection>,
@@ -122,4 +135,33 @@ impl DatabaseConnection {
             }
         }
     }
+}
+
+#[cfg(test)]
+mod database_connection_handler {
+    use super::*;
+
+    const CONFIG_FILE_MOCK_ALT: &str = r#"
+        [canyon_sql]
+        datasources = [
+            {name = 'PostgresDS', properties.db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce'},
+            {name = 'SqlServerDS', properties.db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2'}
+        ]
+    "#;
+
+    /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
+    #[test]
+    fn check_from_datasource() {
+        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
+            .expect("A failure happened retrieving the [canyon_sql] section");
+
+        let psql_ds = &config.canyon_sql.datasources[0].properties;
+        let sqls_ds = &config.canyon_sql.datasources[1].properties;
+
+        assert_eq!(DatabaseType::from_datasource(psql_ds), DatabaseType::PostgreSql);
+        assert_eq!(DatabaseType::from_datasource(sqls_ds), DatabaseType::SqlServer);
+    }
+
+    // TODO Should we check the behaviour of the database handler here or as an 
+    // integration test?
 }
