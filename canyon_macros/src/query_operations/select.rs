@@ -69,7 +69,6 @@ pub fn generate_find_all_tokens(
         async fn find_all<'a>() ->
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            println!("Find all STMT: {:?}", &#stmt);
             let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],

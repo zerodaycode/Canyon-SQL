@@ -5,3 +5,4 @@ Cargo.lock
 canyon_tester/
 macro_utils.rs
 .vscode/
+postgres_data/

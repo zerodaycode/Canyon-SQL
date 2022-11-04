@@ -1,0 +1,4 @@
+[canyon_sql]
+datasources = [
+    {name = 'docker_postgres', properties.db_type = 'postgresql', properties.username = 'postgres', properties.password = 'postgres', properties.host = 'localhost', properties.port = 5842, properties.db_name = 'postgres'}
+]
