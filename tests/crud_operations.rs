@@ -12,7 +12,7 @@ use std::error::Error;
 /// # TODO We must use, for example, the datasource versions of every CRUD method to test
 /// agains *sql server* databases, and use the default datasource for test against *postgresql*
 
-use canyon_sql::{*, crud::CrudOperations};
+use canyon_sql::{*, crud::CrudOperations, bounds::QueryParameters};
 
 mod tests_models;
 use tests_models::league::*;
@@ -55,4 +55,22 @@ async fn test_crud_find_all_datasource() {
 async fn test_crud_find_all_unchecked_datasource() {
     let find_all_result: Vec<League> = League::find_all_unchecked_datasource(PSQL_DS).await;
     assert!(!find_all_result.is_empty()); 
+}
+
+
+#[tokio::test]
+/// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
+/// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
+/// and using the *default datasource*
+async fn test_crud_find_by_pk() {
+    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> = League::find_by_pk(&1).await;
+    assert!(find_by_pk_result.unwrap().is_some());
+    
+    let some_league = find_by_pk_result.unwrap().unwrap();
+    assert_eq!(some_league.id, 1);
+    assert_eq!(some_league.ext_id, 100695891328981122 as i64);
+    assert_eq!(some_league.slug, "european-masters");
+    assert_eq!(some_league.name, "European Masters");
+    assert_eq!(some_league.name, "EUROPE");
+    assert_eq!(some_league.image_url, "http://static.lolesports.com/leagues/EM_Bug_Outline1.png");
 }
