@@ -1,5 +1,5 @@
 pub mod postgresql_queries {
-    pub static FETCH_PUBLIC_SCHEMA: &str = 
+    pub static FETCH_PUBLIC_SCHEMA: &str =
         "SELECT
             gi.table_name,
             gi.column_name,
@@ -57,7 +57,7 @@ pub mod postgresql_type {
 
 /// Contains fragments queries to be invoked as const items and to be concatenated
 /// with dynamic data
-/// 
+///
 /// Ex: ` format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)`
 pub mod query_chunk {
     // TODO @gbm25

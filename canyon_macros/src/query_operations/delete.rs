@@ -3,7 +3,6 @@ use quote::quote;
 
 use crate::utils::macro_tokens::MacroTokens;
 
-
 /// Generates the TokenStream for the __delete() CRUD operation
 /// returning a result, indicating a posible failure querying the database
 pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
@@ -13,10 +12,14 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let pk = macro_data.get_primary_key_annotation();
 
     if let Some(primary_key) = pk {
-        let pk_field = fields.iter()
-            .find( |f| *f.to_string() == primary_key)
-            .expect("Something really bad happened finding the syn::Ident for the pk field of the delete");
-        let pk_field_value = quote! { &self.#pk_field as &dyn canyon_sql::bounds::QueryParameters<'_> };
+        let pk_field = fields
+            .iter()
+            .find(|f| *f.to_string() == primary_key)
+            .expect(
+                "Something really bad happened finding the Ident for the pk field on the delete",
+            );
+        let pk_field_value =
+            quote! { &self.#pk_field as &dyn canyon_sql::bounds::QueryParameters<'_> };
 
         quote! {
             /// Deletes from a database entity the row that matches
@@ -26,7 +29,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 let stmt = format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key);
 
                 let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
-                    stmt, 
+                    stmt,
                     &[#pk_field_value],
                     ""
                 ).await;
@@ -35,7 +38,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     Err(error)
                 } else { Ok(()) }
             }
-    
+
             /// Deletes from a database entity the row that matches
             /// the current instance of a T type, returning a result
             /// indicating a posible failure querying the database with the specified datasource.
@@ -45,7 +48,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 let stmt = format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key);
 
                 let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
-                    stmt, 
+                    stmt,
                     &[#pk_field_value],
                     datasource_name
                 ).await;
@@ -59,7 +62,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         // Delete operation over an instance isn't available without declaring a primary key.
         // The delete querybuilder variant must be used for the case when there's no pk declared
         quote! {
-            async fn delete(&self) 
+            async fn delete(&self)
                 -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
             {
                 Err(std::io::Error::new(
@@ -70,7 +73,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 ).into_inner().unwrap())
             }
 
-            async fn delete_datasource<'a>(&self, datasource_name: &'a str) 
+            async fn delete_datasource<'a>(&self, datasource_name: &'a str)
                 -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
             {
                 Err(std::io::Error::new(
@@ -84,9 +87,12 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     }
 }
 
-/// Generates the TokenStream for the __delete() CRUD operation as a 
+/// Generates the TokenStream for the __delete() CRUD operation as a
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
-pub fn generate_delete_query_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+pub fn generate_delete_query_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &String,
+) -> TokenStream {
     let ty = macro_data.ty;
 
     quote! {

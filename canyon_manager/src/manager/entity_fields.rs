@@ -1,8 +1,8 @@
-use std::convert::TryFrom;
 use partialdebug::placeholder::PartialDebug;
 use proc_macro2::Ident;
 use quote::ToTokens;
-use syn::{Type, Attribute, Field};
+use std::convert::TryFrom;
+use syn::{Attribute, Field, Type};
 
 use super::field_annotation::EntityFieldAnnotation;
 /// Represents any of the fields and annotations (if any valid annotation) found for an Rust struct
@@ -35,42 +35,35 @@ impl EntityField {
         }
     }
 
-
     pub fn new(name: &Ident, raw_helper_attributes: &[Attribute], ty: &Type) -> syn::Result<Self> {
         let mut attributes = Vec::new();
         for attr in raw_helper_attributes {
             let result = Some(EntityFieldAnnotation::try_from(&attr)?);
             match result {
                 Some(res) => attributes.push(res),
-                None => continue
+                None => continue,
             }
         }
 
-        Ok(
-            Self {
-                name: name.clone(),
-                field_type: ty.clone(),
-                attributes
-            }
-        )
+        Ok(Self {
+            name: name.clone(),
+            field_type: ty.clone(),
+            attributes,
+        })
     }
 }
-
 
 impl TryFrom<&Field> for EntityField {
     type Error = syn::Error;
 
     fn try_from(field: &Field) -> Result<Self, Self::Error> {
-        let name = field
-            .ident
-            .as_ref()
-            .ok_or_else(|| {
-                syn::Error::new_spanned(
-                    field.to_token_stream(), 
-                    "Expected a structure with named fields, unnamed field given"
-                )
-            })?;
-        
+        let name = field.ident.as_ref().ok_or_else(|| {
+            syn::Error::new_spanned(
+                field.to_token_stream(),
+                "Expected a structure with named fields, unnamed field given",
+            )
+        })?;
+
         Self::new(name, &field.attrs, &field.ty)
     }
 }
