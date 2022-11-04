@@ -1,8 +1,10 @@
 version: '3.7'
+
 services:
   postgres:
     image: postgres:14
     restart: always
+    hostname: postgres
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
@@ -18,3 +20,13 @@ services:
       - ./sql/10-create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
       # copy the sql script to fill tables
       - ./sql/20-fill_tables.sql:/docker-entrypoint-initdb.d/fill_tables.sql
+    networks:
+      cs-network:
+        ipv4_address: 172.28.1.2
+
+networks:
+  cs-network:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16

@@ -3,7 +3,7 @@ use async_std::net::TcpStream;
 use tiberius::{AuthMethod, Config};
 use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
 
-use crate::datasources::{DatasourceProperties, CanyonSqlConfig};
+use crate::datasources::DatasourceProperties;
 
 /// Represents the current supported databases by Canyon
 #[derive(Debug, PartialEq)]
@@ -140,6 +140,7 @@ impl DatabaseConnection {
 #[cfg(test)]
 mod database_connection_handler {
     use super::*;
+    use crate::CanyonSqlConfig;
 
     const CONFIG_FILE_MOCK_ALT: &str = r#"
         [canyon_sql]
