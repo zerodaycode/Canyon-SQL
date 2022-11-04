@@ -93,3 +93,23 @@ async fn test_crud_find_by_pk_datasource() {
     assert_eq!(some_league.region, "TURKEY");
     assert_eq!(some_league.image_url, "http://static.lolesports.com/leagues/1592516072459_TAL-01-FullonDark.png");
 }
+
+
+#[tokio::test]
+/// Counts how many rows contains an entity on the target database.
+async fn test_crud_count_operation() {
+    assert_eq!(
+        League::find_all().await.unwrap().len() as i64,
+        League::count().await.unwrap()
+    );
+}
+
+#[tokio::test]
+/// Counts how many rows contains an entity on the target database using
+/// the specified datasource
+async fn test_crud_count_datasource_operation() {
+    assert_eq!(
+        League::find_all_datasource(PSQL_DS).await.unwrap().len() as i64,
+        League::count_datasource(PSQL_DS).await.unwrap()
+    );
+}
