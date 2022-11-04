@@ -122,9 +122,7 @@ pub fn canyon_entity(
         match element {
             syn::NestedMeta::Meta(m) => {
                 match m {
-                    syn::Meta::NameValue(nv) => {
-                        // println!("Found meta nv: {:?}", nv.path.get_ident());
-                        // println!("Found meta nv: {:?}", nv.lit);
+                    syn::Meta::NameValue(nv) => { 
                         let attr_arg_ident = nv
                             .path
                             .get_ident()
