@@ -222,7 +222,7 @@ pub fn generate_find_by_pk_tokens(
     // Disabled if there's no `primary_key` annotation
     if pk.is_empty() {
         return quote! {
-            async fn find_by_pk<'a>(value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>)
+            async fn find_by_pk<'a>(value: &'a dyn canyon_sql::bounds::QueryParameters<'a>)
                 -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
             {
                 Err(
@@ -236,7 +236,7 @@ pub fn generate_find_by_pk_tokens(
             }
 
             async fn find_by_pk_datasource<'a>(
-                value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+                value: &'a dyn canyon_sql::bounds::QueryParameters<'a>,
                 datasource_name: &'a str
             ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
                 Err(
@@ -283,7 +283,7 @@ pub fn generate_find_by_pk_tokens(
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        async fn find_by_pk<'a>(value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>) ->
+        async fn find_by_pk<'a>(value: &'a dyn canyon_sql::bounds::QueryParameters<'a>) ->
             Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
             let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
@@ -312,7 +312,7 @@ pub fn generate_find_by_pk_tokens(
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
         async fn find_by_pk_datasource<'a>(
-            value: &'a dyn canyon_sql::canyon_crud::bounds::QueryParameters<'a>,
+            value: &'a dyn canyon_sql::bounds::QueryParameters<'a>,
             datasource_name: &'a str
         ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 

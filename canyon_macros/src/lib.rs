@@ -10,14 +10,14 @@ use quote::{quote, ToTokens};
 use syn::{DeriveInput, Fields, Type, Visibility};
 
 use query_operations::{
-    delete::{generate_delete_query_tokens, generate_delete_tokens},
-    insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     select::{
         generate_count_tokens, generate_find_all_query_tokens, generate_find_all_tokens,
         generate_find_all_unchecked_tokens, generate_find_by_foreign_key_tokens,
         generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
     },
+    insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     update::{generate_update_query_tokens, generate_update_tokens},
+    delete::{generate_delete_query_tokens, generate_delete_tokens},
 };
 
 use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
@@ -431,7 +431,7 @@ pub fn implement_foreignkeyable_for_type(
     quote! {
         /// Implementation of the trait `ForeignKeyable` for the type
         /// calling this derive proc macro
-        impl canyon_sql::canyon_crud::bounds::ForeignKeyable<Self> for #ty {
+        impl canyon_sql::bounds::ForeignKeyable<Self> for #ty {
             fn get_fk_column(&self, column: &str) -> Option<String> {
                 match column {
                     #(#field_idents),*,
@@ -441,7 +441,7 @@ pub fn implement_foreignkeyable_for_type(
         }
         /// Implementation of the trait `ForeignKeyable` for a reference of this type
         /// calling this derive proc macro
-        impl canyon_sql::canyon_crud::bounds::ForeignKeyable<&Self> for &#ty {
+        impl canyon_sql::bounds::ForeignKeyable<&Self> for &#ty {
             fn get_fk_column<'a>(&self, column: &'a str) -> Option<String> {
                 match column {
                     #(#field_idents_cloned),*,
