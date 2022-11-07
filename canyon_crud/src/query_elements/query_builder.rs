@@ -41,21 +41,21 @@ where
             );
         }
 
-        if self.where_clause.is_empty() {
+        if !self.where_clause.is_empty() {
             self.query.sql.push_str(&self.where_clause)
         }
 
-        if self.and_clause.is_empty() {
+        if !self.and_clause.is_empty() {
             self.query.sql.push_str(&self.and_clause)
         }
 
-        if self.in_clause.is_empty() {
+        if !self.in_clause.is_empty() {
             for value in self.in_clause {
                 self.query.sql.push_str(&value.to_string())
             }
         }
 
-        if self.order_by_clause.is_empty() {
+        if !self.order_by_clause.is_empty() {
             self.query.sql.push_str(&self.order_by_clause)
         }
 

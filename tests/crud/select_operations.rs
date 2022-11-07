@@ -6,16 +6,23 @@ use canyon_sql::{*, crud::CrudOperations};
 
 use crate::constants::PSQL_DS;
 use crate::tests_models::league::*;
+use crate::tests_models::player::*;
 
 #[tokio::test]
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
 /// and using the *default datasource*
 async fn test_crud_find_all() {
-    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> = League::find_all().await;
+    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> = 
+        League::find_all().await;
+
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
-    assert!(!find_all_result.unwrap().is_empty()); 
+    assert!(!find_all_result.unwrap().is_empty());
+
+    let find_all_players: Result<Vec<Player>, Box<dyn Error + Send + Sync>> = 
+        Player::find_all().await;
+    assert!(!find_all_players.unwrap().is_empty());
 }
 
 #[tokio::test]
@@ -70,16 +77,17 @@ async fn test_crud_find_by_pk() {
 /// 
 /// Uses the *specified datasource* in the second parameter of the function call.
 async fn test_crud_find_by_pk_datasource() {
-    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> = League::find_by_pk_datasource(&2, PSQL_DS).await;
+    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+        League::find_by_pk_datasource(&27, PSQL_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
     
     let some_league = find_by_pk_result.unwrap().unwrap();
-    assert_eq!(some_league.id, 2);
-    assert_eq!(some_league.ext_id, 101097443346691685 as i64);
-    assert_eq!(some_league.slug, "turkey-academy-league");
-    assert_eq!(some_league.name, "TAL");
-    assert_eq!(some_league.region, "TURKEY");
-    assert_eq!(some_league.image_url, "http://static.lolesports.com/leagues/1592516072459_TAL-01-FullonDark.png");
+    assert_eq!(some_league.id, 27);
+    assert_eq!(some_league.ext_id, 107898214974993351 as i64);
+    assert_eq!(some_league.slug, "college_championship");
+    assert_eq!(some_league.name, "College Championship");
+    assert_eq!(some_league.region, "NORTH AMERICA");
+    assert_eq!(some_league.image_url, "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png");
 }
 
 

@@ -125,7 +125,7 @@ pub fn generate_find_all_query_tokens(
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention.
-        fn find_all_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
+        fn find_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
             query_elements::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), "")
         }
 
@@ -138,7 +138,7 @@ pub fn generate_find_all_query_tokens(
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
-        fn find_all_query_datasource(datasource_name: &str) ->
+        fn find_query_datasource(datasource_name: &str) ->
             query_elements::query_builder::QueryBuilder<'_, #ty>
         {
             query_elements::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), datasource_name)
