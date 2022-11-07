@@ -368,17 +368,17 @@ fn impl_crud_operations_trait_for_struct(
             /// are generated dynamically based on some properties of the `foreign_key`
             /// annotation)
             #[async_trait]
-            pub trait FkTestFkOperations<T>
-                where T:
-                    std::fmt::Debug +
-                    canyon_sql::canyon_crud::crud::CrudOperations<T> +
-                    canyon_sql::canyon_crud::mapper::RowMapper<T>
-            {
+            pub trait #fk_trait_ident<#ty> {
                 #(#fk_method_signatures)*
                 #(#rev_fk_method_signatures)*
             }
             #[async_trait]
-            impl #fk_trait_ident<#ty> for #ty {
+            impl #fk_trait_ident<#ty> for #ty
+                where #ty:
+                    std::fmt::Debug +
+                    canyon_sql::canyon_crud::crud::CrudOperations<#ty> +
+                    canyon_sql::canyon_crud::mapper::RowMapper<#ty>
+            {
                 #(#fk_method_implementations)*
                 #(#rev_fk_method_implementations)*
             }
