@@ -24,7 +24,7 @@ async fn test_crud_find_with_querybuilder() {
         .await;
 
     let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
-    assert!(!(&filtered_leagues).is_empty());
+    assert!(!filtered_leagues.is_empty());
 
     let league_idx_0 = filtered_leagues.get(0).unwrap();
     assert_eq!(league_idx_0.id, 34);

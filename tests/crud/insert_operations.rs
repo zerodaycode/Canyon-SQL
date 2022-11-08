@@ -30,7 +30,7 @@ use crate::tests_models::league::*;
 async fn test_crud_insert_operation() {
     let mut new_league: League = League {
         id: Default::default(),
-        ext_id: 7892635306594 as i64,
+        ext_id: 7892635306594_i64,
         slug: "some-new-league".to_string(),
         name: "Some New League".to_string(),
         region: "Bahía de cochinos".to_string(),
@@ -58,7 +58,7 @@ async fn test_crud_insert_operation() {
 async fn test_crud_insert_datasource_operation() {
     let mut new_league: League = League {
         id: Default::default(),
-        ext_id: 7892635306594 as i64,
+        ext_id: 7892635306594_i64,
         slug: "some-new-league".to_string(),
         name: "Some New League".to_string(),
         region: "Bahía de cochinos".to_string(),
@@ -97,7 +97,7 @@ async fn test_crud_insert_datasource_operation() {
 async fn test_crud_multi_insert_operation() {
     let mut new_league_mi: League = League {
         id: Default::default(),
-        ext_id: 54376478 as i64,
+        ext_id: 54376478_i64,
         slug: "some-new-random-league".to_string(),
         name: "Some New Random League".to_string(),
         region: "Unknown".to_string(),
@@ -105,7 +105,7 @@ async fn test_crud_multi_insert_operation() {
     };
     let mut new_league_mi_2: League = League {
         id: Default::default(),
-        ext_id: 3475689769678906 as i64,
+        ext_id: 3475689769678906_i64,
         slug: "new-league-2".to_string(),
         name: "New League 2".to_string(),
         region: "Really unknown".to_string(),
@@ -113,7 +113,7 @@ async fn test_crud_multi_insert_operation() {
     };
     let mut new_league_mi_3: League = League {
         id: Default::default(),
-        ext_id: 46756867 as i64,
+        ext_id: 46756867_i64,
         slug: "a-new-multinsert".to_string(),
         name: "New League 3".to_string(),
         region: "The dark side of the moon".to_string(),

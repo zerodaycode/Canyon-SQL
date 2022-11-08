@@ -64,7 +64,7 @@ async fn test_crud_find_by_pk() {
 
     let some_league = find_by_pk_result.unwrap().unwrap();
     assert_eq!(some_league.id, 1);
-    assert_eq!(some_league.ext_id, 100695891328981122 as i64);
+    assert_eq!(some_league.ext_id, 100695891328981122_i64);
     assert_eq!(some_league.slug, "european-masters");
     assert_eq!(some_league.name, "European Masters");
     assert_eq!(some_league.region, "EUROPE");

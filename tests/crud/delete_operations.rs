@@ -20,7 +20,7 @@ async fn test_crud_delete_method_operation() {
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
         id: Default::default(),
-        ext_id: 7892635306594 as i64,
+        ext_id: 7892635306594_i64,
         slug: "some-new-league".to_string(),
         name: "Some New League".to_string(),
         region: "Bahía de cochinos".to_string(),
@@ -64,7 +64,7 @@ async fn test_crud_delete_datasource_method_operation() {
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
         id: Default::default(),
-        ext_id: 7892635306594 as i64,
+        ext_id: 7892635306594_i64,
         slug: "some-new-league".to_string(),
         name: "Some New League".to_string(),
         region: "Bahía de cochinos".to_string(),

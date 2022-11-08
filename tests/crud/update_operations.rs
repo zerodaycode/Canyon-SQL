@@ -30,7 +30,7 @@ async fn test_crud_update_method_operation() {
     assert_eq!(updt_candidate.ext_id, 100695891328981122);
 
     // Modify the value, and perform the update
-    let updt_value: i64 = 593064 as i64;
+    let updt_value: i64 = 593064_i64;
     updt_candidate.ext_id = updt_value;
     updt_candidate
         .update()
@@ -47,7 +47,7 @@ async fn test_crud_update_method_operation() {
 
     // We rollback the changes to the initial value to don't broke other tests
     // the next time that will run
-    updt_candidate.ext_id = 100695891328981122 as i64;
+    updt_candidate.ext_id = 100695891328981122_i64;
     updt_candidate
         .update()
         .await
@@ -70,7 +70,7 @@ async fn test_crud_update_datasource_method_operation() {
     assert_eq!(updt_candidate.ext_id, 100695891328981122);
 
     // Modify the value, and perform the update
-    let updt_value: i64 = 59306442534 as i64;
+    let updt_value: i64 = 59306442534_i64;
     updt_candidate.ext_id = updt_value;
     updt_candidate
         .update_datasource(PSQL_DS)
@@ -87,7 +87,7 @@ async fn test_crud_update_datasource_method_operation() {
 
     // We rollback the changes to the initial value to don't broke other tests
     // the next time that will run
-    updt_candidate.ext_id = 100695891328981122 as i64;
+    updt_candidate.ext_id = 100695891328981122_i64;
     updt_candidate
         .update()
         .await
