@@ -1,3 +1,5 @@
+#![allow(clippy::nonminimal_bool)]
+
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *SELECT* statements
 use crate::Error;
@@ -86,7 +88,7 @@ async fn test_crud_find_by_pk_datasource() {
 
     let some_league = find_by_pk_result.unwrap().unwrap();
     assert_eq!(some_league.id, 27);
-    assert_eq!(some_league.ext_id, 107898214974993351 as i64);
+    assert_eq!(some_league.ext_id, 107898214974993351_i64);
     assert_eq!(some_league.slug, "college_championship");
     assert_eq!(some_league.name, "College Championship");
     assert_eq!(some_league.region, "NORTH AMERICA");
