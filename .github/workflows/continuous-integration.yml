@@ -36,6 +36,9 @@ jobs:
         with:
           rust-version: ${{ matrix.rust }}
 
+      - name: Wake up a docker container with a PostgreSQL
+        run: docker-compose -f ./docker/docker-compose.yml up
+
       - run: cargo test --verbose --workspace --all-features
       - run: cargo test --verbose --workspace --no-default-features
 
