@@ -10,14 +10,14 @@ use quote::{quote, ToTokens};
 use syn::{DeriveInput, Fields, Type, Visibility};
 
 use query_operations::{
+    delete::{generate_delete_query_tokens, generate_delete_tokens},
+    insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     select::{
         generate_count_tokens, generate_find_all_query_tokens, generate_find_all_tokens,
         generate_find_all_unchecked_tokens, generate_find_by_foreign_key_tokens,
         generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
     },
-    insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     update::{generate_update_query_tokens, generate_update_tokens},
-    delete::{generate_delete_query_tokens, generate_delete_tokens},
 };
 
 use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
@@ -122,7 +122,7 @@ pub fn canyon_entity(
         match element {
             syn::NestedMeta::Meta(m) => {
                 match m {
-                    syn::Meta::NameValue(nv) => { 
+                    syn::Meta::NameValue(nv) => {
                         let attr_arg_ident = nv
                             .path
                             .get_ident()

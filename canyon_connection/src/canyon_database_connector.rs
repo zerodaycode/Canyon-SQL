@@ -6,14 +6,14 @@ use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
 use crate::datasources::DatasourceProperties;
 
 /// Represents the current supported databases by Canyon
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum DatabaseType {
     PostgreSql,
     SqlServer,
 }
 
 impl DatabaseType {
-    /// Returns a variant from Self given [`DatasourceProperties`] representing
+    /// Returns a variant from Self given a *DatasourceProperties* representing
     /// some of the available databases in `Canyon-SQL`
     pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
         match datasource.db_type {
@@ -39,12 +39,12 @@ pub struct SqlServerConnection {
 /// the `new` associated function returns `Self`, containing in one of its
 /// members an active connection against the matched database type on the
 /// datasource triggering this process
-/// 
+///
 /// !! Future of this impl. Two aspect to discuss:
-/// - Should we store the active connections? And not triggering 
+/// - Should we store the active connections? And not triggering
 ///   this process on every query? Or it's better to open and close
 ///   the connection with the database on every query?
-/// 
+///
 /// - Now that `Mutex` allow const initializations, we should
 ///   refactor the initialization in a real static handler?
 pub struct DatabaseConnection {
@@ -159,10 +159,16 @@ mod database_connection_handler {
         let psql_ds = &config.canyon_sql.datasources[0].properties;
         let sqls_ds = &config.canyon_sql.datasources[1].properties;
 
-        assert_eq!(DatabaseType::from_datasource(psql_ds), DatabaseType::PostgreSql);
-        assert_eq!(DatabaseType::from_datasource(sqls_ds), DatabaseType::SqlServer);
+        assert_eq!(
+            DatabaseType::from_datasource(psql_ds),
+            DatabaseType::PostgreSql
+        );
+        assert_eq!(
+            DatabaseType::from_datasource(sqls_ds),
+            DatabaseType::SqlServer
+        );
     }
 
-    // TODO Should we check the behaviour of the database handler here or as an 
+    // TODO Should we check the behaviour of the database handler here or as an
     // integration test?
 }

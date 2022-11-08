@@ -2,8 +2,8 @@ use regex::Regex;
 
 use crate::constants::rust_type;
 
-/// This file contains `Rust` types that represents an entry of the [`CanyonRegister`]
-/// where `Canyon` tracks the user types that has to manage for him
+/// This file contains `Rust` types that represents an entry on the `CanyonRegister`
+/// where `Canyon` tracks the user types that has to manage
 
 /// Gets the necessary identifiers of a CanyonEntity to make it the comparative
 /// against the database schemas

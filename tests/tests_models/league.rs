@@ -1,6 +1,6 @@
 use canyon_sql::*;
 
-#[derive(Debug, Clone, CanyonCrud, CanyonMapper, ForeignKeyable, PartialEq)]
+#[derive(Debug, Clone, CanyonCrud, CanyonMapper, ForeignKeyable, Eq, PartialEq)]
 #[canyon_macros::canyon_entity]
 pub struct League {
     #[primary_key]
@@ -9,5 +9,5 @@ pub struct League {
     slug: String,
     name: String,
     region: String,
-    image_url: String
+    image_url: String,
 }

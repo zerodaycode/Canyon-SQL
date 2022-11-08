@@ -16,7 +16,7 @@ fn load_ds_config_from_array() {
 
     let ds_0 = &config.canyon_sql.datasources[0];
     let ds_1 = &config.canyon_sql.datasources[1];
-        
+
     assert_eq!(ds_0.name, "PostgresDS");
     assert_eq!(ds_0.properties.db_type, "postgresql");
     assert_eq!(ds_0.properties.username, "username");
@@ -33,7 +33,7 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_1.properties.port, Some(3340));
     assert_eq!(ds_1.properties.db_name, "triforce2");
 }
-/// ```
+///
 #[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig<'a> {
     #[serde(borrow)]

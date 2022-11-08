@@ -1,7 +1,7 @@
-use canyon_sql::{*, date_time::NaiveDate};
 use crate::tests_models::league::League;
+use canyon_sql::{date_time::NaiveDate, *};
 
-#[derive(Debug, Clone, CanyonCrud, CanyonMapper, PartialEq)]
+#[derive(Debug, Clone, CanyonCrud, CanyonMapper, Eq, PartialEq)]
 #[canyon_macros::canyon_entity]
 pub struct Tournament {
     #[primary_key]

@@ -1,4 +1,4 @@
-//! Provides helpers to build the #[canyon] procedural like attribute macro
+//! Provides helpers to build the `#[canyon_macros::canyon]` procedural like attribute macro
 
 use proc_macro::TokenStream as TokenStream1;
 use proc_macro2::{Ident, TokenStream};

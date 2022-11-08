@@ -1,3 +1,3 @@
 pub mod league;
-pub mod tournament;
 pub mod player;
+pub mod tournament;

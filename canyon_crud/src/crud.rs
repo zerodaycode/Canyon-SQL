@@ -63,7 +63,7 @@ pub trait Transaction<T: Debug> {
     }
 }
 
-/// [`CrudOperations`] it's the core part of Canyon-SQL.
+/// *CrudOperations* it's the core part of Canyon-SQL.
 ///
 /// Here it's defined and implemented every CRUD operation
 /// that the user has available, just by deriving the `CanyonCrud`
@@ -75,9 +75,9 @@ pub trait Transaction<T: Debug> {
 /// The most notorious one it's the [`RowMapper<T>`] one, which allows
 /// Canyon to directly maps database results into structs.
 ///
-/// See it's definition and docs to see the real implications.
+/// See it's definition and docs to see the implementations.
 /// Also, you can find the written macro-code that performs the auto-mapping
-/// in the [`canyon_macros`] crates, on the root of this project.
+/// in the *canyon_sql::canyon_macros* crates, on the root of this project.
 #[async_trait]
 pub trait CrudOperations<T>: Transaction<T>
 where

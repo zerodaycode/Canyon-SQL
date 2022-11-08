@@ -99,7 +99,7 @@ pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
 }
 
-/// The implementation of the [`tiberius`] [`IntoSql`] for the
+/// The implementation of the [`canyon_connection::tiberius`] [`IntoSql`] for the
 /// query parameters.
 ///
 /// This implementation is necessary because of the generic amplitude

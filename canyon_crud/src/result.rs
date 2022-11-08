@@ -32,7 +32,7 @@ impl<T: Debug> DatabaseResult<T> {
         }
     }
 
-    /// Returns a Vec<T> filled with instances of the type T.
+    /// Returns a [`Vec<T>`] filled with instances of the type T.
     /// Z param it's used to constrait the types that can call this method.
     ///
     /// Also, provides a way to statically call `Z::deserialize_<db>` method,
