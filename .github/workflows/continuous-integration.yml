@@ -21,12 +21,17 @@ jobs:
         - { rust: nightly,           os: ubuntu-latest }
         - { rust: stable,            os: macos-latest }
         - { rust: stable,            os: windows-latest }
-        - { rust: nightly,           os: windows-latest }
-        - { rust: stable-x86_64-gnu, os: windows-latest }
-        - { rust: stable-i686-msvc,  os: windows-latest }
 
     steps:
+      - name: Make the USER own the working directory
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: sudo chown -R $USER:$USER ${{ github.workspace }}
+      
       - uses: actions/checkout@v3
+
+      - name: docker-compose
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: docker-compose -f ./docker/docker-compose.yml up -d 
 
       - name: Caching cargo dependencies
         id: project-cache
@@ -36,9 +41,14 @@ jobs:
         with:
           rust-version: ${{ matrix.rust }}
 
-      - run: cargo test --verbose --workspace --all-features
-      - run: cargo test --verbose --workspace --no-default-features
+      - name: Run all tests, UNIT and INTEGRATION for Linux targets
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: cargo test --verbose --workspace --all-features --no-fail-fast -- --show-output --test-threads=1
 
+      - name: Run UNIT tests with no external connections for the rest of the defined targets
+        if: ${{ matrix.os != 'ubuntu-latest' }}
+        run: cargo test --verbose --workspace --exclude tests --all-features --no-fail-fast -- --show-output
+  
   # sanitizer-test:
   #   name: Test with -Zsanitizer=${{ matrix.sanitizer }}
   #   runs-on: ubuntu-latest
