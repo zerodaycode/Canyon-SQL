@@ -48,6 +48,7 @@ jobs:
       - name: Waking up docker
         run: |
           docker-compose -f ./docker/docker-compose.yml down
+          sudo chown -R $USER:$USER ${{ github.workspace }}
           rm -rf ./docker/postgres-data
 
       - name: Generate code coverage report
