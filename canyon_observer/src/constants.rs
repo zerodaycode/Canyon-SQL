@@ -1,5 +1,5 @@
 pub mod postgresql_queries {
-    pub static FETCH_PUBLIC_SCHEMA: &'static str = 
+    pub static FETCH_PUBLIC_SCHEMA: &str =
         "SELECT
             gi.table_name,
             gi.column_name,
@@ -38,16 +38,16 @@ pub mod regex {
 
 /// TODO
 pub mod rust_type {
-    pub const I32: &'static str = "i32";
-    pub const OPT_I32: &'static str = "Option<i32>";
-    pub const I64: &'static str = "i64";
-    pub const OPT_I64: &'static str = "Option<i64>";
-    pub const STRING: &'static str = "String";
-    pub const OPT_STRING: &'static str = "Option<String>";
-    pub const BOOL: &'static str = "bool";
-    pub const OPT_BOOL: &'static str = "Option<bool>";
-    pub const NAIVE_DATE: &'static str = "NaiveDate";
-    pub const OPT_NAIVE_DATE: &'static str = "Option<NaiveDate>";
+    pub const I32: &str = "i32";
+    pub const OPT_I32: &str = "Option<i32>";
+    pub const I64: &str = "i64";
+    pub const OPT_I64: &str = "Option<i64>";
+    pub const STRING: &str = "String";
+    pub const OPT_STRING: &str = "Option<String>";
+    pub const BOOL: &str = "bool";
+    pub const OPT_BOOL: &str = "Option<bool>";
+    pub const NAIVE_DATE: &str = "NaiveDate";
+    pub const OPT_NAIVE_DATE: &str = "Option<NaiveDate>";
 }
 
 /// TODO
@@ -57,7 +57,7 @@ pub mod postgresql_type {
 
 /// Contains fragments queries to be invoked as const items and to be concatenated
 /// with dynamic data
-/// 
+///
 /// Ex: ` format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)`
 pub mod query_chunk {
     // TODO @gbm25

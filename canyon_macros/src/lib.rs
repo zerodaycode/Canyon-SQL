@@ -4,68 +4,43 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
-use proc_macro::{TokenStream as CompilerTokenStream, Span};
+use proc_macro::{Span, TokenStream as CompilerTokenStream};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{
-    DeriveInput, Fields, Visibility, Type
-};
+use syn::{DeriveInput, Fields, Type, Visibility};
 
 use query_operations::{
+    delete::{generate_delete_query_tokens, generate_delete_tokens},
+    insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     select::{
-        generate_find_all_unchecked_tokens,
-        generate_find_all_tokens,
-        generate_find_all_query_tokens,
-        generate_count_tokens,
-        generate_find_by_pk_tokens,
-        generate_find_by_foreign_key_tokens,
-        generate_find_by_reverse_foreign_key_tokens
-        
+        generate_count_tokens, generate_find_all_query_tokens, generate_find_all_tokens,
+        generate_find_all_unchecked_tokens, generate_find_by_foreign_key_tokens,
+        generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
     },
-    insert::{
-        generate_insert_tokens,
-        generate_multiple_insert_tokens
-    }, 
-    update::{
-        generate_update_tokens,
-        generate_update_query_tokens
-    },
-    delete::{
-        generate_delete_tokens,
-        generate_delete_query_tokens
-    }
+    update::{generate_update_query_tokens, generate_update_tokens},
 };
 
-use utils::{
-    function_parser::FunctionParser,
-    macro_tokens::MacroTokens, helpers
-};
-use canyon_macro::{wire_queries_to_execute, parse_canyon_macro_attributes};
+use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
+use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
 use canyon_manager::manager::{
+    entity::CanyonEntity,
     manager_builder::{
-        generate_user_struct,
-        generate_enum_with_fields,
-        generate_enum_with_fields_values 
-    }, 
-    entity::CanyonEntity
+        generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
+    },
 };
 
 use canyon_observer::{
+    handler::CanyonHandler,
+    postgresql::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
     CANYON_REGISTER_ENTITIES,
-    handler::CanyonHandler, 
-    postgresql::register_types::{
-        CanyonRegisterEntity, 
-        CanyonRegisterEntityField
-    }, 
 };
 
-
-/// Macro for handling the entry point to the program. 
-/// 
+/// Macro for handling the entry point to the program.
+///
 /// Avoids the user to write the tokio proc_attribute and
 /// the async modifier to the main fn()
-/// 
+///
 /// Also, takes care about wire the necessary code that Canyon's need
 /// to run in order to check the provided code and in order to perform
 /// the necessary operations for the migrations
@@ -76,19 +51,19 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
     // Parses the attributes declared in the arguments of this proc macro
     let attrs_parse_result = parse_canyon_macro_attributes(&attrs);
     if attrs_parse_result.error.is_some() {
-        return attrs_parse_result.error.unwrap()
+        return attrs_parse_result.error.unwrap();
     }
 
     // Parses the function items that this attribute is attached to
     let func_res = syn::parse::<FunctionParser>(input);
     if func_res.is_err() {
-        return quote! { fn main() {} }.into()
+        return quote! { fn main() {} }.into();
     }
-    
-    // TODO check if the `canyon` macro it's attached only to main? 
+
+    // TODO check if the `canyon` macro it's attached only to main?
     let func = func_res.ok().unwrap();
-    let sign = func.clone().sig;
-    let body = func.clone().block.stmts;
+    let sign = func.sig;
+    let body = func.block.stmts;
 
     if attrs_parse_result.allowed_migrations {
         // The migrations
@@ -100,7 +75,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
         // The queries to execute at runtime in the managed state
         let mut queries_tokens: Vec<TokenStream> = Vec::new();
         wire_queries_to_execute(&mut queries_tokens);
-        
+
         // The final code wired in main()
         quote! {
             use canyon_sql::tokio;
@@ -111,7 +86,8 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
                 }
                 #(#body)*
             }
-        }.into()
+        }
+        .into()
     } else {
         quote! {
             use canyon_sql::tokio;
@@ -119,19 +95,21 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
             async #sign {
                 #(#body)*
             }
-        }.into()
+        }
+        .into()
     }
-
 }
-
 
 /// Takes data from the struct annotated with the `canyon_entity` macro to fill the Canyon Register
 /// where lives the data that Canyon needs to work.
-/// 
+///
 /// Also, it's the responsible of generate the tokens for all the `Crud` methods available over
 /// your type
 #[proc_macro_attribute]
-pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+pub fn canyon_entity(
+    _meta: CompilerTokenStream,
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
     let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
 
     let mut table_name: Option<&str> = None;
@@ -145,30 +123,38 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
             syn::NestedMeta::Meta(m) => {
                 match m {
                     syn::Meta::NameValue(nv) => {
-                        // println!("Found meta nv: {:?}", nv.path.get_ident());
-                        // println!("Found meta nv: {:?}", nv.lit);
-                        let attr_arg_ident = nv.path.get_ident()
+                        let attr_arg_ident = nv
+                            .path
+                            .get_ident()
                             .expect("Something went wrong parsing the `table_name` argument")
                             .to_string();
-                        
+
                         if attr_arg_ident == "table_name" || attr_arg_ident == "schema" {
                             table_name = Some(Box::leak(attr_arg_ident.into_boxed_str()));
                             match nv.lit {
-                                syn::Lit::Str(ref l) => schema_name = Some(Box::leak(l.value().into_boxed_str())),
+                                syn::Lit::Str(ref l) => {
+                                    schema_name = Some(Box::leak(l.value().into_boxed_str()))
+                                }
                                 _ => {
                                     parsing_attribute_error = Some(syn::Error::new(
                                         Span::call_site().into(),
-                                        format!("Only string literals are valid values for the attributes")
+                                        "Only string literals are valid values for the attributes"
                                     ).into_compile_error());
                                 }
                             }
                         } else {
-                            parsing_attribute_error = Some(syn::Error::new(
-                                Span::call_site().into(),
-                                format!("Argument: `{:?}` are not allowed in the canyon_macro attr", &attr_arg_ident)
-                            ).into_compile_error());
+                            parsing_attribute_error = Some(
+                                syn::Error::new(
+                                    Span::call_site().into(),
+                                    format!(
+                                        "Argument: `{:?}` are not allowed in the canyon_macro attr",
+                                        &attr_arg_ident
+                                    ),
+                                )
+                                .into_compile_error(),
+                            );
                         }
-                    },
+                    }
                     _ => {
                         parsing_attribute_error = Some(syn::Error::new(
                             Span::call_site().into(),
@@ -176,27 +162,27 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
                         ).into_compile_error());
                     }
                 }
-            },
+            }
             syn::NestedMeta::Lit(_) => {
                 parsing_attribute_error = Some(syn::Error::new(
                     Span::call_site().into(),
                     "No literal values allowed on the `canyon_macros::canyon_entity` proc macro"
                 ).into_compile_error());
-            },
+            }
         }
     }
 
     let entity_res = syn::parse::<CanyonEntity>(input);
 
     if entity_res.is_err() {
-        return entity_res.err()
-            .expect("Unexpected error parsing the struct")
+        return entity_res
+            .expect_err("Unexpected error parsing the struct")
             .into_compile_error()
-            .into()
+            .into();
     }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
-    let entity = entity_res.ok().expect("Unexpected error parsing the struct");
+    let entity = entity_res.expect("Unexpected error parsing the struct");
 
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
@@ -204,31 +190,31 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
     let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
 
     // The identifier of the entities
-    let mut new_entity = CanyonRegisterEntity::new();
-    let e = Box::leak(
-        entity.struct_name.to_string()
-            .into_boxed_str()
-    );
+    let mut new_entity = CanyonRegisterEntity::default();
+    let e = Box::leak(entity.struct_name.to_string().into_boxed_str());
     new_entity.entity_name = e;
     new_entity.user_table_name = table_name;
     new_entity.user_schema_name = schema_name;
 
     // The entity fields
     for field in entity.fields.iter() {
-        let mut new_entity_field = CanyonRegisterEntityField::new();
-        new_entity_field.field_name = field.name.to_string();
-        new_entity_field.field_type = field.get_field_type_as_string().replace(" ", "");
-        
-        field.attributes.iter().for_each(
-            |attr|
-                new_entity_field.annotations.push(attr.get_as_string())
-        );
+        let mut new_entity_field = CanyonRegisterEntityField {
+            field_name: field.name.to_string(),
+            field_type: field.get_field_type_as_string().replace(' ', ""),
+            ..Default::default()
+        };
+
+        field
+            .attributes
+            .iter()
+            .for_each(|attr| new_entity_field.annotations.push(attr.get_as_string()));
 
         new_entity.entity_fields.push(new_entity_field);
     }
 
     // Fill the register with the data of the attached struct
-    CANYON_REGISTER_ENTITIES.lock()
+    CANYON_REGISTER_ENTITIES
+        .lock()
         .expect("Error adquiring Mutex guard on Canyon Entity macro")
         .push(new_entity);
 
@@ -238,14 +224,15 @@ pub fn canyon_entity(_meta: CompilerTokenStream, input: CompilerTokenStream) -> 
         #_generated_enum_type_for_fields
         #_generated_enum_type_for_fields_values
     };
-    
+
     // Pass the result back to the compiler
     if let Some(macro_error) = parsing_attribute_error {
-        quote! { 
+        quote! {
             #macro_error
-            #generated_user_struct 
-        }.into()
-    } else{
+            #generated_user_struct
+        }
+        .into()
+    } else {
         tokens.into()
     }
 }
@@ -259,14 +246,14 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     // that we can manipulate
 
     // Calls the helper struct to build the tokens that generates the final CRUD methos
-    let ast: DeriveInput = syn::parse(input)
-        .expect("Error parsing `Canyon Entity for generate the CRUD methods");
+    let ast: DeriveInput =
+        syn::parse(input).expect("Error parsing `Canyon Entity for generate the CRUD methods");
     let macro_data = MacroTokens::new(&ast);
 
     let table_name_res = helpers::table_schema_parser(&macro_data);
-    
+
     let table_schema_data = if let Err(err) = table_name_res {
-        return err.into()
+        return err.into();
     } else {
         table_name_res.ok().unwrap()
     };
@@ -275,68 +262,66 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     impl_crud_operations_trait_for_struct(&macro_data, table_schema_data)
 }
 
-
-fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_schema_data: String) -> proc_macro::TokenStream {
+fn impl_crud_operations_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: String,
+) -> proc_macro::TokenStream {
     let ty = macro_data.ty;
 
     // Builds the find_all() query
-    let _find_all_unchecked_tokens = generate_find_all_unchecked_tokens(&macro_data, &table_schema_data);
+    let _find_all_unchecked_tokens =
+        generate_find_all_unchecked_tokens(macro_data, &table_schema_data);
     // Builds the find_all_result() query
-    let _find_all_tokens = generate_find_all_tokens(&macro_data, &table_schema_data);
+    let _find_all_tokens = generate_find_all_tokens(macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
-    let _find_all_query_tokens = generate_find_all_query_tokens(&macro_data, &table_schema_data);
-    
+    let _find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
+
     // Builds a COUNT(*) query over some table
-    let _count_tokens = generate_count_tokens(&macro_data, &table_schema_data);
- 
+    let _count_tokens = generate_count_tokens(macro_data, &table_schema_data);
+
     // Builds the find_by_pk() query
-    let _find_by_pk_tokens = generate_find_by_pk_tokens(&macro_data, &table_schema_data);
-    
+    let _find_by_pk_tokens = generate_find_by_pk_tokens(macro_data, &table_schema_data);
+
     // Builds the insert() query
-    let _insert_tokens = generate_insert_tokens(&macro_data, &table_schema_data);
+    let _insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
     // Builds the insert_multi() query
-    let _insert_multi_tokens = generate_multiple_insert_tokens(&macro_data, &table_schema_data);
-    
+    let _insert_multi_tokens = generate_multiple_insert_tokens(macro_data, &table_schema_data);
+
     // Builds the update() queries
-    let _update_tokens = generate_update_tokens(&macro_data, &table_schema_data);
+    let _update_tokens = generate_update_tokens(macro_data, &table_schema_data);
     // Builds the update() query as a QueryBuilder
-    let _update_query_tokens = generate_update_query_tokens(&macro_data, &table_schema_data);
+    let _update_query_tokens = generate_update_query_tokens(macro_data, &table_schema_data);
 
     // Builds the delete() queries
-    let _delete_tokens = generate_delete_tokens(&macro_data, &table_schema_data);
+    let _delete_tokens = generate_delete_tokens(macro_data, &table_schema_data);
 
     // Builds the delete() query as a QueryBuilder
-    let _delete_query_tokens = generate_delete_query_tokens(&macro_data, &table_schema_data);
-    
+    let _delete_query_tokens = generate_delete_query_tokens(macro_data, &table_schema_data);
+
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
-    let _search_by_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_foreign_key_tokens(&macro_data);
-    let fk_method_signatures = _search_by_fk_tokens
-        .iter()
-        .map( |(sign, _)| { sign });
-    let fk_method_implementations = _search_by_fk_tokens
-        .iter()
-        .map( |(_, m_impl)| { m_impl });
+    let _search_by_fk_tokens: Vec<(TokenStream, TokenStream)> =
+        generate_find_by_foreign_key_tokens(macro_data);
+    let fk_method_signatures = _search_by_fk_tokens.iter().map(|(sign, _)| sign);
+    let fk_method_implementations = _search_by_fk_tokens.iter().map(|(_, m_impl)| m_impl);
 
     // The tokens for generating the methods that enable Canyon to retrive the child entities that are of T type
     // given a parent entity U: ForeignKeyable, as an associated function for the child type (T)
-    let _search_by_revese_fk_tokens: Vec<(TokenStream, TokenStream)> = generate_find_by_reverse_foreign_key_tokens(&macro_data, &table_schema_data);
-    let rev_fk_method_signatures = _search_by_revese_fk_tokens
-        .iter()
-        .map( |(sign, _)| { sign });
-    let rev_fk_method_implementations = _search_by_revese_fk_tokens
-        .iter()
-        .map( |(_, m_impl)| { m_impl });
-    
+    let _search_by_revese_fk_tokens: Vec<(TokenStream, TokenStream)> =
+        generate_find_by_reverse_foreign_key_tokens(macro_data, &table_schema_data);
+    let rev_fk_method_signatures = _search_by_revese_fk_tokens.iter().map(|(sign, _)| sign);
+    let rev_fk_method_implementations =
+        _search_by_revese_fk_tokens.iter().map(|(_, m_impl)| m_impl);
+
     // The autogenerated name for the trait that holds the fk and rev fk searches
     let fk_trait_ident = proc_macro2::Ident::new(
-        &format!("{}FkOperations", &ty.to_string()), 
-        proc_macro2::Span::call_site()
+        &format!("{}FkOperations", &ty.to_string()),
+        proc_macro2::Span::call_site(),
     );
 
     let crud_operations_tokens = quote! {
         // The find_all_result impl
         #_find_all_tokens
-                
+
         // The find_all impl
         #_find_all_unchecked_tokens
 
@@ -368,32 +353,32 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
         #_delete_query_tokens
     };
 
-    let tokens = if _search_by_fk_tokens.len() > 0 {
+    let tokens = if !_search_by_fk_tokens.is_empty() {
         quote! {
             #[async_trait]
-            impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
+            impl canyon_crud::crud::CrudOperations<#ty> for #ty {
                 #crud_operations_tokens
             }
-            
+
             impl canyon_crud::crud::Transaction<#ty> for #ty {}
-            
+
             /// Hidden trait for generate the foreign key operations available
             /// in Canyon without have to define them before hand in CrudOperations
             /// because it's just imposible with the actual system (where the methods
             /// are generated dynamically based on some properties of the `foreign_key`
             /// annotation)
             #[async_trait]
-            pub trait FkTestFkOperations<T> 
-                where T: 
-                    std::fmt::Debug +
-                    canyon_sql::canyon_crud::crud::CrudOperations<T> +
-                    canyon_sql::canyon_crud::mapper::RowMapper<T>
-            {
+            pub trait #fk_trait_ident<#ty> {
                 #(#fk_method_signatures)*
                 #(#rev_fk_method_signatures)*
             }
             #[async_trait]
-            impl #fk_trait_ident<#ty> for #ty {
+            impl #fk_trait_ident<#ty> for #ty
+                where #ty:
+                    std::fmt::Debug +
+                    canyon_sql::canyon_crud::crud::CrudOperations<#ty> +
+                    canyon_sql::canyon_crud::mapper::RowMapper<#ty>
+            {
                 #(#fk_method_implementations)*
                 #(#rev_fk_method_implementations)*
             }
@@ -401,65 +386,62 @@ fn impl_crud_operations_trait_for_struct(macro_data: &MacroTokens<'_>, table_sch
     } else {
         quote! {
             #[async_trait]
-            impl canyon_crud::crud::CrudOperations<#ty> for #ty { 
+            impl canyon_crud::crud::CrudOperations<#ty> for #ty {
                 #crud_operations_tokens
             }
-            
+
             impl canyon_crud::crud::Transaction<#ty> for #ty {}
-        }   
+        }
     };
-    
 
     tokens.into()
 }
 
 /// proc-macro for annotate struct fields that holds a foreign key relation.
-/// 
+///
 /// So basically, if you have some `ForeignKey` attribute, annotate the parent
 /// struct (where the ForeignKey table property points) with this macro
 /// to make it able to work with compound table relations
 #[proc_macro_derive(ForeignKeyable)]
-pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+pub fn implement_foreignkeyable_for_type(
+    input: proc_macro::TokenStream,
+) -> proc_macro::TokenStream {
     // Gets the data from the AST
     let ast: DeriveInput = syn::parse(input).unwrap();
     let ty = ast.ident;
 
     // Recovers the identifiers of the struct's members
-    let fields = filter_fields(
-        match ast.data {
-            syn::Data::Struct(ref s) => &s.fields,
-            _ => return syn::Error::new(
-                ty.span(), 
-                "ForeignKeyable only works with Structs"
-            ).to_compile_error().into()
+    let fields = filter_fields(match ast.data {
+        syn::Data::Struct(ref s) => &s.fields,
+        _ => {
+            return syn::Error::new(ty.span(), "ForeignKeyable only works with Structs")
+                .to_compile_error()
+                .into()
         }
-    );
+    });
 
-    let field_idents = fields.iter()
-        .map( |(_vis, ident)|
-            {
-                let i = ident.to_string();
-                quote! {
-                    #i => Some(self.#ident.to_string())
-                }
-            }
-    );
+    let field_idents = fields.iter().map(|(_vis, ident)| {
+        let i = ident.to_string();
+        quote! {
+            #i => Some(self.#ident.to_string())
+        }
+    });
     let field_idents_cloned = field_idents.clone();
-    
-    quote!{
-        /// Implementation of the trait `ForeignKeyable` for the type 
+
+    quote! {
+        /// Implementation of the trait `ForeignKeyable` for the type
         /// calling this derive proc macro
-        impl canyon_sql::canyon_crud::bounds::ForeignKeyable<Self> for #ty {
-            fn get_fk_column<'a>(&self, column: &'a str) -> Option<String> {
+        impl canyon_sql::bounds::ForeignKeyable<Self> for #ty {
+            fn get_fk_column(&self, column: &str) -> Option<String> {
                 match column {
                     #(#field_idents),*,
                     _ => None
                 }
             }
         }
-        /// Implementation of the trait `ForeignKeyable` for a reference of this type 
+        /// Implementation of the trait `ForeignKeyable` for a reference of this type
         /// calling this derive proc macro
-        impl canyon_sql::canyon_crud::bounds::ForeignKeyable<&Self> for &#ty {
+        impl canyon_sql::bounds::ForeignKeyable<&Self> for &#ty {
             fn get_fk_column<'a>(&self, column: &'a str) -> Option<String> {
                 match column {
                     #(#field_idents_cloned),*,
@@ -467,7 +449,8 @@ pub fn implement_foreignkeyable_for_type(input: proc_macro::TokenStream) -> proc
                 }
             }
         }
-    }.into()
+    }
+    .into()
 }
 
 #[proc_macro_derive(CanyonMapper)]
@@ -476,21 +459,20 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let ast: DeriveInput = syn::parse(input).unwrap();
 
     // Recovers the identifiers of the struct's members
-    let fields = fields_with_types(
-        match ast.data {
-            syn::Data::Struct(ref s) => &s.fields,
-            _ => return syn::Error::new(
-                ast.ident.span(), 
-                "CanyonMapper only works with Structs"
-            ).to_compile_error().into(),
+    let fields = fields_with_types(match ast.data {
+        syn::Data::Struct(ref s) => &s.fields,
+        _ => {
+            return syn::Error::new(ast.ident.span(), "CanyonMapper only works with Structs")
+                .to_compile_error()
+                .into()
         }
-    );
+    });
 
     // Here it's where the incoming values of the DatabaseResult are wired into a new
     // instance, mapping the fields of the type against the columns
     let init_field_values = fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
-        quote! {  
+        quote! {
             #ident: row.try_get(#ident_name)
                 .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
         }
@@ -498,73 +480,72 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
-        let quote = if get_field_type_as_string(ty) == "String" {
-            quote! {  
+
+        if get_field_type_as_string(ty) == "String" {
+            quote! {
                 #ident: row.get::<&str, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
                     .to_string()
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<i64, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<f32, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<f64, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<&str, &str>(#ident_name)
                     .map( |x| x.to_owned() )
             }
         } else if get_field_type_as_string(ty) == "NaiveDate" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDate, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDate, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty)== "NaiveTime" {
-            quote! {  
+        } else if get_field_type_as_string(ty) == "NaiveTime" {
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveTime, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty) == "NaiveDateTime" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDateTime, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty) == "DateTime" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::canyon_crud::chrono::DateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
-            quote! {  
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
             }
         } else {
-            quote! {  
+            quote! {
                 #ident: row.get::<#ty, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        };
-
-        quote
+        }
     });
 
     // The type of the Struct
@@ -594,22 +575,20 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
         .iter()
-        .map(|field| 
-            (field.vis.clone(), field.ident.as_ref().unwrap().clone()) 
-        )
+        .map(|field| (field.vis.clone(), field.ident.as_ref().unwrap().clone()))
         .collect::<Vec<_>>()
 }
 
 fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
     fields
         .iter()
-        .map(|field| 
+        .map(|field| {
             (
                 field.vis.clone(),
                 field.ident.as_ref().unwrap().clone(),
-                field.ty.clone()
-            ) 
-        )
+                field.ty.clone(),
+            )
+        })
         .collect::<Vec<_>>()
 }
 

@@ -1,9 +1,9 @@
 /// `PostgreSQL` entities for map the multiple rows that are related to one table, and the multiple
-/// columns that are related to those table 
+/// columns that are related to those table
 pub mod information_schema_row_mapper {
     /// The representation of a row of results when the `information schema` it's queried
-    /// 
-    /// Too see an example, see the docs of [`CanyonHandler`] on fn@get_info_of_entities()
+    ///
+    /// Too see an example, see the docs of [`crate::handler::CanyonHandler`] on `fn@get_info_of_entities`
     #[derive(Debug)]
     pub struct RowTable {
         pub table_name: String,
@@ -29,15 +29,12 @@ pub mod information_schema_row_mapper {
     }
 }
 
-
-/// This mod contains the structs necessary to map the data retrieved when the 
-/// `information schema` PostgreSQL table it's queried and after being parsed that rows
-/// into elements of type [`InformationSchemaRowMapper`], in order to fetch and model the
-/// data about the tables (and it's columns) that it's handling
+/// This mod contains the structs necessary to map the data retrieved when the
+/// `information schema` PostgreSQL table it's queried
 pub mod rows_to_table_mapper {
 
     /// Model that represents the database entities that belongs to the current schema.
-    /// 
+    ///
     /// Basically, it's an agrupation of rows of results when Canyon queries the `information schema`
     /// table, grouping by table name (one [`DatabaseTable`] is the rows that contains the information
     /// of a table)
@@ -48,7 +45,7 @@ pub mod rows_to_table_mapper {
     }
 
     /// Represents the *metadata* associated with a column that belongs to a `PostgreSQL` table.
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, Default)]
     pub struct DatabaseTableColumn<'a> {
         pub column_name: String,
         pub postgres_datatype: String,
@@ -67,7 +64,7 @@ pub mod rows_to_table_mapper {
         pub primary_key_name: Option<String>,
         pub is_identity: bool,
         pub identity_generation: Option<String>,
-        pub phantom: &'a str,  // TODO
+        pub phantom: &'a str, // TODO
     }
 
     impl<'a> DatabaseTableColumn<'a> {
