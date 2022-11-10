@@ -24,4 +24,4 @@ jobs:
 
       - name: Running tests for Windows OS targets
         run: |
-          cargo test --all-features --workspace
+          cargo test --all-features --workspace --exclude tests
