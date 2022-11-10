@@ -67,7 +67,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use tokio;</pre>
+                <pre class="has-background-white py-0 px-2">pub use async_trait;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -83,7 +83,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use async_trait;</pre>
+                <pre class="has-background-white py-0 px-2">pub use tokio;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -147,7 +147,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub extern crate canyon_macros;</pre>
+                <pre class="has-background-white py-0 px-2">pub extern crate canyon_connection;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -179,7 +179,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub extern crate canyon_observer;</pre>
+                <pre class="has-background-white py-0 px-2">pub extern crate canyon_macros;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -195,7 +195,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub extern crate canyon_connection;</pre>
+                <pre class="has-background-white py-0 px-2">pub extern crate canyon_observer;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -227,7 +227,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; This reexports allows the users to import all the available</pre>
+                <pre class="has-background-white py-0 px-2">pub use async_trait::*;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -243,7 +243,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; `Canyon-SQL` features in a single statement like:</pre>
+                <pre class="has-background-white py-0 px-2">pub use canyon_connection::*;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -259,7 +259,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; </pre>
+                <pre class="has-background-white py-0 px-2">pub use canyon_crud::*;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -275,7 +275,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; `use canyon_sql::*`</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; This reexports allows the users to import all the available</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -291,7 +291,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; </pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; `Canyon-SQL` features in a single statement like:</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -307,7 +307,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; and avoids polluting the macros with imports.</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -323,7 +323,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; </pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; `use canyon_sql::*`</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -339,7 +339,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; The decision of reexports all this crates was made because the macros</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -355,7 +355,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; was importing this ones already, but if two structures was defined on the </pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; and avoids polluting the macros with imports.</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -371,7 +371,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; same file, the imported names into it collinding, avoiding let the user</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -387,7 +387,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; to have multiple structs in only one file.</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; The decision of reexports all this crates was made because the macros</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -403,7 +403,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; </pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; was importing this ones already, but if two structures was defined on the</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -419,7 +419,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; This particular feature (or decision) will be opened for revision</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; same file, the imported names into it collinding, avoiding let the user</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -435,7 +435,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; &#x27;cause it&#x27;s not definitive to let this forever</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; to have multiple structs in only one file.</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -451,7 +451,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use canyon_macros::*;</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -467,7 +467,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use canyon_observer::*;</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; This particular feature (or decision) will be opened for revision</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -483,7 +483,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use canyon_crud::*;</pre>
+                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F;&#x2F; &#x27;cause it&#x27;s not definitive to let this forever</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -499,7 +499,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use canyon_connection::*;</pre>
+                <pre class="has-background-white py-0 px-2">pub use canyon_macros::*;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -515,7 +515,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub use async_trait::*;</pre>
+                <pre class="has-background-white py-0 px-2">pub use canyon_observer::*;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -611,7 +611,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">        DateTime, NaiveDate, NaiveTime, NaiveDateTime, Utc, FixedOffset</pre>
+                <pre class="has-background-white py-0 px-2">        DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc,</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -649,7 +649,7 @@
 </div>
         <footer class="footer">
             <div class="content has-text-centered">
-                <p class="heading">Date: 2022-10-30 11:31</p>
+                <p class="heading">Date: 2022-11-10 15:48</p>
             </div>
         </footer>
     </body>
