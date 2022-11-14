@@ -21,6 +21,15 @@ services:
     networks:
       cs-network:
         ipv4_address: 172.28.1.2
+  sql-server:
+    container_name: sql-server
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: always
+    ports:
+      - "1434:1433"
+    environment:
+      MSSQL_SA_PASSWORD: "SqlServer-10"
+      ACCEPT_EULA: "Y"
 
 networks:
   cs-network:

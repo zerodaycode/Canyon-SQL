@@ -4,7 +4,7 @@
 ///! the default generated queries, esentially for build the queries
 ///! with the SQL filters
 ///
-use canyon_sql::{crud::CrudOperations, *};
+use canyon_sql::{crud::CrudOperations, runtime::tokio, query::operators::Comp};
 
 use crate::constants::PSQL_DS;
 use crate::tests_models::league::*;

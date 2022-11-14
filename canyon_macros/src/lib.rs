@@ -355,29 +355,29 @@ fn impl_crud_operations_trait_for_struct(
 
     let tokens = if !_search_by_fk_tokens.is_empty() {
         quote! {
-            #[async_trait]
-            impl canyon_crud::crud::CrudOperations<#ty> for #ty {
+            #[canyon_sql::macros::async_trait]
+            impl canyon_sql::crud::CrudOperations<#ty> for #ty {
                 #crud_operations_tokens
             }
 
-            impl canyon_crud::crud::Transaction<#ty> for #ty {}
+            impl canyon_sql::crud::Transaction<#ty> for #ty {}
 
             /// Hidden trait for generate the foreign key operations available
             /// in Canyon without have to define them before hand in CrudOperations
             /// because it's just imposible with the actual system (where the methods
             /// are generated dynamically based on some properties of the `foreign_key`
             /// annotation)
-            #[async_trait]
+            #[canyon_sql::macros::async_trait]
             pub trait #fk_trait_ident<#ty> {
                 #(#fk_method_signatures)*
                 #(#rev_fk_method_signatures)*
             }
-            #[async_trait]
+            #[canyon_sql::macros::async_trait]
             impl #fk_trait_ident<#ty> for #ty
                 where #ty:
                     std::fmt::Debug +
-                    canyon_sql::canyon_crud::crud::CrudOperations<#ty> +
-                    canyon_sql::canyon_crud::mapper::RowMapper<#ty>
+                    canyon_sql::crud::CrudOperations<#ty> +
+                    canyon_sql::mapper::RowMapper<#ty>
             {
                 #(#fk_method_implementations)*
                 #(#rev_fk_method_implementations)*
@@ -385,12 +385,12 @@ fn impl_crud_operations_trait_for_struct(
         }
     } else {
         quote! {
-            #[async_trait]
-            impl canyon_crud::crud::CrudOperations<#ty> for #ty {
+            #[canyon_sql::macros::async_trait]
+            impl canyon_sql::crud::CrudOperations<#ty> for #ty {
                 #crud_operations_tokens
             }
 
-            impl canyon_crud::crud::Transaction<#ty> for #ty {}
+            impl canyon_sql::crud::Transaction<#ty> for #ty {}
         }
     };
 
@@ -506,34 +506,34 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             }
         } else if get_field_type_as_string(ty) == "NaiveDate" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDate, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDate, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty) == "NaiveTime" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty) == "NaiveDateTime" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDateTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::NaiveDateTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
             }
         } else if get_field_type_as_string(ty) == "DateTime" {
             quote! {
-                #ident: row.get::<canyon_sql::canyon_crud::chrono::DateTime, &str>(#ident_name)
+                #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
@@ -552,15 +552,15 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     let ty = ast.ident;
 
     let tokens = quote! {
-        impl canyon_sql::canyon_crud::mapper::RowMapper<Self> for #ty
+        impl canyon_sql::crud::RowMapper<Self> for #ty
         {
-            fn deserialize_postgresql(row: &canyon_sql::canyon_connection::tokio_postgres::Row) -> #ty {
+            fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
                 Self {
                     #(#init_field_values),*
                 }
             }
 
-            fn deserialize_sqlserver(row: &canyon_sql::canyon_connection::tiberius::Row) -> #ty {
+            fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
                 Self {
                     #(#init_field_values_sqlserver),*
                 }

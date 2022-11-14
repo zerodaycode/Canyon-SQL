@@ -50,7 +50,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
@@ -59,7 +59,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             match result {
                 Ok(res) => {
                     match res.get_active_ds() {
-                        canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
+                        canyon_sql::crud::DatabaseType::PostgreSql => {
                             self.#pk_ident = res.wrapper.get(0)
                                 .expect("No value found on the returning clause")
                                 .get::<&str, #pk_type>(#primary_key)
@@ -67,7 +67,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
                             Ok(())
                         },
-                        canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                        canyon_sql::crud::DatabaseType::SqlServer => {
                             self.#pk_ident = res.sqlserver.get(0)
                                 .expect("No value found on the returning clause")
                                 .get::<#pk_type, &str>(#primary_key)
@@ -91,7 +91,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
@@ -294,7 +294,7 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name
@@ -303,7 +303,7 @@ pub fn generate_multiple_insert_tokens(
             match result {
                 Ok(res) => {
                     match res.get_active_ds() {
-                        canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
+                        canyon_sql::crud::DatabaseType::PostgreSql => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = res
                                     .wrapper
@@ -314,7 +314,7 @@ pub fn generate_multiple_insert_tokens(
 
                             Ok(())
                         },
-                        canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                        canyon_sql::crud::DatabaseType::SqlServer => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = res
                                     .sqlserver
@@ -386,7 +386,7 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name

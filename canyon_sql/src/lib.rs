@@ -1,34 +1,45 @@
-// Common reexports (dependencies)
-pub use async_trait;
-pub use tokio;
-pub use tokio_postgres;
+///! The root crate of the `Canyon-SQL` project.
+/// 
+/// Here it's where all the available functionalities and features
+/// reaches the top most level, grouping them and making them visible
+/// through this crate, building the *public API* of the library
 
-// Macros crate
-pub extern crate canyon_connection;
-pub extern crate canyon_crud;
-pub extern crate canyon_macros;
-pub extern crate canyon_observer;
 
-pub use async_trait::*;
-pub use canyon_connection::*;
+/// Reexported elements to the root of the public API
 pub use canyon_crud::*;
-/// This reexports allows the users to import all the available
-/// `Canyon-SQL` features in a single statement like:
-///
-/// `use canyon_sql::*`
-///
-/// and avoids polluting the macros with imports.
-///
-/// The decision of reexports all this crates was made because the macros
-/// was importing this ones already, but if two structures was defined on the
-/// same file, the imported names into it collinding, avoiding let the user
-/// to have multiple structs in only one file.
-///
-/// This particular feature (or decision) will be opened for revision
-/// 'cause it's not definitive to let this forever
-pub use canyon_macros::*;
 pub use canyon_observer::*;
-pub use tokio_postgres::Row;
+
+/// Public API for the `Canyon-SQL` proc-macros, and for the external ones
+pub mod macros {
+    pub use canyon_macros::*;
+    pub use async_trait::*;
+}
+
+/// Crud module serves to reexport the public elements of the `canyon_crud` crate,
+/// exposing them through the public API
+pub mod crud {
+    pub use canyon_crud::crud::*;
+    pub use canyon_crud::mapper::*;
+    pub use canyon_crud::result::*;
+    pub use canyon_crud::DatabaseType;
+}
+
+/// Re-exports the query elements from the `crud`crate
+pub mod query {
+    pub use canyon_crud::query_elements::{query::*, query_builder::*};
+    pub use canyon_crud::query_elements::operators;
+}
+
+/// Reexport the available database clients within Canyon
+pub mod db_clients {
+    pub use canyon_connection::tokio_postgres;
+    pub use canyon_connection::tiberius;
+}
+
+/// Reexport the needed runtime dependencies
+pub mod runtime {
+    pub use tokio;
+}
 
 /// Module for reexport the `chrono` crate with the allowed public and available types in Canyon
 pub mod date_time {

@@ -41,7 +41,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 );
                 let update_values: &[&dyn canyon_sql::bounds::QueryParameters<'_>] = &[#(#update_values),*];
 
-                let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, ""
                 ).await;
 
@@ -64,7 +64,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 );
                 let update_values: &[&dyn canyon_sql::bounds::QueryParameters<'_>] = &[#(#update_values_cloned),*];
 
-                let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, datasource_name
                 ).await;
 
@@ -118,15 +118,15 @@ pub fn generate_update_query_tokens(
 
     quote! {
         /// TODO docs
-        fn update_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::generate(format!("UPDATE {}", #table_schema_data), "")
+        fn update_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
+            canyon_sql::query::Query::generate(format!("UPDATE {}", #table_schema_data), "")
         }
 
         /// TODO docs
         fn update_query_datasource(datasource_name: &str)
-            -> query_elements::query_builder::QueryBuilder<'_, #ty>
+            -> canyon_sql::query::QueryBuilder<'_, #ty>
         {
-            query_elements::query::Query::generate(format!("UPDATE {}", #table_schema_data), datasource_name)
+            canyon_sql::query::Query::generate(format!("UPDATE {}", #table_schema_data), datasource_name)
         }
     }
 }

@@ -28,7 +28,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             async fn delete(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
                 let stmt = format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key);
 
-                let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt,
                     &[#pk_field_value],
                     ""
@@ -47,7 +47,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             {
                 let stmt = format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key);
 
-                let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt,
                     &[#pk_field_value],
                     datasource_name
@@ -98,14 +98,14 @@ pub fn generate_delete_query_tokens(
     quote! {
         /// Deletes a record on a table for the target database that matches the value
         /// of the primary key of the instance
-        fn delete_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), "")
+        fn delete_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
+            canyon_sql::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), "")
         }
 
         /// Deletes a record on a table for the target database with the specified
         /// values generated with the [`Querybuilder`] and with the
-        fn delete_query_datasource(datasource_name: &str) -> query_elements::query_builder::QueryBuilder<'_, #ty> {
-            query_elements::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), datasource_name)
+        fn delete_query_datasource(datasource_name: &str) -> canyon_sql::query::QueryBuilder<'_, #ty> {
+            canyon_sql::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), datasource_name)
         }
     }
 }
