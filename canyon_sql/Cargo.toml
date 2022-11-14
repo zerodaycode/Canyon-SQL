@@ -5,21 +5,7 @@ edition = "2021"
 authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto<gbm25@gmail.com>"]
 
 [dependencies]
-tokio-postgres = { version = "0.7.2", features=["with-chrono-0_4"]  }
-toml = { version = "0.5.8" }
-regex = "1.5"
-
-# Forbidden Rust dark arts
-tokio = { version = "1.9.0", features = ["full"] }
 async-trait = { version = "0.1.50" }
-futures = "0.3.21"
-
-# Serialization/Deserialization
-serde_json = "1.0.59"
-serde = "1.0.90"
-
-# Debug
-partialdebug = "0.2.0"
 
 # Project crates
 canyon_macros = { path = "../canyon_macros" }

@@ -11,6 +11,7 @@ pub mod update_operations;
 
 use crate::constants::PSQL_DS;
 use crate::constants::SQL_SERVER_DS;
+use crate::constants::SQL_SERVER_CREATE_TABLES;
 
 /// In order to initialize data on `SqlServer`. we must manually insert it
 /// when the docker starts. SqlServer official docker from Microsoft does
@@ -26,7 +27,23 @@ use crate::constants::SQL_SERVER_DS;
 #[tokio::test]
 #[ignore]
 async fn initialize_sql_server_docker_instance() {
+    use canyon_sql::runtime::tokio::net::TcpStream;
+    use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
+    use canyon_sql::db_clients::tiberius::{Config, Client};
 
-    let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await.unwrap();
-    let leagues = League::find_all_datasource(PSQL_DS).await.unwrap();
+    static CONN_STR: &str = 
+        "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
+
+    let config = Config::from_ado_string(&CONN_STR).unwrap();
+
+    let tcp = TcpStream::connect(config.get_addr()).await.unwrap();
+    tcp.set_nodelay(true).ok();
+
+    let mut client = Client::connect(config, tcp.compat_write()).await.unwrap();
+    
+    // Create the tables
+    let query_result = client.query(SQL_SERVER_CREATE_TABLES, &[]).await;
+    assert!(!query_result.is_err());
+    // let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await.unwrap();
+    // let leagues = League::find_all_datasource(PSQL_DS).await.unwrap();
 }

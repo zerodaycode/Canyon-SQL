@@ -1,6 +1,7 @@
 pub extern crate async_std;
 pub extern crate tiberius;
 pub extern crate tokio;
+pub extern crate tokio_util;
 pub extern crate tokio_postgres;
 
 pub mod canyon_database_connector;

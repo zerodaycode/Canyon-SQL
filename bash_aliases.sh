@@ -20,6 +20,7 @@ alias BuildCanyonWinFull='cargo clean && cargo build --all-features --target=x86
 
 # Runs the integration tests of the project for a Windows target
 alias IntegrationTestsWin='cargo test --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture'
+alias ITWinIncludeIgnored='cargo test --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture'
 
 # Collects the code coverage for the project (tests must run before this)
 alias CcEnvVars='export CARGO_INCREMENTAL=0
