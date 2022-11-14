@@ -59,7 +59,7 @@ impl CanyonEntity {
 
     /// Generates an implementation of the match pattern to find whatever variant
     /// is being requested when the method `.field_name_as_str(self)` it's invoked over some
-    /// instance that implements the `canyon_sql::bounds::FieldIdentifier` trait
+    /// instance that implements the `canyon_sql::crud::bounds::FieldIdentifier` trait
     pub fn create_match_arm_for_get_variant_as_string(
         &self,
         enum_name: &Ident,
@@ -79,7 +79,7 @@ impl CanyonEntity {
 
     /// Generates an implementation of the match pattern to find whatever variant
     /// is being requested when the method `.value()` it's invoked over some
-    /// instance that implements the `canyon_sql::bounds::FieldValueIdentifier` trait
+    /// instance that implements the `canyon_sql::crud::bounds::FieldValueIdentifier` trait
     pub fn create_match_arm_for_relate_fields_with_values(
         &self,
         enum_name: &Ident,

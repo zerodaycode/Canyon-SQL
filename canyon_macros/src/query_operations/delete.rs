@@ -19,7 +19,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 "Something really bad happened finding the Ident for the pk field on the delete",
             );
         let pk_field_value =
-            quote! { &self.#pk_field as &dyn canyon_sql::bounds::QueryParameters<'_> };
+            quote! { &self.#pk_field as &dyn canyon_sql::crud::bounds::QueryParameters<'_> };
 
         quote! {
             /// Deletes from a database entity the row that matches

@@ -6,7 +6,7 @@
 
 
 /// Reexported elements to the root of the public API
-pub use canyon_crud::*;
+// pub use canyon_crud::*;
 pub use canyon_observer::*;
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
@@ -20,6 +20,7 @@ pub mod macros {
 pub mod crud {
     pub use canyon_crud::crud::*;
     pub use canyon_crud::mapper::*;
+    pub use canyon_crud::bounds;
     pub use canyon_crud::result::*;
     pub use canyon_crud::DatabaseType;
 }

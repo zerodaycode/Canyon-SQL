@@ -148,7 +148,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
             let datasource_name = "";
-            let mut values: Vec<&dyn canyon_sql::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
+            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
 
@@ -193,7 +193,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
-            let mut values: Vec<&dyn canyon_sql::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
+            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
 
@@ -436,7 +436,7 @@ pub fn generate_multiple_insert_tokens(
         async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use canyon_sql::bounds::QueryParameters;
+            use canyon_sql::crud::bounds::QueryParameters;
             let datasource_name = "";
 
             let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
@@ -493,7 +493,7 @@ pub fn generate_multiple_insert_tokens(
         async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use canyon_sql::bounds::QueryParameters;
+            use canyon_sql::crud::bounds::QueryParameters;
 
             let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
             for instance in instances.iter() {

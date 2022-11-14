@@ -377,7 +377,7 @@ fn impl_crud_operations_trait_for_struct(
                 where #ty:
                     std::fmt::Debug +
                     canyon_sql::crud::CrudOperations<#ty> +
-                    canyon_sql::mapper::RowMapper<#ty>
+                    canyon_sql::crud::RowMapper<#ty>
             {
                 #(#fk_method_implementations)*
                 #(#rev_fk_method_implementations)*
@@ -431,7 +431,7 @@ pub fn implement_foreignkeyable_for_type(
     quote! {
         /// Implementation of the trait `ForeignKeyable` for the type
         /// calling this derive proc macro
-        impl canyon_sql::bounds::ForeignKeyable<Self> for #ty {
+        impl canyon_sql::crud::bounds::ForeignKeyable<Self> for #ty {
             fn get_fk_column(&self, column: &str) -> Option<String> {
                 match column {
                     #(#field_idents),*,
@@ -441,7 +441,7 @@ pub fn implement_foreignkeyable_for_type(
         }
         /// Implementation of the trait `ForeignKeyable` for a reference of this type
         /// calling this derive proc macro
-        impl canyon_sql::bounds::ForeignKeyable<&Self> for &#ty {
+        impl canyon_sql::crud::bounds::ForeignKeyable<&Self> for &#ty {
             fn get_fk_column<'a>(&self, column: &'a str) -> Option<String> {
                 match column {
                     #(#field_idents_cloned),*,
