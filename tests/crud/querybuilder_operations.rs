@@ -14,7 +14,7 @@ use crate::tests_models::tournament::*;
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_find_with_querybuilder() {
+fn test_crud_find_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     let filtered_leagues_result: Result<Vec<League>, _> = League::find_query()
@@ -33,7 +33,7 @@ async fn test_crud_find_with_querybuilder() {
 
 /// Same than the above but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_find_with_querybuilder_datasource() {
+fn test_crud_find_with_querybuilder_datasource() {
     // Find all the players where its ID column value is greater that 50
     let filtered_find_players = Player::find_query_datasource(PSQL_DS)
         .r#where(PlayerFieldValue::id(50), Comp::Gt)
@@ -46,7 +46,7 @@ async fn test_crud_find_with_querybuilder_datasource() {
 /// Updates the values of the range on entries defined by the constraint paramenters
 /// in the database entity
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_update_with_querybuilder() {
+fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     League::update_query()
@@ -71,7 +71,7 @@ async fn test_crud_update_with_querybuilder() {
 
 /// Same as above, but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_update_with_querybuilder_datasource() {
+fn test_crud_update_with_querybuilder_datasource() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     Player::update_query_datasource(PSQL_DS)
@@ -93,7 +93,7 @@ async fn test_crud_update_with_querybuilder_datasource() {
 /// GitHub Action wake up), it won't delete things that already have been deleted,
 /// but this isn't an error. They just don't exists.
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_delete_with_querybuilder() {
+fn test_crud_delete_with_querybuilder() {
     Tournament::delete_query()
         .r#where(TournamentFieldValue::id(14), Comp::Gt)
         .and(TournamentFieldValue::id(16), Comp::Lt)
@@ -106,7 +106,7 @@ async fn test_crud_delete_with_querybuilder() {
 
 /// Same as the above delete, but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_delete_with_querybuilder_datasource() {
+fn test_crud_delete_with_querybuilder_datasource() {
     Player::delete_query_datasource(PSQL_DS)
         .r#where(PlayerFieldValue::id(120), Comp::Gt)
         .and(PlayerFieldValue::id(130), Comp::Lt)

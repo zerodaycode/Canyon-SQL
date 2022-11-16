@@ -16,7 +16,7 @@ use crate::tests_models::league::*;
 /// Attemp of usage the `t.update(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_update_method_operation() {
+fn test_crud_update_method_operation() {
     // We first retrieve some entity from the database. Note that we must make
     // the retrieved instance mutable of clone it to a new mutable resource
     let mut updt_candidate: League = League::find_by_pk(&1)
@@ -56,7 +56,7 @@ async fn test_crud_update_method_operation() {
 
 /// Same as the above test, but with the specified datasource.
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_update_datasource_method_operation() {
+fn test_crud_update_datasource_method_operation() {
     // We first retrieve some entity from the database. Note that we must make
     // the retrieved instance mutable of clone it to a new mutable resource
     let mut updt_candidate: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)

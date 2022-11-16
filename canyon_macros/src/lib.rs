@@ -4,7 +4,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
-use canyon_connection::{DATASOURCES, canyon_database_connector::DatabaseConnection, CACHED_DATABASE_CONN};
+use canyon_connection::{DATASOURCES, canyon_database_connector::DatabaseConnection, CACHED_DATABASE_CONN, CANYON_TOKIO_RUNTIME};
 use proc_macro::{Span, TokenStream as CompilerTokenStream};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -68,8 +68,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
     if attrs_parse_result.allowed_migrations {
         // The migrations
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
+        CANYON_TOKIO_RUNTIME.block_on(async {
             CanyonHandler::run().await;
         });
 
@@ -116,13 +115,15 @@ pub fn canyon_tokio_test(
         let sign = func.sig;
         let body = func.block.stmts;
 
-        println!("Generated body for the test: {:?}", &body);
+        // println!("Generated body for the test: {:?}", &body);
 
         quote! {
-            #[tokio::test]
+            #[test]
             #sign {
-                canyon_sql::runtime::tokio::runtime::Handle::current()
-                    .spawn(async { #(#body)* });
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                    .block_on(async { 
+                        #(#body)* 
+                    });
             }
         }.into()
     }

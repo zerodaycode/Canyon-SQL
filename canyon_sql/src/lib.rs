@@ -39,6 +39,7 @@ pub mod db_clients {
 
 /// Reexport the needed runtime dependencies
 pub mod runtime {
+    pub use canyon_connection::CANYON_TOKIO_RUNTIME;
     pub use canyon_connection::tokio;
     pub use canyon_connection::tokio_util;
 }

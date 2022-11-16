@@ -18,7 +18,8 @@ const CONFIG_FILE_IDENTIFIER: &str = "canyon.toml";
 
 lazy_static! {
     pub static ref CANYON_TOKIO_RUNTIME: tokio::runtime::Runtime = 
-        tokio::runtime::Runtime::new().unwrap();
+        tokio::runtime::Runtime::new()
+            .expect("Failed initializing the Canyon-SQL Tokio Runtime");
 
     static ref RAW_CONFIG_FILE: String = fs::read_to_string(CONFIG_FILE_IDENTIFIER)
         .expect("Error opening or reading the Canyon configuration file");
@@ -29,29 +30,9 @@ lazy_static! {
     pub static ref DEFAULT_DATASOURCE: DatasourceConfig<'static> =
         CONFIG_FILE.canyon_sql.datasources.clone()[0];
 
+    static ref IGNITER: () = init_datasources();
     pub static ref CACHED_DATABASE_CONN: Mutex<HashMap<&'static str, &'static mut DatabaseConnection>> =
-        Mutex::new(init_datasources());
-
-    pub static ref CACHED_DATABASE_CONN_VEC: Vec<&'static mut DatabaseConnection> = init_pool();
-}
-
-fn init_pool() -> Vec<&'static mut DatabaseConnection> {
-    let mut v = Vec::new();
-
-    tokio::runtime::Runtime::new().unwrap().block_on(async {
-        for datasource in DATASOURCES.iter() {
-            v.push(
-                Box::leak(
-                    Box::new(DatabaseConnection::new(&datasource.properties)
-                        .await
-                        .expect(&format!("Error pooling a new connection for the datasource: {:?}", datasource.name))
-                    )
-                )
-            );
-        }
-    });
-
-    v
+        Mutex::new(HashMap::new());
 }
 
 /// Convenient free function to initialize a kind of connection pool based on the datasources present defined
@@ -64,22 +45,28 @@ fn init_pool() -> Vec<&'static mut DatabaseConnection> {
 /// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) sufferes a lot when it has continuous
 /// statements with multiple queries, like and insert followed by a find by id to check if the insert query has done its
 /// job done.
-fn init_datasources() -> HashMap<&'static str, &'static mut DatabaseConnection> {
-    let mut pool: HashMap<&'static str, &'static mut DatabaseConnection> = HashMap::new();
-
-    tokio::runtime::Handle::current().block_on(async {
+pub fn init_datasources() 
+    // -> HashMap<&'static str, &'static mut DatabaseConnection> 
+{   // tokio::runtime::Handle::current().block_on(async {
+    println!("Datasources available: {}", DATASOURCES.len());
+    CANYON_TOKIO_RUNTIME.block_on(async {
+        let mut pool: HashMap<&'static str, &'static mut DatabaseConnection> = HashMap::new();
+        println!("Datasources available: {}", DATASOURCES.len());
         for datasource in DATASOURCES.iter() {
             pool.insert(
                 datasource.name,
                 Box::leak(
                     Box::new(DatabaseConnection::new(&datasource.properties)
-                        .await
-                        .expect(&format!("Error pooling a new connection for the datasource: {:?}", datasource.name))
-                    )
+                    .await
+                    .expect(&format!("Error pooling a new connection for the datasource: {:?}", datasource.name))
                 )
-            );
-        }
-    });
+            )
+        );
+    }
     
-    pool
+    *CACHED_DATABASE_CONN.blocking_lock() = pool;
+});
+println!("Datasources available: {}", DATASOURCES.len());
+    
+    // pool
 }

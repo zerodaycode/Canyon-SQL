@@ -18,7 +18,7 @@ use crate::tests_models::tournament::*;
 /// with some another entity `U`, for example, performns a search to find
 /// what is the parent type `U` of `T`
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_search_by_foreign_key() {
+fn test_crud_search_by_foreign_key() {
     let some_tournament: Tournament = Tournament::find_by_pk(&1)
         .await
         .expect("Result variant of the query is err")
@@ -39,7 +39,7 @@ async fn test_crud_search_by_foreign_key() {
 
 /// Same as the search by foreign key, but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_search_by_foreign_key_datasource() {
+fn test_crud_search_by_foreign_key_datasource() {
     let some_tournament: Tournament = Tournament::find_by_pk_datasource(&1, PSQL_DS)
         .await
         .expect("Result variant of the query is err")
@@ -68,7 +68,7 @@ async fn test_crud_search_by_foreign_key_datasource() {
 ///
 /// For this to work, `U`, the parent, must have derived the `ForeignKeyable` proc macro
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_search_reverse_side_foreign_key() {
+fn test_crud_search_reverse_side_foreign_key() {
     let some_league: League = League::find_by_pk(&1)
         .await
         .expect("Result variant of the query is err")
@@ -88,7 +88,7 @@ async fn test_crud_search_reverse_side_foreign_key() {
 /// Same as the search by the reverse side of a foreign key relation
 /// but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_search_reverse_side_foreign_key_datasource() {
+fn test_crud_search_reverse_side_foreign_key_datasource() {
     let some_league: League = League::find_by_pk_datasource(&1, PSQL_DS)
         .await
         .expect("Result variant of the query is err")

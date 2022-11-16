@@ -2,8 +2,9 @@ use std::borrow::BorrowMut;
 use std::fmt::{Debug, Display};
 
 use async_trait::async_trait;
-use canyon_connection::{CACHED_DATABASE_CONN, CACHED_DATABASE_CONN_VEC};
+use canyon_connection::{CACHED_DATABASE_CONN, CANYON_TOKIO_RUNTIME};
 use canyon_connection::canyon_database_connector::DatabaseType;
+use canyon_connection::tokio::join;
 
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
@@ -32,13 +33,21 @@ pub trait Transaction<T: Debug> {
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a,
     {
-        let guarded_cache = CACHED_DATABASE_CONN.lock().await;
+        // let guarded_cache = CACHED_DATABASE_CONN.lock().await;
+        // println!("CACHED DS: {:?}", guarded_cache.len());
+        // if CACHED_DATABASE_CONN.lock().await.len() == 0 {
+        let r = CANYON_TOKIO_RUNTIME.block_on(async {
+            canyon_connection::init_datasources();
+        println!("Initialized DS");
+        let new_gu_ca = CACHED_DATABASE_CONN.lock().await;
+        // println!("CACHED DS: {:?}", guarded_cache.len());
+        println!("CACHED DS: {:?}", new_gu_ca.len());
         let database_conn = if datasource_name.is_empty() {
-            guarded_cache.values()
+            new_gu_ca.values()
                 .next()
                 .expect("No default datasource found. Check your `canyon.toml` file")
         } else {
-            guarded_cache.get(datasource_name)
+            new_gu_ca.get(datasource_name)
                 .expect(
                     &format!(
                         "Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
@@ -46,6 +55,7 @@ pub trait Transaction<T: Debug> {
                 )
         };
 
+        println!("BEFORE QUERY");
         match database_conn.database_type {
             DatabaseType::PostgreSql => {
                 postgres_query_launcher::launch::<T>(database_conn, stmt.to_string(), params.as_ref())
@@ -56,6 +66,10 @@ pub trait Transaction<T: Debug> {
                     .await
             }
         }
+        });
+        // join!(r).0.unwrap().await
+        r
+        
     }
 }
 

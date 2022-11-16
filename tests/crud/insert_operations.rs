@@ -27,7 +27,7 @@ use crate::tests_models::league::*;
 /// an argument specifiying not autoincremental behaviour, all the fields will be
 /// inserted on the database and no returning value will be placed in any field.   
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_insert_operation() {
+fn test_crud_insert_operation() {
     let mut new_league: League = League {
         id: Default::default(),
         ext_id: 7892635306594_i64,
@@ -55,7 +55,7 @@ async fn test_crud_insert_operation() {
 /// Same as the insert operation above, but targeting the database defined in
 /// the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_insert_datasource_operation() {
+fn test_crud_insert_datasource_operation() {
     let mut new_league: League = League {
         id: Default::default(),
         ext_id: 7892635306594_i64,
@@ -94,7 +94,7 @@ async fn test_crud_insert_datasource_operation() {
 /// The instances without `#[primary_key]` inserts all the values on the instaqce fields
 /// on the database.
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_multi_insert_operation() {
+fn test_crud_multi_insert_operation() {
     let mut new_league_mi: League = League {
         id: Default::default(),
         ext_id: 54376478_i64,
@@ -155,7 +155,7 @@ async fn test_crud_multi_insert_operation() {
 
 /// Same as the multi insert above, but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_multi_insert_datasource_operation() {
+fn test_crud_multi_insert_datasource_operation() {
     let mut new_league_mi: League = League {
         id: Default::default(),
         ext_id: 54376478_i64,

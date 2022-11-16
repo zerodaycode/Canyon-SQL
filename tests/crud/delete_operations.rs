@@ -15,7 +15,7 @@ use crate::tests_models::league::*;
 /// Attemp of usage the `t.delete(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_delete_method_operation() {
+fn test_crud_delete_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
@@ -59,7 +59,7 @@ async fn test_crud_delete_method_operation() {
 
 /// Same as the delete test, but performing the operations with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
-async fn test_crud_delete_datasource_method_operation() {
+fn test_crud_delete_datasource_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
