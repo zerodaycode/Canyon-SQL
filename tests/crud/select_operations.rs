@@ -3,9 +3,9 @@
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *SELECT* statements
 use crate::Error;
+use crate::constants::SQL_SERVER_DS;
 use canyon_sql::{crud::CrudOperations, runtime::tokio};
 
-use crate::constants::PSQL_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 
@@ -40,7 +40,7 @@ async fn test_crud_find_all_unchecked() {
 /// and using the specified datasource
 async fn test_crud_find_all_datasource() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
-        League::find_all_datasource(PSQL_DS).await;
+        League::find_all_datasource(SQL_SERVER_DS).await;
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());
@@ -50,7 +50,7 @@ async fn test_crud_find_all_datasource() {
 /// Same as the `find_all_datasource()`, but with the unchecked variant and the specified dataosource,
 /// returning directly `Vec<T>` and not `Result<Vec<T>, Err>`
 async fn test_crud_find_all_unchecked_datasource() {
-    let find_all_result: Vec<League> = League::find_all_unchecked_datasource(PSQL_DS).await;
+    let find_all_result: Vec<League> = League::find_all_unchecked_datasource(SQL_SERVER_DS).await;
     assert!(!find_all_result.is_empty());
 }
 
@@ -83,7 +83,7 @@ async fn test_crud_find_by_pk() {
 /// Uses the *specified datasource* in the second parameter of the function call.
 async fn test_crud_find_by_pk_datasource() {
     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-        League::find_by_pk_datasource(&27, PSQL_DS).await;
+        League::find_by_pk_datasource(&27, SQL_SERVER_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
     let some_league = find_by_pk_result.unwrap().unwrap();
@@ -112,7 +112,7 @@ async fn test_crud_count_operation() {
 /// the specified datasource
 async fn test_crud_count_datasource_operation() {
     assert_eq!(
-        League::find_all_datasource(PSQL_DS).await.unwrap().len() as i64,
-        League::count_datasource(PSQL_DS).await.unwrap()
+        League::find_all_datasource(SQL_SERVER_DS).await.unwrap().len() as i64,
+        League::count_datasource(SQL_SERVER_DS).await.unwrap()
     );
 }

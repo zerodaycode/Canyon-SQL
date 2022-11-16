@@ -1,3 +1,5 @@
+use std::mem::transmute;
+
 use async_std::net::TcpStream;
 
 use tiberius::{AuthMethod, Config};
@@ -27,12 +29,12 @@ impl DatabaseType {
 /// A connection with a `PostgreSQL` database
 pub struct PostgreSqlConnection {
     pub client: Client,
-    pub connection: Connection<Socket, NoTlsStream>,
+    // pub connection: Connection<Socket, NoTlsStream>,
 }
 
 /// A connection with a `SqlServer` database
 pub struct SqlServerConnection {
-    pub client: tiberius::Client<TcpStream>,
+    pub client: &'static mut tiberius::Client<TcpStream>,
 }
 
 /// The Canyon database connection handler. When a new query is launched,
@@ -56,7 +58,24 @@ pub struct DatabaseConnection {
 unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
 
+#[allow(mutable_transmutes)]
 impl DatabaseConnection {
+    pub async fn launch_mssql_query<'a>(&self, query: tiberius::Query<'a>)
+        -> Result<Vec<tiberius::Row>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        // self.sqlserver_connection.as_ref().unwrap().client
+        let as_mut = unsafe { transmute::<&DatabaseConnection, &mut DatabaseConnection>(self) };
+        
+        Ok(
+            query.query(
+                as_mut.sqlserver_connection.as_mut().unwrap().client
+            ).await?
+            .into_results()
+            .await?
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+        )
+    }
     pub async fn new(
         datasource: &DatasourceProperties<'_>,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
@@ -75,10 +94,16 @@ impl DatabaseConnection {
                 )
                 .await?;
 
+                tokio::spawn(async move {
+                    if let Err(e) = new_connection.await {
+                        eprintln!("An error occured while trying to connect to the PostgreSQL database: {e}");
+                    }
+                });
+
                 Ok(Self {
                     postgres_connection: Some(PostgreSqlConnection {
                         client: new_client,
-                        connection: new_connection,
+                        // connection: new_connection,
                     }),
                     sqlserver_connection: None,
                     database_type: DatabaseType::from_datasource(datasource),
@@ -117,7 +142,11 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: client.expect("A failure happened connecting to the database"),
+                        client: Box::leak(
+                            Box::new(
+                                client.expect("A failure happened connecting to the database")
+                            )
+                        ),
                     }),
                     database_type: DatabaseType::from_datasource(datasource),
                 })

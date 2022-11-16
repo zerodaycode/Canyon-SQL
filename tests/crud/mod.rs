@@ -9,9 +9,9 @@ pub mod querybuilder_operations;
 pub mod select_operations;
 pub mod update_operations;
 
-use crate::constants::PSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 use crate::constants::SQL_SERVER_CREATE_TABLES;
+use crate::constants::SQL_SERVER_FILL_TABLE_VALUES;
 
 /// In order to initialize data on `SqlServer`. we must manually insert it
 /// when the docker starts. SqlServer official docker from Microsoft does
@@ -37,13 +37,28 @@ async fn initialize_sql_server_docker_instance() {
     let config = Config::from_ado_string(&CONN_STR).unwrap();
 
     let tcp = TcpStream::connect(config.get_addr()).await.unwrap();
+    let tcp2 = TcpStream::connect(config.get_addr()).await.unwrap();
     tcp.set_nodelay(true).ok();
 
-    let mut client = Client::connect(config, tcp.compat_write()).await.unwrap();
+    let mut client = Client::connect(config.clone(), tcp.compat_write()).await.unwrap();
     
     // Create the tables
     let query_result = client.query(SQL_SERVER_CREATE_TABLES, &[]).await;
     assert!(!query_result.is_err());
-    // let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await.unwrap();
-    // let leagues = League::find_all_datasource(PSQL_DS).await.unwrap();
+
+    let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await;
+    match leagues_sql {
+        Ok(leagues) => {
+            if leagues.is_empty() {
+                let mut client2 = Client::connect(config, tcp2.compat_write())
+                    .await
+                    .unwrap();
+                let result = client2
+                    .query(SQL_SERVER_FILL_TABLE_VALUES, &[])
+                    .await;
+                assert!(!result.is_err());
+            }
+        },
+        Err(_) => ()
+    }
 }
