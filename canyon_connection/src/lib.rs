@@ -7,17 +7,19 @@ pub extern crate tokio_postgres;
 pub mod canyon_database_connector;
 mod datasources;
 
-use std::{fs, collections::HashMap};
+use std::{fs, collections::HashMap, hash::Hash, thread};
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
 use canyon_database_connector::DatabaseConnection;
-use datasources::DatasourceProperties;
-use std::ops::DerefMut;
 use lazy_static::lazy_static;
+use tokio::sync::Mutex;
 
 const CONFIG_FILE_IDENTIFIER: &str = "canyon.toml";
 
 lazy_static! {
+    pub static ref CANYON_TOKIO_RUNTIME: tokio::runtime::Runtime = 
+        tokio::runtime::Runtime::new().unwrap();
+
     static ref RAW_CONFIG_FILE: String = fs::read_to_string(CONFIG_FILE_IDENTIFIER)
         .expect("Error opening or reading the Canyon configuration file");
     static ref CONFIG_FILE: CanyonSqlConfig<'static> = toml::from_str(RAW_CONFIG_FILE.as_str())
@@ -27,11 +29,10 @@ lazy_static! {
     pub static ref DEFAULT_DATASOURCE: DatasourceConfig<'static> =
         CONFIG_FILE.canyon_sql.datasources.clone()[0];
 
-    pub static ref CACHED_DATABASE_CONN: HashMap<&'static str, &'static mut DatabaseConnection> =
-        init_datasources();
+    pub static ref CACHED_DATABASE_CONN: Mutex<HashMap<&'static str, &'static mut DatabaseConnection>> =
+        Mutex::new(init_datasources());
 
-    pub static ref CACHED_DATABASE_CONN_VEC: Vec<&'static mut DatabaseConnection> =
-        init_pool();
+    pub static ref CACHED_DATABASE_CONN_VEC: Vec<&'static mut DatabaseConnection> = init_pool();
 }
 
 fn init_pool() -> Vec<&'static mut DatabaseConnection> {
@@ -65,8 +66,8 @@ fn init_pool() -> Vec<&'static mut DatabaseConnection> {
 /// job done.
 fn init_datasources() -> HashMap<&'static str, &'static mut DatabaseConnection> {
     let mut pool: HashMap<&'static str, &'static mut DatabaseConnection> = HashMap::new();
-    
-    tokio::runtime::Runtime::new().unwrap().block_on(async {
+
+    tokio::runtime::Handle::current().block_on(async {
         for datasource in DATASOURCES.iter() {
             pool.insert(
                 datasource.name,
@@ -79,6 +80,6 @@ fn init_datasources() -> HashMap<&'static str, &'static mut DatabaseConnection> 
             );
         }
     });
-
+    
     pool
 }

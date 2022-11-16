@@ -62,7 +62,6 @@ unsafe impl Sync for DatabaseConnection {}
 impl DatabaseConnection {
     pub async fn launch_mssql_query<'a>(&self, query: tiberius::Query<'a>)
         -> Result<Vec<tiberius::Row>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        // self.sqlserver_connection.as_ref().unwrap().client
         let as_mut = unsafe { transmute::<&DatabaseConnection, &mut DatabaseConnection>(self) };
         
         Ok(
@@ -76,6 +75,7 @@ impl DatabaseConnection {
             .collect::<Vec<_>>()
         )
     }
+
     pub async fn new(
         datasource: &DatasourceProperties<'_>,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {

@@ -14,6 +14,7 @@ tokio = { version = "1.9.0", features = ["full"] }
 canyon_observer = { path = "../canyon_observer" }
 canyon_manager = { path = "../canyon_manager" }
 canyon_crud = { path = "../canyon_crud" }
+canyon_connection = { path = "../canyon_connection" }
 
 [lib]
 proc-macro = true

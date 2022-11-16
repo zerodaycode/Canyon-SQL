@@ -14,7 +14,7 @@ use crate::tests_models::league::*;
 ///
 /// Attemp of usage the `t.delete(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
-#[tokio::test]
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_delete_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
@@ -58,7 +58,7 @@ async fn test_crud_delete_method_operation() {
 }
 
 /// Same as the delete test, but performing the operations with the specified datasource
-#[tokio::test]
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_delete_datasource_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
@@ -76,14 +76,14 @@ async fn test_crud_delete_datasource_method_operation() {
         .insert_datasource(SQL_SERVER_DS)
         .await
         .expect("Failed insert operation");
-    // assert_eq!(
-    //     new_league.id,
-    //     League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
-    //         .await
-    //         .expect("Request error")
-    //         .expect("None value")
-    //         .id
-    // );
+    assert_eq!(
+        new_league.id,
+        League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
+            .await
+            .expect("Request error")
+            .expect("None value")
+            .id
+    );
 
     // Now that we have an instance mapped to some entity by a primary key, we can now
     // remove that entry from the database with the delete operation
@@ -95,10 +95,10 @@ async fn test_crud_delete_datasource_method_operation() {
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
     // Remeber that `find_by_primary_key(&dyn QueryParameters<'a>) -> Result<Option<T>>, Err>
-    // assert_eq!(
-    //     League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
-    //         .await
-    //         .expect("Unwrapping the result, letting the Option<T>"),
-    //     None
-    // );
+    assert_eq!(
+        League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
+            .await
+            .expect("Unwrapping the result, letting the Option<T>"),
+        None
+    );
 }

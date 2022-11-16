@@ -13,6 +13,10 @@ use crate::constants::SQL_SERVER_DS;
 use crate::constants::SQL_SERVER_CREATE_TABLES;
 use crate::constants::SQL_SERVER_FILL_TABLE_VALUES;
 
+use canyon_sql::runtime::tokio::net::TcpStream;
+use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
+use canyon_sql::db_clients::tiberius::{Config, Client};
+
 /// In order to initialize data on `SqlServer`. we must manually insert it
 /// when the docker starts. SqlServer official docker from Microsoft does
 /// not allow you to run `.sql` files against the database (not at least, without)
@@ -24,13 +28,9 @@ use crate::constants::SQL_SERVER_FILL_TABLE_VALUES;
 /// This will be marked as `#[ignore]`, so we can force to run first the marked as
 /// ignored, check the data available, perform the necessary init operations and
 /// then *cargo test <args...>* the real integration tests
-#[tokio::test]
+#[canyon_sql::macros::canyon_tokio_test]
 #[ignore]
 async fn initialize_sql_server_docker_instance() {
-    use canyon_sql::runtime::tokio::net::TcpStream;
-    use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
-    use canyon_sql::db_clients::tiberius::{Config, Client};
-
     static CONN_STR: &str = 
         "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
 

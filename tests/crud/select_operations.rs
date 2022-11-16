@@ -9,35 +9,37 @@ use canyon_sql::{crud::CrudOperations, runtime::tokio};
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 
-#[tokio::test]
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
 /// and using the *default datasource*
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_find_all() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
         League::find_all().await;
 
     // Connection doesn't return an error
-    assert!(!find_all_result.is_err());
-    assert!(!find_all_result.unwrap().is_empty());
+    // assert!(!find_all_result.is_err());
+    // assert!(!find_all_result.clone().unwrap().is_empty());
+
+    println!("Res 0: {:?}", find_all_result.unwrap().get(0));
 
     let find_all_players: Result<Vec<Player>, Box<dyn Error + Send + Sync>> =
         Player::find_all().await;
-    assert!(!find_all_players.unwrap().is_empty());
+    assert!(find_all_players.unwrap().is_empty());
 }
 
-#[tokio::test]
 /// Same as the `find_all()`, but with the unchecked variant, which directly returns `Vec<T>` not
 /// `Result` wrapped
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_find_all_unchecked() {
     let find_all_result: Vec<League> = League::find_all_unchecked().await;
     assert!(!find_all_result.is_empty());
 }
 
-#[tokio::test]
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
 /// and using the specified datasource
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_find_all_datasource() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
         League::find_all_datasource(SQL_SERVER_DS).await;
@@ -46,19 +48,19 @@ async fn test_crud_find_all_datasource() {
     assert!(!find_all_result.unwrap().is_empty());
 }
 
-#[tokio::test]
 /// Same as the `find_all_datasource()`, but with the unchecked variant and the specified dataosource,
 /// returning directly `Vec<T>` and not `Result<Vec<T>, Err>`
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_find_all_unchecked_datasource() {
     let find_all_result: Vec<League> = League::find_all_unchecked_datasource(SQL_SERVER_DS).await;
     assert!(!find_all_result.is_empty());
 }
 
-#[tokio::test]
 /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
 /// defined with the #[primary_key] attribute over some field of the type.
 ///
 /// Uses the *default datasource*.
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_find_by_pk() {
     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
         League::find_by_pk(&1).await;
@@ -76,11 +78,11 @@ async fn test_crud_find_by_pk() {
     );
 }
 
-#[tokio::test]
 /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
 /// defined with the #[primary_key] attribute over some field of the type.
 ///
 /// Uses the *specified datasource* in the second parameter of the function call.
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_find_by_pk_datasource() {
     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
         League::find_by_pk_datasource(&27, SQL_SERVER_DS).await;
@@ -98,8 +100,8 @@ async fn test_crud_find_by_pk_datasource() {
     );
 }
 
-#[tokio::test]
 /// Counts how many rows contains an entity on the target database.
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_count_operation() {
     assert_eq!(
         League::find_all().await.unwrap().len() as i64,
@@ -107,9 +109,9 @@ async fn test_crud_count_operation() {
     );
 }
 
-#[tokio::test]
 /// Counts how many rows contains an entity on the target database using
 /// the specified datasource
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_count_datasource_operation() {
     assert_eq!(
         League::find_all_datasource(SQL_SERVER_DS).await.unwrap().len() as i64,

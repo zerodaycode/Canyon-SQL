@@ -4,6 +4,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
+use canyon_connection::{DATASOURCES, canyon_database_connector::DatabaseConnection, CACHED_DATABASE_CONN};
 use proc_macro::{Span, TokenStream as CompilerTokenStream};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -97,6 +98,33 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
             }
         }
         .into()
+    }
+}
+
+#[proc_macro_attribute]
+/// Wraps the [`tokio::test`] proc macro in a convenient way to run tests within
+/// the tokio's current reactor
+pub fn canyon_tokio_test(
+    _meta: CompilerTokenStream,
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    let func_res = syn::parse::<FunctionParser>(input);
+    if func_res.is_err() {
+        return quote! { fn non_valid_fn() {} }.into(); // TODO
+    } else {
+        let func = func_res.ok().unwrap();
+        let sign = func.sig;
+        let body = func.block.stmts;
+
+        println!("Generated body for the test: {:?}", &body);
+
+        quote! {
+            #[tokio::test]
+            #sign {
+                canyon_sql::runtime::tokio::runtime::Handle::current()
+                    .spawn(async { #(#body)* });
+            }
+        }.into()
     }
 }
 

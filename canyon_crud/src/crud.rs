@@ -32,46 +32,19 @@ pub trait Transaction<T: Debug> {
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a,
     {
-        let mut database_conn = if datasource_name.is_empty() {
-            CACHED_DATABASE_CONN.values()
-                .into_iter()
+        let guarded_cache = CACHED_DATABASE_CONN.lock().await;
+        let database_conn = if datasource_name.is_empty() {
+            guarded_cache.values()
                 .next()
                 .expect("No default datasource found. Check your `canyon.toml` file")
         } else {
-            let a = CACHED_DATABASE_CONN.get(datasource_name)
+            guarded_cache.get(datasource_name)
                 .expect(
                     &format!(
                         "Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
                     )
-                );
-                a
+                )
         };
-
-        // let ds_index = 0;
-        // let db_c = if datasource_name.is_empty() {
-        //     CACHED_DATABASE_CONN_VEC.get_mut(0)
-        // } else {
-        //     CACHED_DATABASE_CONN_VEC.get_mut(ds_index)
-        // };
-        // for entry in CACHED_DATABASE_CONN.
-        // let database_connection =
-        //     if datasource_name.is_empty() {
-        //         DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
-        //     } else {
-        //         // Get the specified one
-        //         DatabaseConnection::new(
-        //         &DATASOURCES.iter()
-        //         .find(|ds| ds.name == datasource_name)
-        //         .unwrap_or_else(||
-        //             panic!("No datasource found with the specified parameter: `{datasource_name}`")
-        //         ).properties
-        //     ).await
-        //     };
-
-        // if let Err(_db_conn) = database_connection {
-        //     return Err(_db_conn);
-        // } else {
-            // let db_conn = database_connection?;
 
         match database_conn.database_type {
             DatabaseType::PostgreSql => {
@@ -83,7 +56,6 @@ pub trait Transaction<T: Debug> {
                     .await
             }
         }
-        // }
     }
 }
 
@@ -185,6 +157,7 @@ mod postgres_query_launcher {
 
     pub async fn launch<'a, T: Debug>(
         db_conn: &DatabaseConnection,
+        // datasource_name: &str,
         stmt: String,
         params: &'a [&'_ dyn QueryParameters<'_>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
@@ -255,11 +228,11 @@ mod sqlserver_query_launcher {
             );
         }
 
-        let mut sql_server_query = Query::new(stmt.to_owned().replace('$', "@P"));
+        let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
         params
             .as_ref()
             .iter()
-            .for_each(|param| sql_server_query.bind(*param));
+            .for_each(|param| mssql_query.bind(*param));
 
         // let mut client = db_conn
         //     .sqlserver_connection
@@ -276,7 +249,7 @@ mod sqlserver_query_launcher {
         //     .into_iter()
         //     .flatten()
         //     .collect::<Vec<_>>();
-        let yes = (*db_conn).launch_mssql_query(sql_server_query).await?;
+        let yes = (*db_conn).launch_mssql_query(mssql_query).await?;
         Ok(DatabaseResult::new_sqlserver(yes))
     }
 }

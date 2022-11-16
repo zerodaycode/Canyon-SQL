@@ -14,10 +14,10 @@ use crate::constants::PSQL_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::tournament::*;
 
-#[tokio::test]
 /// Given an entity `T` which has some field declaring a foreign key relation
 /// with some another entity `U`, for example, performns a search to find
 /// what is the parent type `U` of `T`
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_search_by_foreign_key() {
     let some_tournament: Tournament = Tournament::find_by_pk(&1)
         .await
@@ -37,8 +37,8 @@ async fn test_crud_search_by_foreign_key() {
     }
 }
 
-#[tokio::test]
 /// Same as the search by foreign key, but with the specified datasource
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_search_by_foreign_key_datasource() {
     let some_tournament: Tournament = Tournament::find_by_pk_datasource(&1, PSQL_DS)
         .await
@@ -62,12 +62,12 @@ async fn test_crud_search_by_foreign_key_datasource() {
     }
 }
 
-#[tokio::test]
 /// Given an entity `U` that is know as the "parent" side of the relation with another
 /// entity `T`, for example, we can ask to the parent for the childrens that belongs
 /// to `U`.
 ///
 /// For this to work, `U`, the parent, must have derived the `ForeignKeyable` proc macro
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_search_reverse_side_foreign_key() {
     let some_league: League = League::find_by_pk(&1)
         .await
@@ -85,9 +85,9 @@ async fn test_crud_search_reverse_side_foreign_key() {
         .for_each(|t| assert_eq!(t.league, some_league.id));
 }
 
-#[tokio::test]
 /// Same as the search by the reverse side of a foreign key relation
 /// but with the specified datasource
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_search_reverse_side_foreign_key_datasource() {
     let some_league: League = League::find_by_pk_datasource(&1, PSQL_DS)
         .await

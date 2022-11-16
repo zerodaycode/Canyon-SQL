@@ -22,6 +22,16 @@ where
     set_clause: String,
     datasource_name: &'a str,
 }
+
+unsafe impl<'a, T> Send for QueryBuilder<'a, T> 
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {}
+
+unsafe impl<'a, T> Sync for QueryBuilder<'a, T> 
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {}
+
+
 impl<'a, T> QueryBuilder<'a, T>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,

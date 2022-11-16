@@ -15,7 +15,7 @@ use crate::tests_models::league::*;
 ///
 /// Attemp of usage the `t.update(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
-#[tokio::test]
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_update_method_operation() {
     // We first retrieve some entity from the database. Note that we must make
     // the retrieved instance mutable of clone it to a new mutable resource
@@ -55,7 +55,7 @@ async fn test_crud_update_method_operation() {
 }
 
 /// Same as the above test, but with the specified datasource.
-#[tokio::test]
+#[canyon_sql::macros::canyon_tokio_test]
 async fn test_crud_update_datasource_method_operation() {
     // We first retrieve some entity from the database. Note that we must make
     // the retrieved instance mutable of clone it to a new mutable resource
@@ -67,7 +67,7 @@ async fn test_crud_update_datasource_method_operation() {
     // The ext_id field value is extracted from the sql scripts under the
     // docker/sql folder. We are retrieving the first entity inserted at the
     // wake up time of the database, and now checking some of its properties.
-    assert_eq!(updt_candidate.ext_id, 100695891328981122);
+    assert_eq!(updt_candidate.ext_id, 10069589122);
 
     // Modify the value, and perform the update
     let updt_value: i64 = 59306442534_i64;
