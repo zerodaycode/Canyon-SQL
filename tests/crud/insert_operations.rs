@@ -1,6 +1,6 @@
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *INSERT* statements
-use canyon_sql::{crud::CrudOperations, runtime::tokio};
+use canyon_sql::crud::CrudOperations;
 
 use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
@@ -75,7 +75,7 @@ fn test_crud_insert_datasource_operation() {
     // value for the primary key field, which is id. So, we can query the
     // database again with the find by primary key operation to check if
     // the value was really inserted
-    let inserted_league = League::find_by_pk(&new_league.id)
+    let inserted_league = League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
         .await
         .expect("Failed the query to the database")
         .expect("No entity found for the primary key value passed in");

@@ -4,7 +4,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
-use canyon_connection::{DATASOURCES, canyon_database_connector::DatabaseConnection, CACHED_DATABASE_CONN, CANYON_TOKIO_RUNTIME};
+use canyon_connection::CANYON_TOKIO_RUNTIME;
 use proc_macro::{Span, TokenStream as CompilerTokenStream};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -32,9 +32,9 @@ use canyon_manager::manager::{
 };
 
 use canyon_observer::{
-    handler::CanyonHandler,
+    // handler::CanyonHandler,
     postgresql::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
-    CANYON_REGISTER_ENTITIES,
+    CANYON_REGISTER_ENTITIES, handler::CanyonHandler,
 };
 
 /// Macro for handling the entry point to the program.
@@ -68,6 +68,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
     if attrs_parse_result.allowed_migrations {
         // The migrations
+        // TODO This macro probably must be upgraded
         CANYON_TOKIO_RUNTIME.block_on(async {
             CanyonHandler::run().await;
         });
@@ -101,7 +102,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 }
 
 #[proc_macro_attribute]
-/// Wraps the [`tokio::test`] proc macro in a convenient way to run tests within
+/// Wraps the [`test`] proc macro in a convenient way to run tests within
 /// the tokio's current reactor
 pub fn canyon_tokio_test(
     _meta: CompilerTokenStream,
@@ -114,14 +115,15 @@ pub fn canyon_tokio_test(
         let func = func_res.ok().unwrap();
         let sign = func.sig;
         let body = func.block.stmts;
-
-        // println!("Generated body for the test: {:?}", &body);
+        let attrs = func.attrs;
 
         quote! {
             #[test]
+            #(#attrs)*
             #sign {
-                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
-                    .block_on(async { 
+                canyon_sql::runtime::init_connection_cache();
+                canyon_sql::runtime::futures::
+                    executor::block_on(async move { 
                         #(#body)* 
                     });
             }

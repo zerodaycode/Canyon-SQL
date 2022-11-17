@@ -1,9 +1,7 @@
-use std::mem::transmute;
-
 use async_std::net::TcpStream;
 
 use tiberius::{AuthMethod, Config};
-use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
+use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceProperties;
 
@@ -58,24 +56,8 @@ pub struct DatabaseConnection {
 unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
 
-#[allow(mutable_transmutes)]
-impl DatabaseConnection {
-    pub async fn launch_mssql_query<'a>(&self, query: tiberius::Query<'a>)
-        -> Result<Vec<tiberius::Row>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let as_mut = unsafe { transmute::<&DatabaseConnection, &mut DatabaseConnection>(self) };
-        
-        Ok(
-            query.query(
-                as_mut.sqlserver_connection.as_mut().unwrap().client
-            ).await?
-            .into_results()
-            .await?
-            .into_iter()
-            .flatten()
-            .collect::<Vec<_>>()
-        )
-    }
 
+impl DatabaseConnection {
     pub async fn new(
         datasource: &DatasourceProperties<'_>,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
@@ -197,7 +179,4 @@ mod database_connection_handler {
             DatabaseType::SqlServer
         );
     }
-
-    // TODO Should we check the behaviour of the database handler here or as an
-    // integration test?
 }

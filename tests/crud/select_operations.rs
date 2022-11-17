@@ -4,10 +4,7 @@
 ///! generates and executes *SELECT* statements
 use crate::Error;
 use crate::constants::SQL_SERVER_DS;
-use canyon_sql::runtime::CANYON_TOKIO_RUNTIME;
-// use canyon_sql::runtime::CANYON_TOKIO_RUNTIME;
-// use canyon_sql::runtime::tokio::join;
-use canyon_sql::{crud::CrudOperations, runtime::tokio};
+use canyon_sql::crud::CrudOperations;
 
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
@@ -15,26 +12,17 @@ use crate::tests_models::player::*;
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
 /// and using the *default datasource*
-#[test]
+#[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_all() {
-    // CANYON_TOKIO_RUNTIME.block_on(async {
-    //     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
-    //     League::find_all().await;
-
-    // // Connection doesn't return an error
-    // // assert!(!find_all_result.is_err());
-    // // assert!(!find_all_result.clone().unwrap().is_empty());
-
-    // eprintln!("Res 0: {:?}", find_all_result.unwrap().get(0));
-
-    // let find_all_players: Result<Vec<Player>, Box<dyn Error + Send + Sync>> =
-    //     Player::find_all().await;
-    // assert!(!find_all_players.unwrap().is_empty());
-    // });
-    assert_eq!(false, true)
-    // let a = join!(r).0;
-    // // println!("ERR T: {:?}", a.0.unwrap().await);
-    // // assert!(a.0.is_err())
+    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
+        League::find_all().await;
+    // Connection doesn't return an error
+    assert!(!find_all_result.is_err());
+    assert!(!find_all_result.unwrap().is_empty());
+    
+    let find_all_players: Result<Vec<Player>, Box<dyn Error + Send + Sync>> =
+        Player::find_all().await;
+    assert!(!find_all_players.unwrap().is_empty());
 }
 
 /// Same as the `find_all()`, but with the unchecked variant, which directly returns `Vec<T>` not
@@ -48,14 +36,14 @@ fn test_crud_find_all_unchecked() {
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
 /// and using the specified datasource
-// #[tokio::test]
-// async fn test_crud_find_all_datasource() {
-//     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
-//         League::find_all_datasource(SQL_SERVER_DS).await;
-//     // Connection doesn't return an error
-//     assert!(!find_all_result.is_err());
-//     assert!(!find_all_result.unwrap().is_empty());
-// }
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_all_datasource() {
+    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
+        League::find_all_datasource(SQL_SERVER_DS).await;
+    // Connection doesn't return an error
+    assert!(!find_all_result.is_err());
+    assert!(!find_all_result.unwrap().is_empty());
+}
 
 /// Same as the `find_all_datasource()`, but with the unchecked variant and the specified dataosource,
 /// returning directly `Vec<T>` and not `Result<Vec<T>, Err>`
