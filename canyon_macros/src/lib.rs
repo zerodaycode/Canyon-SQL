@@ -80,7 +80,7 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
         // The final code wired in main()
         quote! {
             use canyon_sql::tokio;
-            #[tokio::main]
+            #[tokio::main]  // TODO This runtime must be replaced for the Canyon's generated one
             async #sign {
                 {
                     #(#queries_tokens)*

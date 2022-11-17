@@ -28,11 +28,11 @@ use canyon_sql::db_clients::tiberius::{Config, Client};
 /// ignored, check the data available, perform the necessary init operations and
 /// then *cargo test <args...>* the real integration tests
 #[canyon_sql::macros::canyon_tokio_test]
-// #[ignore]
+#[ignore]
 fn initialize_sql_server_docker_instance() {
     CANYON_TOKIO_RUNTIME.block_on(async {
         static CONN_STR: &str = 
-        "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
+            "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
 
         let config = Config::from_ado_string(&CONN_STR).unwrap();
 

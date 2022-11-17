@@ -1,6 +1,6 @@
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *UPDATE* statements
-use canyon_sql::{crud::CrudOperations, runtime::tokio};
+use canyon_sql::crud::CrudOperations;
 
 use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
@@ -27,7 +27,7 @@ fn test_crud_update_method_operation() {
     // The ext_id field value is extracted from the sql scripts under the
     // docker/sql folder. We are retrieving the first entity inserted at the
     // wake up time of the database, and now checking some of its properties.
-    assert_eq!(updt_candidate.ext_id, 100695891328981122);
+    assert_eq!(updt_candidate.ext_id, 100695891328981122_i64);
 
     // Modify the value, and perform the update
     let updt_value: i64 = 593064_i64;
@@ -67,7 +67,7 @@ fn test_crud_update_datasource_method_operation() {
     // The ext_id field value is extracted from the sql scripts under the
     // docker/sql folder. We are retrieving the first entity inserted at the
     // wake up time of the database, and now checking some of its properties.
-    assert_eq!(updt_candidate.ext_id, 10069589122);
+    assert_eq!(updt_candidate.ext_id, 100695891328981122_i64);
 
     // Modify the value, and perform the update
     let updt_value: i64 = 59306442534_i64;
@@ -78,18 +78,18 @@ fn test_crud_update_datasource_method_operation() {
         .expect("Failed the update operation");
 
     // Retrieve it again, and check if the value was really updated
-    // let updt_entity: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)
-    //     .await
-    //     .expect("[2] - Failed the query to the database")
-    //     .expect("[2] - No entity found for the primary key value passed in");
+    let updt_entity: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)
+        .await
+        .expect("[2] - Failed the query to the database")
+        .expect("[2] - No entity found for the primary key value passed in");
 
-    // assert_eq!(updt_entity.ext_id, updt_value);
+    assert_eq!(updt_entity.ext_id, updt_value);
 
     // We rollback the changes to the initial value to don't broke other tests
     // the next time that will run
     updt_candidate.ext_id = 100695891328981122_i64;
     updt_candidate
-        .update()
+        .update_datasource(SQL_SERVER_DS)
         .await
-        .expect("Failed the restablish initial value update operation");
+        .expect("Failed to restablish the initial value update operation");
 }
