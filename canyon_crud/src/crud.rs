@@ -1,15 +1,13 @@
 use std::fmt::{Debug, Display};
 
 use async_trait::async_trait;
+use canyon_connection::CACHED_DATABASE_CONN;
 use canyon_connection::canyon_database_connector::DatabaseType;
 
 use crate::mapper::RowMapper;
 use crate::result::DatabaseResult;
 use crate::{bounds::QueryParameters, query_elements::query_builder::QueryBuilder};
 
-use canyon_connection::{
-    canyon_database_connector::DatabaseConnection, DATASOURCES, DEFAULT_DATASOURCE,
-};
 
 /// This traits defines and implements a query against a database given
 /// an statemt `stmt` and the params to pass the to the client.
@@ -20,7 +18,9 @@ use canyon_connection::{
 #[async_trait]
 #[allow(clippy::question_mark)]
 pub trait Transaction<T: Debug> {
-    /// Performs the necessary to execute a query against the database
+    /// Performs a query against the targeted database by the selected datasource.
+    /// 
+    /// No datasource means take the entry zero 
     async fn query<'a, S, Z>(
         stmt: S,
         params: Z,
@@ -30,34 +30,29 @@ pub trait Transaction<T: Debug> {
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a,
     {
-        let database_connection =
-            if datasource_name.is_empty() {
-                DatabaseConnection::new(&DEFAULT_DATASOURCE.properties).await
-            } else {
-                // Get the specified one
-                DatabaseConnection::new(
-                &DATASOURCES.iter()
-                .find(|ds| ds.name == datasource_name)
-                .unwrap_or_else(||
-                    panic!("No datasource found with the specified parameter: `{datasource_name}`")
-                ).properties
-            ).await
-            };
+        let guarded_cache = CACHED_DATABASE_CONN.lock().await;
 
-        if let Err(_db_conn) = database_connection {
-            return Err(_db_conn);
+        let database_conn = if datasource_name.is_empty() {
+            guarded_cache.values()
+                .next()
+                .expect("No default datasource found. Check your `canyon.toml` file")
         } else {
-            let db_conn = database_connection?;
+            guarded_cache.get(datasource_name)
+                .expect(
+                    &format!(
+                        "Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
+                    )
+                )
+        };
 
-            match db_conn.database_type {
-                DatabaseType::PostgreSql => {
-                    postgres_query_launcher::launch::<T>(db_conn, stmt.to_string(), params.as_ref())
-                        .await
-                }
-                DatabaseType::SqlServer => {
-                    sqlserver_query_launcher::launch::<T, Z>(db_conn, &mut stmt.to_string(), params)
-                        .await
-                }
+        match database_conn.database_type {
+            DatabaseType::PostgreSql => {
+                postgres_query_launcher::launch::<T>(database_conn, stmt.to_string(), params.as_ref())
+                    .await
+            }
+            DatabaseType::SqlServer => {
+                sqlserver_query_launcher::launch::<T, Z>(database_conn, &mut stmt.to_string(), params)
+                    .await
             }
         }
     }
@@ -160,51 +155,45 @@ mod postgres_query_launcher {
     use std::fmt::Debug;
 
     pub async fn launch<'a, T: Debug>(
-        db_conn: DatabaseConnection,
+        db_conn: &DatabaseConnection,
+        // datasource_name: &str,
         stmt: String,
         params: &'a [&'_ dyn QueryParameters<'_>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let postgres_connection = db_conn.postgres_connection.unwrap();
-        let (client, connection) = (postgres_connection.client, postgres_connection.connection);
-
-        canyon_connection::tokio::spawn(async move {
-            if let Err(e) = connection.await {
-                eprintln!("An error occured while trying to connect to the database: {e}");
-            }
-        });
 
         let mut m_params = Vec::new();
         for param in params {
             m_params.push(param.as_postgres_param());
         }
 
-        let query_result = client.query(&stmt, m_params.as_slice()).await;
+        let query_result = db_conn.postgres_connection.as_ref().unwrap().client.query(&stmt, m_params.as_slice()).await;
 
         if let Err(error) = query_result {
             Err(Box::new(error))
         } else {
             Ok(DatabaseResult::new_postgresql(
-                query_result.expect("A really bad error happened"),
+                query_result.expect("A really bad error happened querying PostgreSQL"),
             ))
         }
     }
 }
 
 mod sqlserver_query_launcher {
-    use std::fmt::Debug;
+    use std::{fmt::Debug, mem::transmute};
+
+    use canyon_connection::tiberius::Row;
 
     use crate::{
         bounds::QueryParameters,
         canyon_connection::{
-            async_std::net::TcpStream,
             canyon_database_connector::DatabaseConnection,
-            tiberius::{Client, Query, Row},
+            tiberius::Query,
         },
         result::DatabaseResult,
     };
 
     pub async fn launch<'a, T, Z>(
-        db_conn: DatabaseConnection,
+        db_conn: &&mut DatabaseConnection,
         stmt: &mut String,
         params: Z,
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
@@ -230,20 +219,21 @@ mod sqlserver_query_launcher {
             );
         }
 
-        let mut sql_server_query = Query::new(stmt.to_owned().replace('$', "@P"));
+        let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
         params
             .as_ref()
             .iter()
-            .for_each(|param| sql_server_query.bind(*param));
+            .for_each(|param| mssql_query.bind(*param));
 
-        let client: &mut Client<TcpStream> = &mut db_conn
-            .sqlserver_connection
-            .expect("Error querying the SqlServer database") // TODO Better msg?
-            .client;
-
-        let _results: Vec<Row> = sql_server_query
-            .query(client)
-            .await?
+        #[allow(mutable_transmutes)]
+        let _results: Vec<Row> = mssql_query
+            .query(
+                unsafe { transmute::<&DatabaseConnection, &mut DatabaseConnection>(db_conn) }
+                    .sqlserver_connection
+                    .as_mut()
+                    .expect("Error querying the MSSQL database")
+                    .client
+            ).await?
             .into_results()
             .await?
             .into_iter()

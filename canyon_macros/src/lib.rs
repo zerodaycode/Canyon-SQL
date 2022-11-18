@@ -4,6 +4,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
+use canyon_connection::CANYON_TOKIO_RUNTIME;
 use proc_macro::{Span, TokenStream as CompilerTokenStream};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -31,9 +32,9 @@ use canyon_manager::manager::{
 };
 
 use canyon_observer::{
-    handler::CanyonHandler,
+    // handler::CanyonHandler,
     postgresql::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
-    CANYON_REGISTER_ENTITIES,
+    CANYON_REGISTER_ENTITIES, handler::CanyonHandler,
 };
 
 /// Macro for handling the entry point to the program.
@@ -45,7 +46,7 @@ use canyon_observer::{
 /// to run in order to check the provided code and in order to perform
 /// the necessary operations for the migrations
 #[proc_macro_attribute]
-pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
 
     // Parses the attributes declared in the arguments of this proc macro
@@ -67,8 +68,8 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
     if attrs_parse_result.allowed_migrations {
         // The migrations
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async {
+        // TODO This macro probably must be upgraded
+        CANYON_TOKIO_RUNTIME.block_on(async {
             CanyonHandler::run().await;
         });
 
@@ -78,25 +79,64 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
         // The final code wired in main()
         quote! {
-            use canyon_sql::tokio;
-            #[tokio::main]
-            async #sign {
-                {
-                    #(#queries_tokens)*
-                }
-                #(#body)*
+            #sign {
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                    .handle()
+                    .block_on( async {
+                        canyon_sql::runtime::init_connection_cache().await;
+                        {
+                            #(#queries_tokens)*
+                        }
+                        #(#body)*
+                    }
+                )
             }
         }
         .into()
     } else {
         quote! {
-            use canyon_sql::tokio;
-            #[tokio::main]
-            async #sign {
-                #(#body)*
+            #sign {
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                .handle()
+                .block_on( async {
+                        canyon_sql::runtime::init_connection_cache().await;
+                        #(#body)*
+                    }
+                )
             }
         }
         .into()
+    }
+}
+
+#[proc_macro_attribute]
+/// Wraps the [`test`] proc macro in a convenient way to run tests within
+/// the tokio's current reactor
+pub fn canyon_tokio_test(
+    _meta: CompilerTokenStream,
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    let func_res = syn::parse::<FunctionParser>(input);
+    if func_res.is_err() {
+        return quote! { fn non_valid_test_fn() {} }.into();
+    } else {
+        let func = func_res.ok().unwrap();
+        let sign = func.sig;
+        let body = func.block.stmts;
+        let attrs = func.attrs;
+
+        quote! {
+            #[test]
+            #(#attrs)*
+            #sign {
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                    .handle()
+                    .block_on( async { 
+                        canyon_sql::runtime::init_connection_cache().await;
+                        #(#body)* 
+                    });
+            }
+        }.into()
     }
 }
 

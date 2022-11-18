@@ -1,7 +1,7 @@
 use async_std::net::TcpStream;
 
 use tiberius::{AuthMethod, Config};
-use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
+use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceProperties;
 
@@ -27,12 +27,12 @@ impl DatabaseType {
 /// A connection with a `PostgreSQL` database
 pub struct PostgreSqlConnection {
     pub client: Client,
-    pub connection: Connection<Socket, NoTlsStream>,
+    // pub connection: Connection<Socket, NoTlsStream>,
 }
 
 /// A connection with a `SqlServer` database
 pub struct SqlServerConnection {
-    pub client: tiberius::Client<TcpStream>,
+    pub client: &'static mut tiberius::Client<TcpStream>,
 }
 
 /// The Canyon database connection handler. When a new query is launched,
@@ -56,6 +56,7 @@ pub struct DatabaseConnection {
 unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
 
+
 impl DatabaseConnection {
     pub async fn new(
         datasource: &DatasourceProperties<'_>,
@@ -75,10 +76,16 @@ impl DatabaseConnection {
                 )
                 .await?;
 
+                tokio::spawn(async move {
+                    if let Err(e) = new_connection.await {
+                        eprintln!("An error occured while trying to connect to the PostgreSQL database: {e}");
+                    }
+                });
+
                 Ok(Self {
                     postgres_connection: Some(PostgreSqlConnection {
                         client: new_client,
-                        connection: new_connection,
+                        // connection: new_connection,
                     }),
                     sqlserver_connection: None,
                     database_type: DatabaseType::from_datasource(datasource),
@@ -117,7 +124,11 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: client.expect("A failure happened connecting to the database"),
+                        client: Box::leak(
+                            Box::new(
+                                client.expect("A failure happened connecting to the database")
+                            )
+                        ),
                     }),
                     database_type: DatabaseType::from_datasource(datasource),
                 })
@@ -168,7 +179,4 @@ mod database_connection_handler {
             DatabaseType::SqlServer
         );
     }
-
-    // TODO Should we check the behaviour of the database handler here or as an
-    // integration test?
 }
