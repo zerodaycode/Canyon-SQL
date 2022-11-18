@@ -45,19 +45,17 @@ lazy_static! {
 /// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) sufferes a lot when it has continuous
 /// statements with multiple queries, like and insert followed by a find by id to check if the insert query has done its
 /// job done.
-pub fn init_connection_cache() {
-    CANYON_TOKIO_RUNTIME.handle().block_on( async {
-        for datasource in DATASOURCES.iter() {
-            CACHED_DATABASE_CONN.lock().await.insert(
-                datasource.name,
-                Box::leak(
-                    Box::new(
-                        DatabaseConnection::new(&datasource.properties)
-                            .await
-                            .expect(&format!("Error pooling a new connection for the datasource: {:?}", datasource.name))
-                        )
-                )
-            );
-        }
-    });
+pub async fn init_connection_cache() {
+    for datasource in DATASOURCES.iter() {
+        CACHED_DATABASE_CONN.lock().await.insert(
+            datasource.name,
+            Box::leak(
+                Box::new(
+                    DatabaseConnection::new(&datasource.properties)
+                        .await
+                        .expect(&format!("Error pooling a new connection for the datasource: {:?}", datasource.name))
+                    )
+            )
+        );
+    }
 }

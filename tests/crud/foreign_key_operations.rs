@@ -40,7 +40,7 @@ fn test_crud_search_by_foreign_key() {
 /// Same as the search by foreign key, but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_by_foreign_key_datasource() {
-    let some_tournament: Tournament = Tournament::find_by_pk_datasource(&1, SQL_SERVER_DS)
+    let some_tournament: Tournament = Tournament::find_by_pk_datasource(&10, SQL_SERVER_DS)
         .await
         .expect("Result variant of the query is err")
         .expect("No result found for the given parameter");
@@ -89,6 +89,8 @@ fn test_crud_search_reverse_side_foreign_key() {
 /// but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key_datasource() {
+    let find_all_league = League::find_all_datasource(SQL_SERVER_DS).await
+        .unwrap();
     let some_league: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)
         .await
         .expect("Result variant of the query is err")

@@ -20,7 +20,7 @@ alias BuildCanyonWinFull='cargo clean && cargo build --all-features --target=x86
 
 # Runs the integration tests of the project for a Windows target
 alias IntegrationTestsWin='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture'
-alias ITWinIncludeIgnored='cargo test --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --include-ignored'
+alias ITWinIncludeIgnored='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
 alias SqlServerInitialization='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --include-ignored'
 
 # Collects the code coverage for the project (tests must run before this)

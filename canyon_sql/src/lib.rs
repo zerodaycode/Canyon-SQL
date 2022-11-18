@@ -7,7 +7,11 @@
 
 /// Reexported elements to the root of the public API
 // pub use canyon_crud::*;
-pub use canyon_observer::*;
+pub use canyon_observer::*;  // TODO Pending of refactor de migrations
+
+/// The top level reexport. Here we define the path to some really important
+/// things in `Canyon-SQL`, like the `main` macro, the IT macro.
+pub use canyon_macros::main;
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
 pub mod macros {

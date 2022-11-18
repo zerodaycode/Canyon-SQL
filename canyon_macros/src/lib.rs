@@ -46,7 +46,7 @@ use canyon_observer::{
 /// to run in order to check the provided code and in order to perform
 /// the necessary operations for the migrations
 #[proc_macro_attribute]
-pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
 
     // Parses the attributes declared in the arguments of this proc macro
@@ -79,22 +79,30 @@ pub fn canyon(_meta: CompilerTokenStream, input: CompilerTokenStream) -> Compile
 
         // The final code wired in main()
         quote! {
-            use canyon_sql::tokio;
-            #[tokio::main]  // TODO This runtime must be replaced for the Canyon's generated one
-            async #sign {
-                {
-                    #(#queries_tokens)*
-                }
-                #(#body)*
+            #sign {
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                    .handle()
+                    .block_on( async {
+                        canyon_sql::runtime::init_connection_cache().await;
+                        {
+                            #(#queries_tokens)*
+                        }
+                        #(#body)*
+                    }
+                )
             }
         }
         .into()
     } else {
         quote! {
-            use canyon_sql::tokio;
-            #[tokio::main]
-            async #sign {
-                #(#body)*
+            #sign {
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                .handle()
+                .block_on( async {
+                        canyon_sql::runtime::init_connection_cache().await;
+                        #(#body)*
+                    }
+                )
             }
         }
         .into()
@@ -110,7 +118,7 @@ pub fn canyon_tokio_test(
 ) -> CompilerTokenStream {
     let func_res = syn::parse::<FunctionParser>(input);
     if func_res.is_err() {
-        return quote! { fn non_valid_fn() {} }.into(); // TODO
+        return quote! { fn non_valid_test_fn() {} }.into();
     } else {
         let func = func_res.ok().unwrap();
         let sign = func.sig;
@@ -121,9 +129,10 @@ pub fn canyon_tokio_test(
             #[test]
             #(#attrs)*
             #sign {
-                canyon_sql::runtime::init_connection_cache();
-                canyon_sql::runtime::futures::
-                    executor::block_on(async move { 
+                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                    .handle()
+                    .block_on( async { 
+                        canyon_sql::runtime::init_connection_cache().await;
                         #(#body)* 
                     });
             }

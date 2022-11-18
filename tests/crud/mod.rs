@@ -11,7 +11,6 @@ use crate::constants::SQL_SERVER_FILL_TABLE_VALUES;
 use crate::tests_models::league::League;
 
 use canyon_sql::crud::CrudOperations;
-use canyon_sql::runtime::CANYON_TOKIO_RUNTIME;
 use canyon_sql::runtime::tokio::net::TcpStream;
 use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
 use canyon_sql::db_clients::tiberius::{Config, Client};
@@ -30,7 +29,7 @@ use canyon_sql::db_clients::tiberius::{Config, Client};
 #[canyon_sql::macros::canyon_tokio_test]
 #[ignore]
 fn initialize_sql_server_docker_instance() {
-    CANYON_TOKIO_RUNTIME.block_on(async {
+    canyon_sql::runtime::futures::executor::block_on(async {
         static CONN_STR: &str = 
             "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
 
