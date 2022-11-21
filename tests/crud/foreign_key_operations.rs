@@ -89,8 +89,6 @@ fn test_crud_search_reverse_side_foreign_key() {
 /// but with the specified datasource
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key_datasource() {
-    let find_all_league = League::find_all_datasource(SQL_SERVER_DS).await
-        .unwrap();
     let some_league: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)
         .await
         .expect("Result variant of the query is err")

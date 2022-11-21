@@ -24,7 +24,7 @@ use query_operations::{
 use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use canyon_manager::manager::{
+use canyon_observer::manager::{
     entity::CanyonEntity,
     manager_builder::{
         generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,

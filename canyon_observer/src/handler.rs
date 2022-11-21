@@ -15,6 +15,21 @@ use super::{
     CANYON_REGISTER_ENTITIES,
 };
 
+#[derive(PartialDebug)]
+pub struct Migrations;
+// Makes this structure able to make queries to the database
+impl Transaction<Self> for Migrations {}
+
+impl Migrations {
+    /// Launches the mechanism to parse the Database schema, the Canyon register
+    /// and the database table with the memory of Canyon to perform the
+    /// migrations over the targeted database
+    pub async fn migrate() {
+        let mut db_operation = DatabaseSyncOperations::default();
+        let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+    }
+}
+
 /// Provides the necessary entities to let Canyon perform and develop
 /// it's full potential, completly managing all the entities written by
 /// the user and annotated with the `#[canyon_entity]`

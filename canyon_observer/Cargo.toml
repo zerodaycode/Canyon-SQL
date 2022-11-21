@@ -11,11 +11,14 @@ tokio-postgres = { version = "0.7.2" , features=["with-chrono-0_4"] }
 async-trait = { version = "0.1.50" }
 regex = "1.5"
 walkdir = "2"
+
 proc-macro2 = "1.0.27"
+syn = { version = "1.0.86", features = ["full", "parsing"] }
+quote = "1.0.9"
 
 # Debug
 partialdebug = "0.2.0"
 
+# Internal dependencies
 canyon_crud = { path = "../canyon_crud" }
-canyon_manager = { path = "../canyon_manager" }
 canyon_connection = { path = "../canyon_connection" }
