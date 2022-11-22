@@ -24,12 +24,12 @@ use query_operations::{
 use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use canyon_observer::manager::{
+use canyon_observer::{manager::{
     entity::CanyonEntity,
     manager_builder::{
         generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
     },
-};
+}, handler::Migrations};
 
 use canyon_observer::{
     // handler::CanyonHandler,
@@ -70,7 +70,8 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
         // The migrations
         // TODO This macro probably must be upgraded
         CANYON_TOKIO_RUNTIME.block_on(async {
-            CanyonHandler::run().await;
+            // CanyonHandler::run().await;
+            // Migrations::migrate().await;
         });
 
         // The queries to execute at runtime in the managed state
@@ -138,6 +139,31 @@ pub fn canyon_tokio_test(
             }
         }.into()
     }
+}
+
+/// Generates the enums that contains the `TypeFields` and `TypeFieldsValues`
+/// that the querybuilder requires for construct its queries
+#[proc_macro_derive(Fields)]
+pub fn querybuilder_fields(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    let entity_res = syn::parse::<CanyonEntity>(input);
+
+    if entity_res.is_err() {
+        return entity_res
+            .expect_err("Unexpected error parsing the struct")
+            .into_compile_error()
+            .into();
+    }
+
+    // No errors detected on the parsing, so we can safely unwrap the parse result
+    let entity = entity_res.expect("Unexpected error parsing the struct");
+    let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
+    let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
+    quote! {
+        #_generated_enum_type_for_fields
+        #_generated_enum_type_for_fields_values
+    }.into()
 }
 
 /// Takes data from the struct annotated with the `canyon_entity` macro to fill the Canyon Register
@@ -223,11 +249,8 @@ pub fn canyon_entity(
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
     let entity = entity_res.expect("Unexpected error parsing the struct");
-
     // Generate the bits of code that we should give back to the compiler
     let generated_user_struct = generate_user_struct(&entity);
-    let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
-    let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
 
     // The identifier of the entities
     let mut new_entity = CanyonRegisterEntity::default();
@@ -244,8 +267,7 @@ pub fn canyon_entity(
             ..Default::default()
         };
 
-        field
-            .attributes
+        field.attributes
             .iter()
             .for_each(|attr| new_entity_field.annotations.push(attr.get_as_string()));
 
@@ -261,8 +283,6 @@ pub fn canyon_entity(
     // Assemble everything
     let tokens = quote! {
         #generated_user_struct
-        #_generated_enum_type_for_fields
-        #_generated_enum_type_for_fields_values
     };
 
     // Pass the result back to the compiler
@@ -270,8 +290,7 @@ pub fn canyon_entity(
         quote! {
             #macro_error
             #generated_user_struct
-        }
-        .into()
+        }.into()
     } else {
         tokens.into()
     }

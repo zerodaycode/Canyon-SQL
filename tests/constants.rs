@@ -2,6 +2,37 @@
 pub const PSQL_DS: &str = "postgres_docker";
 pub const SQL_SERVER_DS: &str = "sqlserver_docker";
 
+pub static FETCH_PUBLIC_SCHEMA: &str =
+"SELECT
+    gi.table_name,
+    gi.column_name,
+    gi.data_type,
+    gi.character_maximum_length,
+    gi.is_nullable,
+    gi.column_default,
+    gi.numeric_precision,
+    gi.numeric_scale,
+    gi.numeric_precision_radix,
+    gi.datetime_precision,
+    gi.interval_type,
+    CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'FOREIGN KEY')
+        THEN CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) ELSE NULL END AS foreign_key_info,
+    CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'FOREIGN KEY')
+        THEN con.conname ELSE NULL END AS foreign_key_name,
+    CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'PRIMARY KEY')
+        THEN CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) ELSE NULL END AS primary_key_info,
+    CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'PRIMARY KEY')
+        THEN con.conname ELSE NULL END AS primary_key_name,
+    gi.is_identity,
+    gi.identity_generation
+FROM
+    information_schema.columns AS gi
+LEFT JOIN pg_catalog.pg_constraint AS con on
+    gi.table_name = CAST(con.conrelid::regclass AS TEXT) AND
+    gi.column_name = split_part(split_part(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT),')',1),'(',2)
+WHERE
+    table_schema = 'public';";
+
 
 pub const SQL_SERVER_CREATE_TABLES: &str = "
 IF OBJECT_ID(N'[dbo].[league]', N'U') IS NULL

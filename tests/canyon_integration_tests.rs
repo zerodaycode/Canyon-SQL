@@ -8,6 +8,8 @@ use std::error::Error;
 /// variants of the `find_all` implementations. We will go to directly `.unwrap()` the results
 /// because, if there's something wrong in the code reported by the tests, we want to *panic*
 /// and abort the execution.
-mod constants;
 mod crud;
+mod migrations;
+
+mod constants;
 mod tests_models;

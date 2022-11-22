@@ -1,4 +1,4 @@
-use crate::{crud::Transaction, mapper::RowMapper};
+use crate::{crud::Transaction, mapper::RowMapper, bounds::Row};
 use canyon_connection::{canyon_database_connector::DatabaseType, tiberius, tokio_postgres};
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -7,7 +7,7 @@ use std::{fmt::Debug, marker::PhantomData};
 /// and providing methods to deserialize this result into a **user defined struct**
 #[derive(Debug)]
 pub struct DatabaseResult<T: Debug> {
-    pub wrapper: Vec<tokio_postgres::Row>,
+    pub postgres: Vec<tokio_postgres::Row>,
     pub sqlserver: Vec<tiberius::Row>,
     pub active_ds: DatabaseType,
     _phantom_data: std::marker::PhantomData<T>,
@@ -16,8 +16,8 @@ pub struct DatabaseResult<T: Debug> {
 impl<T: Debug> DatabaseResult<T> {
     pub fn new_postgresql(result: Vec<tokio_postgres::Row>) -> Self {
         Self {
-            wrapper: result,
-            sqlserver: vec![],
+            postgres: result,
+            sqlserver: Vec::with_capacity(0),
             active_ds: DatabaseType::PostgreSql,
             _phantom_data: PhantomData,
         }
@@ -25,7 +25,7 @@ impl<T: Debug> DatabaseResult<T> {
 
     pub fn new_sqlserver(results: Vec<tiberius::Row>) -> Self {
         Self {
-            wrapper: vec![],
+            postgres: Vec::with_capacity(0),
             sqlserver: results,
             active_ds: DatabaseType::SqlServer,
             _phantom_data: PhantomData,
@@ -54,7 +54,7 @@ impl<T: Debug> DatabaseResult<T> {
     {
         let mut results = Vec::new();
 
-        self.wrapper
+        self.postgres
             .iter()
             .for_each(|row| results.push(Z::deserialize_postgresql(row)));
 
@@ -74,6 +74,29 @@ impl<T: Debug> DatabaseResult<T> {
         results
     }
 
+    pub fn as_canyon_row(&self) -> Vec<&dyn Row> {
+        let mut results = Vec::new();
+
+        match self.active_ds {
+            DatabaseType::PostgreSql => {
+                self.postgres
+                    .iter()
+                    .for_each(|row| results.push(
+                        row as &dyn Row
+                    ));
+            },
+            DatabaseType::SqlServer => {
+                self.sqlserver
+                    .iter()
+                    .for_each(|row| results.push(
+                        row as &dyn Row
+                    ));
+            },
+        };
+
+        results
+    }
+
     /// Returns the active datasource
     pub fn get_active_ds(&self) -> &DatabaseType {
         &self.active_ds
@@ -82,7 +105,7 @@ impl<T: Debug> DatabaseResult<T> {
     /// Returns how many rows contains the result of the query
     pub fn number_of_results(&self) -> usize {
         match self.active_ds {
-            DatabaseType::PostgreSql => self.wrapper.len(),
+            DatabaseType::PostgreSql => self.postgres.len(),
             DatabaseType::SqlServer => self.sqlserver.len(),
         }
     }

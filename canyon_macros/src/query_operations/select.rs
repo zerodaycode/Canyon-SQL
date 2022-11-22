@@ -164,7 +164,7 @@ pub fn generate_count_tokens(
             match c.get_active_ds() {
                 canyon_sql::crud::DatabaseType::PostgreSql => {
                     Ok(
-                        c.wrapper.get(0)
+                        c.postgres.get(0)
                             .expect(&format!("Count operation failed for {:?}", #ty_str))
                             .get::<&str, i64>("count")
                             .to_owned()

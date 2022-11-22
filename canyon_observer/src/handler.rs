@@ -1,7 +1,10 @@
+use canyon_connection::{CACHED_DATABASE_CONN, get_database_type_from_datasource_name, tiberius};
 use partialdebug::placeholder::PartialDebug;
-use tokio_postgres::{types::Type, Row};
+use tokio_postgres::{types::Type};
 
-use canyon_crud::crud::Transaction;
+use canyon_crud::{crud::Transaction, bounds::{Row, RowOperations}, DatabaseType, result::DatabaseResult};
+
+use crate::constants;
 
 use super::{
     memory::CanyonMemory,
@@ -24,9 +27,90 @@ impl Migrations {
     /// Launches the mechanism to parse the Database schema, the Canyon register
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
-    pub async fn migrate() {
+    pub async fn migrate(datasource_name: &str) {
         let mut db_operation = DatabaseSyncOperations::default();
         let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+
+        // Tracked entities that must be migrated whenever Canyon starts
+        let db_type = get_database_type_from_datasource_name(datasource_name).await;
+        let schema_status = Self::fetch_database(datasource_name, db_type).await;
+        let table_rows = Self::get_table_rows(&schema_status);
+    }
+
+    /// Fetches a concrete schema metadata by target the database
+    /// choosed by it's datasource name property
+    async fn fetch_database(datasource_name: &str, db_type: DatabaseType) -> DatabaseResult<Migrations>
+    {
+        let query = match db_type {
+            DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
+            DatabaseType::SqlServer => todo!()
+        };
+
+        Self::query(query, &[], datasource_name)
+            .await
+            .unwrap()
+    }
+
+    ///
+    fn get_table_rows(db_results: &DatabaseResult<Migrations>) -> Vec<RowTable> {
+        let mut schema_info: Vec<RowTable> = Vec::new();
+
+        for res_row in db_results.as_canyon_row().into_iter() {
+            let unique_table = schema_info
+                .iter_mut()
+                .find(|table| table.table_name == res_row.get::<&str>("table_name"));
+            match unique_table {
+                Some(table) => {
+                    /* If a table entity it's already present on the collection, we add it
+                    the founded columns related to the table */
+                    Self::get_columns_for_table(res_row, table);
+                }
+                None => {
+                    /* If there's no table for a given "table_name" property on the
+                    collection yet, we must create a new instance and attach it
+                    the founded columns data in this iteration */
+                    let new_table = RowTable {
+                        table_name: res_row.get::<&str>("table_name").to_owned(),
+                        columns: Vec::new(),
+                    };
+                    // Self::get_row_postgres_columns_for_table(res_row, &mut new_table);
+                    schema_info.push(new_table);
+                }
+            };
+        }
+
+        schema_info
+        // Self::generate_mapped_table_entities(schema_info)
+    }
+
+    /// Maps a [`Row`] from the `information_schema` table into a [`RowTable`],
+    /// by extracting every single column in a Row and making a relation between the column's name,
+    /// the datatype of the value that it's holding, and the value itself.
+    fn get_columns_for_table(res_row: &dyn Row, table: &mut RowTable) {
+        for column in res_row.columns().iter() {
+            if column.name() != "table_name" { // Discards the column "table_name"
+                let mut new_column = RelatedColumn {
+                    column_identifier: column.name().to_string(),
+                    datatype: column.type_().to_string(),
+                    value: ColumnTypeValue::NoneValue,
+                };
+
+                match *postgre_column.type_() {
+                    Type::NAME | Type::VARCHAR | Type::TEXT => {
+                        new_column.value = ColumnTypeValue::StringValue(
+                            res_row.get::<Option<String>>(postgre_column.name()),
+                        );
+                    }
+                    Type::INT4 => {
+                        new_column.value = ColumnTypeValue::IntValue(
+                            res_row.get::<Option<i32>>(postgre_column.name()),
+                        );
+                    }
+                    _ => new_column.value = ColumnTypeValue::NoneValue,
+                }
+                table.columns.push(new_column)
+            }
+        }
     }
 }
 
@@ -79,7 +163,7 @@ impl CanyonHandler {
     tournament      slug            text                YES
     tournament      start_date      date                YES
     ```
-    Not all columns included in the example table.
+    > Not all retrieved columns are included in the example above.
 
     Too see all the columns that will be mapeed, see the [`struct@RowTable`]
     */
@@ -88,11 +172,10 @@ impl CanyonHandler {
             super::constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
             vec![],
             "",
-        )
-        .await
+        ).await
         .ok()
         .unwrap()
-        .wrapper;
+        .postgres;
 
         let mut schema_info: Vec<RowTable> = Vec::new();
 
@@ -135,7 +218,7 @@ impl CanyonHandler {
                 Some(table) => Self::map_splitted_column_info_into_entity(mapped_table, table),
                 None => {
                     let mut new_unique_database_table = DatabaseTable {
-                        table_name: mapped_table.table_name.clone(),
+                        table_name: mapped_table.table_name.clone().to_string(),
                         columns: Vec::new(),
                     };
                     Self::map_splitted_column_info_into_entity(
@@ -242,7 +325,7 @@ impl CanyonHandler {
     /// Maps a [`tokio_postgres`] [`Row`] from the `information_schema` table into a `Canyon's` [`RowTable`],
     /// by extracting every single column in a Row and making a relation between the column's name,
     /// the datatype of the value that it's holding, and the value itself.
-    fn get_row_postgres_columns_for_table(res_row: &Row, table: &mut RowTable) {
+    fn get_row_postgres_columns_for_table(res_row: &tokio_postgres::Row, table: &mut RowTable) {
         for postgre_column in res_row.columns().iter() {
             if postgre_column.name() != "table_name" {
                 // Discards the column "table_name"

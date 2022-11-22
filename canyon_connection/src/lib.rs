@@ -11,7 +11,7 @@ mod datasources;
 use std::fs;
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
-use canyon_database_connector::DatabaseConnection;
+use canyon_database_connector::{DatabaseConnection, DatabaseType};
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
 use tokio::sync::Mutex;
@@ -33,6 +33,20 @@ lazy_static! {
     
     pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, &'static mut DatabaseConnection>> =
         Mutex::new(IndexMap::new());
+}
+
+
+/// Returns a [`enum@DatabaseType`] for an [`struct@DatabaseConnection`]
+/// by querying the related `datasource_name`
+pub async fn get_database_type_from_datasource_name(
+    datasource_name: &str
+) -> DatabaseType {
+    match CACHED_DATABASE_CONN.lock().await.get(datasource_name) {
+        Some(db_conn) => {
+            db_conn.database_type
+        },
+        None => panic!("No datasource: {datasource_name} found by the provided identifier"),
+    }
 }
 
 /// Convenient free function to initialize a kind of connection pool based on the datasources present defined

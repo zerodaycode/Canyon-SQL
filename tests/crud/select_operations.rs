@@ -16,6 +16,7 @@ use crate::tests_models::player::*;
 fn test_crud_find_all() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
         League::find_all().await;
+    
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());

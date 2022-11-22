@@ -63,7 +63,7 @@ impl CanyonMemory {
         let mem_results = Self::query("SELECT * FROM canyon_memory", vec![], "")
             .await
             .expect("Error querying Canyon Memory")
-            .wrapper; // TODO Change it for the correct db type when migrations
+            .postgres; // TODO Change it for the correct db type when migrations
                       // supports more databases that just `PostgreSQL`
 
         // Manually maps the results

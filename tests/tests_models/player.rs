@@ -1,6 +1,6 @@
 use canyon_sql::macros::*;
 
-#[derive(Debug, Clone, CanyonCrud, CanyonMapper, Eq, PartialEq)]
+#[derive(Debug, Clone, Fields, CanyonCrud, CanyonMapper, Eq, PartialEq)]
 #[canyon_entity]
 /// Data model that represents a database entity for Players.
 ///

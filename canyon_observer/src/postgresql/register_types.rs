@@ -42,14 +42,6 @@ pub struct CanyonRegisterEntityField {
 }
 
 impl CanyonRegisterEntityField {
-    // pub fn new() -> CanyonRegisterEntityField {
-    //     Self {
-    //         field_name: String::new(),
-    //         field_type: String::new(),
-    //         annotations: Vec::new()
-    //     }
-    // }
-
     /// Return the postgres datatype and parameters to create a column for a given rust type
     fn to_postgres_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");

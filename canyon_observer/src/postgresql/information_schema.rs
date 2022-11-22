@@ -10,7 +10,7 @@ pub mod information_schema_row_mapper {
         pub columns: Vec<RelatedColumn>,
     }
 
-    /// A column retrives from the `information schema` query that belongs to a [`RowTable`] element,
+    /// A column retrived from the `information schema` query that belongs to a [`RowTable`] element,
     /// representing one of the total columns of a table
     #[derive(Debug)]
     pub struct RelatedColumn {

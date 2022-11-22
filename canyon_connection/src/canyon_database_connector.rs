@@ -6,7 +6,7 @@ use tokio_postgres::{Client, NoTls};
 use crate::datasources::DatasourceProperties;
 
 /// Represents the current supported databases by Canyon
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {
     PostgreSql,
     SqlServer,
