@@ -55,13 +55,16 @@ impl Migrations {
 
         for res_row in db_results.as_canyon_row().into_iter() {
             println!("\nROW: {:?}", &res_row.as_any().downcast_ref::<tokio_postgres::Row>());
+            println!("Table name from row: {}", res_row.get::<&str>("table_name"));
             let unique_table = schema_info
                 .iter_mut()
-                .find(|table| table.table_name == res_row.get::<&str>("table_name"));
+                .find(|table| (*table).table_name == res_row.get::<&str>("table_name").to_owned());
             match unique_table {
                 Some(table) => {
                     /* If a table entity it's already present on the collection, we add it
                     the founded columns related to the table */
+                    println!("\nParsing unique_table: {}", table.table_name);
+                    println!("Table name from row: {}", res_row.get::<&str>("table_name"));
                     Self::get_columns_metadata(res_row, table);
                 }
                 None => {
@@ -72,6 +75,7 @@ impl Migrations {
                         table_name: res_row.get::<&str>("table_name").to_owned(),
                         columns: Vec::new(),
                     };
+                    println!("\nParsing old_table: {}", new_table.table_name);
                     Self::get_columns_metadata(res_row, &mut new_table);
                     schema_info.push(new_table);
                 }
