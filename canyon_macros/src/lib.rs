@@ -71,7 +71,8 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
         // TODO This macro probably must be upgraded
         CANYON_TOKIO_RUNTIME.block_on(async {
             // CanyonHandler::run().await;
-            // Migrations::migrate().await;
+            canyon_connection::init_connection_cache().await;
+            Migrations::migrate("postgres_docker").await;
         });
 
         // The queries to execute at runtime in the managed state

@@ -1,3 +1,5 @@
+#![feature(type_name_of_val)]
+
 /// Holds the data needed by Canyon when the user
 /// application it's running.
 ///

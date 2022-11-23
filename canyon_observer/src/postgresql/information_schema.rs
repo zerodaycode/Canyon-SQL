@@ -1,6 +1,8 @@
 /// `PostgreSQL` entities for map the multiple rows that are related to one table, and the multiple
 /// columns that are related to those table
 pub mod information_schema_row_mapper {
+    use canyon_crud::bounds::{Column, Row, ColumnType, ColumnTypeValue};
+
     /// The representation of a row of results when the `information schema` it's queried
     ///
     /// Too see an example, see the docs of [`crate::handler::CanyonHandler`] on `fn@get_info_of_entities`
@@ -15,18 +17,90 @@ pub mod information_schema_row_mapper {
     #[derive(Debug)]
     pub struct RelatedColumn {
         pub column_identifier: String,
-        pub datatype: String,
+        // pub datatype_str: String,
+        // pub datatype: TypeId,
         pub value: ColumnTypeValue,
     }
 
-    /// Represents the relation between a real value stored inside a [`RelatedColumn`]
-    /// and the datatype of that value
-    #[derive(Debug)]
-    pub enum ColumnTypeValue {
-        StringValue(Option<String>),
-        IntValue(Option<i32>),
-        NoneValue,
-    }
+    // /// Represents the relation between a real value stored inside a [`RelatedColumn`]
+    // /// and the datatype of that value
+    // #[derive(Debug)]
+    // pub enum ColumnTypeValue {
+    //     StringValue(Option<String>),
+    //     IntValue(Option<i32>),
+    //     NoneValue,
+    // }
+    // impl ColumnTypeValue {
+    //     pub fn from_crud(ctv: canyon_crud::bounds::ColumnTypeValue) -> Self {
+    //         match ctv {
+    //             canyon_crud::bounds::ColumnTypeValue::StringValue(s) => Self::StringValue(s),
+    //             canyon_crud::bounds::ColumnTypeValue::IntValue(i) => Self::IntValue(i),
+    //             canyon_crud::bounds::ColumnTypeValue::NoneValue => Self::NoneValue,
+    //         }
+    //     }
+
+    //     pub fn value_from_column(row: &dyn Row, col: Column) {
+    //         match col.type_().as_any().downcast_ref::<ColumnType>().unwrap() {
+    //             ColumnType::Postgres(v) => {
+    //                 match *v {
+    //                     TokioPostgresType::NAME | TokioPostgresType::VARCHAR | TokioPostgresType::TEXT => 
+    //                     {
+    //                         ColumnTypeValue::StringValue(
+    //                             row.get_opt::<&str>(col.name())
+    //                                 .map(|opt| opt.to_owned()),
+    //                         )
+    //                     }
+    //                     TokioPostgresType::INT4 => {
+    //                         ColumnTypeValue::IntValue(
+    //                             row.get_opt::<i32>(col.name()),
+    //                         )
+    //                     }
+    //                     _ => ColumnTypeValue::NoneValue,
+    //                 }
+    //             },
+    //             ColumnType::SqlServer(v) => todo!()
+    //             // {
+    //             //     match v {
+    //             //         tiberius::ColumnType::Null => todo!(),
+    //             //         tiberius::ColumnType::Bit => todo!(),
+    //             //         tiberius::ColumnType::Int1 => todo!(),
+    //             //         tiberius::ColumnType::Int2 => todo!(),
+    //             //         tiberius::ColumnType::Int4 => todo!(),
+    //             //         tiberius::ColumnType::Int8 => todo!(),
+    //             //         tiberius::ColumnType::Datetime4 => todo!(),
+    //             //         tiberius::ColumnType::Float4 => todo!(),
+    //             //         tiberius::ColumnType::Float8 => todo!(),
+    //             //         tiberius::ColumnType::Money => todo!(),
+    //             //         tiberius::ColumnType::Datetime => todo!(),
+    //             //         tiberius::ColumnType::Money4 => todo!(),
+    //             //         tiberius::ColumnType::Guid => todo!(),
+    //             //         tiberius::ColumnType::Intn => todo!(),
+    //             //         tiberius::ColumnType::Bitn => todo!(),
+    //             //         tiberius::ColumnType::Decimaln => todo!(),
+    //             //         tiberius::ColumnType::Numericn => todo!(),
+    //             //         tiberius::ColumnType::Floatn => todo!(),
+    //             //         tiberius::ColumnType::Datetimen => todo!(),
+    //             //         tiberius::ColumnType::Daten => todo!(),
+    //             //         tiberius::ColumnType::Timen => todo!(),
+    //             //         tiberius::ColumnType::Datetime2 => todo!(),
+    //             //         tiberius::ColumnType::DatetimeOffsetn => todo!(),
+    //             //         tiberius::ColumnType::BigVarBin => todo!(),
+    //             //         tiberius::ColumnType::BigVarChar => todo!(),
+    //             //         tiberius::ColumnType::BigBinary => todo!(),
+    //             //         tiberius::ColumnType::BigChar => todo!(),
+    //             //         tiberius::ColumnType::NVarchar => todo!(),
+    //             //         tiberius::ColumnType::NChar => todo!(),
+    //             //         tiberius::ColumnType::Xml => todo!(),
+    //             //         tiberius::ColumnType::Udt => todo!(),
+    //             //         tiberius::ColumnType::Text => todo!(),
+    //             //         tiberius::ColumnType::Image => todo!(),
+    //             //         tiberius::ColumnType::NText => todo!(),
+    //             //         tiberius::ColumnType::SSVariant => todo!(), 
+    //             //     }
+    //             // },
+    //         }
+    //     }
+    // }
 }
 
 /// This mod contains the structs necessary to map the data retrieved when the
