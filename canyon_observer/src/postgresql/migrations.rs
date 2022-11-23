@@ -5,11 +5,12 @@ use std::fmt::{Debug, Display};
 use std::{ops::Not, sync::MutexGuard};
 
 use crate::memory::CanyonMemory;
-use crate::postgresql::information_schema::rows_to_table_mapper::DatabaseTable;
+// use crate::postgresql::information_schema::rows_to_table_mapper::DatabaseTable;
 use crate::QUERIES_TO_EXECUTE;
 use canyon_crud::crud::Transaction;
 use regex::Regex;
 
+use super::information_schema::rows_to_table_mapper::TableMetadata;
 use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 
 /// Responsible of generating the queries to sync the database status with the
@@ -29,7 +30,7 @@ impl DatabaseSyncOperations {
         &mut self,
         canyon_memory: CanyonMemory,
         canyon_tables: Vec<CanyonRegisterEntity<'static>>,
-        database_tables: Vec<DatabaseTable<'a>>,
+        database_tables: Vec<TableMetadata<'a>>,
     ) {
         // For each entity (table) on the register
         for canyon_register_entity in canyon_tables {
@@ -355,14 +356,14 @@ impl DatabaseSyncOperations {
 
     fn check_table_on_database<'a>(
         table_name: &'a str,
-        database_tables: &[DatabaseTable<'_>],
+        database_tables: &[TableMetadata<'_>],
     ) -> bool {
         database_tables.iter().any(|v| v.table_name == table_name)
     }
 
     fn columns_in_table(
         canyon_columns: Vec<CanyonRegisterEntityField>,
-        database_tables: &[DatabaseTable<'_>],
+        database_tables: &[TableMetadata<'_>],
         table_name: &str,
     ) -> Vec<String> {
         canyon_columns
@@ -382,7 +383,7 @@ impl DatabaseSyncOperations {
     }
 
     fn columns_to_remove(
-        database_tables: &[DatabaseTable<'_>],
+        database_tables: &[TableMetadata<'_>],
         canyon_columns: Vec<CanyonRegisterEntityField>,
         table_name: &str,
     ) -> Vec<String> {
