@@ -75,14 +75,14 @@ impl Migrations {
                         table_name: res_row.get::<&str>("table_name").to_owned(),
                         columns: Vec::new(),
                     };
-                    println!("\nParsing old_table: {}", new_table.table_name);
+                    println!("\nParsing new_table: {}", new_table.table_name);
                     Self::get_columns_metadata(res_row, &mut new_table);
                     schema_info.push(new_table);
                 }
             };
         }
 
-        // println!("SCHEMA INFO [0]: {:?}", &schema_info.get(0));
+        println!("SCHEMA INFO [0]: {:?}", &schema_info.get(0));
         // println!("\nSCHEMA INFO [1]: {:?}", &schema_info.get(1));
         println!("\nROW [0]: {:?}", &db_results.postgres.get(0));
         schema_info
@@ -92,87 +92,86 @@ impl Migrations {
     /// by extracting every single column in a Row and making a relation between the column's name,
     /// the datatype of the value that it's holding, and the value itself.
     fn get_columns_metadata(res_row: &dyn Row, table: &mut TableMetadata) {
+        let mut entity_column = ColumnMetadata::default();
         for column in res_row.columns().iter() {
-            if column.name() != "table_name" { // Discards the column "table_name"
-                table.columns.push(Self::set_column_metadata(res_row, column));
-            }
+            if column.name() != "table_name" {
+                Self::set_column_metadata(res_row, column, &mut entity_column);
+            }// Discards the column "table_name"
         }
+        table.columns.push(entity_column);
     }
 
     /// 
-    fn set_column_metadata<'a>(row: &dyn Row, column: &Column) -> ColumnMetadata<'a> {
-        let mut entity_column = ColumnMetadata::default();
-        let column_identifier = column.name();
-        let column_value = ColumnTypeValue::get_value(row, column);
+    fn set_column_metadata<'a>(row: &dyn Row, src: &Column, dest: &mut ColumnMetadata) {
+        let column_identifier = src.name();
+        let column_value = ColumnTypeValue::get_value(row, src);
         println!("COL - Parsing: {} with value => {:?}", &column_identifier, &column_value);
 
         if column_identifier == "column_name" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.column_name = value.to_owned().unwrap()
+                dest.column_name = value.to_owned().unwrap()
             }
         } else if column_identifier == "data_type" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.postgres_datatype = value.to_owned().unwrap()
+                dest.postgres_datatype = value.to_owned().unwrap()
             }
         } else if column_identifier == "character_maximum_length" {
             if let ColumnTypeValue::IntValue(value) = &column_value {
-                entity_column.character_maximum_length = value.to_owned()
+                dest.character_maximum_length = value.to_owned()
             }
         } else if column_identifier == "is_nullable" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.is_nullable = matches!(value.as_ref().unwrap().as_str(), "YES")
+                dest.is_nullable = matches!(value.as_ref().unwrap().as_str(), "YES")
             }
         } else if column_identifier == "column_default" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.column_default = value.to_owned()
+                dest.column_default = value.to_owned()
             }
         } else if column_identifier == "numeric_precision" {
             if let ColumnTypeValue::IntValue(value) = &column_value {
-                entity_column.numeric_precision = value.to_owned()
+                dest.numeric_precision = value.to_owned()
             }
         } else if column_identifier == "numeric_scale" {
             if let ColumnTypeValue::IntValue(value) = &column_value {
-                entity_column.numeric_scale = value.to_owned()
+                dest.numeric_scale = value.to_owned()
             }
         } else if column_identifier == "numeric_precision_radix" {
             if let ColumnTypeValue::IntValue(value) = &column_value {
-                entity_column.numeric_precision_radix = value.to_owned()
+                dest.numeric_precision_radix = value.to_owned()
             }
         } else if column_identifier == "datetime_precision" {
             if let ColumnTypeValue::IntValue(value) = &column_value {
-                entity_column.datetime_precision = value.to_owned()
+                dest.datetime_precision = value.to_owned()
             }
         } else if column_identifier == "interval_type" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.interval_type = value.to_owned()
+                dest.interval_type = value.to_owned()
             }
         } else if column_identifier == "foreign_key_info" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.foreign_key_info = value.to_owned()
+                dest.foreign_key_info = value.to_owned()
             }
         } else if column_identifier == "foreign_key_name" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.foreign_key_name = value.to_owned()
+                dest.foreign_key_name = value.to_owned()
             }
         } else if column_identifier == "primary_key_info" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.primary_key_info = value.to_owned()
+                dest.primary_key_info = value.to_owned()
             }
         } else if column_identifier == "primary_key_name" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.primary_key_name = value.to_owned()
+                dest.primary_key_name = value.to_owned()
             }
         } else if column_identifier == "is_identity" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.is_identity = matches!(value.as_ref().unwrap().as_str(), "YES")
+                dest.is_identity = matches!(value.as_ref().unwrap().as_str(), "YES")
             }
         } else if column_identifier == "identity_generation" {
             if let ColumnTypeValue::StringValue(value) = &column_value {
-                entity_column.identity_generation = value.to_owned()
+                dest.identity_generation = value.to_owned()
             }
         };
-
-        entity_column
         // Just for split the related column data into what will be the values for
         // every DatabaseTableColumn.
         // Every time that we find an &RelatedColumn which column identifier
