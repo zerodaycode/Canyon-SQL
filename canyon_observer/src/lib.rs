@@ -11,7 +11,7 @@
 ///
 /// Takes care about the queries that Canyon has to execute
 /// in order to perform the migrations
-pub mod postgresql;
+pub mod migrations;
 
 extern crate canyon_crud;
 
@@ -22,7 +22,7 @@ pub mod handler;
 pub mod manager;
 
 use std::sync::Mutex;
-use crate::postgresql::register_types::CanyonRegisterEntity;
+use crate::migrations::register_types::CanyonRegisterEntity;
 
 pub static CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> =
     Mutex::new(Vec::new());

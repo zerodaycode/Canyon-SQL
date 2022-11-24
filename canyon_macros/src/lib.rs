@@ -24,17 +24,24 @@ use query_operations::{
 use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use canyon_observer::{manager::{
-    entity::CanyonEntity,
-    manager_builder::{
-        generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
-    },
-}, handler::Migrations};
+use canyon_observer::{
+    manager::{
+        entity::CanyonEntity,
+        manager_builder::{
+            generate_enum_with_fields,
+            generate_enum_with_fields_values,
+            generate_user_struct
+        },
+    }, 
+    handler::Migrations
+};
 
 use canyon_observer::{
-    // handler::CanyonHandler,
-    postgresql::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
-    CANYON_REGISTER_ENTITIES, handler::CanyonHandler,
+    migrations::register_types::{
+        CanyonRegisterEntity,
+        CanyonRegisterEntityField
+    },
+    CANYON_REGISTER_ENTITIES
 };
 
 /// Macro for handling the entry point to the program.
@@ -70,7 +77,6 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
         // The migrations
         // TODO This macro probably must be upgraded
         CANYON_TOKIO_RUNTIME.block_on(async {
-            // CanyonHandler::run().await;
             canyon_connection::init_connection_cache().await;
             Migrations::migrate("postgres_docker").await;
         });

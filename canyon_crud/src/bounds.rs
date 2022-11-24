@@ -144,7 +144,7 @@ pub enum ColumnType {
 pub trait RowOperations {
     /// Abstracts the different forms of use the common `get` row
     /// function or method dynamically no matter what are the origin
-    /// type
+    /// type from any database client provider
     fn get<'a, Output>(&'a self, col_name: &str) -> Output
         where Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
 
