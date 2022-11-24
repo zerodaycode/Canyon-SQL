@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
 
-use crate::QUERIES_TO_EXECUTE;
+use crate::{QUERIES_TO_EXECUTE, constants};
 
 /// Convenient struct that contains the necessary data and operations to implement
 /// the `Canyon Memory`.
@@ -42,7 +42,7 @@ use crate::QUERIES_TO_EXECUTE;
 /// correct operations because we can't "remember" how that entity was, and how it should be now, avoiding
 /// potencially dangerous operations due to lack of knowing what entity relates with new data.
 ///
-/// The `memory field` HashMap is made by the filename as a key, and the struct's name as value
+/// The `memory field` HashMap is made by the filepath as a key, and the struct's name as value
 #[derive(Debug)]
 pub struct CanyonMemory {
     pub memory: HashMap<String, String>,
@@ -56,28 +56,26 @@ impl CanyonMemory {
     /// Queries the database to retrieve internal data about the structures
     /// tracked by `CanyonSQL`
     #[allow(clippy::nonminimal_bool)]
-    pub async fn remember() -> Self {
+    pub async fn remember(datasource_name: &str) -> Self {
         // Creates the memory table if not exists
-        Self::create_memory().await;
+        Self::create_memory(datasource_name).await;
         // Check database for the "memory data"
-        let mem_results = Self::query("SELECT * FROM canyon_memory", vec![], "")
+        let mem_results = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
             .await
             .expect("Error querying Canyon Memory")
-            .postgres; // TODO Change it for the correct db type when migrations
-                      // supports more databases that just `PostgreSQL`
+            .postgres; // TODO 
 
+        // return CanyonMemory {memory: HashMap::new(), table_rename: HashMap::new()};
+        
         // Manually maps the results
         let mut memory_db_rows = Vec::new();
-        // let mut memory_rows_to_delete = Vec::new();
-        // Cando non a encontres no parseo de archivos, acumulas no array
-        // Tremendísima query con WHERE IN (45)
-        for row in mem_results {
-            let db_row = CanyonMemoryDatabaseRow {
+        for row in mem_results.iter() {
+            let db_row = CanyonMemoryRow {
                 id: row.get::<&str, i32>("id"),
-                filename: row.get::<&str, String>("filename"),
-                struct_name: row.get::<&str, String>("struct_name"),
+                filepath: row.get::<&str, String>("filepath"),
+                struct_name: row.get::<&str, String>("struct_name"), 
             };
-            memory_db_rows.push(db_row);
+            memory_db_rows.push(db_row); 
         }
 
         // Parses the source code files looking for the #[canyon_entity] annotated classes
@@ -93,48 +91,50 @@ impl CanyonMemory {
         let mut values_to_insert = String::new();
         let mut updates = Vec::new();
 
-        for (filename, struct_name) in &mem.memory {
-            // When the filename and the struct hasn't been modified and are already on db
+        for (filepath, struct_name) in &mem.memory {
+            // When the filepath and the struct hasn't been modified and are already on db
             let already_in_db = memory_db_rows.iter().any(|el| {
-                (el.filename == *filename && el.struct_name == *struct_name)
-                    || ((el.filename != *filename && el.struct_name == *struct_name)
-                        || (el.filename == *filename && el.struct_name != *struct_name))
+                (el.filepath == *filepath && el.struct_name == *struct_name)
+                    || ((el.filepath != *filepath && el.struct_name == *struct_name)
+                        || (el.filepath == *filepath && el.struct_name != *struct_name))
             });
             if !already_in_db {
-                values_to_insert.push_str(format!("('{filename}', '{struct_name}'),").as_str());
+                values_to_insert.push_str(format!("('{filepath}', '{struct_name}'),").as_str());
             }
-            // When the struct or the filename it's already on db but one of the two has been modified
+            // When the struct or the filepath it's already on db but one of the two has been modified
             let need_to_update = memory_db_rows.iter().find(|el| {
-                (el.filename == *filename || el.struct_name == *struct_name)
-                    && !(el.filename == *filename && el.struct_name == *struct_name)
+                (el.filepath == *filepath || el.struct_name == *struct_name)
+                    && !(el.filepath == *filepath && el.struct_name == *struct_name)
             });
 
+            // update means: the old one. The value to update
             if let Some(update) = need_to_update {
-                updates.push(struct_name);
+                println!("To update: {:?}", &struct_name);
+                updates.push(update.struct_name.clone());
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
-                    "UPDATE canyon_memory SET filename = '{}', struct_name = '{}' \
+                    "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}' \
                             WHERE id = {}",
-                    filename, struct_name, update.id
+                        filepath, struct_name, update.id
                 ));
-
+ 
                 // if the updated element is the struct name, whe add it to the table_rename Hashmap
                 let rename_table = &update.struct_name != struct_name;
 
                 if rename_table {
                     mem.table_rename.insert(
-                        struct_name.clone().to_lowercase(),
-                        update.struct_name.clone().to_lowercase(),
+                        struct_name.to_lowercase(),
+                        update.struct_name.to_lowercase(),
                     );
-                }
+                } 
             }
         }
 
-        if values_to_insert != String::new() {
+        if !values_to_insert.is_empty() {
             values_to_insert.pop();
             values_to_insert.push(';');
 
             QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
-                "INSERT INTO canyon_memory (filename, struct_name) VALUES {}",
+                "INSERT INTO canyon_memory (filepath, struct_name) VALUES {}",
                 values_to_insert
             ));
         }
@@ -165,13 +165,13 @@ impl CanyonMemory {
                 && file.path().display().to_string().ends_with(".rs")
             {
                 // Opening the source code file
-                let contents =
-                    fs::read_to_string(file.path()).expect("Something went wrong reading the file");
+                let contents = fs::read_to_string(file.path())
+                    .expect("Something went wrong reading the file");
 
                 let mut canyon_entity_macro_counter = 0;
                 let mut struct_name = String::new();
                 for line in contents.split('\n') {
-                    if line.starts_with("pub struct") {
+                    if !line.starts_with("//") && line.contains("struct") {
                         struct_name.push_str(
                             line.split_whitespace()
                                 .collect::<Vec<&str>>()
@@ -179,7 +179,7 @@ impl CanyonMemory {
                                 .unwrap_or(&"FAILED"),
                         )
                     }
-                    if line.contains("#[")
+                    if line.contains("#[") // separated checks for possible different paths
                         && line.contains("canyon_entity")
                         && !line.starts_with("//")
                     {
@@ -187,25 +187,17 @@ impl CanyonMemory {
                     }
                 }
 
-                // If more than two, we panic!
                 match canyon_entity_macro_counter {
+                    0 => (),
                     1 => {
                         self.memory.insert(
-                            file.path()
-                                .display()
-                                .to_string()
-                                .replace('\\', "/")
-                                .split('/')
-                                .collect::<Vec<&str>>()
-                                .last()
-                                .unwrap_or(&"FAILED")
-                                .to_string(),
+                            file.path().display().to_string().replace("\\", "/"),
                             struct_name,
                         );
-                    }
+                    },
                     _ => panic!(
-                        r"Canyon does not support having multiple structs annotated\ 
-                        with `#[canyon::entity]` on the same file when the `#[canyon]`\  
+                        "Canyon does not support having multiple structs annotated
+                        with `#[canyon::entity]` on the same file when the `#[canyon]`
                         macro it's present on the program"
                     ),
                 }
@@ -214,24 +206,18 @@ impl CanyonMemory {
     }
 
     /// Generates, if not exists the `canyon_memory` table
-    async fn create_memory() {
+    async fn create_memory(datasource_name: &str) {
         Self::query(
-            "CREATE TABLE IF NOT EXISTS canyon_memory \
-            ( id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY, \
-              filename VARCHAR NOT NULL, struct_name VARCHAR NOT NULL
-            )",
-            vec![],
-            "",
-        )
-        .await
+            constants::queries::CANYON_MEMORY_TABLE, &[], datasource_name,
+        ).await
         .expect("Error creating the 'canyon_memory' table");
     }
 }
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryDatabaseRow {
+struct CanyonMemoryRow {
     id: i32,
-    filename: String,
+    filepath: String,
     struct_name: String,
 }

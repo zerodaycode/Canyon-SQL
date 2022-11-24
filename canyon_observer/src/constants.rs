@@ -1,3 +1,12 @@
+pub mod queries {
+    pub static CANYON_MEMORY_TABLE: &str =
+        "CREATE TABLE IF NOT EXISTS canyon_memory (
+            id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+            filepath VARCHAR NOT NULL,
+            struct_name VARCHAR NOT NULL
+        )";
+}
+
 pub mod postgresql_queries {
     pub static FETCH_PUBLIC_SCHEMA: &str =
         "SELECT

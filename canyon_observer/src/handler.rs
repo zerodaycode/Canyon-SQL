@@ -13,7 +13,7 @@ use crate::{
             ColumnMetadata,
             ColumnMetadataTypeValue
         }   
-    }
+    }, memory::CanyonMemory
 };
 
 #[derive(PartialDebug)]
@@ -26,13 +26,16 @@ impl Migrations {
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
     pub async fn migrate(datasource_name: &str) {
-        let mut db_operation = DatabaseSyncOperations::default();
-        let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+        let mut _db_operations = DatabaseSyncOperations::default();
+        let _canyon_memory = CanyonMemory::remember(datasource_name).await;
+        let _canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
 
         // Tracked entities that must be migrated whenever Canyon starts
         let db_type = get_database_type_from_datasource_name(datasource_name).await;
         let schema_status = Self::fetch_database(datasource_name, db_type).await;
-        let table_rows = Self::map_rows(schema_status);
+        let _database_tables = Self::map_rows(schema_status);
+
+        // db_operations.fill_operations(canyon_memory, canyon_tables, database_tables).await;
     }
 
     /// Fetches a concrete schema metadata by target the database
@@ -81,7 +84,6 @@ impl Migrations {
             };
         }
 
-        println!("SCHEMA INFO [0]: {:?}", &schema_info.get(0));
         schema_info
     }
 
@@ -172,27 +174,4 @@ impl Migrations {
             }
         };
     }
-}
-
-/// Provides the necessary entities to let Canyon perform and develop
-/// it's full potential, completly managing all the entities written by
-/// the user and annotated with the `#[canyon_entity]`
-#[derive(PartialDebug)]
-pub struct CanyonHandler;
-
-// Makes this structure able to make queries to the database
-impl Transaction<Self> for CanyonHandler {}
-
-impl CanyonHandler {
-    // pub async fn run() {
-    //     let mut db_operation = DatabaseSyncOperations::default();
-    //     let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
-    //     db_operation
-    //         .fill_operations(
-    //             CanyonMemory::remember().await,
-    //             canyon_tables,
-    //             Self::fetch_postgres_database_status().await,
-    //         )
-    //         .await;
-    // }
 }

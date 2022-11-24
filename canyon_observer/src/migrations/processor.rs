@@ -32,7 +32,7 @@ impl DatabaseSyncOperations {
         canyon_tables: Vec<CanyonRegisterEntity<'static>>,
         database_tables: Vec<TableMetadata>,
     ) {
-        // For each entity (table) on the register
+        // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_tables {
             let table_name = canyon_register_entity.entity_name;
 
