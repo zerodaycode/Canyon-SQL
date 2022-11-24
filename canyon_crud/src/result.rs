@@ -74,7 +74,7 @@ impl<T: Debug> DatabaseResult<T> {
         results
     }
 
-    pub fn as_canyon_row(&self) -> Vec<&dyn Row> {
+    pub fn as_canyon_rows(&self) -> Vec<&dyn Row> {
         let mut results = Vec::new();
 
         match self.active_ds {

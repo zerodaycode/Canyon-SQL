@@ -60,7 +60,7 @@ impl Migrations {
     fn map_rows<'a>(db_results: DatabaseResult<Migrations>) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
 
-        for res_row in db_results.as_canyon_row().into_iter() {
+        for res_row in db_results.as_canyon_rows().into_iter() {
             let unique_table = schema_info
                 .iter_mut()
                 .find(|table| table.table_name == res_row.get::<&str>("table_name").to_owned());

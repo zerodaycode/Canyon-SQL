@@ -1,4 +1,4 @@
-use canyon_crud::crud::Transaction;
+use canyon_crud::{crud::Transaction, bounds::RowOperations};
 use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
@@ -60,10 +60,10 @@ impl CanyonMemory {
         // Creates the memory table if not exists
         Self::create_memory(datasource_name).await;
         // Check database for the "memory data"
-        let mem_results = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
+        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
             .await
-            .expect("Error querying Canyon Memory")
-            .postgres; // TODO 
+            .expect("Error querying Canyon Memory");
+        let mem_results = res.as_canyon_rows();
 
         // return CanyonMemory {memory: HashMap::new(), table_rename: HashMap::new()};
         
@@ -71,9 +71,9 @@ impl CanyonMemory {
         let mut memory_db_rows = Vec::new();
         for row in mem_results.iter() {
             let db_row = CanyonMemoryRow {
-                id: row.get::<&str, i32>("id"),
-                filepath: row.get::<&str, String>("filepath"),
-                struct_name: row.get::<&str, String>("struct_name"), 
+                id: row.get::<i32>("id"),
+                filepath: row.get::<&str>("filepath"),
+                struct_name: row.get::<&str>("struct_name")
             };
             memory_db_rows.push(db_row); 
         }
@@ -142,7 +142,7 @@ impl CanyonMemory {
         // Deletes the records when a table is dropped on the previous Canyon run
         let in_memory = mem.memory.values().collect::<Vec<&String>>();
         memory_db_rows.into_iter().for_each(|db_row| {
-            if !in_memory.contains(&&db_row.struct_name) && !updates.contains(&&db_row.struct_name)
+            if !in_memory.contains(&&db_row.struct_name.to_string()) && !updates.contains(&&db_row.struct_name)
             {
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
                     "DELETE FROM canyon_memory WHERE struct_name = '{}'",
@@ -216,8 +216,8 @@ impl CanyonMemory {
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryRow {
+struct CanyonMemoryRow<'a> {
     id: i32,
-    filepath: String,
-    struct_name: String,
+    filepath: &'a str,
+    struct_name: &'a str,
 }
