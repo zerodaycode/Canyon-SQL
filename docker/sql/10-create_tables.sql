@@ -38,12 +38,6 @@ CREATE TABLE public.team (
 	home_league			INTEGER REFERENCES league(id)
 );
 
-CREATE TABLE public.team_player (
-    id					INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-	team_id				INTEGER REFERENCES team(id) ON DELETE CASCADE,
-    player_id			INTEGER REFERENCES player(id) ON DELETE CASCADE
-);
-
 -- For now, we use for out CI process the default data for postgres instances
 
 -- ALTER TABLE public.league OWNER TO triforce;

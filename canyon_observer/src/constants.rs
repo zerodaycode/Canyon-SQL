@@ -1,13 +1,15 @@
 pub mod queries {
+    
+}
+
+pub mod postgresql_queries {
     pub static CANYON_MEMORY_TABLE: &str =
         "CREATE TABLE IF NOT EXISTS canyon_memory (
             id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
             filepath VARCHAR NOT NULL,
             struct_name VARCHAR NOT NULL
         )";
-}
 
-pub mod postgresql_queries {
     pub static FETCH_PUBLIC_SCHEMA: &str =
         "SELECT
             gi.table_name,
@@ -38,6 +40,66 @@ pub mod postgresql_queries {
             gi.column_name = split_part(split_part(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT),')',1),'(',2)
         WHERE
             table_schema = 'public';";
+}
+
+
+pub mod mssql_queries {
+    pub static CANYON_MEMORY_TABLE: &str =
+        "IF OBJECT_ID(N'[dbo].[canyon_memory]', N'U') IS NULL
+        BEGIN
+            CREATE TABLE dbo.canyon_memory (
+                id					INT PRIMARY KEY IDENTITY,
+                filepath			NVARCHAR(250) NOT NULL,
+                struct_name			NVARCHAR(100) NOT NULL
+            );
+        END";
+
+    pub static FETCH_PUBLIC_SCHEMA: &str =
+        "SELECT
+            gi.table_name,
+            gi.column_name,
+            gi.data_type,
+            CAST(gi.character_maximum_length AS int),
+            gi.is_nullable,
+            gi.column_default,
+            CAST(gi.numeric_precision AS int),
+            CAST(gi.numeric_scale AS int),
+            CAST(gi.numeric_precision_radix AS int),
+            CAST(gi.datetime_precision AS int),
+            fk.foreign_key_info,
+            fk.foreign_key_name,
+            pk.CONSTRAINT_NAME as primary_key_info,
+            pk.CONSTRAINT_NAME as primary_key_name
+            FROM INFORMATION_SCHEMA.COLUMNS gi
+            LEFT JOIN (
+                SELECT
+                    SCHEMA_NAME(f.schema_id) schemaName,
+                    OBJECT_NAME(f.parent_object_id) ConstrainedTable,
+                    COL_NAME(fc.parent_object_id, fc.parent_column_id) ConstrainedColumn,
+                    f.name foreign_key_name,
+                    CONCAT('FOREIGN KEY (',  
+                    COL_NAME(fc.parent_object_id, fc.parent_column_id), ') REFERENCES ',
+                    OBJECT_NAME(f.referenced_object_id),
+                    '(',
+                    COL_NAME(fc.referenced_object_id, fc.referenced_column_id)
+                    , ')') AS foreign_key_info
+                FROM
+                    sys.foreign_keys AS f
+                INNER JOIN
+                    sys.foreign_key_columns AS fc
+                ON f.OBJECT_ID = fc.constraint_object_id
+                INNER JOIN
+                    sys.tables t
+                ON t.OBJECT_ID = fc.referenced_object_id
+            ) AS fk
+                ON fk.ConstrainedTable = gi.TABLE_NAME AND fk.ConstrainedColumn = gi.COLUMN_NAME  AND gi.TABLE_SCHEMA = fk.schemaName    
+            LEFT JOIN (
+                SELECT *
+                FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+                WHERE OBJECTPROPERTY(OBJECT_ID(kcu.CONSTRAINT_SCHEMA + '.' + QUOTENAME(kcu.CONSTRAINT_NAME)), 'IsPrimaryKey') = 1
+            ) AS pk
+                ON pk.TABLE_NAME = gi.TABLE_NAME AND pk.CONSTRAINT_SCHEMA = gi.TABLE_SCHEMA AND pk.COLUMN_NAME = gi.COLUMN_NAME
+            WHERE gi.TABLE_SCHEMA = 'dbo'";
 }
 
 /// TODO

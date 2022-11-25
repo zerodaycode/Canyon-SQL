@@ -36,7 +36,7 @@ impl<T: Debug> DatabaseResult<T> {
     /// Z param it's used to constrait the types that can call this method.
     ///
     /// Also, provides a way to statically call `Z::deserialize_<db>` method,
-    /// which it's a complex implementation used by the macros to automatically
+    /// which it's the implementation used by the macros to automatically
     /// map database columns into the fields for T.
     pub fn get_entities<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
     where

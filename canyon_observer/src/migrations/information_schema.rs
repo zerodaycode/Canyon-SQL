@@ -1,4 +1,4 @@
-use canyon_connection::{tiberius, tokio_postgres::types::Type as TokioPostgresType};
+use canyon_connection::{tiberius::ColumnType as TIB_TY, tokio_postgres::types::Type as TP_TYP};
 use canyon_crud::bounds::{Column, Row, ColumnType, RowOperations};
     
 /// Model that represents the database entities that belongs to the current schema.
@@ -47,14 +47,14 @@ impl ColumnMetadataTypeValue {
         match col.column_type() {
             ColumnType::Postgres(v) => {
                 match *v {
-                    TokioPostgresType::NAME | TokioPostgresType::VARCHAR | TokioPostgresType::TEXT => 
+                    TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => 
                     {
                         Self::StringValue(
                             row.get_opt::<&str>(col.name())
                                 .map(|opt| opt.to_owned()),
                         )
                     }
-                    TokioPostgresType::INT4 => {
+                    TP_TYP::INT4 => {
                         Self::IntValue(
                             row.get_opt::<i32>(col.name()),
                         )
@@ -65,41 +65,15 @@ impl ColumnMetadataTypeValue {
             ColumnType::SqlServer(v) =>
             {
                 match v {
-                    tiberius::ColumnType::Null => todo!(),
-                    tiberius::ColumnType::Bit => todo!(),
-                    tiberius::ColumnType::Int1 => todo!(),
-                    tiberius::ColumnType::Int2 => todo!(),
-                    tiberius::ColumnType::Int4 => todo!(),
-                    tiberius::ColumnType::Int8 => todo!(),
-                    tiberius::ColumnType::Datetime4 => todo!(),
-                    tiberius::ColumnType::Float4 => todo!(),
-                    tiberius::ColumnType::Float8 => todo!(),
-                    tiberius::ColumnType::Money => todo!(),
-                    tiberius::ColumnType::Datetime => todo!(),
-                    tiberius::ColumnType::Money4 => todo!(),
-                    tiberius::ColumnType::Guid => todo!(),
-                    tiberius::ColumnType::Intn => todo!(),
-                    tiberius::ColumnType::Bitn => todo!(),
-                    tiberius::ColumnType::Decimaln => todo!(),
-                    tiberius::ColumnType::Numericn => todo!(),
-                    tiberius::ColumnType::Floatn => todo!(),
-                    tiberius::ColumnType::Datetimen => todo!(),
-                    tiberius::ColumnType::Daten => todo!(),
-                    tiberius::ColumnType::Timen => todo!(),
-                    tiberius::ColumnType::Datetime2 => todo!(),
-                    tiberius::ColumnType::DatetimeOffsetn => todo!(),
-                    tiberius::ColumnType::BigVarBin => todo!(),
-                    tiberius::ColumnType::BigVarChar => todo!(),
-                    tiberius::ColumnType::BigBinary => todo!(),
-                    tiberius::ColumnType::BigChar => todo!(),
-                    tiberius::ColumnType::NVarchar => todo!(),
-                    tiberius::ColumnType::NChar => todo!(),
-                    tiberius::ColumnType::Xml => todo!(),
-                    tiberius::ColumnType::Udt => todo!(),
-                    tiberius::ColumnType::Text => todo!(),
-                    tiberius::ColumnType::Image => todo!(),
-                    tiberius::ColumnType::NText => todo!(),
-                    tiberius::ColumnType::SSVariant => todo!(), 
+                    TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => 
+                        Self::StringValue(
+                            row.get_opt::<&str>(col.name())
+                                .map(|opt| opt.to_owned()),
+                    ),
+                    TIB_TY::Int2 | TIB_TY::Int4 | TIB_TY::Int8 | TIB_TY::Intn => Self::IntValue(
+                        row.get_opt::<i32>(col.name())
+                    ),
+                    _ => Self::NoneValue
                 }
             },
         }

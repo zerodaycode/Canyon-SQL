@@ -7,7 +7,7 @@ use crate::{
     CANYON_REGISTER_ENTITIES,
     constants, 
     migrations::{
-        processor::DatabaseSyncOperations,
+        processor:: MigrationsProcessor,
         information_schema::{
             TableMetadata,
             ColumnMetadata,
@@ -26,16 +26,27 @@ impl Migrations {
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
     pub async fn migrate(datasource_name: &str) {
-        let mut _db_operations = DatabaseSyncOperations::default();
-        let _canyon_memory = CanyonMemory::remember(datasource_name).await;
+        let mut _migrations_processor = MigrationsProcessor::default();
+
+        let canyon_memory = CanyonMemory::remember(datasource_name).await;
         let _canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
 
         // Tracked entities that must be migrated whenever Canyon starts
         let db_type = get_database_type_from_datasource_name(datasource_name).await;
         let schema_status = Self::fetch_database(datasource_name, db_type).await;
-        let _database_tables = Self::map_rows(schema_status);
+        let database_tables_schema_info = Self::map_rows(schema_status);
+        // We filter the tables from the schema that aren't Canyon entities
+        let mut user_database_tables = vec![];
+        for table_parsed in database_tables_schema_info.iter() {
+            if canyon_memory.memory.values().into_iter().any(|f| f.to_lowercase() == table_parsed.table_name) {
+                user_database_tables.append(&mut vec![table_parsed]);
+            }
+        }
 
-        // db_operations.fill_operations(canyon_memory, canyon_tables, database_tables).await;
+        // migrations_processor.process(
+        //     canyon_memory, canyon_tables, user_database_tables, datasource_name
+        // ); 
+        // .await;
     }
 
     /// Fetches a concrete schema metadata by target the database
@@ -44,7 +55,7 @@ impl Migrations {
     {
         let query = match db_type {
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
-            DatabaseType::SqlServer => todo!()
+            DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA
         };
 
         Self::query(query, &[], datasource_name)
@@ -110,11 +121,11 @@ impl Migrations {
 
         if column_identifier == "column_name" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.column_name = value.to_owned().unwrap()
+                dest.column_name = value.to_owned().expect("[MIGRATIONS - set_column_metadata -> column_name]")
             }
         } else if column_identifier == "data_type" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.postgres_datatype = value.to_owned().unwrap()
+                dest.postgres_datatype = value.to_owned().expect("[MIGRATIONS - set_column_metadata -> data_type]")
             }
         } else if column_identifier == "character_maximum_length" {
             if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
@@ -122,7 +133,12 @@ impl Migrations {
             }
         } else if column_identifier == "is_nullable" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.is_nullable = matches!(value.as_ref().unwrap().as_str(), "YES")
+                dest.is_nullable = matches!(
+                    value.as_ref()
+                        .expect("[MIGRATIONS - set_column_metadata -> is_nullable]")
+                        .as_str(), 
+                    "YES"
+                )
             }
         } else if column_identifier == "column_default" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
@@ -166,7 +182,12 @@ impl Migrations {
             }
         } else if column_identifier == "is_identity" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.is_identity = matches!(value.as_ref().unwrap().as_str(), "YES")
+                dest.is_identity = matches!(
+                    value.as_ref()
+                        .expect("[MIGRATIONS - set_column_metadata -> is_identity]")
+                        .as_str(),
+                    "YES"
+                )
             }
         } else if column_identifier == "identity_generation" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {

@@ -16,6 +16,29 @@ use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 /// Responsible of generating the queries to sync the database status with the
 /// Rust source code managed by Canyon, for succesfully make the migrations
 #[derive(Debug, Default)]
+pub struct MigrationsProcessor {
+    _operations: Vec<Box<dyn DatabaseOperation>>,
+}
+impl Transaction<Self> for MigrationsProcessor {}
+
+impl MigrationsProcessor {
+    pub 
+    // async 
+    fn process<'a>(
+        &mut self,
+        _canyon_memory: CanyonMemory,
+        _canyon_tables: Vec<CanyonRegisterEntity<'static>>,
+        _database_tables: Vec<TableMetadata>,
+        _datasource_name: &'a str
+    ) {
+        
+    }
+}
+
+
+/// Responsible of generating the queries to sync the database status with the
+/// Rust source code managed by Canyon, for succesfully make the migrations
+#[derive(Debug, Default)]
 pub struct DatabaseSyncOperations {
     operations: Vec<Box<dyn DatabaseOperation>>,
     drop_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,

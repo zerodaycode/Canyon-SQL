@@ -1,4 +1,5 @@
-use canyon_crud::{crud::Transaction, bounds::RowOperations};
+use canyon_connection::get_database_type_from_datasource_name;
+use canyon_crud::{crud::Transaction, bounds::RowOperations, DatabaseType};
 use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
@@ -55,12 +56,17 @@ impl Transaction<Self> for CanyonMemory {}
 impl CanyonMemory {
     /// Queries the database to retrieve internal data about the structures
     /// tracked by `CanyonSQL`
+    /// 
+    /// TODO fetch schemas if structures have not default ones
     #[allow(clippy::nonminimal_bool)]
-    pub async fn remember(datasource_name: &str) -> Self {
+    pub async fn remember(datasource_name: &str) -> Self {     
+        let database_type = get_database_type_from_datasource_name(datasource_name).await;
+
         // Creates the memory table if not exists
-        Self::create_memory(datasource_name).await;
+        Self::create_memory(datasource_name, &database_type).await;
+        
         // Check database for the "memory data"
-        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
+        let res = Self::query("SELECT * FROM dbo.canyon_memory", &[], datasource_name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();
@@ -109,7 +115,6 @@ impl CanyonMemory {
 
             // update means: the old one. The value to update
             if let Some(update) = need_to_update {
-                println!("To update: {:?}", &struct_name);
                 updates.push(update.struct_name.clone());
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
                     "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}' \
@@ -206,11 +211,14 @@ impl CanyonMemory {
     }
 
     /// Generates, if not exists the `canyon_memory` table
-    async fn create_memory(datasource_name: &str) {
-        Self::query(
-            constants::queries::CANYON_MEMORY_TABLE, &[], datasource_name,
-        ).await
-        .expect("Error creating the 'canyon_memory' table");
+    async fn create_memory(datasource_name: &str, database_type: &DatabaseType) {        
+        let query = if database_type == &DatabaseType::PostgreSql {
+            constants::postgresql_queries::CANYON_MEMORY_TABLE
+        } else { constants::mssql_queries::CANYON_MEMORY_TABLE };
+        
+        Self::query(query, &[], datasource_name)
+            .await
+            .expect("Error creating the 'canyon_memory' table");
     }
 }
 

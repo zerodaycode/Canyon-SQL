@@ -46,20 +46,21 @@ fn initialize_sql_server_docker_instance() {
         assert!(!query_result.is_err());
 
         let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await;
+        assert!(!leagues_sql.is_err());
 
         match leagues_sql {
             Ok(leagues) => {
-                if leagues.is_empty() {
+                if leagues.len() < 10 {
                     let mut client2 = Client::connect(config, tcp2.compat_write())
                         .await
-                        .unwrap();
+                        .expect("Can't connect to MSSQL");
                     let result = client2
                         .query(SQL_SERVER_FILL_TABLE_VALUES, &[])
                         .await;
                     assert!(!result.is_err());
                 }
             },
-            Err(_) => ()
+            Err(e) => eprintln!("Error retrieving the leagues: {:?}", e)
         }
     });
 }
