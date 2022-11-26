@@ -17,21 +17,113 @@ use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 /// Rust source code managed by Canyon, for succesfully make the migrations
 #[derive(Debug, Default)]
 pub struct MigrationsProcessor {
-    _operations: Vec<Box<dyn DatabaseOperation>>,
+    operations: Vec<Box<dyn DatabaseOperation>>,
 }
 impl Transaction<Self> for MigrationsProcessor {}
 
 impl MigrationsProcessor {
     pub 
-    // async 
+    async 
     fn process<'a>(
-        &mut self,
-        _canyon_memory: CanyonMemory,
-        _canyon_tables: Vec<CanyonRegisterEntity<'static>>,
-        _database_tables: Vec<TableMetadata>,
-        _datasource_name: &'a str
+        &'a mut self,
+        canyon_memory: CanyonMemory,
+        canyon_tables: Vec<CanyonRegisterEntity<'static>>,
+        database_tables: Vec<TableMetadata>,
+        datasource_name: &'a str
     ) {
-        
+        // For each entity (table) on the register (Rust structs)
+        for canyon_register_entity in canyon_tables {
+            let entity_name = canyon_register_entity.entity_name;
+            // 1st operation -> 
+            self.create_or_rename_tables(&canyon_memory, entity_name, &database_tables);
+        }
+
+        Self::from_query_register(datasource_name).await;
+    }
+
+    /// TODO
+    fn create_or_rename_tables<'a>(
+        &'a mut self,
+        canyon_memory: &CanyonMemory,
+        entity_name: &'_ str,
+        database_tables: &'a [TableMetadata]
+    ) {
+        // 1st operation -> Check if the current entity is already on the target database.
+        // If isn't present (this if case), we 
+        if !MigrationsHelper::entity_already_on_database(entity_name, &database_tables) {
+            // [`CanyonMemory`] holds a HashMap with the tables who changed their name in
+            // the Rust side. If this table name is present, we don't create a new table,
+            // just rename the already known one
+            if canyon_memory.renamed_entities.contains_key(entity_name) {
+                self.table_rename::<String, String>(
+                    canyon_memory
+                        .renamed_entities
+                        .get(entity_name) // Get the old entity name (the value)
+                        .unwrap()
+                        .to_owned(),
+                    entity_name.to_string() // Set the new table name
+                )
+            } else { 
+                todo!()
+                // Return some control flag to indicate that we must begin to
+                // parse inner elements (columns, constraints...) with the data
+                // Also, we must indicate a relation between the old table name
+                // and the new one, because the parsing are against the legacy
+                // table name, but the queries must be generated against the new
+                // table name
+            }
+        }
+    }
+
+    /// Generates a database agnostic query to change the name of a table
+    fn table_rename<T, U>(&mut self, old_table_name: T, new_table_name: U)
+    where
+        T: Into<String> + Debug + Display + Sync + 'static,
+        U: Into<String> + Debug + Display + Sync + 'static,
+    {
+        self.operations
+            .push(Box::new(TableOperation::AlterTableName::<
+                _,
+                _,
+                &str,
+                &str,
+                &str,
+            >(old_table_name, new_table_name)));
+    }
+
+    /// Make the detected migrations for the next Canyon-SQL run
+    #[allow(clippy::await_holding_lock)]
+    pub async fn from_query_register(datasource_name: &str) {
+        let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
+
+        for i in 0..queries.len() - 1 {
+            let query_to_execute = queries.get(i).unwrap_or_else(|| {
+                panic!("Failed to retrieve query from the register at index: {i}")
+            });
+
+            Self::query(query_to_execute, [], datasource_name)
+                .await
+                .ok()
+                .unwrap_or_else(|| {
+                    panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
+                });
+            // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
+            // TODO Ask for user input?
+        }
+    }
+}
+
+/// Contains helper methods to parse and process the external and internal input data 
+/// for the migrations
+struct MigrationsHelper;
+impl MigrationsHelper {
+    /// Checks if a tracked Canyon entity is already present in the database
+    fn entity_already_on_database<'a>(
+        entity_name: &'a str,
+        database_tables: &'a [TableMetadata],
+    ) -> bool {
+        // TODO Capitalization of letters??
+        database_tables.iter().any(|v| v.table_name == entity_name)
     }
 }
 
@@ -65,14 +157,14 @@ impl DatabaseSyncOperations {
             // If the table isn't on the database we push a new operation to the collection,
             // either to create a new table or to rename an existing one.
             if !table_on_database {
-                let table_renamed = canyon_memory.table_rename.contains_key(table_name);
+                let table_renamed = canyon_memory.renamed_entities.contains_key(table_name);
 
                 // canyon_memory holds a hashmap of the tables who must changed their name.
                 // If this table name is present, we dont create a new one, just rename
                 if table_renamed {
                     // let old_table_name = data.canyon_memory.table_rename.to_owned().get(&table_name.to_owned());
                     let otn = canyon_memory
-                        .table_rename
+                        .renamed_entities
                         .get(table_name)
                         .unwrap()
                         .to_owned()

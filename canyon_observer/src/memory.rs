@@ -47,7 +47,7 @@ use crate::{QUERIES_TO_EXECUTE, constants};
 #[derive(Debug)]
 pub struct CanyonMemory {
     pub memory: HashMap<String, String>,
-    pub table_rename: HashMap<String, String>,
+    pub renamed_entities: HashMap<String, String>,
 }
 
 // Makes this structure able to make queries to the database
@@ -87,7 +87,7 @@ impl CanyonMemory {
         // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
             memory: HashMap::new(),
-            table_rename: HashMap::new(),
+            renamed_entities: HashMap::new(),
         };
         Self::find_canyon_entity_annotated_structs(&mut mem).await;
 
@@ -113,22 +113,22 @@ impl CanyonMemory {
                     && !(el.filepath == *filepath && el.struct_name == *struct_name)
             });
 
-            // update means: the old one. The value to update
-            if let Some(update) = need_to_update {
-                updates.push(update.struct_name.clone());
+            // updated means: the old one. The value to update
+            if let Some(updated) = need_to_update {
+                updates.push(updated.struct_name.clone());
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
                     "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}' \
                             WHERE id = {}",
-                        filepath, struct_name, update.id
+                        filepath, struct_name, updated.id
                 ));
  
                 // if the updated element is the struct name, whe add it to the table_rename Hashmap
-                let rename_table = &update.struct_name != struct_name;
+                let rename_table = &updated.struct_name != struct_name;
 
                 if rename_table {
-                    mem.table_rename.insert(
-                        struct_name.to_lowercase(),
-                        update.struct_name.to_lowercase(),
+                    mem.renamed_entities.insert(
+                        struct_name.to_lowercase(), // The new one
+                        updated.struct_name.to_lowercase(), // The old one
                     );
                 } 
             }
