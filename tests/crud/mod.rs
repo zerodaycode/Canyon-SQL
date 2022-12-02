@@ -47,9 +47,10 @@ fn initialize_sql_server_docker_instance() {
 
         let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await;
         assert!(!leagues_sql.is_err());
-
+        
         match leagues_sql {
-            Ok(leagues) => {
+            Ok(ref leagues) => {
+                println!("Leagues inserted on SQLSERVER: {:?}", leagues_sql);
                 if leagues.len() < 10 {
                     let mut client2 = Client::connect(config, tcp2.compat_write())
                         .await

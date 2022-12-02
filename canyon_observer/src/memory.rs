@@ -45,7 +45,7 @@ use crate::{QUERIES_TO_EXECUTE, constants};
 ///
 /// The `memory field` HashMap is made by the filepath as a key, and the struct's name as value
 #[derive(Debug)]
-pub struct CanyonMemory {
+pub struct  CanyonMemory {
     pub memory: HashMap<String, String>,
     pub renamed_entities: HashMap<String, String>,
 }
@@ -65,13 +65,11 @@ impl CanyonMemory {
         // Creates the memory table if not exists
         Self::create_memory(datasource_name, &database_type).await;
         
-        // Check database for the "memory data"
+        // Retrieve the last status data from the `canyon_memory` table
         let res = Self::query("SELECT * FROM dbo.canyon_memory", &[], datasource_name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();
-
-        // return CanyonMemory {memory: HashMap::new(), table_rename: HashMap::new()};
         
         // Manually maps the results
         let mut memory_db_rows = Vec::new();

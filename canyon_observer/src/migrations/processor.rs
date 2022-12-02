@@ -22,15 +22,14 @@ pub struct MigrationsProcessor {
 impl Transaction<Self> for MigrationsProcessor {}
 
 impl MigrationsProcessor {
-    pub 
-    async 
-    fn process<'a>(
+    pub async fn process<'a>(
         &'a mut self,
         canyon_memory: CanyonMemory,
         canyon_tables: Vec<CanyonRegisterEntity<'static>>,
-        database_tables: Vec<TableMetadata>,
+        database_tables: Vec<&'a TableMetadata>,
         datasource_name: &'a str
     ) {
+        println!("Database tables to play with: {:?}", &database_tables.len());
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_tables {
             let entity_name = canyon_register_entity.entity_name;
@@ -38,7 +37,14 @@ impl MigrationsProcessor {
             self.create_or_rename_tables(&canyon_memory, entity_name, &database_tables);
         }
 
-        Self::from_query_register(datasource_name).await;
+        // TODO Deprecated
+        // Self::from_query_register(datasource_name).await;
+
+        // Self::operations_executor().await;
+        for operation in &self.operations {
+            println!("Operation query: {:?}", &operation);
+            // operation.execute().await
+        }
     }
 
     /// TODO
@@ -46,11 +52,11 @@ impl MigrationsProcessor {
         &'a mut self,
         canyon_memory: &CanyonMemory,
         entity_name: &'_ str,
-        database_tables: &'a [TableMetadata]
+        database_tables: &'a [&'a TableMetadata]
     ) {
         // 1st operation -> Check if the current entity is already on the target database.
         // If isn't present (this if case), we 
-        if !MigrationsHelper::entity_already_on_database(entity_name, &database_tables) {
+        if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
             // [`CanyonMemory`] holds a HashMap with the tables who changed their name in
             // the Rust side. If this table name is present, we don't create a new table,
             // just rename the already known one
@@ -63,15 +69,16 @@ impl MigrationsProcessor {
                         .to_owned(),
                     entity_name.to_string() // Set the new table name
                 )
-            } else { 
-                todo!()
-                // Return some control flag to indicate that we must begin to
-                // parse inner elements (columns, constraints...) with the data
-                // Also, we must indicate a relation between the old table name
-                // and the new one, because the parsing are against the legacy
-                // table name, but the queries must be generated against the new
-                // table name
-            }
+            } 
+            // else { 
+            //     todo!()
+            //     // Return some control flag to indicate that we must begin to
+            //     // parse inner elements (columns, constraints...) with the data
+            //     // Also, we must indicate a relation between the old table name
+            //     // and the new one, because the parsing are against the legacy
+            //     // table name, but the queries must be generated against the new
+            //     // table name
+            // }
         }
     }
 
@@ -96,19 +103,25 @@ impl MigrationsProcessor {
     pub async fn from_query_register(datasource_name: &str) {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
 
-        for i in 0..queries.len() - 1 {
-            let query_to_execute = queries.get(i).unwrap_or_else(|| {
-                panic!("Failed to retrieve query from the register at index: {i}")
-            });
-
-            Self::query(query_to_execute, [], datasource_name)
-                .await
-                .ok()
-                .unwrap_or_else(|| {
-                    panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
+        if queries.len() > 0 {
+            println!("Found migrations queries");
+            for i in 0..queries.len() - 1 {
+                let query_to_execute = queries.get(i).unwrap_or_else(|| {
+                    panic!("Failed to retrieve query from the register at index: {i}")
                 });
-            // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
-            // TODO Ask for user input?
+                println!("Query: {:?}", query_to_execute);
+    
+                Self::query(query_to_execute, [], datasource_name)
+                    .await
+                    .ok()
+                    .unwrap_or_else(|| {
+                        panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
+                    });
+                // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
+                // TODO Ask for user input?
+            }
+        } else {
+            println!("No migrations queries found to apply")
         }
     }
 }
@@ -118,12 +131,25 @@ impl MigrationsProcessor {
 struct MigrationsHelper;
 impl MigrationsHelper {
     /// Checks if a tracked Canyon entity is already present in the database
+    /// 
+    /// ```
+    /// #[test]
+    /// fn test_entity_already_on_database() {
+    ///     const mocked_entity_name: &str = "League";
+    /// }
+    /// ```
     fn entity_already_on_database<'a>(
         entity_name: &'a str,
-        database_tables: &'a [TableMetadata],
+        database_tables: &'a [&'_ TableMetadata],
     ) -> bool {
         // TODO Capitalization of letters??
-        database_tables.iter().any(|v| v.table_name == entity_name)
+        println!("Looking for entity: {:?}", entity_name);
+        database_tables.iter().any(
+            |v| {
+                println!("Checking database table: {:?}", v.table_name);
+                v.table_name == entity_name
+            }
+        )
     }
 }
 
@@ -450,6 +476,8 @@ impl DatabaseSyncOperations {
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
+    /// TODO This should be deprecated, migrations queries can be run without need
+    /// an static item to hold the operations
     #[allow(clippy::await_holding_lock)]
     pub async fn from_query_register() {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();

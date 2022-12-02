@@ -26,33 +26,34 @@ impl Migrations {
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
     pub async fn migrate(datasource_name: &str) {
-        let mut _migrations_processor = MigrationsProcessor::default();
+        let mut migrations_processor = MigrationsProcessor::default();
 
         let canyon_memory = CanyonMemory::remember(datasource_name).await;
-        let _canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+        let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
 
         // Tracked entities that must be migrated whenever Canyon starts
         let db_type = get_database_type_from_datasource_name(datasource_name).await;
         let schema_status = Self::fetch_database(datasource_name, db_type).await;
         let database_tables_schema_info = Self::map_rows(schema_status);
+        
         // We filter the tables from the schema that aren't Canyon entities
         let mut user_database_tables = vec![];
         for table_parsed in database_tables_schema_info.iter() {
-            if canyon_memory.memory.values().into_iter().any(|f| f.to_lowercase() == table_parsed.table_name) {
+            if canyon_memory.memory.values().into_iter().any(|f| f.to_lowercase() == table_parsed.table_name) 
+                || canyon_memory.renamed_entities.contains_key(&table_parsed.table_name.to_lowercase())
+            {
                 user_database_tables.append(&mut vec![table_parsed]);
             }
         }
 
-        // migrations_processor.process(
-        //     canyon_memory, canyon_tables, user_database_tables, datasource_name
-        // ); 
-        // .await;
+        migrations_processor.process(
+            canyon_memory, canyon_tables, user_database_tables, datasource_name
+        ).await;
     }
 
     /// Fetches a concrete schema metadata by target the database
     /// choosed by it's datasource name property
-    async fn fetch_database(datasource_name: &str, db_type: DatabaseType) -> DatabaseResult<Migrations>
-    {
+    async fn fetch_database(datasource_name: &str, db_type: DatabaseType) -> DatabaseResult<Migrations> {
         let query = match db_type {
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA
