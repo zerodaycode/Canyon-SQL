@@ -145,8 +145,7 @@ impl CanyonMemory {
         // Deletes the records when a table is dropped on the previous Canyon run
         let in_memory = mem.memory.values().collect::<Vec<&String>>();
         memory_db_rows.into_iter().for_each(|db_row| {
-            if !in_memory.contains(&&db_row.struct_name.to_string()) && !updates.contains(&&db_row.struct_name)
-            {
+            if !in_memory.contains(&&db_row.struct_name.to_string()) && !updates.contains(&&db_row.struct_name) {
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
                     "DELETE FROM canyon_memory WHERE struct_name = '{}'",
                     db_row.struct_name

@@ -25,33 +25,32 @@ impl MigrationsProcessor {
     pub async fn process<'a>(
         &'a mut self,
         canyon_memory: CanyonMemory,
-        canyon_tables: Vec<CanyonRegisterEntity<'static>>,
+        canyon_tables: Vec<CanyonRegisterEntity<'a>>,
         database_tables: Vec<&'a TableMetadata>,
         datasource_name: &'a str
     ) {
         println!("Database tables to play with: {:?}", &database_tables.len());
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_tables {
-            let entity_name = canyon_register_entity.entity_name;
+            let entity_name = canyon_register_entity.entity_name.to_lowercase();
             // 1st operation -> 
-            self.create_or_rename_tables(&canyon_memory, entity_name, &database_tables);
+            self.create_or_rename_tables(&canyon_memory, entity_name.as_str(), &database_tables);
         }
 
-        // TODO Deprecated
         // Self::from_query_register(datasource_name).await;
 
         // Self::operations_executor().await;
         for operation in &self.operations {
             println!("Operation query: {:?}", &operation);
-            // operation.execute().await
+            // operation.execute().await; // This should be moved again to runtime
         }
     }
 
     /// TODO
     fn create_or_rename_tables<'a>(
-        &'a mut self,
-        canyon_memory: &CanyonMemory,
-        entity_name: &'_ str,
+        &mut self,
+        canyon_memory: &'_ CanyonMemory,
+        entity_name: &'a str,
         database_tables: &'a [&'a TableMetadata]
     ) {
         // 1st operation -> Check if the current entity is already on the target database.
@@ -61,7 +60,7 @@ impl MigrationsProcessor {
             // the Rust side. If this table name is present, we don't create a new table,
             // just rename the already known one
             if canyon_memory.renamed_entities.contains_key(entity_name) {
-                self.table_rename::<String, String>(
+                self.table_rename(
                     canyon_memory
                         .renamed_entities
                         .get(entity_name) // Get the old entity name (the value)
@@ -69,25 +68,21 @@ impl MigrationsProcessor {
                         .to_owned(),
                     entity_name.to_string() // Set the new table name
                 )
-            } 
+            }
             // else { 
             //     todo!()
-            //     // Return some control flag to indicate that we must begin to
-            //     // parse inner elements (columns, constraints...) with the data
-            //     // Also, we must indicate a relation between the old table name
-            //     // and the new one, because the parsing are against the legacy
-            //     // table name, but the queries must be generated against the new
-            //     // table name
+                // Return some control flag to indicate that we must begin to
+                // parse inner elements (columns, constraints...) with the data
+                // Also, we must indicate a relation between the old table name
+                // and the new one, because the parsing are against the legacy
+                // table name, but the queries must be generated against the new
+                // table name
             // }
         }
     }
 
     /// Generates a database agnostic query to change the name of a table
-    fn table_rename<T, U>(&mut self, old_table_name: T, new_table_name: U)
-    where
-        T: Into<String> + Debug + Display + Sync + 'static,
-        U: Into<String> + Debug + Display + Sync + 'static,
-    {
+    fn table_rename(&mut self, old_table_name: String, new_table_name: String) {
         self.operations
             .push(Box::new(TableOperation::AlterTableName::<
                 _,
@@ -128,19 +123,16 @@ impl MigrationsProcessor {
 
 /// Contains helper methods to parse and process the external and internal input data 
 /// for the migrations
-pub(crate) struct MigrationsHelper;
+struct MigrationsHelper;
 impl MigrationsHelper {
     /// Checks if a tracked Canyon entity is already present in the database
-    pub(crate) fn entity_already_on_database<'a>(
+    fn entity_already_on_database<'a>(
         entity_name: &'a str,
         database_tables: &'a [&'_ TableMetadata],
     ) -> bool {
         println!("Looking for entity: {:?}", entity_name);
-        database_tables.iter().any(
-            |v| {
-                println!("Checking database table: {:?}", v.table_name);
-                v.table_name.to_lowercase() == entity_name.to_lowercase()
-            }
+        database_tables.iter().any( |v| 
+            v.table_name.to_lowercase() == entity_name.to_lowercase()
         )
     }
 }
@@ -148,7 +140,6 @@ impl MigrationsHelper {
 #[cfg(test)]
 mod migrations_helper_tests {
     use crate::constants;
-
     use super::*;
 
     const MOCKED_ENTITY_NAME: &str = "League";
