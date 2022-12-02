@@ -18,11 +18,6 @@ pub mod postgresql_queries {
             gi.character_maximum_length,
             gi.is_nullable,
             gi.column_default,
-            gi.numeric_precision,
-            gi.numeric_scale,
-            gi.numeric_precision_radix,
-            gi.datetime_precision,
-            gi.interval_type,
             CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'FOREIGN KEY')
             	THEN CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT) ELSE NULL END AS foreign_key_info,
             CASE WHEN starts_with(CAST(pg_catalog.pg_get_constraintdef(oid) AS TEXT), 'FOREIGN KEY')
@@ -62,10 +57,6 @@ pub mod mssql_queries {
             CAST(gi.character_maximum_length AS int),
             gi.is_nullable,
             gi.column_default,
-            CAST(gi.numeric_precision AS int),
-            CAST(gi.numeric_scale AS int),
-            CAST(gi.numeric_precision_radix AS int),
-            CAST(gi.datetime_precision AS int),
             fk.foreign_key_info,
             fk.foreign_key_name,
             pk.CONSTRAINT_NAME as primary_key_info,
@@ -132,4 +123,102 @@ pub mod postgresql_type {
 /// Ex: ` format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)`
 pub mod query_chunk {
     // TODO @gbm25
+}
+
+
+pub mod mocked_data {
+    use canyon_connection::lazy_static::lazy_static;
+
+    use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
+
+    lazy_static! {
+        pub static ref TABLE_METADATA_LEAGUE_EX: TableMetadata = TableMetadata { 
+            table_name: "league".to_string(), 
+            columns: vec![
+                ColumnMetadata {
+                    column_name: "id".to_owned(),
+                    postgres_datatype: "int".to_owned(),
+                    character_maximum_length: None,
+                    is_nullable: false,
+                    column_default: None,
+                    foreign_key_info: None,
+                    foreign_key_name: None,
+                    primary_key_info: Some("PK__league__3213E83FBDA92571".to_owned()),
+                    primary_key_name: Some("PK__league__3213E83FBDA92571".to_owned()),
+                    is_identity: false,
+                    identity_generation: None
+                }, 
+                ColumnMetadata {
+                    column_name: "ext_id".to_owned(),
+                    postgres_datatype: "bigint".to_owned(),
+                    character_maximum_length: None,
+                    is_nullable: false,
+                    column_default: None,
+                    foreign_key_info: None,
+                    foreign_key_name: None,
+                    primary_key_info: None,
+                    primary_key_name: None,
+                    is_identity: false,
+                    identity_generation: None
+                }, 
+                ColumnMetadata {
+                    column_name: "slug".to_owned(),
+                    postgres_datatype: "nvarchar".to_owned(),
+                    character_maximum_length: None,
+                    is_nullable: false,
+                    column_default: None,
+                    foreign_key_info: None,
+                    foreign_key_name: None,
+                    primary_key_info: None,
+                    primary_key_name: None,
+                    is_identity: false,
+                    identity_generation: None
+                }, 
+                ColumnMetadata {
+                    column_name: "name".to_owned(),
+                    postgres_datatype: "nvarchar".to_owned(),
+                    character_maximum_length: None,
+                    is_nullable: false,
+                    column_default: None,
+                    foreign_key_info: None,
+                    foreign_key_name: None,
+                    primary_key_info: None,
+                    primary_key_name: None,
+                    is_identity: false,
+                    identity_generation: None
+                }, 
+                ColumnMetadata {
+                    column_name: "region".to_owned(), 
+                    postgres_datatype: "nvarchar".to_owned(),
+                    character_maximum_length: None,
+                    is_nullable: false,
+                    column_default: None,
+                    foreign_key_info: None,
+                    foreign_key_name: None,
+                    primary_key_info: None,
+                    primary_key_name: None,
+                    is_identity: false,
+                    identity_generation: None
+                }, 
+                ColumnMetadata {
+                    column_name: "image_url".to_owned(),
+                    postgres_datatype: "nvarchar".to_owned(),
+                    character_maximum_length: None,
+                    is_nullable: false,
+                    column_default: None,
+                    foreign_key_info: None,
+                    foreign_key_name: None,
+                    primary_key_info: None,
+                    primary_key_name: None,
+                    is_identity: false,
+                    identity_generation: None 
+                }
+            ]
+        };
+
+        pub static ref NON_MATCHING_TABLE_METADATA: TableMetadata = TableMetadata { 
+            table_name: "random_name_to_assert_false".to_string(), 
+            columns: vec![]
+        };
+    }
 }

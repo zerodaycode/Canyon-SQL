@@ -20,11 +20,6 @@ pub struct ColumnMetadata {
     pub character_maximum_length: Option<i32>,
     pub is_nullable: bool, // Care, postgres type is varchar
     pub column_default: Option<String>,
-    pub numeric_precision: Option<i32>,
-    pub numeric_scale: Option<i32>,
-    pub numeric_precision_radix: Option<i32>,
-    pub datetime_precision: Option<i32>,
-    pub interval_type: Option<String>,
     pub foreign_key_info: Option<String>,
     pub foreign_key_name: Option<String>,
     pub primary_key_info: Option<String>,

@@ -128,28 +128,50 @@ impl MigrationsProcessor {
 
 /// Contains helper methods to parse and process the external and internal input data 
 /// for the migrations
-struct MigrationsHelper;
+pub(crate) struct MigrationsHelper;
 impl MigrationsHelper {
     /// Checks if a tracked Canyon entity is already present in the database
-    /// 
-    /// ```
-    /// #[test]
-    /// fn test_entity_already_on_database() {
-    ///     const mocked_entity_name: &str = "League";
-    /// }
-    /// ```
-    fn entity_already_on_database<'a>(
+    pub(crate) fn entity_already_on_database<'a>(
         entity_name: &'a str,
         database_tables: &'a [&'_ TableMetadata],
     ) -> bool {
-        // TODO Capitalization of letters??
         println!("Looking for entity: {:?}", entity_name);
         database_tables.iter().any(
             |v| {
                 println!("Checking database table: {:?}", v.table_name);
-                v.table_name == entity_name
+                v.table_name.to_lowercase() == entity_name.to_lowercase()
             }
         )
+    }
+}
+
+#[cfg(test)]
+mod migrations_helper_tests {
+    use crate::constants;
+
+    use super::*;
+
+    const MOCKED_ENTITY_NAME: &str = "League";
+
+    #[test]
+    fn test_entity_already_on_database() {
+        let parse_result_empty_db_tables = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME, &[]
+        );
+        // Always should be false
+        assert_eq!(parse_result_empty_db_tables, false);
+
+        // Rust has a League entity. Database has a `league` entity. Case should be normalized
+        // and a match must raise
+        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME, &[&constants::mocked_data::TABLE_METADATA_LEAGUE_EX]
+        );
+        assert!(mocked_league_entity_on_database);
+
+        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME, &[&constants::mocked_data::NON_MATCHING_TABLE_METADATA]
+        );
+        assert_eq!(mocked_league_entity_on_database, false)
     }
 }
 

@@ -4,6 +4,7 @@ pub extern crate futures;
 pub extern crate tokio;
 pub extern crate tokio_util;
 pub extern crate tokio_postgres;
+pub extern crate lazy_static;
 
 pub mod canyon_database_connector;
 mod datasources;

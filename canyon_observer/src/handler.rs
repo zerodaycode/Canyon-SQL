@@ -109,7 +109,7 @@ impl Migrations {
         for column in res_row.columns().iter() {
             if column.name() != "table_name" {
                 Self::set_column_metadata(res_row, column, &mut entity_column);
-            } // Discards the column "table_name", is alreadya field of [`TableMetadata`]
+            } // Discards the column "table_name", 'cause is already a field of [`TableMetadata`]
         }
         table.columns.push(entity_column);
     }
@@ -144,26 +144,6 @@ impl Migrations {
         } else if column_identifier == "column_default" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
                 dest.column_default = value.to_owned()
-            }
-        } else if column_identifier == "numeric_precision" {
-            if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
-                dest.numeric_precision = value.to_owned()
-            }
-        } else if column_identifier == "numeric_scale" {
-            if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
-                dest.numeric_scale = value.to_owned()
-            }
-        } else if column_identifier == "numeric_precision_radix" {
-            if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
-                dest.numeric_precision_radix = value.to_owned()
-            }
-        } else if column_identifier == "datetime_precision" {
-            if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
-                dest.datetime_precision = value.to_owned()
-            }
-        } else if column_identifier == "interval_type" {
-            if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.interval_type = value.to_owned()
             }
         } else if column_identifier == "foreign_key_info" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
