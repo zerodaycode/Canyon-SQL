@@ -93,28 +93,61 @@ pub mod mssql_queries {
             WHERE gi.TABLE_SCHEMA = 'dbo'";
 }
 
-/// TODO
-pub mod regex {
-    // TODO @gbm25
+/// Constant string values that holds regex patterns
+pub mod regex_patterns {
+    pub const EXTRACT_RUST_OPT_REGEX: &str = r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>";
 }
 
-/// TODO
+/// Constant values that maps the string representation of the Rust
+/// built-in types
+#[allow(unused)]
 pub mod rust_type {
+    pub const I8: &str = "i8";
+    pub const OPT_I8: &str = "Option<i8>";
+    pub const U8: &str = "u8";
+    pub const OPT_U8: &str = "Option<u8>";
+
+    pub const I16: &str = "i16";
+    pub const OPT_U16: &str = "Option<i16>";
+    pub const U16: &str = "u16";
+    pub const OPT_I16: &str = "Option<u16>";
+
     pub const I32: &str = "i32";
     pub const OPT_I32: &str = "Option<i32>";
+    pub const U32: &str = "u32";
+    pub const OPT_U32: &str = "Option<u32>";
+
     pub const I64: &str = "i64";
     pub const OPT_I64: &str = "Option<i64>";
+    pub const U64: &str = "u64";
+    pub const OPT_U64: &str = "Option<u64>";
+
+    pub const F32: &str = "f32";
+    pub const OPT_F32: &str = "Option<f32>";
+    pub const F64: &str = "f64";
+    pub const OPT_F64: &str = "Option<f64>";
+
     pub const STRING: &str = "String";
     pub const OPT_STRING: &str = "Option<String>";
+
     pub const BOOL: &str = "bool";
     pub const OPT_BOOL: &str = "Option<bool>";
+
     pub const NAIVE_DATE: &str = "NaiveDate";
     pub const OPT_NAIVE_DATE: &str = "Option<NaiveDate>";
+
+    pub const NAIVE_DATE_TIME: &str = "NaiveDateTime";
+    pub const OPT_NAIVE_DATE_TIME: &str = "Option<NaiveDateTime>";
 }
 
 /// TODO
 pub mod postgresql_type {
-    // TODO @gbm25
+    pub const INTEGER: &str = "INTEGER";
+    pub const BIGINT: &str = "BIGINT";
+    pub const TEXT: &str = "TEXT";
+    pub const BOOLEAN: &str = "BOOLEAN";
+    pub const DATE: &str = "DATE";
+    pub const DATETIME: &str = "DATETIME";
 }
 
 /// Contains fragments queries to be invoked as const items and to be concatenated

@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::constants::rust_type;
+use crate::constants::{rust_type, postgresql_type, regex_patterns};
 
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
@@ -61,17 +61,29 @@ impl CanyonRegisterEntityField {
         let mut postgres_type = String::new();
 
         match rust_type_clean.as_str() {
-            rust_type::I32 => postgres_type.push_str("INTEGER NOT NULL"),
-            rust_type::OPT_I32 => postgres_type.push_str("INTEGER"),
-            rust_type::I64 => postgres_type.push_str("BIGINT NOT NULL"),
-            rust_type::OPT_I64 => postgres_type.push_str("BIGINT"),
-            rust_type::STRING => postgres_type.push_str("TEXT NOT NULL"),
-            rust_type::OPT_STRING => postgres_type.push_str("TEXT"),
-            rust_type::BOOL => postgres_type.push_str("BOOLEAN NOT NULL"),
-            rust_type::OPT_BOOL => postgres_type.push_str("BOOLEAN"),
-            rust_type::NAIVE_DATE => postgres_type.push_str("DATE NOT NULL"),
-            rust_type::OPT_NAIVE_DATE => postgres_type.push_str("DATE"),
-            &_ => postgres_type.push_str("DATE"),
+            rust_type::I8 | rust_type::U8 => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::INTEGER)),
+            rust_type::OPT_I8 | rust_type::OPT_U8 => postgres_type.push_str(postgresql_type::INTEGER),
+
+            rust_type::I16 | rust_type::U16 => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::INTEGER)),
+            rust_type::OPT_I16 | rust_type::OPT_U16 => postgres_type.push_str(postgresql_type::INTEGER),
+            
+            rust_type::I32 | rust_type::U32 => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::INTEGER)),
+            rust_type::OPT_I32 | rust_type::OPT_U32 => postgres_type.push_str(postgresql_type::INTEGER),
+            
+            rust_type::I64 | rust_type::U64 => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::BIGINT)),
+            rust_type::OPT_I64 | rust_type::OPT_U64 => postgres_type.push_str(postgresql_type::BIGINT),
+            
+            rust_type::STRING => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::TEXT)),
+            rust_type::OPT_STRING => postgres_type.push_str(postgresql_type::TEXT),
+            
+            rust_type::BOOL => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::BOOLEAN)),
+            rust_type::OPT_BOOL => postgres_type.push_str(postgresql_type::BOOLEAN),
+            
+            rust_type::NAIVE_DATE => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::DATE)),
+            rust_type::OPT_NAIVE_DATE => postgres_type.push_str(postgresql_type::DATE),
+            rust_type::NAIVE_DATE_TIME => postgres_type.push_str(&format!("{} NOT NULL", postgresql_type::DATETIME)),
+            rust_type::OPT_NAIVE_DATE_TIME => postgres_type.push_str(postgresql_type::DATETIME),
+            &_ => todo!(),
         }
 
         postgres_type
@@ -83,7 +95,7 @@ impl CanyonRegisterEntityField {
 
         if rs_type_is_optional {
             let type_regex =
-                Regex::new(r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>").unwrap();
+                Regex::new(regex_patterns::EXTRACT_RUST_OPT_REGEX).unwrap();
             let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
             rust_type_clean = capture_rust_type
                 .name("rust_type")
