@@ -38,16 +38,18 @@ impl Migrations {
         
         // We filter the tables from the schema that aren't Canyon entities
         let mut user_database_tables = vec![];
-        for table_parsed in database_tables_schema_info.iter() {
-            if canyon_memory.memory.values().into_iter().any(|f| f.to_lowercase() == table_parsed.table_name) 
-                || canyon_memory.renamed_entities.contains_key(&table_parsed.table_name.to_lowercase())
+        println!("Renamed entities: {:?}", &canyon_memory.renamed_entities);
+        println!("DB tables len: {:?}", &database_tables_schema_info.len());
+        for parsed_table in database_tables_schema_info.iter() {
+            if canyon_memory.memory.values().any(|f| f.to_lowercase() == parsed_table.table_name) 
+                || canyon_memory.renamed_entities.values().any(|f| *f == parsed_table.table_name.to_lowercase())
             {
-                user_database_tables.append(&mut vec![table_parsed]);
+                user_database_tables.append(&mut vec![parsed_table]);
             }
         }
 
         migrations_processor.process(
-            canyon_memory, canyon_tables, user_database_tables, datasource_name
+            canyon_memory, canyon_tables, user_database_tables, datasource_name, db_type
         ).await;
     }
 

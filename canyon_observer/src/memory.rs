@@ -66,28 +66,31 @@ impl CanyonMemory {
         Self::create_memory(datasource_name, &database_type).await;
         
         // Retrieve the last status data from the `canyon_memory` table
-        let res = Self::query("SELECT * FROM dbo.canyon_memory", &[], datasource_name)
+        // TODO hardcoded schema for SQLSERVER development
+        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();
         
         // Manually maps the results
-        let mut memory_db_rows = Vec::new();
+        let mut db_rows = Vec::new();
         for row in mem_results.iter() {
             let db_row = CanyonMemoryRow {
                 id: row.get::<i32>("id"),
                 filepath: row.get::<&str>("filepath"),
                 struct_name: row.get::<&str>("struct_name")
             };
-            memory_db_rows.push(db_row); 
+            db_rows.push(db_row); 
         }
-
+        println!("DB rows: {:?}", &db_rows);
+        
         // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
             memory: HashMap::new(),
             renamed_entities: HashMap::new(),
         };
         Self::find_canyon_entity_annotated_structs(&mut mem).await;
+        println!("In memory entities: {:?}", &mem);
 
         // Insert into the memory table the new discovered entities
         // Care, insert the new ones, delete the olds
@@ -97,7 +100,7 @@ impl CanyonMemory {
 
         for (filepath, struct_name) in &mem.memory {
             // When the filepath and the struct hasn't been modified and are already on db
-            let already_in_db = memory_db_rows.iter().any(|el| {
+            let already_in_db = db_rows.iter().any(|el| {
                 (el.filepath == *filepath && el.struct_name == *struct_name)
                     || ((el.filepath != *filepath && el.struct_name == *struct_name)
                         || (el.filepath == *filepath && el.struct_name != *struct_name))
@@ -106,27 +109,27 @@ impl CanyonMemory {
                 values_to_insert.push_str(format!("('{filepath}', '{struct_name}'),").as_str());
             }
             // When the struct or the filepath it's already on db but one of the two has been modified
-            let need_to_update = memory_db_rows.iter().find(|el| {
+            let need_to_update = db_rows.iter().find(|el| {
                 (el.filepath == *filepath || el.struct_name == *struct_name)
                     && !(el.filepath == *filepath && el.struct_name == *struct_name)
             });
 
             // updated means: the old one. The value to update
-            if let Some(updated) = need_to_update {
-                updates.push(updated.struct_name.clone());
+            if let Some(old) = need_to_update {
+                updates.push(old.struct_name.clone());
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
                     "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}' \
                             WHERE id = {}",
-                        filepath, struct_name, updated.id
+                        filepath, struct_name, old.id
                 ));
  
                 // if the updated element is the struct name, whe add it to the table_rename Hashmap
-                let rename_table = &updated.struct_name != struct_name;
+                let rename_table = &old.struct_name != struct_name;
 
                 if rename_table {
                     mem.renamed_entities.insert(
                         struct_name.to_lowercase(), // The new one
-                        updated.struct_name.to_lowercase(), // The old one
+                        old.struct_name.to_lowercase(), // The old one
                     );
                 } 
             }
@@ -144,7 +147,7 @@ impl CanyonMemory {
 
         // Deletes the records when a table is dropped on the previous Canyon run
         let in_memory = mem.memory.values().collect::<Vec<&String>>();
-        memory_db_rows.into_iter().for_each(|db_row| {
+        db_rows.into_iter().for_each(|db_row| {
             if !in_memory.contains(&&db_row.struct_name.to_string()) && !updates.contains(&&db_row.struct_name) {
                 QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
                     "DELETE FROM canyon_memory WHERE struct_name = '{}'",

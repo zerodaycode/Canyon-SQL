@@ -2,6 +2,7 @@
 ///! over a target database
  
 use async_trait::async_trait;
+use canyon_crud::DatabaseType;
 use std::fmt::{Debug, Display};
 use std::{ops::Not, sync::MutexGuard};
 
@@ -27,7 +28,8 @@ impl MigrationsProcessor {
         canyon_memory: CanyonMemory,
         canyon_tables: Vec<CanyonRegisterEntity<'a>>,
         database_tables: Vec<&'a TableMetadata>,
-        datasource_name: &'a str
+        datasource_name: &'a str,
+        db_type: DatabaseType
     ) {
         println!("Database tables to play with: {:?}", &database_tables.len());
         // For each entity (table) on the register (Rust structs)
@@ -37,13 +39,13 @@ impl MigrationsProcessor {
             self.create_or_rename_tables(&canyon_memory, entity_name.as_str(), &database_tables);
         }
 
-        // Self::from_query_register(datasource_name).await;
-
+        
         // Self::operations_executor().await;
         for operation in &self.operations {
             println!("Operation query: {:?}", &operation);
-            // operation.execute().await; // This should be moved again to runtime
+            operation.execute(db_type).await; // This should be moved again to runtime
         }
+        // Self::from_query_register(datasource_name).await;
     }
 
     /// TODO
@@ -99,12 +101,10 @@ impl MigrationsProcessor {
         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
 
         if queries.len() > 0 {
-            println!("Found migrations queries");
             for i in 0..queries.len() - 1 {
                 let query_to_execute = queries.get(i).unwrap_or_else(|| {
                     panic!("Failed to retrieve query from the register at index: {i}")
                 });
-                println!("Query: {:?}", query_to_execute);
     
                 Self::query(query_to_execute, [], datasource_name)
                     .await
@@ -474,18 +474,18 @@ impl DatabaseSyncOperations {
             }
         }
 
-        for operation in &self.operations {
-            operation.execute().await
-        }
-        for drop_primary_key_operation in &self.drop_primary_key_operations {
-            drop_primary_key_operation.execute().await
-        }
-        for set_primary_key_operation in &self.set_primary_key_operations {
-            set_primary_key_operation.execute().await
-        }
-        for constrain_operation in &self.constrains_operations {
-            constrain_operation.execute().await
-        }
+        // for operation in &self.operations {
+        //     operation.execute().await
+        // }
+        // for drop_primary_key_operation in &self.drop_primary_key_operations {
+        //     drop_primary_key_operation.execute().await
+        // }
+        // for set_primary_key_operation in &self.set_primary_key_operations {
+        //     set_primary_key_operation.execute().await
+        // }
+        // for constrain_operation in &self.constrains_operations {
+        //     constrain_operation.execute().await
+        // }
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
@@ -779,7 +779,7 @@ impl DatabaseSyncOperations {
 /// Trait that enables implementors to execute migration queries
 #[async_trait]
 trait DatabaseOperation: Debug {
-    async fn execute(&self);
+    async fn execute(&self, db_type: DatabaseType);
 }
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
@@ -817,7 +817,7 @@ where
     W: Into<String> + Debug + Display + Sync,
     X: Into<String> + Debug + Display + Sync,
 {
-    async fn execute(&self) {
+    async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) =>
                 format!(
@@ -827,8 +827,15 @@ where
                     ).collect::<Vec<String>>().join(", ")
                 ).replace('"', ""),
 
-            TableOperation::AlterTableName(old_table_name, new_table_name) =>
-                format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
+            TableOperation::AlterTableName(old_table_name, new_table_name) => {
+                if db_type == DatabaseType::PostgreSql {
+                    format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};")
+                } else if db_type == DatabaseType::SqlServer {
+                    format!("exec sp_rename '[{old_table_name}]', '{new_table_name}';")
+                } else {
+                    todo!()
+                }                 
+            },
 
             TableOperation::AddTableForeignKey(
                 table_name,
@@ -890,7 +897,7 @@ impl<T> DatabaseOperation for ColumnOperation<T>
 where
     T: Into<String> + std::fmt::Debug + Display + Sync,
 {
-    async fn execute(&self) {
+    async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) => format!(
                 "ALTER TABLE {table_name} ADD COLUMN \"{}\" {};",
@@ -946,7 +953,7 @@ impl<T> DatabaseOperation for SequenceOperation<T>
 where
     T: Into<String> + std::fmt::Debug + Display + Sync,
 {
-    async fn execute(&self) {
+    async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => format!(
                 "SELECT setval(pg_get_serial_sequence('{}', '{}'), max(\"{}\")) from {};",
