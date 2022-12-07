@@ -472,18 +472,17 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                         let lookage_value = value.get_fk_column(#column)
                         .expect(format!(
                             "Column: {:?} not found in type: {:?}", #column, #table
-                            ).as_str());
+                            ));
 
                         let stmt = format!(
-                            "SELECT * FROM {} WHERE {} = {}", 
+                            "SELECT * FROM {} WHERE {} = $1", 
                             #table_schema_data,
-                            format!("\"{}\"", #f_ident).as_str(),
-                            lookage_value
+                            format!("\"{}\"", #f_ident).as_str()
                         );
 
                         let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                             stmt,
-                            &[],
+                            &[lookage_value],
                             ""
                         ).await;
 
@@ -503,19 +502,17 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                         let lookage_value = value.get_fk_column(#column)
                             .expect(format!(
                                 "Column: {:?} not found in type: {:?}", #column, #table
-                            ).as_str());
+                            ));
 
                         let stmt = format!(
-                            "SELECT * FROM {} WHERE {} = {}", 
+                            "SELECT * FROM {} WHERE {} = $1", 
                             #table_schema_data,
-                            format!("\"{}\"", #f_ident).as_str(),
-                            lookage_value  // TODO The unique non-parametrized query parameter
-                            // We must convert it to QueryParameters
+                            format!("\"{}\"", #f_ident).as_str()
                         );
 
                         let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                             stmt,
-                            &[],
+                            &[lookage_value],
                             datasource_name
                         ).await;
 

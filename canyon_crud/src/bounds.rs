@@ -86,7 +86,7 @@ where
 /// this side of the relation it's representing
 pub trait ForeignKeyable<T> {
     /// Retrieves the field related to the column passed in
-    fn get_fk_column(&self, column: &str) -> Option<String>;
+    fn get_fk_column(&self, column: &str) -> Option<&dyn QueryParameters<'_>>;
 }
 
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
