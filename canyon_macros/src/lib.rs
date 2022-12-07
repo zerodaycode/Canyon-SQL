@@ -515,8 +515,7 @@ pub fn implement_foreignkeyable_for_type(
                 }
             }
         }
-    }
-    .into()
+    }.into()
 }
 
 #[proc_macro_derive(CanyonMapper)]

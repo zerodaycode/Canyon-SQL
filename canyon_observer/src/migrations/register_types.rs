@@ -1,6 +1,7 @@
+use canyon_crud::DatabaseType;
 use regex::Regex;
 
-use crate::constants::{rust_type, postgresql_type, regex_patterns};
+use crate::constants::{rust_type, postgresql_type, sqlserver_type, regex_patterns, self};
 
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
@@ -15,22 +16,6 @@ pub struct CanyonRegisterEntity<'a> {
     pub entity_fields: Vec<CanyonRegisterEntityField>,
 }
 
-impl<'a> CanyonRegisterEntity<'a> {
-    /// Returns the String representation for the current "CanyonRegisterEntity" instance.
-    /// Being "CanyonRegisterEntity" the representation of a table, the String will be formed by each of its "CanyonRegisterEntityField",
-    /// formatting each as "name of the column" "postgres representation of the type" "parameters for the column"
-    pub fn entity_fields_as_string(&self) -> String {
-        let mut fields_strings: Vec<String> = Vec::new();
-
-        for field in &self.entity_fields {
-            let column_postgres_syntax = field.field_type_to_postgres();
-            let field_as_string = format!("{} {column_postgres_syntax}", field.field_name);
-            fields_strings.push(field_as_string);
-        }
-
-        fields_strings.join(" ")
-    }
-}
 
 /// Complementary type for a field that represents a struct field that maps
 /// some real database column data
@@ -43,13 +28,13 @@ pub struct CanyonRegisterEntityField {
 
 impl CanyonRegisterEntityField {
     /// Return the postgres datatype and parameters to create a column for a given rust type
-    fn to_postgres_syntax(&self) -> String {
+    pub fn to_postgres_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
         let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
 
         if rs_type_is_optional {
             let type_regex =
-                Regex::new(r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>").unwrap();
+                Regex::new(regex_patterns::EXTRACT_RUST_OPT_REGEX).unwrap();
             let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
             rust_type_clean = capture_rust_type
                 .name("rust_type")
@@ -89,6 +74,54 @@ impl CanyonRegisterEntityField {
         postgres_type
     }
 
+    /// Return the postgres datatype and parameters to create a column for a given rust type
+    /// for Microsoft SQL Server
+    pub fn to_sqlserver_syntax(&self) -> String {
+        let mut rust_type_clean = self.field_type.replace(' ', "");
+        let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
+
+        if rs_type_is_optional {
+            let type_regex =
+                Regex::new(regex_patterns::EXTRACT_RUST_OPT_REGEX).unwrap();
+            let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
+            rust_type_clean = capture_rust_type
+                .name("rust_type")
+                .unwrap()
+                .as_str()
+                .to_string();
+        }
+
+        let mut sqlserver_type = String::new();
+
+        match rust_type_clean.as_str() {
+            rust_type::I8 | rust_type::U8 => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::INT)),
+            rust_type::OPT_I8 | rust_type::OPT_U8 => sqlserver_type.push_str(sqlserver_type::INT),
+
+            rust_type::I16 | rust_type::U16 => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::INT)),
+            rust_type::OPT_I16 | rust_type::OPT_U16 => sqlserver_type.push_str(sqlserver_type::INT),
+            
+            rust_type::I32 | rust_type::U32 => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::INT)),
+            rust_type::OPT_I32 | rust_type::OPT_U32 => sqlserver_type.push_str(sqlserver_type::INT),
+            
+            rust_type::I64 | rust_type::U64 => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::BIGINT)),
+            rust_type::OPT_I64 | rust_type::OPT_U64 => sqlserver_type.push_str(sqlserver_type::BIGINT),
+            
+            rust_type::STRING => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::NVARCHAR)),
+            rust_type::OPT_STRING => sqlserver_type.push_str(sqlserver_type::NVARCHAR),
+            
+            rust_type::BOOL => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::BIT)),
+            rust_type::OPT_BOOL => sqlserver_type.push_str(sqlserver_type::BIT),
+            
+            rust_type::NAIVE_DATE => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::DATE)),
+            rust_type::OPT_NAIVE_DATE => sqlserver_type.push_str(sqlserver_type::DATE),
+            rust_type::NAIVE_DATE_TIME => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::DATETIME)),
+            rust_type::OPT_NAIVE_DATE_TIME => sqlserver_type.push_str(sqlserver_type::DATETIME),
+            &_ => todo!(),
+        }
+
+        sqlserver_type
+    }
+
     pub fn to_postgres_alter_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
         let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
@@ -124,6 +157,7 @@ impl CanyonRegisterEntityField {
     }
 
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
+    ///  with the correct format for PostgreSQL
     fn to_postgres_id_syntax(&self) -> String {
         let has_pk_annotation = self
             .annotations
@@ -146,6 +180,30 @@ impl CanyonRegisterEntityField {
         }
     }
 
+        /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
+        /// with the correct format for Microsoft SQL Server
+        fn to_sqlserver_id_syntax(&self) -> String {
+            let has_pk_annotation = self
+                .annotations
+                .iter()
+                .find(|a| a.starts_with("Annotation: PrimaryKey"));
+    
+            let pk_is_autoincremental = match has_pk_annotation {
+                Some(annotation) => annotation.contains("true"),
+                None => false,
+            };
+    
+            let numeric = vec!["i16", "i32", "i64"];
+    
+            let sqlserver_datatype_syntax = Self::to_sqlserver_syntax(self);
+    
+            if numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental {
+                format!("{sqlserver_datatype_syntax} IDENTITY PRIMARY")
+            } else {
+                format!("{sqlserver_datatype_syntax} PRIMARY KEY")
+            }
+        }
+
     /// Return if the field is autoincremental
     pub fn is_autoincremental(&self) -> bool {
         let has_pk_annotation = self
@@ -163,15 +221,4 @@ impl CanyonRegisterEntityField {
         numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental
     }
 
-    pub fn field_type_to_postgres(&self) -> String {
-        let is_pk = self
-            .annotations
-            .iter()
-            .find(|a| a.starts_with("Annotation: PrimaryKey"));
-
-        match is_pk {
-            Some(_) => Self::to_postgres_id_syntax(self),
-            None => Self::to_postgres_syntax(self),
-        }
-    }
 }

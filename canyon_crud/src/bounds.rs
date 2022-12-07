@@ -77,6 +77,15 @@ where
     }
 }
 
+impl<T> FieldValueIdentifier<T> for Option<String>
+where
+    T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
+{
+    fn value(self) -> String {
+        self.unwrap().to_string()
+    }
+}
+
 /// Bounds to some type T in order to make it callable over some fn parameter T
 ///
 /// Represents the ability of an struct to be considered as candidate to perform

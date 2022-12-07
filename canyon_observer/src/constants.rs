@@ -150,6 +150,16 @@ pub mod postgresql_type {
     pub const DATETIME: &str = "DATETIME";
 }
 
+pub mod sqlserver_type {
+    pub const INT: &str = "INT";
+    pub const BIGINT: &str = "BIGINT";
+    // TODO More information needed, the number of characters may need to be variable and user-defined
+    pub const NVARCHAR: &str = "nvarchar(max)";
+    pub const BIT: &str = "BIT";
+    pub const DATE: &str = "DATE";
+    pub const DATETIME: &str = "DATETIME2";
+}
+
 /// Contains fragments queries to be invoked as const items and to be concatenated
 /// with dynamic data
 ///
