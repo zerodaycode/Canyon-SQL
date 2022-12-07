@@ -90,16 +90,18 @@ impl CanyonEntity {
                 let field_name = &f.name;
                 let field_name_as_string = f.name.to_string();
                 let field_type_as_string = f.get_field_type_as_string();
-
+                
                 if field_type_as_string.contains("Option") {
+                    println!("OPT - Field name as string: {:?} => Type: {:?}", &field_name_as_string, &field_type_as_string);
                     quote! {
                         #enum_name::#field_name(v) =>
-                            format!("{} {}", #field_name_as_string.to_string(), v.unwrap().to_string())
+                            format!("{:?} {:?}", #field_name_as_string, v.unwrap().to_string())
                     }
                 } else {
+                    println!("Field name as string: {:?} => Type: {:?}", &field_name_as_string, &field_type_as_string);
                     quote! {
                         #enum_name::#field_name(v) =>
-                            format!("{} {}", #field_name_as_string.clone().to_string(), v.to_string())
+                            format!("{:?} {:?}", #field_name_as_string, v.to_string())
                     }
                 }
             })

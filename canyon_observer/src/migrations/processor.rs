@@ -3,15 +3,14 @@
  
 use async_trait::async_trait;
 use canyon_crud::DatabaseType;
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 use std::{ops::Not, sync::MutexGuard};
 
 use crate::memory::CanyonMemory;
 use crate::QUERIES_TO_EXECUTE;
 use canyon_crud::crud::Transaction;
-use regex::Regex;
 
-use super::information_schema::TableMetadata;
+use super::information_schema::{TableMetadata, ColumnMetadata};
 use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 
 /// Responsible of generating the queries to sync the database status with the
@@ -39,9 +38,42 @@ impl MigrationsProcessor {
             self.create_or_rename_tables(
                 &canyon_memory,
                 entity_name.as_str(),
-                canyon_register_entity.entity_fields,
+                canyon_register_entity.entity_fields.clone(),
                 &database_tables
             );
+
+            let current_table_metadata = self.get_current_table_metadata(
+                &canyon_memory,
+                entity_name.as_str(),
+                &database_tables
+            );
+            
+            self.delete_fields(
+                entity_name.as_str(),
+                canyon_register_entity.entity_fields.clone(),
+                current_table_metadata
+            );
+
+            // For each field (column) on the this canyon register entity
+            for canyon_register_field in canyon_register_entity.entity_fields {
+                
+                // We only create oe modify (right now only datatype)
+                // the column when the database already contains the table, 
+                // if not, the columns are already create in the previous operation (create table)
+                if current_table_metadata.is_some(){
+
+                    let current_column_metadata = self.get_current_column_metadata( 
+                        canyon_register_field.field_name.clone(), current_table_metadata.unwrap()
+                    );
+
+                    self.create_or_modify_field (
+                        entity_name.as_str(),
+                        canyon_register_field,
+                        current_column_metadata
+                    )
+                }
+                
+            }
         }
 
         
@@ -91,28 +123,105 @@ impl MigrationsProcessor {
         }
     }
 
+
+
+
     /// Generates a database agnostic query to change the name of a table
     fn create_table(&mut self, table_name: String, entity_fields: Vec<CanyonRegisterEntityField>) {
         self.operations
-            .push(Box::new(TableOperation::CreateTable::<
-                String,
-                &str,
-                &str,
-                &str,
-                &str,
-            >(table_name, entity_fields)));
+            .push(Box::new(TableOperation::CreateTable(table_name, entity_fields)));
     }
 
     /// Generates a database agnostic query to change the name of a table
     fn table_rename(&mut self, old_table_name: String, new_table_name: String) {
         self.operations
-            .push(Box::new(TableOperation::AlterTableName::<
-                _,
-                _,
-                &str,
-                &str,
-                &str,
-            >(old_table_name, new_table_name)));
+            .push(Box::new(TableOperation::AlterTableName(old_table_name, new_table_name)));
+    }
+
+
+    // Get the table metadata for a given entity name or his old entity name if the table was renamed.
+    fn get_current_table_metadata<'a> (
+        &mut self,
+        canyon_memory: &'_ CanyonMemory,
+        entity_name: &'a str,
+        database_tables: &'a [&'_ TableMetadata],
+    ) -> Option<&'a TableMetadata> {
+        let correct_entity_name = canyon_memory.renamed_entities
+            .get(&entity_name.to_lowercase())
+            .map(|e| e.to_owned())
+            .unwrap_or(entity_name.to_string());
+        
+        database_tables.iter()
+            .find(|table_metadata| table_metadata.table_name.to_lowercase() == *correct_entity_name.to_lowercase())
+            .map(|e| e.to_owned().clone())
+
+    }
+
+    // Get the column metadata for a given column name
+    fn get_current_column_metadata<'a>  (
+        &mut self,
+        column_name: String,
+        current_table_metadata: &'a TableMetadata,
+    ) -> Option<&'a ColumnMetadata> {
+        current_table_metadata.columns.iter()
+            .find(|column| column.column_name == column_name)
+            .map(|e| e.to_owned().clone())
+    }
+
+    // Creates or modify (currently only datatype) a column for a given canyon register entity field
+    fn delete_fields<'a > (
+        &mut self,
+        entity_name: &'a str,
+        entity_fields: Vec<CanyonRegisterEntityField>,
+        current_table_metadata: Option<&'a TableMetadata>
+    ) {
+        if current_table_metadata.is_some() {
+
+            let columns_name_to_delete : Vec<String> = current_table_metadata
+            .unwrap()
+            .columns
+            .iter()
+            .filter(|db_column| {
+                entity_fields
+                    .iter()
+                    .map(|canyon_field| canyon_field.field_name.to_string())
+                    .any (|canyon_field| canyon_field == db_column.column_name)
+                    .not()
+            })
+            .map(|db_column| db_column.column_name.to_string())
+            .collect();
+
+            for column_name in columns_name_to_delete {
+                self.delete_column(entity_name, column_name);
+            }
+        }
+    }
+
+    // Creates or modify (currently only datatype) a column for a given canyon register entity field
+    fn create_or_modify_field<'a > (
+        &mut self,
+        entity_name: &'a str,
+        canyon_register_entity_field: CanyonRegisterEntityField,
+        current_column_metadata: Option<&ColumnMetadata>,
+    ) {
+        // If we do not retrieve data for this database column, it does not exist yet
+        // and therefore has to be created
+        if current_column_metadata.is_none() {
+            self.create_column(entity_name.to_string(), canyon_register_entity_field)
+        }
+        else {
+            // TODO hay que
+        }
+    }
+
+    fn delete_column(&mut self, table_name: &str, column_name: String) {
+        self.operations
+            .push(Box::new(ColumnOperation::DeleteColumn(table_name.to_string(), column_name)));
+    }
+
+    fn create_column(&mut self, table_name: String, field: CanyonRegisterEntityField) {
+        self.operations
+            .push(Box::new(ColumnOperation::CreateColumn(table_name, field)));
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
@@ -804,55 +913,53 @@ trait DatabaseOperation: Debug {
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
 #[derive(Debug)]
-enum TableOperation<T, U, V, W, X> {
-    CreateTable(T, Vec<CanyonRegisterEntityField>),
+enum TableOperation {
+    CreateTable(String, Vec<CanyonRegisterEntityField>),
     // old table_name, new table_name
-    AlterTableName(T, U),
+    AlterTableName(String, String),
     // table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
-    AddTableForeignKey(T, U, V, W, X),
+    AddTableForeignKey(String, String, String, String, String),
     // table_with_foreign_key, constrain_name
-    DeleteTableForeignKey(T, T),
+    DeleteTableForeignKey(String, String),
     // table_name, entity_field, column_name
-    AddTablePrimaryKey(T, CanyonRegisterEntityField),
+    AddTablePrimaryKey(String, CanyonRegisterEntityField),
     // table_name, constrain_name
-    DeleteTablePrimaryKey(T, T),
+    DeleteTablePrimaryKey(String, String),
 }
 
-impl<T, U, V, W, X> Transaction<T> for TableOperation<T, U, V, W, X>
-where
-    T: Into<String> + Debug + Display + Sync,
-    U: Into<String> + Debug + Display + Sync,
-    V: Into<String> + Debug + Display + Sync,
-    W: Into<String> + Debug + Display + Sync,
-    X: Into<String> + Debug + Display + Sync,
-{
-}
+impl<T: Debug> Transaction<T> for TableOperation {}
 
 #[async_trait]
-impl<T, U, V, W, X> DatabaseOperation for TableOperation<T, U, V, W, X>
-where
-    T: Into<String> + Debug + Display + Sync,
-    U: Into<String> + Debug + Display + Sync,
-    V: Into<String> + Debug + Display + Sync,
-    W: Into<String> + Debug + Display + Sync,
-    X: Into<String> + Debug + Display + Sync,
+impl DatabaseOperation for TableOperation
 {
     async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "CREATE TABLE {table_name} ({:?});",
-                        table_fields.iter().map(|entity_field|
-                            format!("{} {}", entity_field.field_name, entity_field.field_type_to_postgres())
-                        ).collect::<Vec<String>>().join(", ")
+                        "CREATE TABLE {:?} ({:?});",
+                        table_name,
+                        table_fields.iter()
+                            .map(|entity_field| format!(
+                                "{} {}",
+                                entity_field.field_name,
+                                entity_field.to_postgres_syntax()
+                            )
+                        ).collect::<Vec<String>>()
+                        .join(", ")
                     ).replace('"', "")
                 } else if db_type == DatabaseType::SqlServer {
                     format!(
-                        "CREATE TABLE {table_name} ({:?});",
-                        table_fields.iter().map(|entity_field|
-                            format!("{} {}", entity_field.field_name, entity_field.field_type_to_postgres())
-                        ).collect::<Vec<String>>().join(", ")
+                        "CREATE TABLE {:?} ({:?});",
+                        table_name,
+                        table_fields.iter()
+                            .map(|entity_field| format!(
+                                "{} {}",
+                                entity_field.field_name,
+                                entity_field.to_sqlserver_syntax()
+                            )
+                        ).collect::<Vec<String>>()
+                        .join(", ")
                     ).replace('"', "")
                 } else {
                     todo!()
@@ -861,9 +968,9 @@ where
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
                 if db_type == DatabaseType::PostgreSql {
-                    format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};")
+                    format!("ALTER TABLE {:?} RENAME TO {:?};", old_table_name, new_table_name)
                 } else if db_type == DatabaseType::SqlServer {
-                    format!("exec sp_rename '[{old_table_name}]', '{new_table_name}';")
+                    format!("exec sp_rename '[{:?}]', '{:?}';", old_table_name, new_table_name)
                 } else {
                     todo!()
                 }                 
@@ -876,18 +983,22 @@ where
                 table_to_reference,
                 column_to_reference
             ) => format!(
-                "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
-                FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
+                "ALTER TABLE {:?} ADD CONSTRAINT {:?} \
+                FOREIGN KEY ({:?}) REFERENCES {:?} ({:?});",
+                table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
             ),
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constrain_name) =>
-                format!("ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constrain_name};"),
+                format!(
+                    "ALTER TABLE {:?} DROP CONSTRAINT {:?};",
+                    table_with_foreign_key, constrain_name
+            ),
 
             TableOperation::AddTablePrimaryKey(
                 table_name,
                 entity_field
             ) => format!(
-                "ALTER TABLE {} ADD PRIMARY KEY (\"{}\");",
+                "ALTER TABLE {:?} ADD PRIMARY KEY (\"{}\");",
                 table_name,
                 entity_field.field_name
             ),
@@ -896,7 +1007,9 @@ where
                 table_name,
                 primary_key_name
             ) => format!(
-                "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"
+                "ALTER TABLE {:?} DROP CONSTRAINT {:?} CASCADE;",
+                table_name,
+                primary_key_name
             ),
 
         };
@@ -907,60 +1020,68 @@ where
 
 /// Helper to relate the operations that Canyon should do when a change on a field should
 #[derive(Debug)]
-enum ColumnOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
-    CreateColumn(T, CanyonRegisterEntityField),
-    DeleteColumn(T, String),
+enum ColumnOperation {
+    CreateColumn(String, CanyonRegisterEntityField),
+    DeleteColumn(String, String),
     // AlterColumnName,
-    AlterColumnType(T, CanyonRegisterEntityField),
-    AlterColumnDropNotNull(T, CanyonRegisterEntityField),
-    AlterColumnSetNotNull(T, CanyonRegisterEntityField),
-    // TODO if implement throught annotations, modify for both GENERATED {ALWAYS,BY DEFAULT}
-    AlterColumnAddIdentity(T, CanyonRegisterEntityField),
-    AlterColumnDropIdentity(T, CanyonRegisterEntityField),
+    AlterColumnType(String, CanyonRegisterEntityField),
+    AlterColumnDropNotNull(String, CanyonRegisterEntityField),
+    AlterColumnSetNotNull(String, CanyonRegisterEntityField),
+    // TODO if implement throught annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
+    AlterColumnAddIdentity(String, CanyonRegisterEntityField),
+    AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
 
-impl<T> Transaction<Self> for ColumnOperation<T> where
-    T: Into<String> + std::fmt::Debug + Display + Sync
-{
-}
+impl Transaction<Self> for ColumnOperation {} 
 
 #[async_trait]
-impl<T> DatabaseOperation for ColumnOperation<T>
-where
-    T: Into<String> + std::fmt::Debug + Display + Sync,
+impl DatabaseOperation for ColumnOperation
 {
     async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
-            ColumnOperation::CreateColumn(table_name, entity_field) => format!(
-                "ALTER TABLE {table_name} ADD COLUMN \"{}\" {};",
+            ColumnOperation::CreateColumn(table_name, entity_field) => 
+            if db_type == DatabaseType::PostgreSql {
+                format!(
+                "ALTER TABLE {:?} ADD COLUMN \"{}\" {};",
+                table_name,
                 entity_field.field_name,
-                entity_field.field_type_to_postgres()
-            ),
+                entity_field.to_postgres_syntax())
+            }  else if db_type == DatabaseType::SqlServer {
+                format!(
+                    "ALTER TABLE {:?} ADD {} {};",
+                    table_name,
+                    entity_field.field_name,
+                    entity_field.to_sqlserver_syntax()
+                )
+            } else {
+                todo!()
+            },
             ColumnOperation::DeleteColumn(table_name, column_name) => {
-                format!("ALTER TABLE {table_name} DROP COLUMN \"{column_name}\";")
-            }
+                // TODO Check if operation for SQL server is diferent
+                format!("ALTER TABLE {:?} DROP COLUMN \"{column_name}\";", table_name)
+            },
             ColumnOperation::AlterColumnType(table_name, entity_field) => format!(
-                "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
+                "ALTER TABLE {:?} ALTER COLUMN \"{}\" TYPE {};",
                 table_name,
                 entity_field.field_name,
                 entity_field.to_postgres_alter_syntax()
             ),
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) => format!(
-                "ALTER TABLE {} ALTER COLUMN \"{}\" DROP NOT NULL;",
+                "ALTER TABLE {:?} ALTER COLUMN \"{}\" DROP NOT NULL;",
                 table_name, entity_field.field_name
             ),
             ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) => format!(
-                "ALTER TABLE {} ALTER COLUMN \"{}\" SET NOT NULL;",
+                "ALTER TABLE {:?} ALTER COLUMN \"{}\" SET NOT NULL;",
                 table_name, entity_field.field_name
             ),
 
             ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
-                "ALTER TABLE {} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;",
+                "ALTER TABLE {:?} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;",
                 table_name, entity_field.field_name
             ),
 
             ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
-                "ALTER TABLE {} ALTER COLUMN \"{}\" DROP IDENTITY;",
+                "ALTER TABLE {:?} ALTER COLUMN \"{}\" DROP IDENTITY;",
                 table_name, entity_field.field_name
             ),
         };
@@ -971,24 +1092,21 @@ where
 
 /// Helper for operations involving sequences
 #[derive(Debug)]
-enum SequenceOperation<T: Into<String> + std::fmt::Debug + Display + Sync> {
+enum SequenceOperation<T: Into<String> + std::fmt::Debug + Sync> {
     ModifySequence(T, CanyonRegisterEntityField),
 }
 
-impl<T> Transaction<Self> for SequenceOperation<T> where
-    T: Into<String> + std::fmt::Debug + Display + Sync
-{
-}
+impl<T> Transaction<Self> for SequenceOperation<T> 
+    where T: Into<String> + std::fmt::Debug + Sync {}
 
 #[async_trait]
 impl<T> DatabaseOperation for SequenceOperation<T>
-where
-    T: Into<String> + std::fmt::Debug + Display + Sync,
+    where T: Into<String> + std::fmt::Debug + Sync
 {
     async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => format!(
-                "SELECT setval(pg_get_serial_sequence('{}', '{}'), max(\"{}\")) from {};",
+                "SELECT setval(pg_get_serial_sequence('{:?}', '{}'), max(\"{}\")) from {:?};",
                 table_name, entity_field.field_name, entity_field.field_name, table_name
             ),
         };
