@@ -42,7 +42,7 @@ impl MigrationsProcessor {
                 &database_tables
             );
 
-            let current_table_metadata = self.get_current_table_metadata(
+            let current_table_metadata = MigrationsHelper::get_current_table_metadata(
                 &canyon_memory,
                 entity_name.as_str(),
                 &database_tables
@@ -51,7 +51,8 @@ impl MigrationsProcessor {
             self.delete_fields(
                 entity_name.as_str(),
                 canyon_register_entity.entity_fields.clone(),
-                current_table_metadata
+                current_table_metadata,
+                db_type
             );
 
             // For each field (column) on the this canyon register entity
@@ -62,8 +63,9 @@ impl MigrationsProcessor {
                 // if not, the columns are already create in the previous operation (create table)
                 if current_table_metadata.is_some(){
 
-                    let current_column_metadata = self.get_current_column_metadata( 
-                        canyon_register_field.field_name.clone(), current_table_metadata.unwrap()
+                    let current_column_metadata = MigrationsHelper::get_current_column_metadata( 
+                        canyon_register_field.field_name.clone(), 
+                        current_table_metadata.unwrap()
                     );
 
                     self.create_or_modify_field (
@@ -139,45 +141,17 @@ impl MigrationsProcessor {
     }
 
 
-    // Get the table metadata for a given entity name or his old entity name if the table was renamed.
-    fn get_current_table_metadata<'a> (
-        &mut self,
-        canyon_memory: &'_ CanyonMemory,
-        entity_name: &'a str,
-        database_tables: &'a [&'_ TableMetadata],
-    ) -> Option<&'a TableMetadata> {
-        let correct_entity_name = canyon_memory.renamed_entities
-            .get(&entity_name.to_lowercase())
-            .map(|e| e.to_owned())
-            .unwrap_or(entity_name.to_string());
-        
-        database_tables.iter()
-            .find(|table_metadata| table_metadata.table_name.to_lowercase() == *correct_entity_name.to_lowercase())
-            .map(|e| e.to_owned().clone())
-
-    }
-
-    // Get the column metadata for a given column name
-    fn get_current_column_metadata<'a>  (
-        &mut self,
-        column_name: String,
-        current_table_metadata: &'a TableMetadata,
-    ) -> Option<&'a ColumnMetadata> {
-        current_table_metadata.columns.iter()
-            .find(|column| column.column_name == column_name)
-            .map(|e| e.to_owned().clone())
-    }
-
     // Creates or modify (currently only datatype) a column for a given canyon register entity field
     fn delete_fields<'a > (
         &mut self,
         entity_name: &'a str,
         entity_fields: Vec<CanyonRegisterEntityField>,
-        current_table_metadata: Option<&'a TableMetadata>
+        current_table_metadata: Option<&'a TableMetadata>,
+        db_type: DatabaseType
     ) {
         if current_table_metadata.is_some() {
-
-            let columns_name_to_delete : Vec<String> = current_table_metadata
+            println!("Current table metadata :{:?}",current_table_metadata);
+            let columns_name_to_delete : Vec<&ColumnMetadata> = current_table_metadata
             .unwrap()
             .columns
             .iter()
@@ -188,11 +162,19 @@ impl MigrationsProcessor {
                     .any (|canyon_field| canyon_field == db_column.column_name)
                     .not()
             })
-            .map(|db_column| db_column.column_name.to_string())
             .collect();
 
-            for column_name in columns_name_to_delete {
-                self.delete_column(entity_name, column_name);
+            for column_metadata in columns_name_to_delete {
+                if db_type == DatabaseType::SqlServer && !column_metadata.is_nullable {
+                    self.drop_column_not_null(
+                        entity_name, 
+                        column_metadata.column_name.clone(), 
+                        MigrationsHelper::get_datatype_from_column_metadata(
+                        entity_name.to_string(), column_metadata
+                        )
+                    )
+                }
+                self.delete_column(entity_name, column_metadata.column_name.clone());
             }
         }
     }
@@ -217,6 +199,11 @@ impl MigrationsProcessor {
     fn delete_column(&mut self, table_name: &str, column_name: String) {
         self.operations
             .push(Box::new(ColumnOperation::DeleteColumn(table_name.to_string(), column_name)));
+    }
+
+    fn drop_column_not_null(&mut self, table_name: &str, column_name: String, column_datatype: String) {
+        self.operations
+            .push(Box::new(ColumnOperation::DropNotNullBeforeDropColumn(table_name.to_string(), column_name, column_datatype)));
     }
 
     fn create_column(&mut self, table_name: String, field: CanyonRegisterEntityField) {
@@ -263,6 +250,50 @@ impl MigrationsHelper {
         database_tables.iter().any( |v| 
             v.table_name.to_lowercase() == entity_name.to_lowercase()
         )
+    }
+
+    // Get the table metadata for a given entity name or his old entity name if the table was renamed.
+    fn get_current_table_metadata<'a> (
+        canyon_memory: &'_ CanyonMemory,
+        entity_name: &'a str,
+        database_tables: &'a [&'_ TableMetadata],
+    ) -> Option<&'a TableMetadata> {
+        let correct_entity_name = canyon_memory.renamed_entities
+            .get(&entity_name.to_lowercase())
+            .map(|e| e.to_owned())
+            .unwrap_or(entity_name.to_string());
+        
+        database_tables.iter()
+            .find(|table_metadata| table_metadata.table_name.to_lowercase() == *correct_entity_name.to_lowercase())
+            .map(|e| e.to_owned().clone())
+
+    }
+
+    // Get the column metadata for a given column name
+    fn get_current_column_metadata<'a>  (
+        column_name: String,
+        current_table_metadata: &'a TableMetadata,
+    ) -> Option<&'a ColumnMetadata> {
+        current_table_metadata.columns.iter()
+            .find(|column| column.column_name == column_name)
+            .map(|e| e.to_owned().clone())
+    }
+
+    fn get_datatype_from_column_metadata<'a> (
+        column_name: String,
+        current_column_metadata: &'a ColumnMetadata,
+    ) -> String {
+        // TODO Add all SQL Server text datatypes
+        if vec!["nvarchar","varchar"].contains(&current_column_metadata.postgres_datatype.to_lowercase().as_str()) {
+            let varchar_len = match &current_column_metadata.character_maximum_length {
+                Some(v) => v.to_string(),
+                None => "max".to_string()
+            };
+            
+            format!("{}({})", current_column_metadata.postgres_datatype, varchar_len)
+        } else { 
+            format!("{}", current_column_metadata.postgres_datatype)
+        }
     }
 }
 
@@ -1026,6 +1057,8 @@ enum ColumnOperation {
     // AlterColumnName,
     AlterColumnType(String, CanyonRegisterEntityField),
     AlterColumnDropNotNull(String, CanyonRegisterEntityField),
+    // SQL server specific operation - SQL server can't drop a NOT NULL column
+    DropNotNullBeforeDropColumn(String, String, String),
     AlterColumnSetNotNull(String, CanyonRegisterEntityField),
     // TODO if implement throught annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
     AlterColumnAddIdentity(String, CanyonRegisterEntityField),
@@ -1042,13 +1075,13 @@ impl DatabaseOperation for ColumnOperation
             ColumnOperation::CreateColumn(table_name, entity_field) => 
             if db_type == DatabaseType::PostgreSql {
                 format!(
-                "ALTER TABLE {:?} ADD COLUMN \"{}\" {};",
+                "ALTER TABLE {} ADD COLUMN \"{}\" {};",
                 table_name,
                 entity_field.field_name,
                 entity_field.to_postgres_syntax())
             }  else if db_type == DatabaseType::SqlServer {
                 format!(
-                    "ALTER TABLE {:?} ADD {} {};",
+                    "ALTER TABLE {} ADD \"{}\" {};",
                     table_name,
                     entity_field.field_name,
                     entity_field.to_sqlserver_syntax()
@@ -1058,18 +1091,45 @@ impl DatabaseOperation for ColumnOperation
             },
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is diferent
-                format!("ALTER TABLE {:?} DROP COLUMN \"{column_name}\";", table_name)
+                format!("ALTER TABLE {} DROP COLUMN {};", table_name, column_name)
             },
             ColumnOperation::AlterColumnType(table_name, entity_field) => format!(
-                "ALTER TABLE {:?} ALTER COLUMN \"{}\" TYPE {};",
+                "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
                 table_name,
                 entity_field.field_name,
                 entity_field.to_postgres_alter_syntax()
             ),
-            ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) => format!(
+            ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) => 
+            if db_type == DatabaseType::PostgreSql { 
+                format!(
                 "ALTER TABLE {:?} ALTER COLUMN \"{}\" DROP NOT NULL;",
                 table_name, entity_field.field_name
+               )
+            }  else if db_type == DatabaseType::SqlServer {
+                format!(
+                "ALTER TABLE {} ALTER COLUMN {} {} NULL",
+                table_name, entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
+                )
+            } else {
+                todo!()
+            }
+
+            ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) => 
+                format!(
+                "ALTER TABLE {} ALTER COLUMN {} {} NULL; DECLARE @tableName VARCHAR(MAX) = 'league'
+                DECLARE @columnName VARCHAR(MAX) = 'new_field'
+                DECLARE @ConstraintName nvarchar(200)
+                SELECT @ConstraintName = Name 
+                FROM SYS.DEFAULT_CONSTRAINTS
+                WHERE PARENT_OBJECT_ID = OBJECT_ID(@tableName) 
+                AND PARENT_COLUMN_ID = (
+                    SELECT column_id FROM sys.columns
+                    WHERE NAME = @columnName AND object_id = OBJECT_ID(@tableName))
+                IF @ConstraintName IS NOT NULL
+                    EXEC('ALTER TABLE '+@tableName+' DROP CONSTRAINT ' + @ConstraintName);",
+                table_name, column_name, column_datatype
             ),
+
             ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) => format!(
                 "ALTER TABLE {:?} ALTER COLUMN \"{}\" SET NOT NULL;",
                 table_name, entity_field.field_name

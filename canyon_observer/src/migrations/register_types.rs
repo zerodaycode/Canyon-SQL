@@ -30,18 +30,6 @@ impl CanyonRegisterEntityField {
     /// Return the postgres datatype and parameters to create a column for a given rust type
     pub fn to_postgres_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
-        let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
-
-        if rs_type_is_optional {
-            let type_regex =
-                Regex::new(regex_patterns::EXTRACT_RUST_OPT_REGEX).unwrap();
-            let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
-            rust_type_clean = capture_rust_type
-                .name("rust_type")
-                .unwrap()
-                .as_str()
-                .to_string();
-        }
 
         let mut postgres_type = String::new();
 
@@ -78,18 +66,6 @@ impl CanyonRegisterEntityField {
     /// for Microsoft SQL Server
     pub fn to_sqlserver_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
-        let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
-
-        if rs_type_is_optional {
-            let type_regex =
-                Regex::new(regex_patterns::EXTRACT_RUST_OPT_REGEX).unwrap();
-            let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
-            rust_type_clean = capture_rust_type
-                .name("rust_type")
-                .unwrap()
-                .as_str()
-                .to_string();
-        }
 
         let mut sqlserver_type = String::new();
 
@@ -106,7 +82,7 @@ impl CanyonRegisterEntityField {
             rust_type::I64 | rust_type::U64 => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::BIGINT)),
             rust_type::OPT_I64 | rust_type::OPT_U64 => sqlserver_type.push_str(sqlserver_type::BIGINT),
             
-            rust_type::STRING => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::NVARCHAR)),
+            rust_type::STRING => sqlserver_type.push_str(&format!("{} NOT NULL DEFAULT ''", sqlserver_type::NVARCHAR)),
             rust_type::OPT_STRING => sqlserver_type.push_str(sqlserver_type::NVARCHAR),
             
             rust_type::BOOL => sqlserver_type.push_str(&format!("{} NOT NULL", sqlserver_type::BIT)),
@@ -154,6 +130,35 @@ impl CanyonRegisterEntityField {
         }
 
         postgres_type
+    }
+
+    pub fn to_sqlserver_alter_syntax(&self) -> String {
+        let mut rust_type_clean = self.field_type.replace(' ', "");
+        let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
+
+        if rs_type_is_optional {
+            let type_regex =
+                Regex::new(regex_patterns::EXTRACT_RUST_OPT_REGEX).unwrap();
+            let capture_rust_type = type_regex.captures(rust_type_clean.as_str()).unwrap();
+            rust_type_clean = capture_rust_type
+                .name("rust_type")
+                .unwrap()
+                .as_str()
+                .to_string();
+        }
+
+        let mut sqlserver_type = String::new();
+
+        match rust_type_clean.as_str() {
+            rust_type::I32 => sqlserver_type.push_str("INT"),
+            rust_type::I64 => sqlserver_type.push_str("BIGINT"),
+            rust_type::STRING => sqlserver_type.push_str("VARCHAR(MAX)"),
+            rust_type::BOOL => sqlserver_type.push_str("BIT"),
+            rust_type::NAIVE_DATE => sqlserver_type.push_str("DATE"),
+            &_ => sqlserver_type.push_str("DATE"),
+        }
+
+        sqlserver_type
     }
 
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"

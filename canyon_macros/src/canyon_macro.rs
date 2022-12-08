@@ -133,7 +133,7 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
             }
         }
         // TODO Bring to the client's main code the datasource name
-        MigrationsProcessor::from_query_register("postgres_docker").await;
+        // MigrationsProcessor::from_query_register("postgres_docker").await;
         MigrationsProcessor::from_query_register("sqlserver_docker").await;
         // DatabaseSyncOperations::from_query_register().await;
     };
