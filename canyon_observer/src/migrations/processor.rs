@@ -1116,8 +1116,8 @@ impl DatabaseOperation for ColumnOperation
 
             ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) => 
                 format!(
-                "ALTER TABLE {} ALTER COLUMN {} {} NULL; DECLARE @tableName VARCHAR(MAX) = 'league'
-                DECLARE @columnName VARCHAR(MAX) = 'new_field'
+                "ALTER TABLE {} ALTER COLUMN {} {} NULL; DECLARE @tableName VARCHAR(MAX) = '{table_name}'
+                DECLARE @columnName VARCHAR(MAX) = '{column_name}'
                 DECLARE @ConstraintName nvarchar(200)
                 SELECT @ConstraintName = Name 
                 FROM SYS.DEFAULT_CONSTRAINTS
