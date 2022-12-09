@@ -1,7 +1,6 @@
-use canyon_crud::DatabaseType;
 use regex::Regex;
 
-use crate::constants::{rust_type, postgresql_type, sqlserver_type, regex_patterns, self};
+use crate::constants::{rust_type, postgresql_type, sqlserver_type, regex_patterns};
 
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
@@ -158,7 +157,7 @@ impl CanyonRegisterEntityField {
 
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
     ///  with the correct format for PostgreSQL
-    fn to_postgres_id_syntax(&self) -> String {
+    fn _to_postgres_id_syntax(&self) -> String {
         let has_pk_annotation = self
             .annotations
             .iter()
@@ -182,7 +181,7 @@ impl CanyonRegisterEntityField {
 
         /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"
         /// with the correct format for Microsoft SQL Server
-        fn to_sqlserver_id_syntax(&self) -> String {
+        fn _to_sqlserver_id_syntax(&self) -> String {
             let has_pk_annotation = self
                 .annotations
                 .iter()

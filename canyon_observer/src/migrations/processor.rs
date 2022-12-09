@@ -27,7 +27,7 @@ impl MigrationsProcessor {
         canyon_memory: CanyonMemory,
         canyon_entities: Vec<CanyonRegisterEntity<'a>>,
         database_tables: Vec<&'a TableMetadata>,
-        datasource_name: &'a str,
+        _datasource_name: &'a str,
         db_type: DatabaseType
     ) {
         println!("Database tables to play with: {:?}", &database_tables.len());
@@ -235,13 +235,14 @@ impl MigrationsProcessor {
                     panic!("Failed to retrieve query from the register at index: {i}")
                 });
     
-                Self::query(query_to_execute, [], datasource_name)
-                    .await
-                    .ok()
-                    .unwrap_or_else(|| {
-                        panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
-                    });
-                // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
+                let res = Self::query(query_to_execute, [], datasource_name).await;
+                
+                match res {
+                    Ok(_) =>
+                        println!("[OK] - Query: {:?}", queries.get(i).unwrap()),
+                    Err(e) =>
+                        println!("[ERR] - Query: {:?}\nCause: {:?}", queries.get(i).unwrap(), e),
+                }
                 // TODO Ask for user input?
             }
         } else {
@@ -913,6 +914,7 @@ trait DatabaseOperation: Debug {
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
 #[derive(Debug)]
+#[allow(dead_code)]
 enum TableOperation {
     CreateTable(String, Vec<CanyonRegisterEntityField>),
     // old table_name, new table_name
@@ -970,7 +972,21 @@ impl DatabaseOperation for TableOperation
                 if db_type == DatabaseType::PostgreSql {
                     format!("ALTER TABLE {:?} RENAME TO {:?};", old_table_name, new_table_name)
                 } else if db_type == DatabaseType::SqlServer {
-                    format!("exec sp_rename '[{:?}]', '{:?}';", old_table_name, new_table_name)
+                    /*
+                        Notes: Brackets around `old_table_name`, p.e. 
+                            exec sp_rename ['league'], 'leagues'  // NOT VALID!
+                        is only allowed for compound names splitted by a dot.
+                            exec sp_rename ['random.league'], 'leagues'  // OK
+
+                        CARE! This doesn't mean that we are including the schema.
+                            exec sp_rename ['dbo.random.league'], 'leagues' // OK
+                            exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
+
+                        Due to the automatic mapped name from Rust to DB and viceversa, this won't
+                        be an allowed behaviour for now, only with the table_name parameter on the
+                        CanyonEntity annotation.
+                    */
+                    format!("exec sp_rename '{old_table_name}', '{new_table_name}';")
                 } else {
                     todo!()
                 }                 
@@ -1020,6 +1036,7 @@ impl DatabaseOperation for TableOperation
 
 /// Helper to relate the operations that Canyon should do when a change on a field should
 #[derive(Debug)]
+#[allow(dead_code)]
 enum ColumnOperation {
     CreateColumn(String, CanyonRegisterEntityField),
     DeleteColumn(String, String),
@@ -1092,6 +1109,7 @@ impl DatabaseOperation for ColumnOperation
 
 /// Helper for operations involving sequences
 #[derive(Debug)]
+#[allow(dead_code)]
 enum SequenceOperation<T: Into<String> + std::fmt::Debug + Sync> {
     ModifySequence(T, CanyonRegisterEntityField),
 }
@@ -1103,7 +1121,7 @@ impl<T> Transaction<Self> for SequenceOperation<T>
 impl<T> DatabaseOperation for SequenceOperation<T>
     where T: Into<String> + std::fmt::Debug + Sync
 {
-    async fn execute(&self, db_type: DatabaseType) {
+    async fn execute(&self, _db_type: DatabaseType) {
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => format!(
                 "SELECT setval(pg_get_serial_sequence('{:?}', '{}'), max(\"{}\")) from {:?};",
