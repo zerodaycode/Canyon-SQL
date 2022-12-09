@@ -1,5 +1,5 @@
 pub mod delete_operations;
-pub mod foreign_key_operations;
+// pub mod foreign_key_operations;
 pub mod insert_operations;
 pub mod querybuilder_operations;
 pub mod select_operations;
@@ -50,7 +50,8 @@ fn initialize_sql_server_docker_instance() {
         
         match leagues_sql {
             Ok(ref leagues) => {
-                println!("Leagues inserted on SQLSERVER: {:?}", leagues_sql);
+                let leagues_len = leagues.len();
+                println!("Leagues already inserted on SQLSERVER: {:?}", &leagues_len);
                 if leagues.len() < 10 {
                     let mut client2 = Client::connect(config, tcp2.compat_write())
                         .await

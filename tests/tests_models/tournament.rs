@@ -10,6 +10,7 @@ pub struct Tournament {
     slug: String,
     start_date: NaiveDate,
     end_date: NaiveDate,
-    #[foreign_key(table = "league", column = "id")]
+    // TODO Error on CanyonCRUD macro, bad return type
+    // #[foreign_key(table = "league", column = "id")]
     league: i32,
 }

@@ -119,19 +119,11 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
             migrations::processor::MigrationsProcessor
         };
 
-
         *QUERIES_TO_EXECUTE.lock().unwrap() = #queries
             .split("->")
             .map(str::to_string)
             .collect::<Vec<String>>();
 
-
-        if QUERIES_TO_EXECUTE.lock().unwrap().len() > 1 {
-            // > 1 because there's an [""] entry
-            for element in QUERIES_TO_EXECUTE.lock().unwrap().iter() {
-                println!("\t{:?}", element)
-            }
-        }
         // TODO Bring to the client's main code the datasource name
         // MigrationsProcessor::from_query_register("postgres_docker").await;
         MigrationsProcessor::from_query_register("sqlserver_docker").await;
