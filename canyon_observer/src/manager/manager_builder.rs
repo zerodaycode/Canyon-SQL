@@ -84,12 +84,6 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
                 }
             }
         }
-
-        impl #generics std::fmt::Display for #enum_name #generics {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "") // TODO
-            }
-        }
     }
 }
 
@@ -143,11 +137,5 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
                 }
             }
         }
-
-        // impl<'e> std::fmt::Display for #enum_name<'e> {
-        //     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        //         write!(f, "") // TODO
-        //     }
-        // }
     }
 }

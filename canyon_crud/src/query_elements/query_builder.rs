@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::{
-    bounds::{FieldIdentifier, FieldValueIdentifier, InClauseValues, QueryParameters},
+    bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameters},
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
     query_elements::operators::Comp,
@@ -69,15 +69,11 @@ where
 
         self.query.sql.push(';');
 
-        println!("Querybuilder query: {:?}", &self.query.sql);
-        println!("Querybuilder parameters: {:?}", &self.query.params);
-
         let result = T::query(
             self.query.sql.clone(),
             self.query.params.iter().map(|arg| *arg).collect::<Vec<&dyn QueryParameters>>(),
             self.datasource_name,
-        )
-        .await;
+        ).await;
 
         if let Err(error) = result {
             Err(error)
