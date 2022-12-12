@@ -101,7 +101,6 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
     let match_arms = &canyon_entity.create_match_arm_for_relate_fields_with_values(&enum_name);
 
     let visibility = &canyon_entity.vis;
-    let generics = &canyon_entity.generics;
 
     quote! {
         #[derive(Debug)]

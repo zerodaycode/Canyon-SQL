@@ -9,7 +9,6 @@ use crate::{
 };
 
 /// Builder for a query while chaining SQL clauses
-// #[derive(Clone)]
 pub struct QueryBuilder<'a, T>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
@@ -143,9 +142,7 @@ where
             "".to_owned()
         };
 
-        self.order_by_clause.push_str(
-            &(order_by.field_name_as_str() + &desc),
-        );
+        self.order_by_clause.push_str(&(order_by.field_name_as_str() + &desc));
         self
     }
 

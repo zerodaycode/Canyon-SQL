@@ -8,7 +8,6 @@ use crate::{
 };
 
 /// Holds a sql sentence details
-// #[derive(Clone)]
 pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
     pub sql: String,
     pub params: Vec<&'a dyn QueryParameters<'a>>,
