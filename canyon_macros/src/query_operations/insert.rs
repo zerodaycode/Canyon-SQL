@@ -9,8 +9,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     // Retrieves the fields of the Struct as a collection of Strings, already parsed
     // the condition of remove the primary key if it's present and it's autoincremental
-    let insert_columns = macro_data.get_column_names_pk_parsed()
-        .join(", ");
+    let insert_columns = macro_data.get_column_names_pk_parsed().join(", ");
 
     // Returns a String with the generic $x placeholder for the query parameters.
     let placeholders = macro_data.placeholders_generator();
@@ -18,7 +17,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     // Retrives the fields of the Struct
     let fields = macro_data.get_struct_fields();
 
-    let insert_values = fields.iter().map( |ident| {
+    let insert_values = fields.iter().map(|ident| {
         quote! { &self.#ident }
     });
     let insert_values_cloned = insert_values.clone();
@@ -27,12 +26,15 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     let remove_pk_value_from_fn_entry = if let Some(pk_index) = macro_data.get_pk_index() {
         quote! { values.remove(#pk_index) }
-    } else { quote! {} };
-    
-    let pk_ident_type = macro_data._fields_with_types()
+    } else {
+        quote! {}
+    };
+
+    let pk_ident_type = macro_data
+        ._fields_with_types()
         .into_iter()
-        .find( |(i, _t)| Some(i.to_string()) == primary_key);
-    
+        .find(|(i, _t)| Some(i.to_string()) == primary_key);
+
     let insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;
         let pk_type = &pk_data.1;
@@ -41,14 +43,14 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             #remove_pk_value_from_fn_entry;
 
             let stmt = format!(
-                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}", 
-                #table_schema_data, 
-                #insert_columns, 
+                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}",
+                #table_schema_data,
+                #insert_columns,
                 #placeholders,
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
@@ -57,15 +59,15 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             match result {
                 Ok(res) => {
                     match res.get_active_ds() {
-                        canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
-                            self.#pk_ident = res.wrapper.get(0)
+                        canyon_sql::crud::DatabaseType::PostgreSql => {
+                            self.#pk_ident = res.postgres.get(0)
                                 .expect("No value found on the returning clause")
                                 .get::<&str, #pk_type>(#primary_key)
                                 .to_owned();
 
                             Ok(())
                         },
-                        canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                        canyon_sql::crud::DatabaseType::SqlServer => {
                             self.#pk_ident = res.sqlserver.get(0)
                                 .expect("No value found on the returning clause")
                                 .get::<#pk_type, &str>(#primary_key)
@@ -82,14 +84,14 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     } else {
         quote! {
             let stmt = format!(
-                "INSERT INTO {} ({}) VALUES ({})", 
-                #table_schema_data, 
-                #insert_columns, 
+                "INSERT INTO {} ({}) VALUES ({})",
+                #table_schema_data,
+                #insert_columns,
                 #placeholders,
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
@@ -107,17 +109,17 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// Inserts into a database entity the current data in `self`, generating a new
         /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
         /// datasource by it's `datasouce name`, defined in the configuration file.
-        /// 
-        /// This `insert` operation needs a `&mut` reference. That's because typically, 
+        ///
+        /// This `insert` operation needs a `&mut` reference. That's because typically,
         /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the  
+        /// inserted, the database will generate a unique new value for the
         /// `pk` field, having a unique identifier for every record, and it will
         /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
         /// operation, you instance will have the correct value that is the *PRIMARY KEY*
         /// of the database row that represents.
-        /// 
+        ///
         /// This operation returns a result type, indicating a posible failure querying the database.
-        /// 
+        ///
         /// ## *Examples*
         ///```
         /// let mut lec: League = League {
@@ -141,29 +143,29 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         ///     eprintln!("{:?}", ins_result.err())
         /// }
         /// ```
-        /// 
-        async fn insert<'a>(&mut self) 
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
+        ///
+        async fn insert<'a>(&mut self)
+            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
             let datasource_name = "";
-            let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
+            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
 
         /// Inserts into a database entity the current data in `self`, generating a new
         /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
         /// datasource by it's `datasouce name`, defined in the configuration file.
-        /// 
-        /// This `insert` operation needs a `&mut` reference. That's because typically, 
+        ///
+        /// This `insert` operation needs a `&mut` reference. That's because typically,
         /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the  
+        /// inserted, the database will generate a unique new value for the
         /// `pk` field, having a unique identifier for every record, and it will
         /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
         /// operation, you instance will have the correct value that is the *PRIMARY KEY*
         /// of the database row that represents.
-        /// 
+        ///
         /// This operation returns a result type, indicating a posible failure querying the database.
-        /// 
+        ///
         /// ## *Examples*
         ///```
         /// let mut lec: League = League {
@@ -188,42 +190,43 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// }
         /// ```
         ///
-        async fn insert_datasource<'a>(&mut self, datasource_name: &'a str) 
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
+        async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
+            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
-            let mut values: Vec<&dyn canyon_sql::canyon_crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
+            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
-    
+
     }
 }
 
 /// Generates the TokenStream for the __insert() CRUD operation, but being available
-/// as a [`QueryBuilder`] object, and instead of being a method over some [`T`] type, 
+/// as a [`QueryBuilder`] object, and instead of being a method over some [`T`] type,
 /// as an associated function for [`T`]
-/// 
+///
 /// This, also lets the user to have the option to be able to insert multiple
 /// [`T`] objects in only one query
-pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+pub fn generate_multiple_insert_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &String,
+) -> TokenStream {
     let ty = macro_data.ty;
 
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data.get_struct_fields_as_strings();
-    
+
     // Retrives the fields of the Struct
     let fields = macro_data.get_struct_fields();
-    
-    let macro_fields = fields.iter().map( |field| 
-        quote! { &instance.#field } 
-    );
+
+    let macro_fields = fields.iter().map(|field| quote! { &instance.#field });
     let macro_fields_cloned = macro_fields.clone();
 
-    let pk = macro_data.get_primary_key_annotation()
-        .unwrap_or_default();
-    
-    let pk_ident_type = macro_data._fields_with_types()
+    let pk = macro_data.get_primary_key_annotation().unwrap_or_default();
+
+    let pk_ident_type = macro_data
+        ._fields_with_types()
         .into_iter()
-        .find( |(i, _t)| i.to_string() == pk);
+        .find(|(i, _t)| *i == pk);
 
     let multi_insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;
@@ -238,7 +241,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
 
             let mut splitted = mapped_fields.split(", ")
                 .collect::<Vec<&str>>();
-            
+
             let pk_value_index = splitted.iter()
                 .position(|pk| *pk == format!("\"{}\"", #pk).as_str())
                 .expect("Error. No primary key found when should be there");
@@ -255,7 +258,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
                 let mut inner_counter = 0;
                 fields_placeholders.push('(');
                 vector.remove(pk_value_index);
-                
+
                 for _value in vector.iter() {
                     if inner_counter < vector.len() - 1 {
                         fields_placeholders.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
@@ -277,8 +280,8 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
             }
 
             let stmt = format!(
-                "INSERT INTO {} ({}) VALUES {} RETURNING {}", 
-                #table_schema_data, 
+                "INSERT INTO {} ({}) VALUES {} RETURNING {}",
+                #table_schema_data,
                 mapped_fields,
                 fields_placeholders,
                 #pk
@@ -291,8 +294,8 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
                 }
             }
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
-                stmt, 
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                stmt,
                 v_arr,
                 datasource_name
             ).await;
@@ -300,10 +303,10 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
             match result {
                 Ok(res) => {
                     match res.get_active_ds() {
-                        canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
+                        canyon_sql::crud::DatabaseType::PostgreSql => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = res
-                                    .wrapper
+                                    .postgres
                                     .get(idx)
                                     .expect("Failed getting the returned IDs for a multi insert")
                                     .get::<&str, #pk_type>(#pk);
@@ -311,7 +314,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
 
                             Ok(())
                         },
-                        canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                        canyon_sql::crud::DatabaseType::SqlServer => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = res
                                     .sqlserver
@@ -348,7 +351,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
             for vector in final_values.iter_mut() {
                 let mut inner_counter = 0;
                 fields_placeholders.push('(');
-                
+
                 for _value in vector.iter() {
                     if inner_counter < vector.len() - 1 {
                         fields_placeholders.push_str(&("$".to_owned() + &values_counter.to_string() + ","));
@@ -370,8 +373,8 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
             }
 
             let stmt = format!(
-                "INSERT INTO {} ({}) VALUES {}", 
-                #table_schema_data, 
+                "INSERT INTO {} ({}) VALUES {}",
+                #table_schema_data,
                 mapped_fields,
                 fields_placeholders
             );
@@ -383,8 +386,8 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
                 }
             }
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
-                stmt, 
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                stmt,
                 v_arr,
                 datasource_name
             ).await;
@@ -398,7 +401,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
 
     quote! {
         /// Inserts multiple instances of some type `T` into its related table.
-        /// 
+        ///
         /// ```
         /// let mut new_league = League {
         ///     id: Default::default(),
@@ -431,15 +434,15 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
         /// .ok();
         /// ```
         async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
-            Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
+            Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use crate::bounds::QueryParameters;
+            use canyon_sql::crud::bounds::QueryParameters;
             let datasource_name = "";
-            
+
             let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
             for instance in instances.iter() {
                 let intermediate: &[&dyn QueryParameters<'_>] = &[#(#macro_fields),*];
-                
+
                 let mut longer_lived: Vec<&dyn QueryParameters<'_>> = Vec::new();
                 for value in intermediate.into_iter() {
                     longer_lived.push(*value)
@@ -449,13 +452,13 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
             }
 
             let mut mapped_fields: String = String::new();
-            
+
             #multi_insert_transaction
         }
 
         /// Inserts multiple instances of some type `T` into its related table with the specified
         /// datasource by it's `datasouce name`, defined in the configuration file.
-        /// 
+        ///
         /// ```
         /// let mut new_league = League {
         ///     id: Default::default(),
@@ -488,14 +491,14 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
         /// .ok();
         /// ```
         async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
-            Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> 
+            Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use crate::bounds::QueryParameters;
-            
+            use canyon_sql::crud::bounds::QueryParameters;
+
             let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
             for instance in instances.iter() {
                 let intermediate: &[&dyn QueryParameters<'_>] = &[#(#macro_fields_cloned),*];
-                
+
                 let mut longer_lived: Vec<&dyn QueryParameters<'_>> = Vec::new();
                 for value in intermediate.into_iter() {
                     longer_lived.push(*value)
@@ -505,7 +508,7 @@ pub fn generate_multiple_insert_tokens(macro_data: &MacroTokens, table_schema_da
             }
 
             let mut mapped_fields: String = String::new();
-            
+
             #multi_insert_transaction
         }
     }

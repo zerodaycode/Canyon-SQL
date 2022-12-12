@@ -4,7 +4,7 @@ pub enum Comp {
     Gt,
     Gte,
     Lt,
-    Lte
+    Lte,
 }
 
 impl Comp {
@@ -15,7 +15,7 @@ impl Comp {
             Self::Gt => " > ".to_string(),
             Self::Gte => " >= ".to_string(),
             Self::Lt => " < ".to_string(),
-            Self::Lte => " <= ".to_string()
+            Self::Lte => " <= ".to_string(),
         }
     }
 }
