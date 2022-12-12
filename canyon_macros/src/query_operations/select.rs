@@ -472,7 +472,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                         let lookage_value = value.get_fk_column(#column)
                         .expect(format!(
                             "Column: {:?} not found in type: {:?}", #column, #table
-                            ));
+                            ).as_str());
 
                         let stmt = format!(
                             "SELECT * FROM {} WHERE {} = $1", 
@@ -502,7 +502,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                         let lookage_value = value.get_fk_column(#column)
                             .expect(format!(
                                 "Column: {:?} not found in type: {:?}", #column, #table
-                            ));
+                            ).as_str());
 
                         let stmt = format!(
                             "SELECT * FROM {} WHERE {} = $1", 
