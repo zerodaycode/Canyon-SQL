@@ -71,6 +71,9 @@ where
 
         self.query.sql.push(';');
 
+        println!("Querybuilder query: {:?}", &self.query.sql);
+        println!("Querybuilder parameters: {:?}", &self.query.params);
+
         let result = T::query(
             self.query.sql.clone(),
             self.query.params,
