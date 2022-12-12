@@ -41,15 +41,16 @@ where
 }
 
 /// Represents some kind of introspection to make the implementors
-/// retrieves a value inside some variant of an associated enum type.
-/// and convert it to an [`String`], to enable the convertion of
-/// that value into something that can be part of an SQL query.
+/// able to retrieve a value inside some variant of an associated enum type.
+/// and convert it to a tuple struct formed by the column name as an String,
+/// and the dynamic value of the [`QueryParameters<'_>`] trait object contained
+/// inside the variant requested,
+/// enabling a convertion of that value into something 
+/// that can be part of an SQL query.
 ///
-/// It's a generification to convert everything to a string representation
-/// in SQL syntax, so the clauses can use any value to make filters
 ///
 /// Ex:
-/// `SELECT * FROM some_table WHERE id = '2'`
+/// `SELECT * FROM some_table WHERE id = 2`
 ///
 /// That '2' it's extracted from some enum that implements [`FieldValueIdentifier`],
 /// where usually the variant w'd be something like:
@@ -59,23 +60,21 @@ where
 ///     IntVariant(i32)
 /// }
 /// ```
-/// so, the `.value(self)` method it's called over `self`, gets the value for that variant
-/// (or another specified in the logic) and returns that value as an [`String`]
-pub trait FieldValueIdentifier<T>
+pub trait FieldValueIdentifier<'a, T>
 where
     T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
 {
-    fn value(self) -> String;
+    fn value(self) -> (&'static str, &'a dyn QueryParameters<'a>);
 }
 
-impl<T> FieldValueIdentifier<T> for &str
-where
-    T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
-{
-    fn value(self) -> String {
-        self.to_string()
-    }
-}
+// impl<T> FieldValueIdentifier<T> for &str
+// where
+//     T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
+// {
+//     fn value(self) -> String {
+//         self.to_string()
+//     }
+// }
 
 // impl<T> FieldValueIdentifier<T> for Option<String>
 // where

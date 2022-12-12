@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::{
-    bounds::{FieldIdentifier, FieldValueIdentifier, InClauseValues},
+    bounds::{FieldIdentifier, FieldValueIdentifier, InClauseValues, QueryParameters},
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
     query_elements::operators::Comp,
@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Builder for a query while chaining SQL clauses
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct QueryBuilder<'a, T>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
@@ -17,10 +17,10 @@ where
     query: Query<'a, T>,
     where_clause: String,
     and_clause: String,
-    in_clause: &'a [Box<dyn InClauseValues>],
+    in_clause: String,
     order_by_clause: String,
     set_clause: String,
-    datasource_name: &'a str,
+    datasource_name: &'a str
 }
 
 unsafe impl<'a, T> Send for QueryBuilder<'a, T> 
@@ -51,21 +51,19 @@ where
             );
         }
 
-        if !self.where_clause.is_empty() {
+        if self.where_clause.len() > 7 {
             self.query.sql.push_str(&self.where_clause)
         }
 
-        if !self.and_clause.is_empty() {
+        if self.and_clause.len() > 5 {
             self.query.sql.push_str(&self.and_clause)
         }
 
-        if !self.in_clause.is_empty() {
-            for value in self.in_clause {
-                self.query.sql.push_str(&value.to_string())
-            }
+        if self.in_clause.len() > 4 {
+            self.query.sql.push_str(&self.in_clause)
         }
 
-        if !self.order_by_clause.is_empty() {
+        if self.order_by_clause.len() > 10 {
             self.query.sql.push_str(&self.order_by_clause)
         }
 
@@ -76,7 +74,7 @@ where
 
         let result = T::query(
             self.query.sql.clone(),
-            self.query.params,
+            self.query.params.iter().map(|arg| *arg).collect::<Vec<&dyn QueryParameters>>(),
             self.datasource_name,
         )
         .await;
@@ -91,55 +89,54 @@ where
     pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
         Self {
             query,
-            where_clause: String::new(),
-            and_clause: String::new(),
-            in_clause: &[],
-            order_by_clause: String::new(),
+            where_clause: String::from(" WHERE "),
+            and_clause: String::from(" AND "),
+            in_clause: String::from(" IN "),
+            order_by_clause: String::from(" ORDER BY "),
             set_clause: String::new(),
-            datasource_name,
+            datasource_name
         }
     }
 
-    pub fn r#where<Z: FieldValueIdentifier<T>>(mut self, r#where: Z, comp: Comp) -> Self {
-        let values = r#where
-            .value()
-            .split(' ')
-            .map(String::from)
-            .collect::<Vec<String>>();
+    pub fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, comp: Comp) -> Self {
+        let (column_name, value) = r#where.value();
 
-        let where_ = values.get(0).unwrap().to_string()
+        let where_ = column_name.to_string()
             + &comp.as_string()[..]
-            + "'"
-            + values.get(1).unwrap()
-            + "'";
+            + "$"
+            + &(self.query.params.len() + 1).to_string();
 
-        self.where_clause
-            .push_str(&(String::from(" WHERE ") + where_.as_str()));
-
+        self.where_clause.push_str(&where_);
+        self.query.params.push(value);
         self
     }
 
-    pub fn and<Z: FieldValueIdentifier<T>>(mut self, r#and: Z, comp: Comp) -> Self {
-        let values = r#and
-            .value()
-            .split(' ')
-            .map(String::from)
-            .collect::<Vec<String>>();
+    pub fn and<Z: FieldValueIdentifier<'a, T>>(mut self, r#and: Z, comp: Comp) -> Self {
+        let (column_name, value) = r#and.value();
 
-        let where_ = values.get(0).unwrap().to_string()
+        let and_ = column_name.to_string()
             + &comp.as_string()[..]
-            + "'"
-            + values.get(1).unwrap()
-            + "'";
+            + "$"
+            + &(self.query.params.len() + 1).to_string();
 
-        self.where_clause
-            .push_str(&(String::from(" AND ") + where_.as_str()));
-
+        self.and_clause.push_str(&and_);
+        self.query.params.push(value);
         self
     }
 
-    pub fn r#in(mut self, in_values: &'a [Box<dyn InClauseValues>]) -> Self {
-        self.in_clause = in_values;
+    pub fn r#in(mut self, in_values: &'a [&'a (dyn QueryParameters<'a> + 'a)]) -> Self {
+        self.in_clause.push_str("(");
+        
+        in_values.into_iter().for_each(
+            |qp| {
+                self.in_clause.push_str(
+                    &format!("${}",self.query.params.len())
+                );
+                self.query.params.push(*qp)
+            }
+        );
+
+        self.in_clause.push_str(") ");
         self
     }
 
@@ -151,7 +148,7 @@ where
         };
 
         self.order_by_clause.push_str(
-            &(String::from(" ORDER BY ") + order_by.field_name_as_str().as_str() + &desc),
+            &(order_by.field_name_as_str() + &desc),
         );
         self
     }

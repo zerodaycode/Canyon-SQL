@@ -41,18 +41,16 @@ impl CanyonEntity {
     }
 
     /// Generates as many variants for the enum as fields has the type
-    /// which this enum is related to, and that type it's the entity
-    /// stored in [`CanyonEntity`]
+    /// which this enum is related to.
     ///
-    /// Makes a variant `#field_name(#ty)` where `#ty` it's the type
-    /// of the corresponding field
-    pub fn get_fields_as_enum_variants_with_type(&self) -> Vec<TokenStream> {
+    /// Makes a variant `#field_name(#ty)` where `#ty` it's a trait object
+    /// of type [`canyon_crud::bounds::QueryParameters`]
+    pub fn get_fields_as_enum_variants_with_value(&self) -> Vec<TokenStream> {
         self.fields
             .iter()
             .map(|f| {
                 let field_name = &f.name;
-                let ty = &f.field_type;
-                quote! { #field_name(#ty) }
+                quote! { #field_name(&'a dyn canyon_sql::crud::bounds::QueryParameters<'a>) }
             })
             .collect::<Vec<_>>()
     }
@@ -89,18 +87,9 @@ impl CanyonEntity {
             .map( |f| {
                 let field_name = &f.name;
                 let field_name_as_string = f.name.to_string();
-                let field_type_as_string = f.get_field_type_as_string();
                 
-                if field_type_as_string.contains("Option") {
-                    quote! {
-                        #enum_name::#field_name(v) =>
-                            format!("{} {}", #field_name_as_string, v.unwrap().to_string())
-                    }
-                } else {
-                    quote! {
-                        #enum_name::#field_name(v) =>
-                            format!("{} {}", #field_name_as_string, v.to_string())
-                    }
+                quote! {
+                    #enum_name::#field_name(v) => (#field_name_as_string, v)
                 }
             })
         .collect::<Vec<_>>()

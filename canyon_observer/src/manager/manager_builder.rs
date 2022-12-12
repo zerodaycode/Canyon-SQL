@@ -103,7 +103,7 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new((struct_name + "FieldValue").as_str(), Span::call_site());
 
-    let fields_names = &canyon_entity.get_fields_as_enum_variants_with_type();
+    let fields_names = &canyon_entity.get_fields_as_enum_variants_with_value();
     let match_arms = &canyon_entity.create_match_arm_for_relate_fields_with_values(&enum_name);
 
     let visibility = &canyon_entity.vis;
@@ -132,22 +132,22 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         ///     opt(Option<String>)
         /// }
         /// ```
-        #visibility enum #enum_name #generics {
+        #visibility enum #enum_name<'a> {
             #(#fields_names),*
         }
 
-        impl #generics canyon_sql::crud::bounds::FieldValueIdentifier<#ty> for #generics #enum_name #generics {
-            fn value(self) -> String {
+        impl<'a> canyon_sql::crud::bounds::FieldValueIdentifier<'a, #ty> for #enum_name<'a> {
+            fn value(self) -> (&'static str, &'a dyn QueryParameters<'a>) {
                 match self {
                     #(#match_arms),*
                 }
             }
         }
 
-        impl #generics std::fmt::Display for #enum_name #generics {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-                write!(f, "") // TODO
-            }
-        }
+        // impl<'e> std::fmt::Display for #enum_name<'e> {
+        //     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        //         write!(f, "") // TODO
+        //     }
+        // }
     }
 }

@@ -8,10 +8,10 @@ use crate::{
 };
 
 /// Holds a sql sentence details
-#[derive(Clone)]
+// #[derive(Clone)]
 pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
     pub sql: String,
-    pub params: &'a [&'a dyn QueryParameters<'a>],
+    pub params: Vec<&'a dyn QueryParameters<'a>>,
     marker: PhantomData<T>,
 }
 
@@ -22,7 +22,7 @@ where
     pub fn generate(sql: String, datasource_name: &'a str) -> QueryBuilder<'a, T> {
         let self_ = Self {
             sql,
-            params: &[],
+            params: vec![],
             marker: PhantomData,
         };
         QueryBuilder::<T>::new(self_, datasource_name)

@@ -168,6 +168,7 @@ pub fn querybuilder_fields(
     let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
     let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
     quote! {
+        use canyon_sql::crud::bounds::QueryParameters;
         #_generated_enum_type_for_fields
         #_generated_enum_type_for_fields_values
     }.into()

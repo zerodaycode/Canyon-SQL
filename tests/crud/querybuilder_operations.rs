@@ -18,8 +18,8 @@ fn test_crud_find_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     let filtered_leagues_result: Result<Vec<League>, _> = League::find_query()
-        .r#where(LeagueFieldValue::id(50), Comp::Lte)
-        .and(LeagueFieldValue::region("KOREA".to_string()), Comp::Eq)
+        .r#where(LeagueFieldValue::id(&50), Comp::Lte)
+        .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
         .query()
         .await;
 
@@ -36,7 +36,7 @@ fn test_crud_find_with_querybuilder() {
 fn test_crud_find_with_querybuilder_datasource() {
     // Find all the players where its ID column value is greater that 50
     let filtered_find_players = Player::find_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(50), Comp::Gt)
+        .r#where(PlayerFieldValue::id(&50), Comp::Gt)
         .query()
         .await;
 
@@ -51,15 +51,15 @@ fn test_crud_update_with_querybuilder() {
     // and where it's region column value is equals to 'Korea'
     League::update_query()
         .set(&[(LeagueField::slug, "Updated with the QueryBuilder")])
-        .r#where(LeagueFieldValue::id(1), Comp::Gt)
-        .and(LeagueFieldValue::id(8), Comp::Lt)
+        .r#where(LeagueFieldValue::id(&1), Comp::Gt)
+        .and(LeagueFieldValue::id(&8), Comp::Lt)
         .query()
         .await
         .expect("Failed to update records with the querybuilder"); 
 
     let found_updated_values = League::find_query()
-        .r#where(LeagueFieldValue::id(1), Comp::Gt)
-        .and(LeagueFieldValue::id(7), Comp::Lt)
+        .r#where(LeagueFieldValue::id(&1), Comp::Gt)
+        .and(LeagueFieldValue::id(&7), Comp::Lt)
         .query()
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
@@ -79,15 +79,15 @@ fn test_crud_update_with_querybuilder_datasource() {
             (PlayerField::summoner_name, "Random updated player name"),
             (PlayerField::first_name, "I am an updated first name"),
         ])
-        .r#where(PlayerFieldValue::id(1), Comp::Gt)
-        .and(PlayerFieldValue::id(8), Comp::Lt)
+        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
+        .and(PlayerFieldValue::id(&8), Comp::Lt)
         .query()
         .await
         .expect("Failed to update records with the querybuilder");
     
     let found_updated_values = Player::find_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(1), Comp::Gt)
-        .and(PlayerFieldValue::id(7), Comp::Lte)
+        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
+        .and(PlayerFieldValue::id(&7), Comp::Lte)
         .query()
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
@@ -109,8 +109,8 @@ fn test_crud_update_with_querybuilder_datasource() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder() {
     Tournament::delete_query()
-        .r#where(TournamentFieldValue::id(14), Comp::Gt)
-        .and(TournamentFieldValue::id(16), Comp::Lt)
+        .r#where(TournamentFieldValue::id(&14), Comp::Gt)
+        .and(TournamentFieldValue::id(&16), Comp::Lt)
         .query()
         .await
         .expect("Error connecting with the database on the delete operation");
@@ -122,15 +122,15 @@ fn test_crud_delete_with_querybuilder() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_datasource() {
     Player::delete_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(120), Comp::Gt)
-        .and(PlayerFieldValue::id(130), Comp::Lt)
+        .r#where(PlayerFieldValue::id(&120), Comp::Gt)
+        .and(PlayerFieldValue::id(&130), Comp::Lt)
         .query()
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
     assert!(
         Player::find_query_datasource(SQL_SERVER_DS)
-            .r#where(PlayerFieldValue::id(122), Comp::Eq)
+            .r#where(PlayerFieldValue::id(&122), Comp::Eq)
             .query()
             .await
             .unwrap()
