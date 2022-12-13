@@ -8,10 +8,92 @@ use crate::{
     query_elements::query::Query,
 };
 
+pub trait BaseQueryBuilder<'a, T> 
+where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(self, r#where: Z, comp: Comp) -> Self
+        where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
+}
+
+pub trait SelectQueryBuilderOps<'a, T>: BaseQueryBuilder<'a, T> 
+where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    fn join(self) -> Self;
+}
+
+#[derive(Debug)]
+pub enum JoinKind {
+    Left,
+    Inner,
+    Right
+}
+#[derive(Debug)]
+pub struct JoinClause {
+    kind: JoinKind,
+    sql: String
+}
+
+#[derive(Debug)]
+pub struct SelectQueryBuilder<'a, T> 
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+{
+    _inner: QueryBuilder<'a, T>,
+    join_clause: Option<JoinClause>
+}
+impl<'a, T> SelectQueryBuilder<'a, T>
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {
+        pub fn new(table_schema_data: &str) -> Self {
+            Self { 
+                _inner: Query::generate(format!("SELECT * FROM {}", table_schema_data), ""),
+                join_clause: None
+            } 
+        }
+    }
+
+impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T>
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, comp: Comp) -> Self where Self: Sized {
+        let (column_name, value) = r#where.value();
+
+        let where_ = column_name.to_string()
+            + &comp.as_string()[..]
+            + "$"
+            + &(self._inner.query.params.len() + 1).to_string();
+
+        self._inner.where_clause.push_str(&where_);
+        self._inner.query.params.push(value);
+        self
+    }
+}
+impl<'a, T> SelectQueryBuilderOps<'a, T> for SelectQueryBuilder<'a, T> 
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
+{
+    fn join(mut self) -> Self {
+        if let Some(_v) = self.join_clause {
+            todo!();
+        } else {
+            self.join_clause = Some(
+                JoinClause { 
+                    kind: JoinKind::Inner,
+                    sql: String::from(" inner join public.league ON league.id = tournament.league.id ")
+                }
+            )
+        };
+        self
+    }
+
+
+}
+#[derive(Debug)]
 /// Builder for a query while chaining SQL clauses
 pub struct QueryBuilder<'a, T>
 where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     query: Query<'a, T>,
     where_clause: String,
@@ -37,9 +119,9 @@ where
 {
     /// Generates a Query object that contains the necessary data to performn a query
     #[allow(clippy::question_mark)]
-    pub async fn query(
-        &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    pub async fn query(&'a mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    {
         self.query.sql.retain(|c| !r#";"#.contains(c));
 
         if self.query.sql.contains("UPDATE") && !self.set_clause.is_empty() {

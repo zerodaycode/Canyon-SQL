@@ -67,24 +67,6 @@ where
     fn value(self) -> (&'static str, &'a dyn QueryParameters<'a>);
 }
 
-// impl<T> FieldValueIdentifier<T> for &str
-// where
-//     T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
-// {
-//     fn value(self) -> String {
-//         self.to_string()
-//     }
-// }
-
-// impl<T> FieldValueIdentifier<T> for Option<String>
-// where
-//     T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
-// {
-//     fn value(self) -> String {
-//         self.unwrap().to_string()
-//     }
-// }
-
 /// Bounds to some type T in order to make it callable over some fn parameter T
 ///
 /// Represents the ability of an struct to be considered as candidate to perform

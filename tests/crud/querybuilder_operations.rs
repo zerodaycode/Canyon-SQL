@@ -1,3 +1,4 @@
+use canyon_sql::query::SelectQueryBuilderOps;
 ///! Tests for the QueryBuilder available operations within Canyon.
 ///
 ///! QueryBuilder are the way of obtain more flexibility that with
@@ -10,6 +11,22 @@ use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 use crate::tests_models::tournament::*;
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_select_querywith_the_querybuilder() {
+    // Find all the leagues with ID less or equals that 7
+    // and where it's region column value is equals to 'Korea'
+    let filtered_leagues_result = League::select_query()
+        .join();
+    println!("SELECT QUERYBUILDER: {:?}", &filtered_leagues_result);
+        // .query()
+        // .await;
+
+    // let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
+    // assert!(!filtered_leagues.is_empty());
+}
 
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>

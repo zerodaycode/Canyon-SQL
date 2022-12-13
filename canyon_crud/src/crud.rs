@@ -5,6 +5,7 @@ use canyon_connection::CACHED_DATABASE_CONN;
 use canyon_connection::canyon_database_connector::DatabaseType;
 
 use crate::mapper::RowMapper;
+use crate::query_elements::query_builder::{SelectQueryBuilderOps, SelectQueryBuilder};
 use crate::result::DatabaseResult;
 use crate::{bounds::QueryParameters, query_elements::query_builder::QueryBuilder};
 
@@ -89,6 +90,8 @@ where
     async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
     fn find_query<'a>() -> QueryBuilder<'a, T>;
+
+    fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
 
     fn find_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 
