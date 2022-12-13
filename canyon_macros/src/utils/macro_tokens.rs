@@ -92,7 +92,7 @@ impl<'a> MacroTokens<'a> {
                     true
                 }
             })
-            .map(|c| format!("\"{:?}\"", c.ident.as_ref().unwrap()))
+            .map(|c| format!("\"{}\"", c.ident.as_ref().unwrap()))
             .collect::<Vec<String>>()
     }
 

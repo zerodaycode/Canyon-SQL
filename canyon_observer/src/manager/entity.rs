@@ -94,12 +94,12 @@ impl CanyonEntity {
                 if field_type_as_string.contains("Option") {
                     quote! {
                         #enum_name::#field_name(v) =>
-                            format!("{:?} {:?}", #field_name_as_string, v.unwrap().to_string())
+                            format!("{} {}", #field_name_as_string, v.unwrap().to_string())
                     }
                 } else {
                     quote! {
                         #enum_name::#field_name(v) =>
-                            format!("{:?} {:?}", #field_name_as_string, v.to_string())
+                            format!("{} {}", #field_name_as_string, v.to_string())
                     }
                 }
             })
