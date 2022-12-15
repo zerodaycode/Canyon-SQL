@@ -38,7 +38,6 @@ where
     T: Transaction<T> + CrudOperations<T> + RowMapper<T> + Debug,
 {
     fn as_str<'a>(&'a self) -> &'static str;
-    fn field_name_as_str(self) -> String;
 }
 
 /// Represents some kind of introspection to make the implementors
