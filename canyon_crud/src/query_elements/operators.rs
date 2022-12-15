@@ -1,21 +1,27 @@
+pub trait Operator {
+    fn as_str<'a>(&'a self) -> &'static str;
+}
+
+/// Enumerated type for represent the comparison operations
+/// in SQL sentences
 pub enum Comp {
     Eq,
     Neq,
     Gt,
-    Gte,
+    GtEq,
     Lt,
-    Lte,
+    LtEq,
 }
-
-impl Comp {
-    pub fn as_string(&self) -> String {
+impl Operator for Comp {
+    fn as_str<'a>(&'a self) -> &'static str {
         match *self {
-            Self::Eq => " = ".to_string(),
-            Self::Neq => " <> ".to_string(),
-            Self::Gt => " > ".to_string(),
-            Self::Gte => " >= ".to_string(),
-            Self::Lt => " < ".to_string(),
-            Self::Lte => " <= ".to_string(),
+            Self::Eq => " = ",
+            Self::Neq => " <> ",
+            Self::Gt => " > ",
+            Self::GtEq => " >= ",
+            Self::Lt => " < ",
+            Self::LtEq => " <= ",
         }
     }
 }
+

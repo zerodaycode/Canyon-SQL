@@ -36,6 +36,7 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     let enum_name = Ident::new((struct_name + "Field").as_str(), Span::call_site());
 
     let fields_names = &canyon_entity.get_fields_as_enum_variants();
+    let match_arms_str = &canyon_entity.create_match_arm_for_get_variant_as_str(&enum_name);
     let match_arms = &canyon_entity.create_match_arm_for_get_variant_as_string(&enum_name);
 
     let visibility = &canyon_entity.vis;
@@ -78,6 +79,11 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
         }
 
         impl #generics canyon_sql::crud::bounds::FieldIdentifier<#ty> for #generics #enum_name #generics {
+            fn as_str(&self) -> &'static str {
+                match *self {
+                    #(#match_arms_str),*
+                }
+            }
             fn field_name_as_str(self) -> String {
                 match self {
                     #(#match_arms),*

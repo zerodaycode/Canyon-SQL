@@ -55,6 +55,23 @@ impl CanyonEntity {
             .collect::<Vec<_>>()
     }
 
+    pub fn create_match_arm_for_get_variant_as_str(
+        &self,
+        enum_name: &Ident,
+    ) -> Vec<TokenStream> {
+        self.fields
+            .iter()
+            .map(|f| {
+                let field_name = &f.name;
+                let field_name_as_str = f.name.to_string();
+
+                quote! {
+                    #enum_name::#field_name => #field_name_as_str
+                }
+            })
+            .collect::<Vec<_>>()
+    }
+
     /// Generates an implementation of the match pattern to find whatever variant
     /// is being requested when the method `.field_name_as_str(self)` it's invoked over some
     /// instance that implements the `canyon_sql::crud::bounds::FieldIdentifier` trait

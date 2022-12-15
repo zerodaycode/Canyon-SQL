@@ -1,106 +1,31 @@
 use std::fmt::Debug;
 
+use async_trait::async_trait;
+
 use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameters},
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
-    query_elements::operators::Comp,
-    query_elements::query::Query,
+    query_elements::query::Query, Operator,
 };
 
-pub trait BaseQueryBuilder<'a, T> 
-where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+#[async_trait]
+pub trait BaseQueryBuilder<'a, T> where 
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(self, r#where: Z, comp: Comp) -> Self
+    async fn query(&'a mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>;
+
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self
         where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 }
 
-pub trait SelectQueryBuilderOps<'a, T>: BaseQueryBuilder<'a, T> 
-where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
-{
-    fn join(self) -> Self;
-}
-
+/// Type for construct more complex queries than the classical CRUD ones.
 #[derive(Debug)]
-pub enum JoinKind {
-    Left,
-    Inner,
-    Right
-}
-#[derive(Debug)]
-pub struct JoinClause {
-    kind: JoinKind,
-    sql: String
-}
-
-#[derive(Debug)]
-pub struct SelectQueryBuilder<'a, T> 
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
-{
-    _inner: QueryBuilder<'a, T>,
-    join_clause: Option<JoinClause>
-}
-impl<'a, T> SelectQueryBuilder<'a, T>
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {
-        pub fn new(table_schema_data: &str) -> Self {
-            Self { 
-                _inner: Query::generate(format!("SELECT * FROM {}", table_schema_data), ""),
-                join_clause: None
-            } 
-        }
-    }
-
-impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T>
-where
+pub struct QueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, comp: Comp) -> Self where Self: Sized {
-        let (column_name, value) = r#where.value();
-
-        let where_ = column_name.to_string()
-            + &comp.as_string()[..]
-            + "$"
-            + &(self._inner.query.params.len() + 1).to_string();
-
-        self._inner.where_clause.push_str(&where_);
-        self._inner.query.params.push(value);
-        self
-    }
-}
-impl<'a, T> SelectQueryBuilderOps<'a, T> for SelectQueryBuilder<'a, T> 
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
-{
-    fn join(mut self) -> Self {
-        if let Some(_v) = self.join_clause {
-            todo!();
-        } else {
-            self.join_clause = Some(
-                JoinClause { 
-                    kind: JoinKind::Inner,
-                    sql: String::from(" inner join public.league ON league.id = tournament.league.id ")
-                }
-            )
-        };
-        self
-    }
-
-
-}
-#[derive(Debug)]
-/// Builder for a query while chaining SQL clauses
-pub struct QueryBuilder<'a, T>
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
-{
-    query: Query<'a, T>,
-    where_clause: String,
-    and_clause: String,
-    in_clause: String,
-    order_by_clause: String,
-    set_clause: String,
+    pub query: Query<'a, T>,  // TODO Decouple Query from Querybuilder
     datasource_name: &'a str
 }
 
@@ -117,37 +42,20 @@ impl<'a, T> QueryBuilder<'a, T>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
+    /// Returns an only-read reference to the underlying SQL sentence
+    pub fn get_sql(&'a self) -> &'a str {
+        self.query.sql.as_str()
+    }
+    /// Public interface for append the content of an slice to the end of
+    /// the underlying SQL sentece
+    pub fn push_sql(&mut self, sql: &str) { self.query.sql.push_str(sql); }
+
     /// Generates a Query object that contains the necessary data to performn a query
     #[allow(clippy::question_mark)]
     pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     {
-        self.query.sql.retain(|c| !r#";"#.contains(c));
-
-        if self.query.sql.contains("UPDATE") && !self.set_clause.is_empty() {
-            self.query.sql.push_str(&self.set_clause)
-        } else if !self.query.sql.contains("UPDATE") && !self.set_clause.is_empty() {
-            panic!(
-                "'SET' SQL statement only must be used in `T::update_query() associated functions`"
-            );
-        }
-
-        if self.where_clause.len() > 7 {
-            self.query.sql.push_str(&self.where_clause)
-        }
-
-        if self.and_clause.len() > 5 {
-            self.query.sql.push_str(&self.and_clause)
-        }
-
-        if self.in_clause.len() > 4 {
-            self.query.sql.push_str(&self.in_clause)
-        }
-
-        if self.order_by_clause.len() > 10 {
-            self.query.sql.push_str(&self.order_by_clause)
-        }
-
+        // Close the query, we are ready to go
         self.query.sql.push(';');
 
         let result = T::query(
@@ -166,65 +74,85 @@ where
     pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
         Self {
             query,
-            where_clause: String::from(" WHERE "),
-            and_clause: String::from(" AND "),
-            in_clause: String::from(" IN "),
-            order_by_clause: String::from(" ORDER BY "),
-            set_clause: String::new(),
             datasource_name
         }
     }
 
-    pub fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, comp: Comp) -> Self {
+    pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {
         let (column_name, value) = r#where.value();
 
-        let where_ = column_name.to_string()
-            + &comp.as_string()[..]
+        let where_ = String::from(" WHERE ") 
+            + column_name
+            + &op.as_str()
             + "$"
             + &(self.query.params.len() + 1).to_string();
 
-        self.where_clause.push_str(&where_);
+        self.query.sql.push_str(&where_);
+        self.query.params.push(value);
+    }
+
+    pub fn and_clause<Z: FieldValueIdentifier<'a, T>>(mut self, r#and: Z, op: impl Operator) -> Self {
+        let (column_name, value) = r#and.value();
+
+        let and_ = String::from(" AND ")
+            + column_name
+            + &op.as_str()
+            + "$"
+            + &(self.query.params.len() + 1).to_string();
+
+        self.query.sql.push_str(&and_);
         self.query.params.push(value);
         self
     }
 
-    pub fn and<Z: FieldValueIdentifier<'a, T>>(mut self, r#and: Z, comp: Comp) -> Self {
+    pub fn or_clause<Z: FieldValueIdentifier<'a, T>>(mut self, r#and: Z, op: impl Operator) -> Self {
         let (column_name, value) = r#and.value();
 
-        let and_ = column_name.to_string()
-            + &comp.as_string()[..]
+        let and_ = String::from(" OR ")
+            + column_name
+            + &op.as_str()
             + "$"
             + &(self.query.params.len() + 1).to_string();
 
-        self.and_clause.push_str(&and_);
+        self.query.sql.push_str(&and_);
         self.query.params.push(value);
+        self
+    }
+
+    pub fn and<Z: FieldIdentifier<T>>(mut self, column: Z) -> Self {
+        self.query.sql.push_str(&(String::from(" AND ") + &column.as_str()));
+        self
+    }
+
+    #[inline]
+    pub fn or<Z: FieldIdentifier<T>>(mut self, column: Z) -> Self {
+        self.query.sql.push_str(
+            &(String::from(" OR ") + column.as_str())
+        );
         self
     }
 
     pub fn r#in(mut self, in_values: &'a [&'a (dyn QueryParameters<'a> + 'a)]) -> Self {
-        self.in_clause.push_str("(");
+        self.query.sql.push_str("(");
         
         in_values.into_iter().for_each(
             |qp| {
-                self.in_clause.push_str(
-                    &format!("${}",self.query.params.len())
+                self.query.sql.push_str(
+                    &format!("${}", self.query.params.len())
                 );
                 self.query.params.push(*qp)
             }
         );
 
-        self.in_clause.push_str(") ");
+        self.query.sql.push_str(") ");
         self
     }
 
+    #[inline]
     pub fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
-        let desc = if desc {
-            String::from(" DESC ")
-        } else {
-            "".to_owned()
-        };
-
-        self.order_by_clause.push_str(&(order_by.field_name_as_str() + &desc));
+        self.query.sql.push_str(
+            &(order_by.field_name_as_str() + if desc { " DESC " } else { "" })
+        );
         self
     }
 
@@ -236,28 +164,95 @@ where
     {
         match columns.len() {
             0 => return self,
-            _ => self.set_clause.push_str(" SET "),
+            _ => self.query.sql.push_str(" SET "),
         }
 
         for (idx, column) in columns.iter().enumerate() {
             if idx + 1 == columns.len() {
-                self.set_clause.push_str(
+                self.query.sql.push_str(
                     &(column.0.clone().field_name_as_str().to_owned()
                         + "="
                         + "'"
                         + column.1.to_string().as_str()
-                        + "'"),
+                        + "'"
+                    ),
                 )
             } else {
-                self.set_clause.push_str(
+                self.query.sql.push_str(
                     &(column.0.clone().field_name_as_str().to_owned()
                         + "="
                         + "'"
                         + column.1.to_string().as_str()
-                        + "', "),
+                        + "', "
+                    ),
                 )
             }
         }
+        self
+    }
+}
+
+#[derive(Debug)]
+pub struct SelectQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+{
+    _inner: QueryBuilder<'a, T>,
+}
+impl<'a, T> SelectQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    pub fn new(table_schema_data: &str) -> Self {
+        Self { 
+            _inner: Query::generate(format!("SELECT * FROM {}", table_schema_data), "")
+        } 
+    }
+    pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+        self._inner.query.sql.push_str(
+            &String::from(
+                format!("LEFT JOIN {join_table} ON {col1} = {col2} ")
+            )
+        );
+        self
+    }
+    pub fn inner_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+        self._inner.query.sql.push_str(
+            &String::from(
+                format!("INNER JOIN {join_table} ON {col1} = {col2} ")
+            )
+        );
+        self
+    }
+    pub fn right_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+        self._inner.query.sql.push_str(
+            &String::from(
+                format!("RIGHT JOIN {join_table} ON {col1} = {col2} ")
+            )
+        );
+        self
+    }
+    pub fn full_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+        self._inner.query.sql.push_str(
+            &String::from(
+                format!("FULL JOIN {join_table} ON {col1} = {col2} ")
+            )
+        );
+        self
+    }
+}
+
+#[async_trait]
+impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T>
+where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
+{
+    #[inline]
+    async fn query(&'a mut self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+        self._inner.query().await
+    }
+
+    #[inline]
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
+        self._inner.r#where(r#where, op);
         self
     }
 }
