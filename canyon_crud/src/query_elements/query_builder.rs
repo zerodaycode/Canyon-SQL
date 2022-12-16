@@ -7,66 +7,101 @@ use crate::{
     query_elements::query::Query, Operator,
 };
 
-pub trait BaseQueryBuilder<'a, T> where 
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
-{
-    /// Returns a read-only reference to the underlying SQL sentence,
-    /// with the same lifetime as self
-    fn read_sql(&'a self) -> &'a str;
+/// Contains the elements that makes part of the formal declaration
+/// of the behaviour of the Canyon-SQL QueryBuilder
+pub mod ops {
+    pub use super::*;
 
-    /// Public interface for append the content of an slice to the end of
-    /// the underlying SQL sentece.
+    /// The [`QueryBuilder`] trait is the root of a kind of hierarchy
+    /// on more specific [`super::QueryBuilder`], that are:
     /// 
-    /// This mutator will allow the user to wire SQL code to the already
-    /// generated one
+    /// * [`super::SelectQueryBuilder`]
+    /// * [`super::UpdateQueryBuilder`]
+    /// * [`super::DeleteQueryBuilder`]
     /// 
-    /// * `sql` - The [`&str`] to be wired in the SQL
-    fn push_sql(&mut self, sql: &str);
+    /// This trait provides the formal declaration of the behaviour that the
+    /// implementors must provide in their public interfaces, groping
+    /// the common elements between every element down in that
+    /// hierarchy.
+    /// 
+    /// For example, the [`super::QueryBuilder`] type holds the data
+    /// necessary for track the SQL sentece while it's being generated
+    /// thought the fluent builder, and provides the behaviour of
+    /// the common elements defined in this trait.
+    /// 
+    /// The more concrete types represents a wrapper over a raw
+    /// [`super::QueryBuilder`], offering all the elements declared
+    /// in this trait in its public interface, and which implementation
+    /// only consists of call the same method on the wrapped
+    /// [`super::QueryBuilder`].
+    /// 
+    /// This allows us to declare in their public interface their
+    /// specific operations, like, for example, join operations
+    /// on the [`super::SelectQueryBuilder`], and the usage
+    /// of the `SET` clause on a [`super::UpdateQueryBuilder`],
+    /// without mixing types or convoluting everything into
+    /// just one type.
+    pub trait QueryBuilder<'a, T> where 
+        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
+    {
+        /// Returns a read-only reference to the underlying SQL sentence,
+        /// with the same lifetime as self
+        fn read_sql(&'a self) -> &'a str;
 
-    /// Generates a `WHERE` SQL clause for constraint the query.
-    /// 
-    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-    /// column name and the value for the filter
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    /// or equality binary operator 
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self
-        where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
+        /// Public interface for append the content of an slice to the end of
+        /// the underlying SQL sentece.
+        /// 
+        /// This mutator will allow the user to wire SQL code to the already
+        /// generated one
+        /// 
+        /// * `sql` - The [`&str`] to be wired in the SQL
+        fn push_sql(&mut self, sql: &str);
 
-    /// Generates an `AND` SQL clause for constraint the query.
-    /// 
-    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-    /// column name and the value for the filter
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    /// or equality binary operator 
-    fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self;
+        /// Generates a `WHERE` SQL clause for constraint the query.
+        /// 
+        /// * `column` - A [`FieldValueIdentifier`] that will provide the target
+        /// column name and the value for the filter
+        /// * `op` - Any element that implements [`Operator`] for create the comparison
+        /// or equality binary operator 
+        fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self
+            where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 
-    /// Generates an `AND` SQL clause for constraint the query that will create
-    /// the filter in conjunction with an `IN` operator that will ac
-    /// 
-    /// * `column` - A [`FieldIdentifier`] that will provide the target
-    /// column name for the filter, based on the variant that represents
-    /// the field name that maps the targeted column name
-    /// * `values` - An array of [`QueryParameters`] with the values to filter
-    /// inside the `IN` operator
-    fn and_in<Z: FieldIdentifier<T>>(
-        &mut self, column: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self;
+        /// Generates an `AND` SQL clause for constraint the query.
+        /// 
+        /// * `column` - A [`FieldValueIdentifier`] that will provide the target
+        /// column name and the value for the filter
+        /// * `op` - Any element that implements [`Operator`] for create the comparison
+        /// or equality binary operator 
+        fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self;
 
-    /// Generates an `OR` SQL clause for constraint the query.
-    /// 
-    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-    /// column name and the value for the filter
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    /// or equality binary operator 
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self;
+        /// Generates an `AND` SQL clause for constraint the query that will create
+        /// the filter in conjunction with an `IN` operator that will ac
+        /// 
+        /// * `column` - A [`FieldIdentifier`] that will provide the target
+        /// column name for the filter, based on the variant that represents
+        /// the field name that maps the targeted column name
+        /// * `values` - An array of [`QueryParameters`] with the values to filter
+        /// inside the `IN` operator
+        fn and_in<Z: FieldIdentifier<T>>(
+            &mut self, column: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
+        ) -> &mut Self;
 
-    /// Generates a `ORDER BY` SQL clause for constraint the query.
-    /// 
-    /// * `order_by` - A [`FieldIdentifier`] that will provide the target
-    /// column name
-    /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be
-    /// in ascending or descending order
-    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self;
+        /// Generates an `OR` SQL clause for constraint the query.
+        /// 
+        /// * `column` - A [`FieldValueIdentifier`] that will provide the target
+        /// column name and the value for the filter
+        /// * `op` - Any element that implements [`Operator`] for create the comparison
+        /// or equality binary operator 
+        fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self;
+
+        /// Generates a `ORDER BY` SQL clause for constraint the query.
+        /// 
+        /// * `order_by` - A [`FieldIdentifier`] that will provide the target
+        /// column name
+        /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be
+        /// in ascending or descending order
+        fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self;
+    }
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
@@ -168,7 +203,6 @@ where
         
         let mut counter = 1;
         values.into_iter().for_each(|qp| {
-            // TODO Añadir coma por número de parámetros
             if values.len() != counter {
                 self.query.sql.push_str(
                     &format!("${}, ", self.query.params.len())
@@ -308,7 +342,7 @@ impl<'a, T> SelectQueryBuilder<'a, T> where
     }
 }
 
-impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
+impl<'a, T> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
     #[inline]
@@ -383,7 +417,7 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
     { self._inner.query().await }
 }
 
-impl<'a, T> BaseQueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
+impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
     #[inline]
@@ -459,7 +493,7 @@ impl<'a, T> DeleteQueryBuilder<'a, T> where
     { self._inner.query().await }
 }
 
-impl<'a, T> BaseQueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
+impl<'a, T> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
     #[inline]

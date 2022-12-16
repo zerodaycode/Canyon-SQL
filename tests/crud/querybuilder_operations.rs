@@ -15,7 +15,7 @@ use crate::tests_models::tournament::*;
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_select_query_with_the_querybuilder() {
-    use canyon_sql::query::BaseQueryBuilder;
+    use canyon_sql::query::ops::QueryBuilder;
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     let mut filtered_leagues_result = League::select_query();
