@@ -96,16 +96,16 @@ pub fn generate_delete_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// Deletes a record on a table for the target database that matches the value
-        /// of the primary key of the instance
-        fn delete_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
-            canyon_sql::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), "")
-        }
+        // /// Deletes a record on a table for the target database that matches the value
+        // /// of the primary key of the instance
+        // fn delete_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
+        //     canyon_sql::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), "")
+        // }
 
-        /// Deletes a record on a table for the target database with the specified
-        /// values generated with the [`Querybuilder`] and with the
-        fn delete_query_datasource(datasource_name: &str) -> canyon_sql::query::QueryBuilder<'_, #ty> {
-            canyon_sql::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), datasource_name)
-        }
+        // /// Deletes a record on a table for the target database with the specified
+        // /// values generated with the [`Querybuilder`] and with the
+        // fn delete_query_datasource(datasource_name: &str) -> canyon_sql::query::QueryBuilder<'_, #ty> {
+        //     canyon_sql::query::Query::generate(format!("DELETE FROM {}", #table_schema_data), datasource_name)
+        // }
     }
 }

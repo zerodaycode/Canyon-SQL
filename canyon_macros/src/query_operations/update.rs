@@ -117,16 +117,16 @@ pub fn generate_update_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// TODO docs
-        fn update_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
-            canyon_sql::query::Query::generate(format!("UPDATE {}", #table_schema_data), "")
-        }
+        // /// TODO docs
+        // fn update_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
+        //     canyon_sql::query::Query::generate(format!("UPDATE {}", #table_schema_data), "")
+        // }
 
-        /// TODO docs
-        fn update_query_datasource(datasource_name: &str)
-            -> canyon_sql::query::QueryBuilder<'_, #ty>
-        {
-            canyon_sql::query::Query::generate(format!("UPDATE {}", #table_schema_data), datasource_name)
-        }
+        // /// TODO docs
+        // fn update_query_datasource(datasource_name: &str)
+        //     -> canyon_sql::query::QueryBuilder<'_, #ty>
+        // {
+        //     canyon_sql::query::Query::generate(format!("UPDATE {}", #table_schema_data), datasource_name)
+        // }
     }
 }

@@ -31,7 +31,7 @@ pub trait BaseQueryBuilder<'a, T> where
 pub struct QueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-    pub query: Query<'a, T>,  // TODO Decouple Query from Querybuilder
+    query: Query<'a, T>,  // TODO Decouple Query from Querybuilder
     datasource_name: &'a str
 }
 
@@ -178,10 +178,14 @@ pub struct SelectQueryBuilder<'a, T> where
 impl<'a, T> SelectQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-    pub fn new(table_schema_data: &str) -> Self {
+    pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
         Self { 
-            _inner: Query::generate(format!("SELECT * FROM {}", table_schema_data), "")
-        } 
+            _inner: QueryBuilder::<T>::new(
+                Query::new(
+                    format!("SELECT * FROM {}", table_schema_data), ""),
+                    datasource_name
+                )
+        }
     }
     pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner.query.sql.push_str(

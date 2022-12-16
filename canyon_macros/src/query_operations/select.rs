@@ -120,20 +120,17 @@ pub fn generate_find_all_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// Generates a [`canyon_sql::query::QueryBuilder`]
+        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention.
-        fn find_query<'a>() -> canyon_sql::query::QueryBuilder<'a, #ty> {
-            canyon_sql::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), "")
-        }
-
         fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data)
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
         }
 
-        /// Generates a [`canyon_sql::query::QueryBuilder`]
+        
+        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
@@ -142,10 +139,8 @@ pub fn generate_find_all_query_tokens(
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
-        fn find_query_datasource(datasource_name: &str) ->
-            canyon_sql::query::QueryBuilder<'_, #ty>
-        {
-            canyon_sql::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), datasource_name)
+        fn select_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, datasource_name)
         }
     }
 }

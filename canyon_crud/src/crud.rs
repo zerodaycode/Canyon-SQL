@@ -89,11 +89,13 @@ where
 
     async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
-    fn find_query<'a>() -> QueryBuilder<'a, T>;
+    // fn find_query<'a>() -> QueryBuilder<'a, T>;
 
     fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
 
-    fn find_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
+    fn select_query_datasource<'a>(datasource_name: &'a str) -> SelectQueryBuilder<'a, T>;
+
+    // fn find_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 
     async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
@@ -135,9 +137,9 @@ where
         datasource_name: &'a str,
     ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    fn update_query<'a>() -> QueryBuilder<'a, T>;
+    // fn update_query<'a>() -> QueryBuilder<'a, T>;
 
-    fn update_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
+    // fn update_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 
     async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
@@ -146,9 +148,9 @@ where
         datasource_name: &'a str,
     ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    fn delete_query<'a>() -> QueryBuilder<'a, T>;
+    // fn delete_query<'a>() -> QueryBuilder<'a, T>;
 
-    fn delete_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
+    // fn delete_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 }
 
 mod postgres_query_launcher {
