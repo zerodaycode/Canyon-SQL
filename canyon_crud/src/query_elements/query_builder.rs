@@ -1,7 +1,5 @@
 use std::fmt::Debug;
 
-use async_trait::async_trait;
-
 use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameters},
     crud::{CrudOperations, Transaction},
@@ -12,6 +10,17 @@ use crate::{
 pub trait BaseQueryBuilder<'a, T> where 
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
+    /// Returns a read-only reference to the underlying SQL sentence,
+    /// with the same lifetime as self
+    fn read_sql(&'a self) -> &'a str;
+
+    /// Public interface for append the content of an slice to the end of
+    /// the underlying SQL sentece.
+    /// 
+    /// This mutator will allow the user to wire SQL code to the already
+    /// generated one
+    fn push_sql(&mut self, sql: &str);
+
     fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self
         where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 
@@ -49,16 +58,8 @@ where
         Self { query, datasource_name }
     }
 
-    /// Returns a read-only reference to the underlying SQL sentence,
-    /// with the same lifetime as self
-    #[inline] pub fn read_sql(&'a self) -> &'a str {
-        self.query.sql.as_str()
-    }
-    /// Public interface for append the content of an slice to the end of
-    /// the underlying SQL sentece
-    #[inline(always)] pub fn push_sql(&mut self, sql: &str) { self.query.sql.push_str(sql); }
-
-    /// Generates a Query object that contains the necessary data to performn a query
+    /// Launches the generated query against the database targeted
+    /// by the selected datasource
     #[allow(clippy::question_mark)]
     pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
@@ -119,7 +120,6 @@ where
     }
 
     pub fn and_in<Z: FieldIdentifier<T>>(&mut self, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]) {
-        /// TODO
         self.query.sql.push_str("(");
         
         values.into_iter().for_each(|qp| {
@@ -259,6 +259,16 @@ impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
     #[inline]
+    fn read_sql(&'a self) -> &'a str {
+        self._inner.query.sql.as_str()
+    }
+
+    #[inline(always)]
+    fn push_sql(&mut self, sql: &str) { 
+        self._inner.query.sql.push_str(sql); 
+    }
+
+    #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
         self._inner.r#where(r#where, op);
         self
@@ -310,7 +320,7 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
 
     /// Launches the generated query to the database pointed by the 
     /// selected datasource
-    #[inline] async fn query(&'a mut self)
+    #[inline] pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     { self._inner.query().await }
 }
@@ -318,6 +328,16 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
 impl<'a, T> BaseQueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
+    #[inline]
+    fn read_sql(&'a self) -> &'a str {
+        self._inner.query.sql.as_str()
+    }
+
+    #[inline(always)]
+    fn push_sql(&mut self, sql: &str) { 
+        self._inner.query.sql.push_str(sql); 
+    }
+
     #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
         self._inner.r#where(r#where, op);
@@ -371,7 +391,7 @@ impl<'a, T> DeleteQueryBuilder<'a, T> where
 
     /// Launches the generated query to the database pointed by the 
     /// selected datasource
-    #[inline] async fn query(&'a mut self)
+    #[inline] pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     { self._inner.query().await }
 }
@@ -379,6 +399,16 @@ impl<'a, T> DeleteQueryBuilder<'a, T> where
 impl<'a, T> BaseQueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
+    #[inline]
+    fn read_sql(&'a self) -> &'a str {
+        self._inner.query.sql.as_str()
+    }
+
+    #[inline(always)]
+    fn push_sql(&mut self, sql: &str) { 
+        self._inner.query.sql.push_str(sql); 
+    }
+
     #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
         self._inner.r#where(r#where, op);
