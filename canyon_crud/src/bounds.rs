@@ -231,7 +231,7 @@ impl<'a> IntoSql<'a> for &'a dyn QueryParameters<'a> {
     fn into_sql(self) -> ColumnData<'a> {
         self.as_sqlserver_param()
     }
-}
+} 
 
 impl<'a> QueryParameters<'a> for i16 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {

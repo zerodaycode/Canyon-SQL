@@ -9,13 +9,9 @@ use crate::{
     query_elements::query::Query, Operator,
 };
 
-#[async_trait]
 pub trait BaseQueryBuilder<'a, T> where 
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> 
 {
-    async fn query(&'a mut self)  // TODO Split it into diff traits
-        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>;
-
     fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self
         where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 
@@ -31,7 +27,7 @@ pub trait BaseQueryBuilder<'a, T> where
 pub struct QueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
-    query: Query<'a, T>,  // TODO Decouple Query from Querybuilder
+    query: Query<'a, T>,
     datasource_name: &'a str
 }
 
@@ -123,6 +119,7 @@ where
     }
 
     pub fn and_in<Z: FieldIdentifier<T>>(&mut self, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]) {
+        /// TODO
         self.query.sql.push_str("(");
         
         values.into_iter().for_each(|qp| {
@@ -175,18 +172,28 @@ pub struct SelectQueryBuilder<'a, T> where
 {
     _inner: QueryBuilder<'a, T>,
 }
+
 impl<'a, T> SelectQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
+    /// Generates a new public instance of the [`SelectQueryBuilder`]
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
         Self { 
             _inner: QueryBuilder::<T>::new(
-                Query::new(
-                    format!("SELECT * FROM {}", table_schema_data), ""),
-                    datasource_name
-                )
+                Query::new(format!("SELECT * FROM {}", table_schema_data)),
+                datasource_name
+            )
         }
     }
+
+    /// Adds a *LEFT JOIN* SQL statement to the underlying
+    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// 
+    /// * `join_table` - The table target of the join operation
+    /// * `col1` - The left side of the ON operator for the join 
+    /// * `col2` - The right side of the ON operator for the join
+    /// 
+    /// > Note: The order on the column paramenters is irrelevant 
     pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner.query.sql.push_str(
             &String::from(
@@ -195,6 +202,15 @@ impl<'a, T> SelectQueryBuilder<'a, T> where
         );
         self
     }
+
+    /// Adds a *RIGHT JOIN* SQL statement to the underlying
+    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// 
+    /// * `join_table` - The table target of the join operation
+    /// * `col1` - The left side of the ON operator for the join 
+    /// * `col2` - The right side of the ON operator for the join
+    /// 
+    /// > Note: The order on the column paramenters is irrelevant 
     pub fn inner_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner.query.sql.push_str(
             &String::from(
@@ -203,6 +219,15 @@ impl<'a, T> SelectQueryBuilder<'a, T> where
         );
         self
     }
+
+    /// Adds a *RIGHT JOIN* SQL statement to the underlying
+    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// 
+    /// * `join_table` - The table target of the join operation
+    /// * `col1` - The left side of the ON operator for the join 
+    /// * `col2` - The right side of the ON operator for the join
+    /// 
+    /// > Note: The order on the column paramenters is irrelevant 
     pub fn right_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner.query.sql.push_str(
             &String::from(
@@ -211,6 +236,15 @@ impl<'a, T> SelectQueryBuilder<'a, T> where
         );
         self
     }
+
+    /// Adds a *FULL JOIN* SQL statement to the underlying
+    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// 
+    /// * `join_table` - The table target of the join operation
+    /// * `col1` - The left side of the ON operator for the join 
+    /// * `col2` - The right side of the ON operator for the join
+    /// 
+    /// > Note: The order on the column paramenters is irrelevant 
     pub fn full_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner.query.sql.push_str(
             &String::from(
@@ -221,15 +255,130 @@ impl<'a, T> SelectQueryBuilder<'a, T> where
     }
 }
 
-#[async_trait]
 impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
 {
     #[inline]
-    async fn query(&'a mut self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
-        self._inner.query().await
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
+        self._inner.r#where(r#where, op);
+        self
     }
 
+    #[inline]
+    fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.and(column, op);
+        self
+    }
+
+    #[inline]
+    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.or(column, op);
+        self
+    }
+
+    #[inline]
+    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
+        self._inner.order_by(order_by, desc);
+        self
+    }
+}
+
+
+/// Contains the specific database operations of the *UPDATE* SQL statements.
+///  
+/// * `set` - To construct a new `SET` clause to determine the columns to
+/// update with the provided values
+#[derive(Debug)]
+pub struct UpdateQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+{
+    _inner: QueryBuilder<'a, T>,
+}
+
+impl<'a, T> UpdateQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    /// Generates a new public instance of the [`UpdateQueryBuilder`]
+    pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
+        Self { 
+            _inner: QueryBuilder::<T>::new(
+                Query::new(format!("UPDATE {}", table_schema_data)),
+                datasource_name
+            )
+        }
+    }
+
+    /// Launches the generated query to the database pointed by the 
+    /// selected datasource
+    #[inline] async fn query(&'a mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    { self._inner.query().await }
+}
+
+impl<'a, T> BaseQueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
+{
+    #[inline]
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
+        self._inner.r#where(r#where, op);
+        self
+    }
+
+    #[inline]
+    fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.and(column, op);
+        self
+    }
+
+    #[inline]
+    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.or(column, op);
+        self
+    }
+
+    #[inline]
+    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
+        self._inner.order_by(order_by, desc);
+        self
+    }
+}
+
+
+/// Contains the specific database operations associated with the
+/// *DELETE* SQL statements.
+///  
+/// * `set` - To construct a new `SET` clause to determine the columns to
+/// update with the provided values
+#[derive(Debug)]
+pub struct DeleteQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+{
+    _inner: QueryBuilder<'a, T>,
+}
+
+impl<'a, T> DeleteQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+{
+    /// Generates a new public instance of the [`DeleteQueryBuilder`]
+    pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
+        Self { 
+            _inner: QueryBuilder::<T>::new(
+                Query::new(format!("DELETE FROM {}", table_schema_data)),
+                datasource_name
+            )
+        }
+    }
+
+    /// Launches the generated query to the database pointed by the 
+    /// selected datasource
+    #[inline] async fn query(&'a mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    { self._inner.query().await }
+}
+
+impl<'a, T> BaseQueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
+    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send
+{
     #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self {
         self._inner.r#where(r#where, op);

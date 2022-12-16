@@ -18,7 +18,7 @@ impl<'a, T> Query<'a, T>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
-    pub fn new(sql: String, datasource_name: &'a str) -> Query<'a, T> {
+    pub fn new(sql: String) -> Query<'a, T> {
         Self {sql, params: vec![], marker: PhantomData}
     }
 }

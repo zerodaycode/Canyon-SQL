@@ -7,7 +7,7 @@ use canyon_connection::canyon_database_connector::DatabaseType;
 use crate::mapper::RowMapper;
 use crate::query_elements::query_builder::SelectQueryBuilder;
 use crate::result::DatabaseResult;
-use crate::{bounds::QueryParameters, query_elements::query_builder::QueryBuilder};
+use crate::bounds::QueryParameters;
 
 
 /// This traits defines and implements a query against a database given
@@ -89,13 +89,9 @@ where
 
     async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
-    // fn find_query<'a>() -> QueryBuilder<'a, T>;
-
     fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
 
     fn select_query_datasource<'a>(datasource_name: &'a str) -> SelectQueryBuilder<'a, T>;
-
-    // fn find_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
 
     async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 

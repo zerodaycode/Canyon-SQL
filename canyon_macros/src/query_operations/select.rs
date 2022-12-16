@@ -129,7 +129,6 @@ pub fn generate_find_all_query_tokens(
             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
         }
 
-        
         /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
