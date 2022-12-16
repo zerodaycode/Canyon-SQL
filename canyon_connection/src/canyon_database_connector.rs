@@ -140,8 +140,7 @@ impl DatabaseConnection {
                         "There's no `{}` database supported in Canyon-SQL",
                         datasource.db_type
                     ),
-                )
-                .into_inner()
+                ).into_inner()
                 .unwrap())
             }
         }

@@ -4,18 +4,103 @@
 ///! the default generated queries, esentially for build the queries
 ///! with the SQL filters
 ///
-use canyon_sql::{crud::CrudOperations, query::operators::Comp};
+use canyon_sql::{
+    crud::CrudOperations,
+    query::{operators::Comp, ops::QueryBuilder}
+};
 
 use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 use crate::tests_models::tournament::*;
 
+/// Tests for the generated SQL query after use the
+/// WHERE clause
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_where_clause() {
+    let mut l = League::select_query();
+    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq);
+
+    assert_eq!(
+        l.read_sql(),
+        "SELECT * FROM public.league WHERE name = $1"
+    )
+}
+
+/// Tests for the generated SQL query after use the
+/// AND clause
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_and_clause() {
+    let mut l = League::select_query();
+    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .and(LeagueFieldValue::id(&10), Comp::LtEq);
+
+    assert_eq!(
+        l.read_sql(),
+        "SELECT * FROM public.league WHERE name = $1 AND id <= $2"
+    )
+}
+
+/// Tests for the generated SQL query after use the
+/// AND clause
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_and_clause_with_in_constraint() {
+    let mut l = League::select_query();
+    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .and_values_in(LeagueField::id, &[&1, &7, &10]);
+
+    assert_eq!(
+        l.read_sql(),
+        "SELECT * FROM public.league WHERE name = $1 AND id IN ($1, $2, $3) "
+    )
+}
+
+/// Tests for the generated SQL query after use the
+/// AND clause
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_or_clause() {
+    let mut l = League::select_query();
+    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .or(LeagueFieldValue::id(&10), Comp::LtEq);
+
+    assert_eq!(
+        l.read_sql(),
+        "SELECT * FROM public.league WHERE name = $1 OR id <= $2 "
+    )
+}
+
+/// Tests for the generated SQL query after use the
+/// AND clause
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_or_clause_with_in_constraint() {
+    let mut l = League::select_query();
+    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .or_values_in(LeagueField::id, &[&1, &7, &10]);
+
+    assert_eq!(
+        l.read_sql(),
+        "SELECT * FROM public.league WHERE name = $1 OR id IN ($1, $2, $3) "
+    )
+}
+
+/// Tests for the generated SQL query after use the
+/// AND clause
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_order_by_clause() {
+    let mut l = League::select_query();
+    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .order_by(LeagueField::id, false);
+
+    assert_eq!(
+        l.read_sql(),
+        "SELECT * FROM public.league WHERE name = $1 ORDER BY id"
+    )
+}
+
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_select_query_with_the_querybuilder() {
-    use canyon_sql::query::ops::QueryBuilder;
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     let mut filtered_leagues_result = League::select_query();
@@ -24,7 +109,7 @@ fn test_select_query_with_the_querybuilder() {
         // .left_join("team", "tournament.id", "player.tournament_id")
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
         .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
-        .and_in(LeagueField::name, &[&"LCK", &"STRANGER THINGS"]);
+        .and_values_in(LeagueField::name, &[&"LCK", &"STRANGER THINGS"]);
     println!("SELECT QUERYBUILDER: {:?}", filtered_leagues_result);
         // .query()
         // .await;
