@@ -5,7 +5,7 @@ use canyon_connection::CACHED_DATABASE_CONN;
 use canyon_connection::canyon_database_connector::DatabaseType;
 
 use crate::mapper::RowMapper;
-use crate::query_elements::query_builder::SelectQueryBuilder;
+use crate::query_elements::query_builder::{SelectQueryBuilder, UpdateQueryBuilder, DeleteQueryBuilder};
 use crate::result::DatabaseResult;
 use crate::bounds::QueryParameters;
 
@@ -133,9 +133,9 @@ where
         datasource_name: &'a str,
     ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    // fn update_query<'a>() -> QueryBuilder<'a, T>;
+    fn update_query<'a>() -> UpdateQueryBuilder<'a, T>;
 
-    // fn update_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
+    fn update_query_datasource(datasource_name: &str) -> UpdateQueryBuilder<'_, T>;
 
     async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
@@ -144,9 +144,9 @@ where
         datasource_name: &'a str,
     ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
 
-    // fn delete_query<'a>() -> QueryBuilder<'a, T>;
+    fn delete_query<'a>() -> DeleteQueryBuilder<'a, T>;
 
-    // fn delete_query_datasource(datasource_name: &str) -> QueryBuilder<'_, T>;
+    fn delete_query_datasource(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
 }
 
 mod postgres_query_launcher {
