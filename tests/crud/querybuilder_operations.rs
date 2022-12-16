@@ -20,10 +20,11 @@ fn test_select_query_with_the_querybuilder() {
     // and where it's region column value is equals to 'Korea'
     let mut filtered_leagues_result = League::select_query();
     filtered_leagues_result
-        .inner_join("tournament", "league.id", "tournament.league_id")
-        .left_join("team", "tournament.id", "player.tournament_id")
-        .r#where(LeagueFieldValue::id(&3), Comp::Gt)
-        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq);
+        // .inner_join("tournament", "league.id", "tournament.league_id")
+        // .left_join("team", "tournament.id", "player.tournament_id")
+        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
+        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+        .and_in(LeagueField::name, &[&"LCK", &"STRANGER THINGS"]);
     println!("SELECT QUERYBUILDER: {:?}", filtered_leagues_result);
         // .query()
         // .await;

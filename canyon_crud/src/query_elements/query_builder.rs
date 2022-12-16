@@ -19,16 +19,54 @@ pub trait BaseQueryBuilder<'a, T> where
     /// 
     /// This mutator will allow the user to wire SQL code to the already
     /// generated one
+    /// 
+    /// * `sql` - The [`&str`] to be wired in the SQL
     fn push_sql(&mut self, sql: &str);
 
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) -> &mut Self
+    /// Generates a `WHERE` SQL clause for constraint the query.
+    /// 
+    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
+    /// column name and the value for the filter
+    /// * `op` - Any element that implements [`Operator`] for create the comparison
+    /// or equality binary operator 
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self
         where T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 
+    /// Generates an `AND` SQL clause for constraint the query.
+    /// 
+    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
+    /// column name and the value for the filter
+    /// * `op` - Any element that implements [`Operator`] for create the comparison
+    /// or equality binary operator 
     fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self;
 
+    /// Generates an `AND` SQL clause for constraint the query that will create
+    /// the filter in conjunction with an `IN` operator that will ac
+    /// 
+    /// * `column` - A [`FieldIdentifier`] that will provide the target
+    /// column name for the filter, based on the variant that represents
+    /// the field name that maps the targeted column name
+    /// * `values` - An array of [`QueryParameters`] with the values to filter
+    /// inside the `IN` operator
+    fn and_in<Z: FieldIdentifier<T>>(
+        &mut self, column: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
+    ) -> &mut Self;
+
+    /// Generates an `OR` SQL clause for constraint the query.
+    /// 
+    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
+    /// column name and the value for the filter
+    /// * `op` - Any element that implements [`Operator`] for create the comparison
+    /// or equality binary operator 
     fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self;
 
-    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self ;
+    /// Generates a `ORDER BY` SQL clause for constraint the query.
+    /// 
+    /// * `order_by` - A [`FieldIdentifier`] that will provide the target
+    /// column name
+    /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be
+    /// in ascending or descending order
+    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self;
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
@@ -119,13 +157,28 @@ where
         self.query.params.push(value);
     }
 
-    pub fn and_in<Z: FieldIdentifier<T>>(&mut self, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]) {
-        self.query.sql.push_str("(");
+    pub fn and_in<Z: FieldIdentifier<T>>(
+        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
+    ) {
+        if values.len() == 0 { return; }
+
+        self.query.sql.push_str(
+            &format!(" AND {:?} IN (", r#and.as_str())
+        );
         
+        let mut counter = 1;
         values.into_iter().for_each(|qp| {
-            self.query.sql.push_str(
-                &format!("${}", self.query.params.len())
-            );
+            // TODO Añadir coma por número de parámetros
+            if values.len() != counter {
+                self.query.sql.push_str(
+                    &format!("${}, ", self.query.params.len())
+                );
+                counter +=1;
+            } else {
+                self.query.sql.push_str(
+                    &format!("${}", self.query.params.len())
+                );
+            }
             self.query.params.push(*qp)
         });
 
@@ -281,6 +334,11 @@ impl<'a, T> BaseQueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
     }
 
     #[inline]
+    fn and_in<Z: FieldIdentifier<T>>(
+        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
+    ) -> &mut Self { self._inner.and_in(and, values); self }
+
+    #[inline]
     fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
         self._inner.or(column, op);
         self
@@ -349,6 +407,11 @@ impl<'a, T> BaseQueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
         self._inner.and(column, op);
         self
     }
+
+    #[inline]
+    fn and_in<Z: FieldIdentifier<T>>(
+        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
+    ) -> &mut Self { self._inner.and_in(and, values); self }
 
     #[inline]
     fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
@@ -420,6 +483,11 @@ impl<'a, T> BaseQueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
         self._inner.and(column, op);
         self
     }
+
+    #[inline]
+    fn and_in<Z: FieldIdentifier<T>>(
+        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
+    ) -> &mut Self { self._inner.and_in(and, values); self }
 
     #[inline]
     fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
