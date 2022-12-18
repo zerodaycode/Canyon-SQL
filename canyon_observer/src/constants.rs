@@ -96,6 +96,7 @@ pub mod mssql_queries {
 /// Constant string values that holds regex patterns
 pub mod regex_patterns {
     pub const EXTRACT_RUST_OPT_REGEX: &str = r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>";
+    pub const EXTRACT_FOREIGN_KEY_INFO: &str =  r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)";
 }
 
 /// Constant values that maps the string representation of the Rust
