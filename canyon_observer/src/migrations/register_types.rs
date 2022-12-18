@@ -28,7 +28,7 @@ pub struct CanyonRegisterEntityField {
 impl CanyonRegisterEntityField {
     /// Return the postgres datatype and parameters to create a column for a given rust type
     pub fn to_postgres_syntax(&self) -> String {
-        let mut rust_type_clean = self.field_type.replace(' ', "");
+        let rust_type_clean = self.field_type.replace(' ', "");
 
         let mut postgres_type = String::new();
 
@@ -64,7 +64,7 @@ impl CanyonRegisterEntityField {
     /// Return the postgres datatype and parameters to create a column for a given rust type
     /// for Microsoft SQL Server
     pub fn to_sqlserver_syntax(&self) -> String {
-        let mut rust_type_clean = self.field_type.replace(' ', "");
+        let rust_type_clean = self.field_type.replace(' ', "");
 
         let mut sqlserver_type = String::new();
 

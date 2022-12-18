@@ -21,8 +21,8 @@ use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 pub struct MigrationsProcessor {
     operations: Vec<Box<dyn DatabaseOperation>>,
     set_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
-    constraints_operations: Vec<Box<dyn DatabaseOperation>>,
     drop_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
+    constraints_operations: Vec<Box<dyn DatabaseOperation>>,
 }
 impl Transaction<Self> for MigrationsProcessor {}
 
@@ -200,7 +200,7 @@ impl MigrationsProcessor {
                         entity_name, 
                         column_metadata.column_name.clone(), 
                         MigrationsHelper::get_datatype_from_column_metadata(
-                        entity_name.to_string(), column_metadata
+                            column_metadata
                         )
                     )
                 }
@@ -301,11 +301,11 @@ impl MigrationsProcessor {
         )));
     }
 
-    fn add_primary_key(&mut self, entity_name: &str, field: CanyonRegisterEntityField)
+    fn add_primary_key(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField)
         {
             self.set_primary_key_operations
                 .push(Box::new(
-                    TableOperation::AddTablePrimaryKey(entity_name.to_string(), field),
+                    TableOperation::AddTablePrimaryKey(entity_name.to_string(), canyon_register_entity_field),
                 ));
         }
     
@@ -579,7 +579,6 @@ impl MigrationsHelper {
     }
 
     fn get_datatype_from_column_metadata<'a> (
-        column_name: String,
         current_column_metadata: &'a ColumnMetadata,
     ) -> String {
         // TODO Add all SQL Server text datatypes
@@ -1377,36 +1376,57 @@ impl DatabaseOperation for TableOperation
                 column_foreign_key,
                 table_to_reference,
                 column_to_reference
-            ) => format!(
-                "ALTER TABLE {:?} ADD CONSTRAINT {:?} \
-                FOREIGN KEY ({:?}) REFERENCES {:?} ({:?});",
-                table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
-            ),
+            ) => 
+            if db_type == DatabaseType::PostgreSql {
+                format!(
+                    "ALTER TABLE {:?} ADD CONSTRAINT {:?} \
+                    FOREIGN KEY ({:?}) REFERENCES {:?} ({:?});",
+                    table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
+                )
+            } else if db_type == DatabaseType::SqlServer {
+                todo!()
+            } else {  todo!() }
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constraint_name) =>
+            if db_type == DatabaseType::PostgreSql {
                 format!(
                     "ALTER TABLE {:?} DROP CONSTRAINT {:?};",
                     table_with_foreign_key, constraint_name
-            ),
+                )
+            } else if db_type == DatabaseType::SqlServer {
+                todo!()
+            } else {  todo!() }
 
             TableOperation::AddTablePrimaryKey(
                 table_name,
                 entity_field
-            ) => format!(
-                "ALTER TABLE {:?} ADD PRIMARY KEY (\"{}\");",
-                table_name,
-                entity_field.field_name
-            ),
+            ) => 
+            if db_type == DatabaseType::PostgreSql {
+                format!(
+                    "ALTER TABLE {:?} ADD PRIMARY KEY (\"{}\");",
+                    table_name,
+                    entity_field.field_name
+                )
+            } else if db_type == DatabaseType::SqlServer {
+                todo!()
+            } else {  todo!() }
+
+            
+          
 
             TableOperation::DeleteTablePrimaryKey(
                 table_name,
                 primary_key_name
-            ) => format!(
-                "ALTER TABLE {:?} DROP CONSTRAINT {:?} CASCADE;",
-                table_name,
-                primary_key_name
-            ),
-
+            ) => 
+            if db_type == DatabaseType::PostgreSql {
+                format!(
+                    "ALTER TABLE {:?} DROP CONSTRAINT {:?} CASCADE;",
+                    table_name,
+                    primary_key_name
+                )
+            } else if db_type == DatabaseType::SqlServer {
+                todo!()
+            } else {  todo!() }
         };
 
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
@@ -1541,12 +1561,17 @@ impl Transaction<Self> for SequenceOperation {}
 #[async_trait]
 impl DatabaseOperation for SequenceOperation
 {
-    async fn execute(&self, _db_type: DatabaseType) {
+    async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
-            SequenceOperation::ModifySequence(table_name, entity_field) => format!(
-                "SELECT setval(pg_get_serial_sequence('{:?}', '{}'), max(\"{}\")) from {:?};",
-                table_name, entity_field.field_name, entity_field.field_name, table_name
-            ),
+            SequenceOperation::ModifySequence(table_name, entity_field) => 
+            if db_type == DatabaseType::PostgreSql {
+                format!(
+                    "SELECT setval(pg_get_serial_sequence('{:?}', '{}'), max(\"{}\")) from {:?};",
+                    table_name, entity_field.field_name, entity_field.field_name, table_name
+                )
+            } else if db_type == DatabaseType::SqlServer {
+                todo!()
+            } else {  todo!() }
         };
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
     }
