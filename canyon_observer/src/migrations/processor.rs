@@ -18,6 +18,8 @@ use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 #[derive(Debug, Default)]
 pub struct MigrationsProcessor {
     operations: Vec<Box<dyn DatabaseOperation>>,
+    set_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
+    constrains_operations: Vec<Box<dyn DatabaseOperation>>,
 }
 impl Transaction<Self> for MigrationsProcessor {}
 
@@ -58,22 +60,41 @@ impl MigrationsProcessor {
             // For each field (column) on the this canyon register entity
             for canyon_register_field in canyon_register_entity.entity_fields {
                 
-                // We only create oe modify (right now only datatype)
+
+                let current_column_metadata = MigrationsHelper::get_current_column_metadata( 
+                    canyon_register_field.field_name.clone(), 
+                    current_table_metadata
+                );
+
+                // We only create or modify (right now only datatype)
                 // the column when the database already contains the table, 
                 // if not, the columns are already create in the previous operation (create table)
                 if current_table_metadata.is_some(){
 
-                    let current_column_metadata = MigrationsHelper::get_current_column_metadata( 
-                        canyon_register_field.field_name.clone(), 
-                        current_table_metadata.unwrap()
-                    );
-
                     self.create_or_modify_field (
                         entity_name.as_str(),
-                        canyon_register_field,
+                        db_type,
+                        canyon_register_field.clone(),
                         current_column_metadata
                     )
                 }
+                
+                // Time to check annotations for the current column
+
+                // Case when  we only need to add contrains
+                if (current_table_metadata.is_none() && &(&canyon_register_field.annotations).len() > &0)
+                || (current_table_metadata.is_some() && current_column_metadata.is_none()) {
+                    self.add_constrains(
+                        entity_name.as_str(),
+                        canyon_register_field
+                    )
+                }
+                
+                // Case when we need to compare the entity with the database contain
+                if current_table_metadata.is_some() && current_column_metadata.is_some(){
+                   
+                }
+                
                 
             }
         }
@@ -183,6 +204,7 @@ impl MigrationsProcessor {
     fn create_or_modify_field<'a > (
         &mut self,
         entity_name: &'a str,
+        db_type: DatabaseType,
         canyon_register_entity_field: CanyonRegisterEntityField,
         current_column_metadata: Option<&ColumnMetadata>,
     ) {
@@ -191,11 +213,86 @@ impl MigrationsProcessor {
         if current_column_metadata.is_none() {
             self.create_column(entity_name.to_string(), canyon_register_entity_field)
         }
-        else {
-            // TODO hay que
+        else if !MigrationsHelper::is_same_datatype(
+            db_type,
+            &canyon_register_entity_field, 
+            current_column_metadata.unwrap()
+        ){
+            self.change_column_datatype(entity_name.to_string(), canyon_register_entity_field)
+
         }
     }
 
+    fn add_constrains<'a> (
+        &mut self,
+        entity_name: &'a str,
+        canyon_register_entity_field: CanyonRegisterEntityField,
+    ) {
+        for attr in &canyon_register_entity_field.annotations {
+            if attr.starts_with("Annotation: ForeignKey") {
+                let annotation_data = MigrationsHelper::extract_foreign_key_annotation(
+                    &canyon_register_entity_field.annotations
+                 );
+
+                        let table_to_reference = annotation_data.0;
+                        let column_to_reference = annotation_data.1;
+                
+                        let foreign_key_name = format!("{entity_name}_{}_fkey", &canyon_register_entity_field.field_name);
+                
+                        self.add_foreign_key(
+                            entity_name, 
+                            foreign_key_name,
+                            table_to_reference,
+                            column_to_reference,
+                            &canyon_register_entity_field
+                        );
+            }
+            if attr.starts_with("Annotation: PrimaryKey") {
+                Self::add_primary_key(self, entity_name, canyon_register_entity_field.clone());
+
+                if canyon_register_entity_field.is_autoincremental() {
+                    Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
+                }
+            }
+        }
+    }
+
+    fn add_foreign_key(
+        &mut self, 
+        entity_name: &'_ str,
+        foreign_key_name: String,
+        table_to_reference: String,
+        column_to_reference: String,
+        canyon_register_entity_field: &CanyonRegisterEntityField,
+    ) {
+        self.operations
+        .push(Box::new(TableOperation::AddTableForeignKey(
+            entity_name.to_string(), foreign_key_name, canyon_register_entity_field.field_name.clone(), table_to_reference, column_to_reference
+        )));
+    }
+
+    fn add_primary_key(&mut self, entity_name: &str, field: CanyonRegisterEntityField)
+        {
+            self.set_primary_key_operations
+                .push(Box::new(
+                    TableOperation::AddTablePrimaryKey(entity_name.to_string(), field),
+                ));
+        }
+    
+    
+    fn add_identity<'a>(&mut self, entity_name: &'a str, field: CanyonRegisterEntityField)
+    {
+        self.constrains_operations
+            .push(Box::new(ColumnOperation::AlterColumnAddIdentity(
+                entity_name.to_string(),
+                field.clone(),
+            )));
+
+        self.constrains_operations
+            .push(Box::new(SequenceOperation::ModifySequence(
+                entity_name.to_string(), field,
+            )));
+    }
     fn delete_column(&mut self, table_name: &str, column_name: String) {
         self.operations
             .push(Box::new(ColumnOperation::DeleteColumn(table_name.to_string(), column_name)));
@@ -209,6 +306,11 @@ impl MigrationsProcessor {
     fn create_column(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.operations
             .push(Box::new(ColumnOperation::CreateColumn(table_name, field)));
+    }
+
+    fn change_column_datatype(&mut self, table_name: String, field: CanyonRegisterEntityField) {
+        self.operations
+            .push(Box::new(ColumnOperation::AlterColumnType(table_name, field)));
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
@@ -273,11 +375,15 @@ impl MigrationsHelper {
     // Get the column metadata for a given column name
     fn get_current_column_metadata<'a>  (
         column_name: String,
-        current_table_metadata: &'a TableMetadata,
+        current_table_metadata: Option<&'a TableMetadata>,
     ) -> Option<&'a ColumnMetadata> {
-        current_table_metadata.columns.iter()
+        if current_table_metadata.is_none() {
+            None
+        } else {          
+        current_table_metadata.expect("Cant unwrap the current Table Metadata").columns.iter()
             .find(|column| column.column_name == column_name)
             .map(|e| e.to_owned().clone())
+        }
     }
 
     fn get_datatype_from_column_metadata<'a> (
@@ -296,6 +402,56 @@ impl MigrationsHelper {
             format!("{}", current_column_metadata.postgres_datatype)
         }
     }
+
+    fn is_same_datatype(
+        db_type: DatabaseType,
+        canyon_register_entity_field: &CanyonRegisterEntityField,
+        current_column_metadata: &ColumnMetadata
+    ) -> bool {
+
+        if db_type == DatabaseType::PostgreSql {
+            canyon_register_entity_field.to_postgres_syntax() != current_column_metadata.postgres_datatype
+        } else if db_type == DatabaseType::SqlServer {
+            // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
+            canyon_register_entity_field.to_sqlserver_syntax() != current_column_metadata.postgres_datatype
+        } else {
+            todo!()
+        }
+    }
+
+    fn extract_foreign_key_annotation(field_annotations: &[String]) -> (String, String) {
+                let opt_fk_annotation = field_annotations
+                    .iter()
+                    .find(|anno| anno.starts_with("Annotation: ForeignKey"));
+                if let Some(fk_annotation) = opt_fk_annotation {
+                    let annotation_data = fk_annotation
+                        .split(',')
+                        .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                        .map(|x| {
+                            x.split(':')
+                                .collect::<Vec<&str>>()
+                                .get(1)
+                                .expect("Error. Unable to split annotations")
+                                .trim()
+                                .to_string()
+                        })
+                        .collect::<Vec<String>>();
+        
+                    let table_to_reference = annotation_data
+                        .get(0)
+                        .expect("Error extracting table ref from FK annotation")
+                        .to_string();
+                    let column_to_reference = annotation_data
+                        .get(1)
+                        .expect("Error extracting column ref from FK annotation")
+                        .to_string();
+        
+                    (table_to_reference, column_to_reference)
+                } else {
+                    panic!("Detected a Foreign Key attribute when does not exists on the user's code");
+                }
+            }
+
 }
 
 #[cfg(test)]
@@ -610,7 +766,7 @@ mod migrations_helper_tests {
 //                                 table_name.to_string(),
 //                                 database_field
 //                                     .foreign_key_name
-//                                     .as_ref()
+//                                     .as_ref()add_foreign_key_with_annotation
 //                                     .expect("ForeignKey constrain name not found")
 //                                     .to_string(),
 //                             );
@@ -1110,12 +1266,26 @@ impl DatabaseOperation for ColumnOperation
                 // TODO Check if operation for SQL server is diferent
                 format!("ALTER TABLE {} DROP COLUMN {};", table_name, column_name)
             },
-            ColumnOperation::AlterColumnType(table_name, entity_field) => format!(
-                "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
-                table_name,
-                entity_field.field_name,
-                entity_field.to_postgres_alter_syntax()
-            ),
+            ColumnOperation::AlterColumnType(table_name, entity_field) => 
+            if db_type == DatabaseType::PostgreSql {
+                format!(
+                    "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
+                    table_name,
+                    entity_field.field_name,
+                    entity_field.to_postgres_alter_syntax())
+            }  else if db_type == DatabaseType::SqlServer {
+                // TODO Hay que
+                // format!(
+                //     "ALTER TABLE {} ADD \"{}\" {};",
+                //     table_name,
+                //     entity_field.field_name,
+                //     entity_field.to_sqlserver_syntax()
+                // )
+                todo!()
+            } else {
+                todo!()
+            }
+            ,
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) => 
             if db_type == DatabaseType::PostgreSql { 
                 format!(
@@ -1170,16 +1340,14 @@ impl DatabaseOperation for ColumnOperation
 /// Helper for operations involving sequences
 #[derive(Debug)]
 #[allow(dead_code)]
-enum SequenceOperation<T: Into<String> + std::fmt::Debug + Sync> {
-    ModifySequence(T, CanyonRegisterEntityField),
+enum SequenceOperation {
+    ModifySequence(String, CanyonRegisterEntityField),
 }
 
-impl<T> Transaction<Self> for SequenceOperation<T> 
-    where T: Into<String> + std::fmt::Debug + Sync {}
+impl Transaction<Self> for SequenceOperation {}
 
 #[async_trait]
-impl<T> DatabaseOperation for SequenceOperation<T>
-    where T: Into<String> + std::fmt::Debug + Sync
+impl DatabaseOperation for SequenceOperation
 {
     async fn execute(&self, _db_type: DatabaseType) {
         let stmt = match self {
