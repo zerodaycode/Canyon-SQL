@@ -36,6 +36,7 @@ impl MigrationsProcessor {
         db_type: DatabaseType
     ) {
         println!("Database tables to play with: {:?}", &database_tables.len());
+        println!("Entities in canyon entity to play with: {:?}", &canyon_entities.iter().map(|cr| cr.entity_name.to_string()).collect::<Vec<String>>());
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_entities {
             let entity_name = canyon_register_entity.entity_name.to_lowercase();
@@ -114,6 +115,18 @@ impl MigrationsProcessor {
             println!("Operation query: {:?}", &operation);
             operation.execute(db_type).await; // This should be moved again to runtime
         }
+        for operation in &self.drop_primary_key_operations {
+            println!("Operation query: {:?}", &operation);
+            operation.execute(db_type).await; // This should be moved again to runtime
+        }
+        for operation in &self.set_primary_key_operations {
+            println!("Operation query: {:?}", &operation);
+            operation.execute(db_type).await; // This should be moved again to runtime
+        }
+        for operation in &self.constraints_operations {
+            println!("Operation query: {:?}", &operation);
+            operation.execute(db_type).await; // This should be moved again to runtime
+        }
         // Self::from_query_register(datasource_name).await;
     }
 
@@ -125,12 +138,15 @@ impl MigrationsProcessor {
         entity_fields: Vec<CanyonRegisterEntityField>,
         database_tables: &'a [&'a TableMetadata]
     ) {
+
+        println!("Table with name {} already on DB ? {}",entity_name,MigrationsHelper::entity_already_on_database(entity_name, database_tables) );
         // 1st operation -> Check if the current entity is already on the target database.
         // If isn't present (this if case), we 
         if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
             // [`CanyonMemory`] holds a HashMap with the tables who changed their name in
             // the Rust side. If this table name is present, we don't create a new table,
             // just rename the already known one
+            println!("Check if {} its a new name for an old table name",entity_name);
             if canyon_memory.renamed_entities.contains_key(entity_name) {
                 self.table_rename(
                     canyon_memory
@@ -141,6 +157,7 @@ impl MigrationsProcessor {
                     entity_name.to_string() // Set the new table name
                 )
             } else {
+                println!("Create table with name {}",entity_name);
                 self.create_table(entity_name.to_string(), entity_fields)
             }
             // else { 
@@ -154,9 +171,6 @@ impl MigrationsProcessor {
             // }
         }
     }
-
-
-
 
     /// Generates a database agnostic query to change the name of a table
     fn create_table(&mut self, table_name: String, entity_fields: Vec<CanyonRegisterEntityField>) {
@@ -180,7 +194,6 @@ impl MigrationsProcessor {
         db_type: DatabaseType
     ) {
         if current_table_metadata.is_some() {
-            println!("Current table metadata :{:?}",current_table_metadata);
             let columns_name_to_delete : Vec<&ColumnMetadata> = current_table_metadata
             .unwrap()
             .columns
@@ -340,6 +353,9 @@ impl MigrationsProcessor {
             .any(|anno| anno.starts_with("Annotation: ForeignKey"));
 
         // ----------- PRIMARY KEY ---------------
+        println!("Column -> {}. Is primary key Rust ? {}, Is primary key DB ? {}",
+        canyon_register_entity_field.field_name,field_is_primary_key, 
+        current_column_metadata.primary_key_info.is_some());
 
         // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
         if field_is_primary_key && current_column_metadata.primary_key_info.is_none() {
@@ -354,6 +370,7 @@ impl MigrationsProcessor {
         // Case when field don't contains a primary key annotation, but there is already one in the database column
         else if !field_is_primary_key && current_column_metadata.primary_key_info.is_some()
         {
+            println!("Column to remove PK -> {}",canyon_register_entity_field.field_name);
             Self::drop_primary_key(
                 self,
                 entity_name,
@@ -370,6 +387,16 @@ impl MigrationsProcessor {
         
         }
         // -------- FOREIGN KEY CASE ----------------------------
+
+
+        println!("Column -> {}. Is foreign key Rust ? {}, Is foreign key DB ? {}",
+        canyon_register_entity_field.field_name,field_is_foreign_key, 
+        current_column_metadata.foreign_key_name.is_some());
+
+        println!("Column -> {}. Should we delete FK ? {}",
+        canyon_register_entity_field.field_name,
+        !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() );
+
 
         // Case when field contains a foreign key annotation, and it's not already on database, add it to constraints_operations
         if field_is_foreign_key && current_column_metadata.foreign_key_name.is_none() {
@@ -460,6 +487,7 @@ impl MigrationsProcessor {
             // Case when field don't contains a foreign key annotation, but there is already one in the database column
             else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
             {
+                println!("Removing FK on column {}", &canyon_register_entity_field.field_name);
                 Self::delete_foreign_key(
                     self,
                     entity_name,
@@ -469,6 +497,9 @@ impl MigrationsProcessor {
                         .expect("ForeignKey constrain name not found")
                         .to_string(),
                 );
+            }
+            else {
+                println!("Column {} going somewhere it shouldn't", &canyon_register_entity_field.field_name);
             }
         }
     }
@@ -546,7 +577,6 @@ impl MigrationsHelper {
             v.table_name.to_lowercase() == entity_name.to_lowercase()
         )
     }
-
     // Get the table metadata for a given entity name or his old entity name if the table was renamed.
     fn get_current_table_metadata<'a> (
         canyon_memory: &'_ CanyonMemory,
@@ -1411,21 +1441,17 @@ impl DatabaseOperation for TableOperation
                 todo!()
             } else {  todo!() }
 
-            
-          
-
             TableOperation::DeleteTablePrimaryKey(
                 table_name,
                 primary_key_name
             ) => 
-            if db_type == DatabaseType::PostgreSql {
+            
+            if db_type == DatabaseType::PostgreSql || db_type == DatabaseType::SqlServer  {
                 format!(
                     "ALTER TABLE {:?} DROP CONSTRAINT {:?} CASCADE;",
                     table_name,
                     primary_key_name
                 )
-            } else if db_type == DatabaseType::SqlServer {
-                todo!()
             } else {  todo!() }
         };
 
