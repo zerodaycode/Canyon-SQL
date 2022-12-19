@@ -1,0 +1,27 @@
+name: macOS CI
+
+on:
+  push:
+    tags:        
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux-tests:
+    runs-on: macos-latest
+    name: Tests for macOS
+    env:
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Caching cargo deps
+        id: ci-cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Running tests for macOS targets
+        run: |
+          cargo test --all-features --workspace --exclude tests

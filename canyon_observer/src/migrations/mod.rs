@@ -1,3 +1,3 @@
 pub mod information_schema;
-pub mod migrations;
+pub mod processor;
 pub mod register_types;

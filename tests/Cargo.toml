@@ -1,0 +1,12 @@
+[package]
+name = "tests"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+canyon_sql = { path = "../canyon_sql" }
+
+[[test]]
+name = "canyon_integration_tests"
+path = "canyon_integration_tests.rs"
