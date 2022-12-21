@@ -265,9 +265,9 @@ impl MigrationsProcessor {
             .push(Box::new(ColumnOperation::AlterColumnType(table_name, field)));
     }
 
-    fn add_constraints<'a> (
+    fn add_constraints(
         &mut self,
-        entity_name: &'a str,
+        entity_name: &str,
         canyon_register_entity_field: CanyonRegisterEntityField,
     ) {
         for attr in &canyon_register_entity_field.annotations {
@@ -322,7 +322,7 @@ impl MigrationsProcessor {
                 ));
         }
     
-    fn add_identity<'a>(&mut self, entity_name: &'a str, field: CanyonRegisterEntityField)
+    fn add_identity(&mut self, entity_name: &str, field: CanyonRegisterEntityField)
     {
         self.constraints_operations
             .push(Box::new(ColumnOperation::AlterColumnAddIdentity(
@@ -390,129 +390,125 @@ impl MigrationsProcessor {
 
 
         println!("Column -> {}. Is foreign key Rust ? {}, Is foreign key DB ? {}",
-        canyon_register_entity_field.field_name,field_is_foreign_key, 
-        current_column_metadata.foreign_key_name.is_some());
+                 canyon_register_entity_field.field_name, field_is_foreign_key,
+                 current_column_metadata.foreign_key_name.is_some());
 
         println!("Column -> {}. Should we delete FK ? {}",
-        canyon_register_entity_field.field_name,
-        !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() );
+                 canyon_register_entity_field.field_name,
+                 !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some());
 
 
         // Case when field contains a foreign key annotation, and it's not already on database, add it to constraints_operations
         if field_is_foreign_key && current_column_metadata.foreign_key_name.is_none() {
-
             if current_column_metadata.foreign_key_name.is_none() {
-
                 let annotation_data = MigrationsHelper::extract_foreign_key_annotation(
                     &canyon_register_entity_field.annotations
-                 );
+                );
 
                 let table_to_reference = annotation_data.0;
                 let column_to_reference = annotation_data.1;
-        
+
                 let foreign_key_name = format!("{entity_name}_{}_fkey", &canyon_register_entity_field.field_name);
-        
+
                 Self::add_foreign_key(
                     self,
-                    entity_name, 
+                    entity_name,
                     foreign_key_name,
                     table_to_reference,
                     column_to_reference,
-                    &canyon_register_entity_field
+                    &canyon_register_entity_field,
                 );
             }
+        }
         // Case when field contains a foreign key annotation, and there is already one in the database
-            else if field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
+        else if field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
+        {
+            // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
+            let annotation_data = MigrationsHelper::extract_foreign_key_annotation(
+                &canyon_register_entity_field.annotations
+            );
+
+            let foreign_key_name = format!("{entity_name}_{}_fkey", &canyon_register_entity_field.field_name);
+
+            // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
+            let references_regex = Regex::new(regex_patterns::EXTRACT_FOREIGN_KEY_INFO).unwrap();
+
+            let captures_references = references_regex
+                .captures(
+                    current_column_metadata
+                        .foreign_key_info
+                        .as_ref()
+                        .expect("Regex - foreign key info"),
+                )
+                .expect("Regex - foreign key info not found");
+
+            let current_column = captures_references
+                .name("current_column")
+                .expect("Regex - Current column not found")
+                .as_str()
+                .to_string();
+            let ref_table = captures_references
+                .name("ref_table")
+                .expect("Regex - Ref tablenot found")
+                .as_str()
+                .to_string();
+            let ref_column = captures_references
+                .name("ref_column")
+                .expect("Regex - Ref column not found")
+                .as_str()
+                .to_string();
+
+            // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
+            if canyon_register_entity_field.field_name != current_column
+                || annotation_data.0 != ref_table
+                || annotation_data.1 != ref_column
             {
-                // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
-                let annotation_data = MigrationsHelper::extract_foreign_key_annotation(
-                    &canyon_register_entity_field.annotations
-                );
-        
-                let foreign_key_name = format!("{entity_name}_{}_fkey", &canyon_register_entity_field.field_name);
-
-                // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
-                let references_regex = Regex::new(regex_patterns::EXTRACT_FOREIGN_KEY_INFO).unwrap();
-
-                let captures_references = references_regex
-                    .captures(
-                        current_column_metadata
-                            .foreign_key_info
-                            .as_ref()
-                            .expect("Regex - foreign key info"),
-                    )
-                    .expect("Regex - foreign key info not found");
-
-                let current_column = captures_references
-                    .name("current_column")
-                    .expect("Regex - Current column not found")
-                    .as_str()
-                    .to_string();
-                let ref_table = captures_references
-                    .name("ref_table")
-                    .expect("Regex - Ref tablenot found")
-                    .as_str()
-                    .to_string();
-                let ref_column = captures_references
-                    .name("ref_column")
-                    .expect("Regex - Ref column not found")
-                    .as_str()
-                    .to_string();
-
-                // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
-                if canyon_register_entity_field.field_name != current_column
-                    || annotation_data.0 != ref_table
-                    || annotation_data.1 != ref_column
-                {
-                    Self::delete_foreign_key(
-                        self,
-                        entity_name,
-                        current_column_metadata
-                            .foreign_key_name
-                            .as_ref()
-                            .expect("Annotation foreign key constrain name not found")
-                            .to_string(),
-                    );
-
-                    Self::add_foreign_key(
-                        self,
-                        entity_name,
-                        foreign_key_name,
-                        annotation_data.0,
-                        annotation_data.1,
-                        &canyon_register_entity_field)
-                    
-                }
-            }
-            // Case when field don't contains a foreign key annotation, but there is already one in the database column
-            else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
-            {
-                println!("Removing FK on column {}", &canyon_register_entity_field.field_name);
                 Self::delete_foreign_key(
                     self,
                     entity_name,
                     current_column_metadata
                         .foreign_key_name
                         .as_ref()
-                        .expect("ForeignKey constrain name not found")
+                        .expect("Annotation foreign key constrain name not found")
                         .to_string(),
                 );
+
+                Self::add_foreign_key(
+                    self,
+                    entity_name,
+                    foreign_key_name,
+                    annotation_data.0,
+                    annotation_data.1,
+                    &canyon_register_entity_field)
             }
-            else {
-                println!("Column {} going somewhere it shouldn't", &canyon_register_entity_field.field_name);
-            }
+        }
+        // Case when field don't contains a foreign key annotation, but there is already one in the database column
+        else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
+        {
+            println!("Removing FK on column {}", &canyon_register_entity_field.field_name);
+            Self::delete_foreign_key(
+                self,
+                entity_name,
+                current_column_metadata
+                    .foreign_key_name
+                    .as_ref()
+                    .expect("ForeignKey constrain name not found")
+                    .to_string(),
+            );
+        } else {
+            println!("Column {} going somewhere it shouldn't", &canyon_register_entity_field.field_name);
         }
     }
 
 
-    fn drop_primary_key<'a>(&mut self, entity_name: &'a str, primary_key_name: String)
+    fn drop_primary_key(&mut self, entity_name: &str, primary_key_name: String)
     {
         self.drop_primary_key_operations
             .push(Box::new(TableOperation::DeleteTablePrimaryKey(entity_name.to_string(), primary_key_name)));
     }
 
 
-    fn drop_identity<'a> (&mut self, entity_name: &'a str, canyon_register_entity_field: CanyonRegisterEntityField)
+    fn drop_identity(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField)
     {
         self.constraints_operations
             .push(Box::new(ColumnOperation::AlterColumnDropIdentity(
@@ -521,9 +517,9 @@ impl MigrationsProcessor {
     }
 
 
-    fn delete_foreign_key<'a> (
+    fn delete_foreign_key(
         &mut self,
-        entity_name: &'a str,
+        entity_name: &str,
         constrain_name: String,
     ) 
     {
@@ -595,10 +591,10 @@ impl MigrationsHelper {
     }
 
     // Get the column metadata for a given column name
-    fn get_current_column_metadata<'a>  (
+    fn get_current_column_metadata(
         column_name: String,
-        current_table_metadata: Option<&'a TableMetadata>,
-    ) -> Option<&'a ColumnMetadata> {
+        current_table_metadata: Option<&TableMetadata>,
+    ) -> Option<&ColumnMetadata> {
         if current_table_metadata.is_none() {
             None
         } else {          
@@ -608,8 +604,8 @@ impl MigrationsHelper {
         }
     }
 
-    fn get_datatype_from_column_metadata<'a> (
-        current_column_metadata: &'a ColumnMetadata,
+    fn get_datatype_from_column_metadata(
+        current_column_metadata: &ColumnMetadata,
     ) -> String {
         // TODO Add all SQL Server text datatypes
         if vec!["nvarchar","varchar"].contains(&current_column_metadata.postgres_datatype.to_lowercase().as_str()) {
