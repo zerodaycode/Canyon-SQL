@@ -63,8 +63,6 @@ impl MigrationsProcessor {
 
             // For each field (column) on the this canyon register entity
             for canyon_register_field in canyon_register_entity.entity_fields {
-                
-
                 let current_column_metadata = MigrationsHelper::get_current_column_metadata( 
                     canyon_register_field.field_name.clone(), 
                     current_table_metadata
@@ -74,7 +72,6 @@ impl MigrationsProcessor {
                 // the column when the database already contains the table, 
                 // if not, the columns are already create in the previous operation (create table)
                 if current_table_metadata.is_some(){
-
                     self.create_or_modify_field (
                         entity_name.as_str(),
                         db_type,
@@ -96,16 +93,13 @@ impl MigrationsProcessor {
 
                 
                 // Case when we need to compare the entity with the database contain
-                if current_table_metadata.is_some() && current_column_metadata.is_some(){
-                   self.add_modify_or_remove_constraints(
-                    entity_name.as_str(),
-                    canyon_register_field,
-                    current_column_metadata.unwrap()
-                )
-
+                if current_table_metadata.is_some() && current_column_metadata.is_some() {
+                    self.add_modify_or_remove_constraints(
+                        entity_name.as_str(),
+                        canyon_register_field,
+                        current_column_metadata.unwrap()
+                    )
                 }
-                
-                
             }
         }
 
@@ -315,12 +309,12 @@ impl MigrationsProcessor {
     }
 
     fn add_primary_key(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField)
-        {
-            self.set_primary_key_operations
-                .push(Box::new(
-                    TableOperation::AddTablePrimaryKey(entity_name.to_string(), canyon_register_entity_field),
-                ));
-        }
+    {
+        self.set_primary_key_operations
+            .push(Box::new(
+                TableOperation::AddTablePrimaryKey(entity_name.to_string(), canyon_register_entity_field),
+            ));
+    }
     
     fn add_identity(&mut self, entity_name: &str, field: CanyonRegisterEntityField)
     {
@@ -495,8 +489,6 @@ impl MigrationsProcessor {
                     .expect("ForeignKey constrain name not found")
                     .to_string(),
             );
-        } else {
-            println!("Column {} going somewhere it shouldn't", &canyon_register_entity_field.field_name);
         }
     }
 
