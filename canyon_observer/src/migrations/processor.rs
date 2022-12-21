@@ -35,8 +35,6 @@ impl MigrationsProcessor {
         _datasource_name: &'a str,
         db_type: DatabaseType
     ) {
-        println!("Database tables to play with: {:?}", &database_tables.len());
-        println!("Entities in canyon entity to play with: {:?}", &canyon_entities.iter().map(|cr| cr.entity_name.to_string()).collect::<Vec<String>>());
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_entities {
             let entity_name = canyon_register_entity.entity_name.to_lowercase();
@@ -106,19 +104,15 @@ impl MigrationsProcessor {
         
         // Self::operations_executor().await;
         for operation in &self.operations {
-            println!("Operation query: {:?}", &operation);
             operation.execute(db_type).await; // This should be moved again to runtime
         }
         for operation in &self.drop_primary_key_operations {
-            println!("Operation query: {:?}", &operation);
             operation.execute(db_type).await; // This should be moved again to runtime
         }
         for operation in &self.set_primary_key_operations {
-            println!("Operation query: {:?}", &operation);
             operation.execute(db_type).await; // This should be moved again to runtime
         }
         for operation in &self.constraints_operations {
-            println!("Operation query: {:?}", &operation);
             operation.execute(db_type).await; // This should be moved again to runtime
         }
         // Self::from_query_register(datasource_name).await;
@@ -132,15 +126,12 @@ impl MigrationsProcessor {
         entity_fields: Vec<CanyonRegisterEntityField>,
         database_tables: &'a [&'a TableMetadata]
     ) {
-
-        println!("Table with name {} already on DB ? {}",entity_name,MigrationsHelper::entity_already_on_database(entity_name, database_tables) );
         // 1st operation -> Check if the current entity is already on the target database.
         // If isn't present (this if case), we 
         if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
             // [`CanyonMemory`] holds a HashMap with the tables who changed their name in
             // the Rust side. If this table name is present, we don't create a new table,
             // just rename the already known one
-            println!("Check if {} its a new name for an old table name",entity_name);
             if canyon_memory.renamed_entities.contains_key(entity_name) {
                 self.table_rename(
                     canyon_memory
@@ -151,18 +142,8 @@ impl MigrationsProcessor {
                     entity_name.to_string() // Set the new table name
                 )
             } else {
-                println!("Create table with name {}",entity_name);
                 self.create_table(entity_name.to_string(), entity_fields)
             }
-            // else { 
-            //     todo!()
-                // Return some control flag to indicate that we must begin to
-                // parse inner elements (columns, constraints...) with the data
-                // Also, we must indicate a relation between the old table name
-                // and the new one, because the parsing are against the legacy
-                // table name, but the queries must be generated against the new
-                // table name
-            // }
         }
     }
 
@@ -302,22 +283,20 @@ impl MigrationsProcessor {
         column_to_reference: String,
         canyon_register_entity_field: &CanyonRegisterEntityField,
     ) {
-        self.operations
-        .push(Box::new(TableOperation::AddTableForeignKey(
-            entity_name.to_string(), foreign_key_name, canyon_register_entity_field.field_name.clone(), table_to_reference, column_to_reference
-        )));
+        self.constraints_operations
+            .push(Box::new(TableOperation::AddTableForeignKey(
+                entity_name.to_string(), foreign_key_name, canyon_register_entity_field.field_name.clone(), table_to_reference, column_to_reference
+            )));
     }
 
-    fn add_primary_key(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField)
-    {
+    fn add_primary_key(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField) {
         self.set_primary_key_operations
             .push(Box::new(
                 TableOperation::AddTablePrimaryKey(entity_name.to_string(), canyon_register_entity_field),
             ));
     }
     
-    fn add_identity(&mut self, entity_name: &str, field: CanyonRegisterEntityField)
-    {
+    fn add_identity(&mut self, entity_name: &str, field: CanyonRegisterEntityField) {
         self.constraints_operations
             .push(Box::new(ColumnOperation::AlterColumnAddIdentity(
                 entity_name.to_string(),
@@ -346,25 +325,28 @@ impl MigrationsProcessor {
             .iter()
             .any(|anno| anno.starts_with("Annotation: ForeignKey"));
 
-        // ----------- PRIMARY KEY ---------------
-        println!("Column -> {}. Is primary key Rust ? {}, Is primary key DB ? {}",
-        canyon_register_entity_field.field_name,field_is_primary_key, 
-        current_column_metadata.primary_key_info.is_some());
-
+        // ------------ PRIMARY KEY ---------------
         // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
         if field_is_primary_key && current_column_metadata.primary_key_info.is_none() {
-
             Self::add_primary_key(self, entity_name, canyon_register_entity_field.clone());
 
             if canyon_register_entity_field.is_autoincremental() {
                 Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
             }
-        
+        }
+        // Case when the field contains a primary key annotation, and it's already on the database
+        else if field_is_primary_key && current_column_metadata.primary_key_info.is_some() {
+            let is_autoincr_rust = canyon_register_entity_field.is_autoincremental();
+            let is_autoincr_in_db = current_column_metadata.is_identity;
+            
+            if !is_autoincr_rust && is_autoincr_in_db {
+                Self::drop_identity(self, entity_name, canyon_register_entity_field.clone())
+            } else if is_autoincr_rust && !is_autoincr_in_db {
+                Self::add_identity(self, entity_name, canyon_register_entity_field.clone())
+            }
         } 
-        // Case when field don't contains a primary key annotation, but there is already one in the database column
-        else if !field_is_primary_key && current_column_metadata.primary_key_info.is_some()
-        {
-            println!("Column to remove PK -> {}",canyon_register_entity_field.field_name);
+        // Case when field doesn't contains a primary key annotation, but there is one in the database column
+        else if !field_is_primary_key && current_column_metadata.primary_key_info.is_some() {
             Self::drop_primary_key(
                 self,
                 entity_name,
@@ -378,20 +360,9 @@ impl MigrationsProcessor {
             if current_column_metadata.is_identity {
                 Self::drop_identity(self, entity_name, canyon_register_entity_field.clone());
             }
-        
         }
-        // -------- FOREIGN KEY CASE ----------------------------
 
-
-        println!("Column -> {}. Is foreign key Rust ? {}, Is foreign key DB ? {}",
-                 canyon_register_entity_field.field_name, field_is_foreign_key,
-                 current_column_metadata.foreign_key_name.is_some());
-
-        println!("Column -> {}. Should we delete FK ? {}",
-                 canyon_register_entity_field.field_name,
-                 !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some());
-
-
+        // -------------------- FOREIGN KEY CASE ----------------------------
         // Case when field contains a foreign key annotation, and it's not already on database, add it to constraints_operations
         if field_is_foreign_key && current_column_metadata.foreign_key_name.is_none() {
             if current_column_metadata.foreign_key_name.is_none() {
@@ -399,24 +370,20 @@ impl MigrationsProcessor {
                     &canyon_register_entity_field.annotations
                 );
 
-                let table_to_reference = annotation_data.0;
-                let column_to_reference = annotation_data.1;
-
                 let foreign_key_name = format!("{entity_name}_{}_fkey", &canyon_register_entity_field.field_name);
 
                 Self::add_foreign_key(
                     self,
                     entity_name,
                     foreign_key_name,
-                    table_to_reference,
-                    column_to_reference,
+                    annotation_data.0,
+                    annotation_data.1,
                     &canyon_register_entity_field,
                 );
             }
         }
         // Case when field contains a foreign key annotation, and there is already one in the database
-        else if field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
-        {
+        else if field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() {
             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
             let annotation_data = MigrationsHelper::extract_foreign_key_annotation(
                 &canyon_register_entity_field.annotations
@@ -433,8 +400,7 @@ impl MigrationsProcessor {
                         .foreign_key_info
                         .as_ref()
                         .expect("Regex - foreign key info"),
-                )
-                .expect("Regex - foreign key info not found");
+                ).expect("Regex - foreign key info not found");
 
             let current_column = captures_references
                 .name("current_column")
@@ -473,13 +439,11 @@ impl MigrationsProcessor {
                     foreign_key_name,
                     annotation_data.0,
                     annotation_data.1,
-                    &canyon_register_entity_field)
+                    &canyon_register_entity_field
+                )
             }
-        }
-        // Case when field don't contains a foreign key annotation, but there is already one in the database column
-        else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some()
-        {
-            println!("Removing FK on column {}", &canyon_register_entity_field.field_name);
+        } else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() {
+            // Case when field don't contains a foreign key annotation, but there is already one in the database column
             Self::delete_foreign_key(
                 self,
                 entity_name,
@@ -493,15 +457,13 @@ impl MigrationsProcessor {
     }
 
 
-    fn drop_primary_key(&mut self, entity_name: &str, primary_key_name: String)
-    {
+    fn drop_primary_key(&mut self, entity_name: &str, primary_key_name: String) {
         self.drop_primary_key_operations
             .push(Box::new(TableOperation::DeleteTablePrimaryKey(entity_name.to_string(), primary_key_name)));
     }
 
 
-    fn drop_identity(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField)
-    {
+    fn drop_identity(&mut self, entity_name: &str, canyon_register_entity_field: CanyonRegisterEntityField) {
         self.constraints_operations
             .push(Box::new(ColumnOperation::AlterColumnDropIdentity(
                 entity_name.to_string(), canyon_register_entity_field,
@@ -513,8 +475,7 @@ impl MigrationsProcessor {
         &mut self,
         entity_name: &str,
         constrain_name: String,
-    ) 
-    {
+    ) {
         self.constraints_operations
             .push(Box::new(TableOperation::DeleteTableForeignKey(
                 // table_with_foreign_key,constrain_name
@@ -546,7 +507,7 @@ impl MigrationsProcessor {
                 // TODO Ask for user input?
             }
         } else {
-            println!("No migrations queries found to apply")
+            println!("No migrations found to apply")
         }
     }
 }
@@ -560,7 +521,6 @@ impl MigrationsHelper {
         entity_name: &'a str,
         database_tables: &'a [&'_ TableMetadata],
     ) -> bool {
-        println!("Looking for entity: {:?}", entity_name);
         database_tables.iter().any( |v| 
             v.table_name.to_lowercase() == entity_name.to_lowercase()
         )
@@ -579,7 +539,6 @@ impl MigrationsHelper {
         database_tables.iter()
             .find(|table_metadata| table_metadata.table_name.to_lowercase() == *correct_entity_name.to_lowercase())
             .map(|e| e.to_owned().clone())
-
     }
 
     // Get the column metadata for a given column name
@@ -617,7 +576,6 @@ impl MigrationsHelper {
         canyon_register_entity_field: &CanyonRegisterEntityField,
         current_column_metadata: &ColumnMetadata
     ) -> bool {
-
         if db_type == DatabaseType::PostgreSql {
             canyon_register_entity_field.to_postgres_syntax() != current_column_metadata.postgres_datatype
         } else if db_type == DatabaseType::SqlServer {
@@ -629,37 +587,37 @@ impl MigrationsHelper {
     }
 
     fn extract_foreign_key_annotation(field_annotations: &[String]) -> (String, String) {
-                let opt_fk_annotation = field_annotations
-                    .iter()
-                    .find(|anno| anno.starts_with("Annotation: ForeignKey"));
-                if let Some(fk_annotation) = opt_fk_annotation {
-                    let annotation_data = fk_annotation
-                        .split(',')
-                        .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
-                        .map(|x| {
-                            x.split(':')
-                                .collect::<Vec<&str>>()
-                                .get(1)
-                                .expect("Error. Unable to split annotations")
-                                .trim()
-                                .to_string()
-                        })
-                        .collect::<Vec<String>>();
-        
-                    let table_to_reference = annotation_data
-                        .get(0)
-                        .expect("Error extracting table ref from FK annotation")
-                        .to_string();
-                    let column_to_reference = annotation_data
+        let opt_fk_annotation = field_annotations
+            .iter()
+            .find(|anno| anno.starts_with("Annotation: ForeignKey"));
+        if let Some(fk_annotation) = opt_fk_annotation {
+            let annotation_data = fk_annotation
+                .split(',')
+                .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
+                .map(|x| {
+                    x.split(':')
+                        .collect::<Vec<&str>>()
                         .get(1)
-                        .expect("Error extracting column ref from FK annotation")
-                        .to_string();
-        
-                    (table_to_reference, column_to_reference)
-                } else {
-                    panic!("Detected a Foreign Key attribute when does not exists on the user's code");
-                }
-            }
+                        .expect("Error. Unable to split annotations")
+                        .trim()
+                        .to_string()
+                })
+                .collect::<Vec<String>>();
+
+            let table_to_reference = annotation_data
+                .get(0)
+                .expect("Error extracting table ref from FK annotation")
+                .to_string();
+            let column_to_reference = annotation_data
+                .get(1)
+                .expect("Error extracting column ref from FK annotation")
+                .to_string();
+
+            (table_to_reference, column_to_reference)
+        } else {
+            panic!("Detected a Foreign Key attribute when does not exists on the user's code");
+        }
+    }
 
 }
 
@@ -693,615 +651,6 @@ mod migrations_helper_tests {
 }
 
 
-// /// Responsible of generating the queries to sync the database status with the
-// /// Rust source code managed by Canyon, for succesfully make the migrations
-// #[derive(Debug, Default)]
-// pub struct DatabaseSyncOperations {
-//     operations: Vec<Box<dyn DatabaseOperation>>,
-//     drop_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
-//     set_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
-//     constrains_operations: Vec<Box<dyn DatabaseOperation>>,
-// }
-
-// impl Transaction<Self> for DatabaseSyncOperations {}
-
-// impl DatabaseSyncOperations {
-//     pub async fn fill_operations<'a>(
-//         &mut self,
-//         canyon_memory: CanyonMemory,
-//         canyon_tables: Vec<CanyonRegisterEntity<'static>>,
-//         database_tables: Vec<TableMetadata>,
-//     ) {
-//         // For each entity (table) on the register (Rust structs)
-//         for canyon_register_entity in canyon_tables {
-//             let table_name = canyon_register_entity.entity_name;
-
-//             // true if this table on the register is already on the database
-//             let table_on_database = Self::check_table_on_database(table_name, &database_tables);
-
-//             // If the table isn't on the database we push a new operation to the collection,
-//             // either to create a new table or to rename an existing one.
-//             if !table_on_database {
-//                 let table_renamed = canyon_memory.renamed_entities.contains_key(table_name);
-
-//                 // canyon_memory holds a hashmap of the tables who must changed their name.
-//                 // If this table name is present, we dont create a new one, just rename
-//                 if table_renamed {
-//                     // let old_table_name = data.canyon_memory.table_rename.to_owned().get(&table_name.to_owned());
-//                     let otn = canyon_memory
-//                         .renamed_entities
-//                         .get(table_name)
-//                         .unwrap()
-//                         .to_owned()
-//                         .clone();
-
-//                     Self::push_table_rename::<String, &str>(self, otn, table_name);
-
-//                     // TODO Change foreign_key constrain name on database
-//                     continue;
-//                 }
-//                 // If not, we push an operation to create a new one
-//                 else {
-//                     Self::add_new_table::<&str>(
-//                         self,
-//                         table_name,
-//                         canyon_register_entity.entity_fields.clone(),
-//                     );
-//                 }
-
-//                 let cloned_fields = canyon_register_entity.entity_fields.clone();
-//                 // We iterate over the fields/columns seeking for constrains to add
-//                 for field in cloned_fields
-//                     .iter()
-//                     .filter(|column| !column.annotations.is_empty())
-//                 {
-//                     field.annotations.iter().for_each(|attr| {
-//                         if attr.starts_with("Annotation: ForeignKey") {
-//                             Self::add_foreign_key_with_annotation::<&str, &String>(
-//                                 self,
-//                                 &field.annotations,
-//                                 table_name,
-//                                 &field.field_name,
-//                             );
-//                         }
-//                         if attr.starts_with("Annotation: PrimaryKey") {
-//                             Self::add_primary_key::<&str>(self, table_name, field.clone());
-
-//                             Self::add_identity::<&str>(self, table_name, field.clone());
-//                         }
-//                     });
-//                 }
-//             } else {
-//                 // We check if each of the columns in this table of the register is in the database table.
-//                 // We get the names and add them to a vector of strings
-//                 let columns_in_table = Self::columns_in_table(
-//                     canyon_register_entity.entity_fields.clone(),
-//                     &database_tables,
-//                     table_name,
-//                 );
-
-//                 // For each field (name, type) in this table of the register
-//                 for field in canyon_register_entity.entity_fields.clone() {
-//                     // Case when the column doesn't exist on the database
-//                     // We push a new column operation to the collection for each one
-//                     if !columns_in_table.contains(&field.field_name) {
-//                         Self::add_column_to_table::<&str>(self, table_name, field.clone());
-
-//                         // We added the founded constraints on the field attributes
-//                         for attr in &field.annotations {
-//                             if attr.starts_with("Annotation: ForeignKey") {
-//                                 Self::add_foreign_key_with_annotation::<&str, &String>(
-//                                     self,
-//                                     &field.annotations,
-//                                     table_name,
-//                                     &field.field_name,
-//                                 );
-//                             }
-//                             if attr.starts_with("Annotation: PrimaryKey") {
-//                                 Self::add_primary_key::<&str>(self, table_name, field.clone());
-
-//                                 Self::add_identity::<&str>(self, table_name, field.clone());
-//                             }
-//                         }
-//                     }
-//                     // Case when the column exist on the database
-//                     else {
-//                         let database_table = database_tables
-//                             .iter()
-//                             .find(|x| x.table_name == table_name)
-//                             .unwrap();
-
-//                         let database_field = database_table
-//                             .columns
-//                             .iter()
-//                             .find(|x| x.column_name == field.field_name)
-//                             .expect("Field annt exists");
-
-//                         let mut database_field_postgres_type: String = String::new();
-//                         match database_field.postgres_datatype.as_str() {
-//                             "integer" => {
-//                                 database_field_postgres_type.push_str("i32");
-//                             }
-//                             "bigint" => {
-//                                 database_field_postgres_type.push_str("i64");
-//                             }
-//                             "text" | "character varying" => {
-//                                 database_field_postgres_type.push_str("String");
-//                             }
-//                             "date" => {
-//                                 database_field_postgres_type.push_str("NaiveDate");
-//                             }
-//                             _ => {}
-//                         }
-
-//                         if database_field.is_nullable {
-//                             database_field_postgres_type =
-//                                 format!("Option<{database_field_postgres_type}>");
-//                         }
-
-//                         if field.field_type != database_field_postgres_type {
-//                             if field.field_type.starts_with("Option") {
-//                                 self.constrains_operations.push(Box::new(
-//                                     ColumnOperation::AlterColumnDropNotNull(
-//                                         table_name,
-//                                         field.clone(),
-//                                     ),
-//                                 ));
-//                             } else {
-//                                 self.constrains_operations.push(Box::new(
-//                                     ColumnOperation::AlterColumnSetNotNull(
-//                                         table_name,
-//                                         field.clone(),
-//                                     ),
-//                                 ));
-//                             }
-//                             Self::change_column_type(self, table_name, field.clone());
-//                         }
-
-//                         let field_is_primary_key = field
-//                             .annotations
-//                             .iter()
-//                             .any(|anno| anno.starts_with("Annotation: PrimaryKey"));
-
-//                         let field_is_foreign_key = field
-//                             .annotations
-//                             .iter()
-//                             .any(|anno| anno.starts_with("Annotation: ForeignKey"));
-//                         // TODO Checking Foreign Key attrs. Refactor to a database rust attributes matcher
-//                         // TODO Evaluate changing the name of the primary key if it already exists in the database
-
-//                         // -------- PRIMARY KEY CASE ----------------------------
-
-//                         // Case when field contains a primary key annotation, and it's not already on database, add it to constrains_operations
-//                         if field_is_primary_key && database_field.primary_key_info.is_none() {
-//                             Self::add_primary_key::<&str>(self, table_name, field.clone());
-//                             Self::add_identity::<&str>(self, table_name, field.clone());
-//                         }
-//                         // Case when field don't contains a primary key annotation, but there is already one in the database column
-//                         else if !field_is_primary_key && database_field.primary_key_info.is_some()
-//                         {
-//                             Self::drop_primary_key::<String>(
-//                                 self,
-//                                 table_name.to_string(),
-//                                 database_field
-//                                     .primary_key_name
-//                                     .as_ref()
-//                                     .expect("PrimaryKey constrain name not found")
-//                                     .to_string(),
-//                             );
-
-//                             if database_field.is_identity {
-//                                 Self::drop_identity::<&str>(self, table_name, field.clone());
-//                             }
-//                         }
-
-//                         // -------- FOREIGN KEY CASE ----------------------------
-
-//                         // Case when field contains a foreign key annotation, and it's not already on database, add it to constrains_operations
-//                         if field_is_foreign_key && database_field.foreign_key_name.is_none() {
-//                             if database_field.foreign_key_name.is_none() {
-//                                 Self::add_foreign_key_with_annotation::<&str, &String>(
-//                                     self,
-//                                     &field.annotations,
-//                                     table_name,
-//                                     &field.field_name,
-//                                 )
-//                             }
-//                         }
-//                         // Case when field contains a foreign key annotation, and there is already one in the database
-//                         else if field_is_foreign_key && database_field.foreign_key_name.is_some()
-//                         {
-//                             // Will contain the table name (on index 0) and column name (on index 1) pointed to by the foreign key
-//                             let annotation_data =
-//                                 Self::extract_foreign_key_annotation(&field.annotations);
-
-//                             // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
-//                             let references_regex = Regex::new(r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)").unwrap();
-
-//                             let captures_references = references_regex
-//                                 .captures(
-//                                     database_field
-//                                         .foreign_key_info
-//                                         .as_ref()
-//                                         .expect("Regex - foreign key info"),
-//                                 )
-//                                 .expect("Regex - foreign key info not found");
-
-//                             let current_column = captures_references
-//                                 .name("current_column")
-//                                 .expect("Regex - Current column not found")
-//                                 .as_str()
-//                                 .to_string();
-//                             let ref_table = captures_references
-//                                 .name("ref_table")
-//                                 .expect("Regex - Ref tablenot found")
-//                                 .as_str()
-//                                 .to_string();
-//                             let ref_column = captures_references
-//                                 .name("ref_column")
-//                                 .expect("Regex - Ref column not found")
-//                                 .as_str()
-//                                 .to_string();
-
-//                             // If entity foreign key is not equal to the one on database, a constrains_operations is added to delete it and add a new one.
-//                             if field.field_name != current_column
-//                                 || annotation_data.0 != ref_table
-//                                 || annotation_data.1 != ref_column
-//                             {
-//                                 Self::delete_foreign_key_with_references::<String>(
-//                                     self,
-//                                     table_name.to_string(),
-//                                     database_field
-//                                         .foreign_key_name
-//                                         .as_ref()
-//                                         .expect("Annotation foreign key constrain name not found")
-//                                         .to_string(),
-//                                 );
-
-//                                 Self::add_foreign_key_with_references(
-//                                     self,
-//                                     annotation_data.0,
-//                                     annotation_data.1,
-//                                     table_name,
-//                                     field.field_name.clone(),
-//                                 )
-//                             }
-//                         }
-//                         // Case when field don't contains a foreign key annotation, but there is already one in the database column
-//                         else if !field_is_foreign_key && database_field.foreign_key_name.is_some()
-//                         {
-//                             Self::delete_foreign_key_with_references::<String>(
-//                                 self,
-//                                 table_name.to_string(),
-//                                 database_field
-//                                     .foreign_key_name
-//                                     .as_ref()add_foreign_key_with_annotation
-//                                     .expect("ForeignKey constrain name not found")
-//                                     .to_string(),
-//                             );
-//                         }
-//                     }
-//                 }
-
-//                 // Filter the list of columns in the corresponding table of the database for the current table of the register,
-//                 // and look for columns that don't exist in the table of the register
-//                 let columns_to_remove: Vec<String> = Self::columns_to_remove(
-//                     &database_tables,
-//                     canyon_register_entity.entity_fields.clone(),
-//                     table_name,
-//                 );
-
-//                 // If we have columns to remove, we push a new operation to the vector for each one
-//                 if columns_to_remove.is_empty().not() {
-//                     for column in &columns_to_remove {
-//                         Self::delete_column_from_table(self, table_name, column.to_owned())
-//                     }
-//                 }
-//             }
-//         }
-
-        // for operation in &self.operations {
-        //     operation.execute().await
-        // }
-        // for drop_primary_key_operation in &self.drop_primary_key_operations {
-        //     drop_primary_key_operation.execute().await
-        // }
-        // for set_primary_key_operation in &self.set_primary_key_operations {
-        //     set_primary_key_operation.execute().await
-        // }
-        // for constrain_operation in &self.constrains_operations {
-        //     constrain_operation.execute().await
-        // }
-    // }
-
-//     /// Make the detected migrations for the next Canyon-SQL run
-//     /// TODO This should be deprecated, migrations queries can be run without need
-//     /// an static item to hold the operations
-//     #[allow(clippy::await_holding_lock)]
-//     pub async fn from_query_register() {
-//         let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
-
-//         for i in 0..queries.len() - 1 {
-//             let query_to_execute = queries.get(i).unwrap_or_else(|| {
-//                 panic!("Failed to retrieve query from the register at index: {i}")
-//             });
-
-//             Self::query(query_to_execute, [], "")
-//                 .await
-//                 .ok()
-//                 .unwrap_or_else(|| {
-//                     panic!("Failed the migration query: {:?}", queries.get(i).unwrap())
-//                 });
-//             // TODO Represent failable operation by logging (if configured by the user) to a text file the Result variant
-//             // TODO Ask for user input?
-//         }
-//     }
-
-//     fn check_table_on_database<'a>(
-//         table_name: &'a str,
-//         database_tables: &[TableMetadata],
-//     ) -> bool {
-//         database_tables.iter().any(|v| v.table_name == table_name)
-//     }
-
-//     fn columns_in_table(
-//         canyon_columns: Vec<CanyonRegisterEntityField>,
-//         database_tables: &[TableMetadata],
-//         table_name: &str,
-//     ) -> Vec<String> {
-//         canyon_columns
-//             .iter()
-//             .filter(|a| {
-//                 database_tables
-//                     .iter()
-//                     .find(|x| x.table_name == table_name)
-//                     .expect("Error collecting database tables")
-//                     .columns
-//                     .iter()
-//                     .map(|x| x.column_name.to_string())
-//                     .any(|x| x == a.field_name)
-//             })
-//             .map(|a| a.field_name.to_string())
-//             .collect()
-//     }
-
-//     fn columns_to_remove(
-//         database_tables: &[TableMetadata],
-//         canyon_columns: Vec<CanyonRegisterEntityField>,
-//         table_name: &str,
-//     ) -> Vec<String> {
-//         database_tables
-//             .iter()
-//             .find(|x| x.table_name == table_name)
-//             .expect("Error parsing the columns to remove")
-//             .columns
-//             .iter()
-//             .filter(|a| {
-//                 canyon_columns
-//                     .iter()
-//                     .map(|x| x.field_name.to_string())
-//                     .any(|x| x == a.column_name)
-//                     .not()
-//             })
-//             .map(|a| a.column_name.to_string())
-//             .collect()
-//     }
-
-//     fn push_table_rename<T, U>(&mut self, old_table_name: T, new_table_name: U)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//         U: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.operations
-//             .push(Box::new(TableOperation::AlterTableName::<
-//                 _,
-//                 _,
-//                 &str,
-//                 &str,
-//                 &str,
-//             >(old_table_name, new_table_name)));
-//     }
-
-//     fn add_new_table<T>(&mut self, table_name: T, columns: Vec<CanyonRegisterEntityField>)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         // self.operations.push(Box::new(TableOperation::CreateTable::<
-//         //     _,
-//         //     &str,
-//         //     &str,
-//         //     &str,
-//         //     &str,
-//         // >(table_name, columns)));
-//     }
-
-//     fn extract_foreign_key_annotation(field_annotations: &[String]) -> (String, String) {
-//         let opt_fk_annotation = field_annotations
-//             .iter()
-//             .find(|anno| anno.starts_with("Annotation: ForeignKey"));
-//         if let Some(fk_annotation) = opt_fk_annotation {
-//             let annotation_data = fk_annotation
-//                 .split(',')
-//                 .filter(|x| !x.contains("Annotation: ForeignKey")) // After here, we only have the "table" and the "column" attribute values
-//                 .map(|x| {
-//                     x.split(':')
-//                         .collect::<Vec<&str>>()
-//                         .get(1)
-//                         .expect("Error. Unable to split annotations")
-//                         .trim()
-//                         .to_string()
-//                 })
-//                 .collect::<Vec<String>>();
-
-//             let table_to_reference = annotation_data
-//                 .get(0)
-//                 .expect("Error extracting table ref from FK annotation")
-//                 .to_string();
-//             let column_to_reference = annotation_data
-//                 .get(1)
-//                 .expect("Error extracting column ref from FK annotation")
-//                 .to_string();
-
-//             (table_to_reference, column_to_reference)
-//         } else {
-//             panic!("Detected a Foreign Key attribute when does not exists on the user's code");
-//         }
-//     }
-
-//     fn add_foreign_key_with_annotation<U, V>(
-//         &mut self,
-//         field_annotations: &[String],
-//         table_name: U,
-//         column_foreign_key: V,
-//     ) where
-//         U: Into<String> + Debug + Display + Sync,
-//         V: Into<String> + Debug + Display + Sync,
-//     {
-//         let annotation_data = Self::extract_foreign_key_annotation(field_annotations);
-
-//         let table_to_reference = annotation_data.0;
-//         let column_to_reference = annotation_data.1;
-
-//         let foreign_key_name = format!("{table_name}_{}_fkey", &column_foreign_key);
-
-//         self.constrains_operations
-//             .push(Box::new(TableOperation::AddTableForeignKey::<
-//                 String,
-//                 String,
-//                 String,
-//                 String,
-//                 String,
-//             >(
-//                 table_name.to_string(),
-//                 foreign_key_name,
-//                 column_foreign_key.to_string(),
-//                 table_to_reference,
-//                 column_to_reference,
-//             )));
-//     }
-
-//     fn add_foreign_key_with_references<T, U, V, W>(
-//         &mut self,
-//         table_to_reference: T,
-//         column_to_reference: U,
-//         table_name: V,
-//         column_foreign_key: W,
-//     ) where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//         U: Into<String> + Debug + Display + Sync + 'static,
-//         V: Into<String> + Debug + Display + Sync + 'static,
-//         W: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         let foreign_key_name = format!("{}_{}_fkey", &table_name, &column_foreign_key);
-
-//         self.constrains_operations
-//             .push(Box::new(TableOperation::AddTableForeignKey(
-//                 table_name,
-//                 foreign_key_name,
-//                 column_foreign_key,
-//                 table_to_reference,
-//                 column_to_reference,
-//             )));
-//     }
-
-//     fn delete_foreign_key_with_references<T>(
-//         &mut self,
-//         table_with_foreign_key: T,
-//         constrain_name: T,
-//     ) where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.constrains_operations
-//             .push(Box::new(TableOperation::DeleteTableForeignKey::<
-//                 T,
-//                 T,
-//                 T,
-//                 T,
-//                 T,
-//             >(
-//                 // table_with_foreign_key,constrain_name
-//                 table_with_foreign_key,
-//                 constrain_name,
-//             )));
-//     }
-
-//     fn add_primary_key<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.set_primary_key_operations
-//             .push(Box::new(
-//                 TableOperation::AddTablePrimaryKey::<T, T, T, T, T>(table_name, field),
-//             ));
-//     }
-
-//     fn drop_primary_key<T>(&mut self, table_name: T, primary_key_name: T)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.drop_primary_key_operations
-//             .push(Box::new(TableOperation::DeleteTablePrimaryKey::<
-//                 T,
-//                 T,
-//                 T,
-//                 T,
-//                 T,
-//             >(table_name, primary_key_name)));
-//     }
-
-//     fn add_identity<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.constrains_operations
-//             .push(Box::new(ColumnOperation::AlterColumnAddIdentity(
-//                 table_name.to_string(),
-//                 field.clone(),
-//             )));
-
-//         self.constrains_operations
-//             .push(Box::new(SequenceOperation::ModifySequence(
-//                 table_name, field,
-//             )));
-//     }
-
-//     fn drop_identity<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.constrains_operations
-//             .push(Box::new(ColumnOperation::AlterColumnDropIdentity(
-//                 table_name, field,
-//             )));
-//     }
-
-//     fn add_column_to_table<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.operations
-//             .push(Box::new(ColumnOperation::CreateColumn(table_name, field)));
-//     }
-
-//     fn change_column_type<T>(&mut self, table_name: T, field: CanyonRegisterEntityField)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.operations
-//             .push(Box::new(ColumnOperation::AlterColumnType(
-//                 table_name, field,
-//             )));
-//     }
-
-//     fn delete_column_from_table<T>(&mut self, table_name: T, column: String)
-//     where
-//         T: Into<String> + Debug + Display + Sync + 'static,
-//     {
-//         self.operations
-//             .push(Box::new(ColumnOperation::DeleteColumn(table_name, column)));
-//     }
-// }
-
 /// Trait that enables implementors to execute migration queries
 #[async_trait]
 trait DatabaseOperation: Debug {
@@ -1328,8 +677,7 @@ enum TableOperation {
 impl<T: Debug> Transaction<T> for TableOperation {}
 
 #[async_trait]
-impl DatabaseOperation for TableOperation
-{
+impl DatabaseOperation for TableOperation {
     async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
@@ -1402,7 +750,7 @@ impl DatabaseOperation for TableOperation
                     table_name, foreign_key_name, column_foreign_key, table_to_reference, column_to_reference
                 )
             } else if db_type == DatabaseType::SqlServer {
-                todo!()
+                todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {  todo!() }
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constraint_name) =>
@@ -1412,7 +760,7 @@ impl DatabaseOperation for TableOperation
                     table_with_foreign_key, constraint_name
                 )
             } else if db_type == DatabaseType::SqlServer {
-                todo!()
+                todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {  todo!() }
 
             TableOperation::AddTablePrimaryKey(
@@ -1426,7 +774,7 @@ impl DatabaseOperation for TableOperation
                     entity_field.field_name
                 )
             } else if db_type == DatabaseType::SqlServer {
-                todo!()
+                todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {  todo!() }
 
             TableOperation::DeleteTablePrimaryKey(
@@ -1440,7 +788,7 @@ impl DatabaseOperation for TableOperation
                     table_name,
                     primary_key_name
                 )
-            } else {  todo!() }
+            } else { todo!() }
         };
 
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
@@ -1500,14 +848,7 @@ impl DatabaseOperation for ColumnOperation
                     entity_field.field_name,
                     entity_field.to_postgres_alter_syntax())
             }  else if db_type == DatabaseType::SqlServer {
-                // TODO Hay que
-                // format!(
-                //     "ALTER TABLE {} ADD \"{}\" {};",
-                //     table_name,
-                //     entity_field.field_name,
-                //     entity_field.to_sqlserver_syntax()
-                // )
-                todo!()
+                todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {
                 todo!()
             }
@@ -1520,8 +861,8 @@ impl DatabaseOperation for ColumnOperation
                )
             }  else if db_type == DatabaseType::SqlServer {
                 format!(
-                "ALTER TABLE {} ALTER COLUMN {} {} NULL",
-                table_name, entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
+                    "ALTER TABLE {} ALTER COLUMN {} {} NULL",
+                    table_name, entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
                 )
             } else {
                 todo!()
@@ -1573,8 +914,7 @@ enum SequenceOperation {
 impl Transaction<Self> for SequenceOperation {}
 
 #[async_trait]
-impl DatabaseOperation for SequenceOperation
-{
+impl DatabaseOperation for SequenceOperation {
     async fn execute(&self, db_type: DatabaseType) {
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => 
@@ -1584,7 +924,7 @@ impl DatabaseOperation for SequenceOperation
                     table_name, entity_field.field_name, entity_field.field_name, table_name
                 )
             } else if db_type == DatabaseType::SqlServer {
-                todo!()
+                todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {  todo!() }
         };
         QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)

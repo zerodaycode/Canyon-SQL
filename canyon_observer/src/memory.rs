@@ -82,7 +82,6 @@ impl CanyonMemory {
             };
             db_rows.push(db_row); 
         }
-        println!("DB rows: {:?}", &db_rows);
         
         // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
@@ -90,7 +89,6 @@ impl CanyonMemory {
             renamed_entities: HashMap::new(),
         };
         Self::find_canyon_entity_annotated_structs(&mut mem).await;
-        println!("In memory entities: {:?}", &mem);
 
         // Insert into the memory table the new discovered entities
         // Care, insert the new ones, delete the olds
