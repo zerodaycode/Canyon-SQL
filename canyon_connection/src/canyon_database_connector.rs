@@ -1,28 +1,29 @@
 use async_std::net::TcpStream;
 
+use serde::Deserialize;
 use tiberius::{AuthMethod, Config};
 use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceProperties;
 
 /// Represents the current supported databases by Canyon
-#[derive(Debug, Eq, PartialEq, Clone, Copy, Default)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
 pub enum DatabaseType {
-    #[default] PostgreSql,
-    SqlServer,
+    #[default] #[serde(alias="postgres", alias="postgresql")] PostgreSql,
+    #[serde(alias="sqlserver", alias="mssql")]SqlServer,
 }
 
-impl DatabaseType {
-    /// Returns a variant from Self given a *DatasourceProperties* representing
-    /// some of the available databases in `Canyon-SQL`
-    pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
-        match datasource.db_type {
-            "postgresql" => Self::PostgreSql,
-            "sqlserver" => Self::SqlServer,
-            _ => todo!(), // TODO Change for boxed dyn error type
-        }
-    }
-}
+// impl DatabaseType {
+//     /// Returns a variant from Self given a *DatasourceProperties* representing
+//     /// some of the available databases in `Canyon-SQL`
+//     // pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
+//     //     match datasource.db_type {
+//     //         "postgresql" => Self::PostgreSql,
+//     //         "sqlserver" => Self::SqlServer,
+//     //         _ => todo!(), // TODO Change for boxed dyn error type
+//     //     }
+//     // }
+// }
 
 /// A connection with a `PostgreSQL` database
 pub struct PostgreSqlConnection {
@@ -62,7 +63,7 @@ impl DatabaseConnection {
         datasource: &DatasourceProperties<'_>,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
-            "postgresql" => {
+            DatabaseType::PostgreSql => {
                 let (new_client, new_connection) = tokio_postgres::connect(
                     &format!(
                         "postgres://{user}:{pswd}@{host}:{port}/{db}",
@@ -88,10 +89,10 @@ impl DatabaseConnection {
                         // connection: new_connection,
                     }),
                     sqlserver_connection: None,
-                    database_type: DatabaseType::from_datasource(datasource),
+                    database_type: DatabaseType::PostgreSql,
                 })
-            }
-            "sqlserver" => {
+            },
+            DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
                 config.host(datasource.host);
@@ -130,19 +131,8 @@ impl DatabaseConnection {
                             )
                         ),
                     }),
-                    database_type: DatabaseType::from_datasource(datasource),
+                    database_type: DatabaseType::SqlServer,
                 })
-            }
-            &_ => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    format!(
-                        "There's no `{}` database supported in Canyon-SQL",
-                        datasource.db_type
-                    ),
-                )
-                .into_inner()
-                .unwrap())
             }
         }
     }
@@ -171,11 +161,11 @@ mod database_connection_handler {
         let sqls_ds = &config.canyon_sql.datasources[1].properties;
 
         assert_eq!(
-            DatabaseType::from_datasource(psql_ds),
+            psql_ds.db_type,
             DatabaseType::PostgreSql
         );
         assert_eq!(
-            DatabaseType::from_datasource(sqls_ds),
+            sqls_ds.db_type,
             DatabaseType::SqlServer
         );
     }

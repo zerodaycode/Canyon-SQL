@@ -1,5 +1,4 @@
-use canyon_connection::get_database_type_from_datasource_name;
-use canyon_crud::{crud::Transaction, bounds::RowOperations, DatabaseType};
+use canyon_crud::{crud::Transaction, bounds::RowOperations, DatabaseType, DatasourceConfig};
 use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
@@ -59,15 +58,13 @@ impl CanyonMemory {
     /// 
     /// TODO fetch schemas if structures have not default ones
     #[allow(clippy::nonminimal_bool)]
-    pub async fn remember(datasource_name: &str) -> Self {     
-        let database_type = get_database_type_from_datasource_name(datasource_name).await;
-
+    pub async fn remember(datasource: &DatasourceConfig<'_>) -> Self {
         // Creates the memory table if not exists
-        Self::create_memory(datasource_name, &database_type).await;
+        Self::create_memory(datasource.name, &datasource.properties.db_type).await;
         
         // Retrieve the last status data from the `canyon_memory` table
         // TODO hardcoded schema for SQLSERVER development
-        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
+        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource.name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();

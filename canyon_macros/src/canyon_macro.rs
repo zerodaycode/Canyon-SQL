@@ -116,7 +116,7 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     let tokens = quote! {
         use canyon_sql::canyon_observer::{
             QUERIES_TO_EXECUTE,
-            migrations::processor::MigrationsProcessor
+            handler::Migrations
         };
 
         *QUERIES_TO_EXECUTE.lock().unwrap() = #queries
@@ -124,10 +124,7 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
             .map(str::to_string)
             .collect::<Vec<String>>();
 
-        // TODO Bring to the client's main code the datasource name
-        // MigrationsProcessor::from_query_register("postgres_docker").await;
-        MigrationsProcessor::from_query_register("postgres_docker").await;
-        // DatabaseSyncOperations::from_query_register().await;
+        Migrations::migrate().await;
     };
 
     canyon_manager_tokens.push(tokens)

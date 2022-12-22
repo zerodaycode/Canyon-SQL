@@ -1,4 +1,4 @@
-use canyon_connection::get_database_type_from_datasource_name;
+use canyon_connection::DATASOURCES;
 use partialdebug::placeholder::PartialDebug;
 
 use canyon_crud::{crud::Transaction, bounds::{Row, RowOperations, Column}, DatabaseType, result::DatabaseResult};
@@ -25,30 +25,32 @@ impl Migrations {
     /// Launches the mechanism to parse the Database schema, the Canyon register
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
-    pub async fn migrate(datasource_name: &str) {
-        let mut migrations_processor = MigrationsProcessor::default();
+    pub async fn migrate() {
+        for datasource in DATASOURCES.iter() {
+            println!("Processing migrations for datasource: {:?}", datasource.name);
+            let mut migrations_processor = MigrationsProcessor::default();
 
-        let canyon_memory = CanyonMemory::remember(datasource_name).await;
-        let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+            let canyon_memory = CanyonMemory::remember(&datasource).await;
+            let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
 
-        // Tracked entities that must be migrated whenever Canyon starts
-        let db_type = get_database_type_from_datasource_name(datasource_name).await;
-        let schema_status = Self::fetch_database(datasource_name, db_type).await;
-        let database_tables_schema_info = Self::map_rows(schema_status);
-        
-        // We filter the tables from the schema that aren't Canyon entities
-        let mut user_database_tables = vec![];
-        for parsed_table in database_tables_schema_info.iter() {
-            if canyon_memory.memory.values().any(|f| f.to_lowercase() == parsed_table.table_name) 
-                || canyon_memory.renamed_entities.values().any(|f| *f == parsed_table.table_name.to_lowercase())
-            {
-                user_database_tables.append(&mut vec![parsed_table]);
+            // Tracked entities that must be migrated whenever Canyon starts
+            let schema_status = Self::fetch_database(datasource.name, datasource.properties.db_type).await;
+            let database_tables_schema_info = Self::map_rows(schema_status);
+            
+            // We filter the tables from the schema that aren't Canyon entities
+            let mut user_database_tables = vec![];
+            for parsed_table in database_tables_schema_info.iter() {
+                if canyon_memory.memory.values().any(|f| f.to_lowercase() == parsed_table.table_name) 
+                    || canyon_memory.renamed_entities.values().any(|f| *f == parsed_table.table_name.to_lowercase())
+                {
+                    user_database_tables.append(&mut vec![parsed_table]);
+                }
             }
-        }
 
-        migrations_processor.process(
-            canyon_memory, canyon_tables, user_database_tables, datasource_name, db_type
-        ).await;
+            migrations_processor.process(
+                canyon_memory, canyon_tables, user_database_tables, datasource
+            ).await;
+        }
     }
 
     /// Fetches a concrete schema metadata by target the database

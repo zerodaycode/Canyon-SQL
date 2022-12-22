@@ -10,7 +10,7 @@ use std::{ops::Not, sync::MutexGuard};
 use crate::constants::regex_patterns;
 use crate::memory::CanyonMemory;
 use crate::QUERIES_TO_EXECUTE;
-use canyon_crud::crud::Transaction;
+use crate::canyon_crud::{crud::Transaction, DatasourceConfig};
 
 use super::information_schema::{TableMetadata, ColumnMetadata};
 use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
@@ -32,12 +32,15 @@ impl MigrationsProcessor {
         canyon_memory: CanyonMemory,
         canyon_entities: Vec<CanyonRegisterEntity<'a>>,
         database_tables: Vec<&'a TableMetadata>,
-        _datasource_name: &'a str,
-        db_type: DatabaseType
+        datasource: &'a DatasourceConfig<'_>
     ) {
+        // The database type formally represented in Canyon
+        let db_type = datasource.properties.db_type;
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_entities {
+            // TODO Check if its disabled for the current datasource
             let entity_name = canyon_register_entity.entity_name.to_lowercase();
+            
             // 1st operation -> 
             self.create_or_rename_tables(
                 &canyon_memory,
@@ -79,7 +82,6 @@ impl MigrationsProcessor {
                 }
                 
                 // Time to check annotations for the current column
-
                 // Case when  we only need to add contrains
                 if (current_table_metadata.is_none() && &(&canyon_register_field.annotations).len() > &0)
                 || (current_table_metadata.is_some() && current_column_metadata.is_none()) {
@@ -102,18 +104,17 @@ impl MigrationsProcessor {
         }
 
         
-        // Self::operations_executor().await;
         for operation in &self.operations {
-            operation.execute(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(db_type).await; // This should be moved again to runtime
         }
         for operation in &self.drop_primary_key_operations {
-            operation.execute(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(db_type).await; // This should be moved again to runtime
         }
         for operation in &self.set_primary_key_operations {
-            operation.execute(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(db_type).await; // This should be moved again to runtime
         }
         for operation in &self.constraints_operations {
-            operation.execute(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(db_type).await; // This should be moved again to runtime
         }
         // Self::from_query_register(datasource_name).await;
     }
@@ -651,10 +652,10 @@ mod migrations_helper_tests {
 }
 
 
-/// Trait that enables implementors to execute migration queries
+/// Trait that enables implementors to generate the migration queries
 #[async_trait]
 trait DatabaseOperation: Debug {
-    async fn execute(&self, db_type: DatabaseType);
+    async fn generate_sql(&self, db_type: DatabaseType);
 }
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
@@ -678,7 +679,7 @@ impl<T: Debug> Transaction<T> for TableOperation {}
 
 #[async_trait]
 impl DatabaseOperation for TableOperation {
-    async fn execute(&self, db_type: DatabaseType) {
+    async fn generate_sql(&self, db_type: DatabaseType) {
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
                 if db_type == DatabaseType::PostgreSql {
@@ -817,7 +818,7 @@ impl Transaction<Self> for ColumnOperation {}
 #[async_trait]
 impl DatabaseOperation for ColumnOperation
 {
-    async fn execute(&self, db_type: DatabaseType) {
+    async fn generate_sql(&self, db_type: DatabaseType) {
         let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) => 
             if db_type == DatabaseType::PostgreSql {
@@ -915,7 +916,7 @@ impl Transaction<Self> for SequenceOperation {}
 
 #[async_trait]
 impl DatabaseOperation for SequenceOperation {
-    async fn execute(&self, db_type: DatabaseType) {
+    async fn generate_sql(&self, db_type: DatabaseType) {
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => 
             if db_type == DatabaseType::PostgreSql {
