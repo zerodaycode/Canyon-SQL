@@ -63,7 +63,7 @@ impl CanyonMemory {
         Self::create_memory(datasource.name, &datasource.properties.db_type).await;
         
         // Retrieve the last status data from the `canyon_memory` table
-        // TODO hardcoded schema for SQLSERVER development
+        // TODO still pending on the target schema, for now they are created on the default one
         let res = Self::query("SELECT * FROM canyon_memory", &[], datasource.name)
             .await
             .expect("Error querying Canyon Memory");
@@ -187,6 +187,8 @@ impl CanyonMemory {
                     }
                 }
 
+                // This limitation will be removed in future versions, when the memory
+                // will be able to track every aspect of an entity
                 match canyon_entity_macro_counter {
                     0 => (),
                     1 => {

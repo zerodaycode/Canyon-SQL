@@ -116,10 +116,12 @@ impl MigrationsProcessor {
         for operation in &self.constraints_operations {
             operation.generate_sql(db_type).await; // This should be moved again to runtime
         }
+        // TODO Still pending to decouple de executions of cargo check to skip the process if this
+        // code is not processed by cargo build or cargo run
         // Self::from_query_register(datasource_name).await;
     }
 
-    /// TODO
+    /// The operation that checks if an entity must be update is name in the database
     fn create_or_rename_tables<'a>(
         &mut self,
         canyon_memory: &'_ CanyonMemory,

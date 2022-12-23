@@ -4,6 +4,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
+use canyon_connection::CANYON_TOKIO_RUNTIME;
 use proc_macro::{Span, TokenStream as CompilerTokenStream};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -31,7 +32,7 @@ use canyon_observer::{
             generate_enum_with_fields_values,
             generate_user_struct
         },
-    }
+    }, handler::Migrations
 };
 
 use canyon_observer::{
@@ -72,6 +73,11 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
     let body = func.block.stmts;
 
     if attrs_parse_result.allowed_migrations {
+        CANYON_TOKIO_RUNTIME.block_on(async {
+            canyon_connection::init_connections_cache().await;
+            Migrations::migrate().await;
+        });
+
         // The queries to execute at runtime in the managed state
         let mut queries_tokens: Vec<TokenStream> = Vec::new();
         wire_queries_to_execute(&mut queries_tokens);

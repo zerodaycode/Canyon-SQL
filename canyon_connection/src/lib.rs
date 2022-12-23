@@ -12,7 +12,7 @@ pub mod datasources;
 use std::fs;
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
-use canyon_database_connector::{DatabaseConnection, DatabaseType};
+use canyon_database_connector::DatabaseConnection;
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
 use tokio::sync::Mutex;

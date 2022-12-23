@@ -1,19 +1,25 @@
-use canyon_connection::DATASOURCES;
+use canyon_connection::{
+    DATASOURCES,
+    datasources::Migrations as MigrationsStatus
+};
 use partialdebug::placeholder::PartialDebug;
 
-use canyon_crud::{crud::Transaction, bounds::{Row, RowOperations, Column}, DatabaseType, result::DatabaseResult};
-
 use crate::{
-    CANYON_REGISTER_ENTITIES,
-    constants, 
+    CANYON_REGISTER_ENTITIES, 
+    memory::CanyonMemory,
+    constants,
+    canyon_crud::{
+        crud::Transaction,
+        bounds::{Row, RowOperations, Column},
+        DatabaseType, result::DatabaseResult
+    }, 
     migrations::{
-        processor:: MigrationsProcessor,
         information_schema::{
             TableMetadata,
             ColumnMetadata,
             ColumnMetadataTypeValue
-        }   
-    }, memory::CanyonMemory
+        }, processor::MigrationsProcessor   
+    }
 };
 
 #[derive(PartialDebug)]
@@ -27,7 +33,14 @@ impl Migrations {
     /// migrations over the targeted database
     pub async fn migrate() {
         for datasource in DATASOURCES.iter() {
+            let enabled_migrations = datasource.properties.migrations;
+            if enabled_migrations.is_none() || 
+                enabled_migrations.is_some_and(|status| status.eq(&MigrationsStatus::Disabled)) {
+                println!("Skipped datasource: {:?} for being disabled (or not configured)", datasource.name);
+                continue;
+            }
             println!("Processing migrations for datasource: {:?}", datasource.name);
+            
             let mut migrations_processor = MigrationsProcessor::default();
 
             let canyon_memory = CanyonMemory::remember(&datasource).await;
