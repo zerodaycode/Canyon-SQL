@@ -112,23 +112,22 @@ impl CanyonRegisterEntityField {
                 .to_string();
         }
 
-        let mut postgres_type = String::new();
-
         match rust_type_clean.as_str() {
-            rust_type::I32 => postgres_type.push_str("INTEGER"),
-            rust_type::OPT_I32 => postgres_type.push_str("INTEGER"),
-            rust_type::I64 => postgres_type.push_str("BIGINT"),
-            rust_type::OPT_I64 => postgres_type.push_str("BIGINT"),
-            rust_type::STRING => postgres_type.push_str("TEXT"),
-            rust_type::OPT_STRING => postgres_type.push_str("TEXT"),
-            rust_type::BOOL => postgres_type.push_str("BOOLEAN"),
-            rust_type::OPT_BOOL => postgres_type.push_str("BOOLEAN"),
-            rust_type::NAIVE_DATE => postgres_type.push_str("DATE"),
-            rust_type::OPT_NAIVE_DATE => postgres_type.push_str("DATE"),
-            &_ => postgres_type.push_str("DATE"),
+            rust_type::I8 | rust_type::U8 | rust_type::OPT_I8 | rust_type::OPT_U8 =>
+                String::from("INT8"),
+            rust_type::I16 | rust_type::U16 | rust_type::OPT_I16 | rust_type::OPT_U16 =>
+                String::from("SMALL INT"),
+            rust_type::I32 | rust_type::U32 | rust_type::OPT_I32 | rust_type::OPT_U32 =>
+                String::from("INTEGER"),
+            rust_type::I64 | rust_type::U64 | rust_type::OPT_I64 | rust_type::OPT_U64 =>
+                String::from("BIGINT"),
+            rust_type::STRING | rust_type::OPT_STRING => String::from("TEXT"),
+            rust_type::BOOL | rust_type::OPT_BOOL => String::from("BOOLEAN"),
+            rust_type::NAIVE_DATE | rust_type::OPT_NAIVE_DATE => String::from("DATE"),
+            rust_type::NAIVE_TIME | rust_type::OPT_NAIVE_TIME => String::from("TIME"),
+            rust_type::NAIVE_DATE_TIME | rust_type::OPT_NAIVE_DATE_TIME  => String::from("TIMESTAMP"),
+            &_ => todo!("Not supported datatype for this migrations version"),
         }
-
-        postgres_type
     }
 
     pub fn to_sqlserver_alter_syntax(&self) -> String {
@@ -146,18 +145,22 @@ impl CanyonRegisterEntityField {
                 .to_string();
         }
 
-        let mut sqlserver_type = String::new();
-
         match rust_type_clean.as_str() {
-            rust_type::I32 => sqlserver_type.push_str("INT"),
-            rust_type::I64 => sqlserver_type.push_str("BIGINT"),
-            rust_type::STRING => sqlserver_type.push_str("VARCHAR(MAX)"),
-            rust_type::BOOL => sqlserver_type.push_str("BIT"),
-            rust_type::NAIVE_DATE => sqlserver_type.push_str("DATE"),
-            &_ => sqlserver_type.push_str("DATE"),
+            rust_type::I8 | rust_type::U8 | rust_type::OPT_I8 | rust_type::OPT_U8 =>
+                String::from("TINY INT"),
+            rust_type::I16 | rust_type::U16 | rust_type::OPT_I16 | rust_type::OPT_U16 =>
+                String::from("SMALL INT"),
+            rust_type::I32 | rust_type::U32 | rust_type::OPT_I32 | rust_type::OPT_U32 =>
+                String::from("INT"),
+            rust_type::I64 | rust_type::U64 | rust_type::OPT_I64 | rust_type::OPT_U64 =>
+                String::from("BIGINT"),
+            rust_type::STRING | rust_type::OPT_STRING => String::from("VARCHAR(MAX)"),
+            rust_type::BOOL | rust_type::OPT_BOOL => String::from("BIT"),
+            rust_type::NAIVE_DATE | rust_type::OPT_NAIVE_DATE => String::from("DATE"),
+            rust_type::NAIVE_TIME | rust_type::OPT_NAIVE_TIME => String::from("TIME"),
+            rust_type::NAIVE_DATE_TIME | rust_type::OPT_NAIVE_DATE_TIME  => String::from("DATETIME2"),
+            &_ => todo!("Not supported datatype for this migrations version"),
         }
-
-        sqlserver_type
     }
 
     /// Return the datatype and parameters to create an id column, given the corresponding "CanyonRegisterEntityField"

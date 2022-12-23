@@ -73,7 +73,7 @@ impl MigrationsProcessor {
                 // We only create or modify (right now only datatype)
                 // the column when the database already contains the table, 
                 // if not, the columns are already create in the previous operation (create table)
-                if current_table_metadata.is_some(){
+                if current_table_metadata.is_some() {
                     self.create_or_modify_field (
                         entity_name.as_str(),
                         db_type,
@@ -210,7 +210,7 @@ impl MigrationsProcessor {
         current_column_metadata: Option<&ColumnMetadata>,
     ) {
         // If we do not retrieve data for this database column, it does not exist yet
-        // and therefore has to be created
+        // and therefore it has to be created
         if current_column_metadata.is_none() {
             self.create_column(entity_name.to_string(), canyon_register_entity_field)
         }
@@ -220,7 +220,6 @@ impl MigrationsProcessor {
             current_column_metadata.unwrap()
         ){
             self.change_column_datatype(entity_name.to_string(), canyon_register_entity_field)
-
         }
     }
 
@@ -555,15 +554,15 @@ impl MigrationsHelper {
         current_column_metadata: &ColumnMetadata,
     ) -> String {
         // TODO Add all SQL Server text datatypes
-        if vec!["nvarchar","varchar"].contains(&current_column_metadata.postgres_datatype.to_lowercase().as_str()) {
+        if vec!["nvarchar","varchar"].contains(&current_column_metadata.datatype.to_lowercase().as_str()) {
             let varchar_len = match &current_column_metadata.character_maximum_length {
                 Some(v) => v.to_string(),
                 None => "max".to_string()
             };
             
-            format!("{}({})", current_column_metadata.postgres_datatype, varchar_len)
+            format!("{}({})", current_column_metadata.datatype, varchar_len)
         } else { 
-            format!("{}", current_column_metadata.postgres_datatype)
+            format!("{}", current_column_metadata.datatype)
         }
     }
 
@@ -573,10 +572,12 @@ impl MigrationsHelper {
         current_column_metadata: &ColumnMetadata
     ) -> bool {
         if db_type == DatabaseType::PostgreSql {
-            canyon_register_entity_field.to_postgres_syntax() != current_column_metadata.postgres_datatype
+            canyon_register_entity_field.to_postgres_alter_syntax().to_lowercase() == 
+                current_column_metadata.datatype
         } else if db_type == DatabaseType::SqlServer {
             // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
-            canyon_register_entity_field.to_sqlserver_syntax() != current_column_metadata.postgres_datatype
+            canyon_register_entity_field.to_sqlserver_alter_syntax().to_lowercase() == 
+                current_column_metadata.datatype
         } else {
             todo!()
         }

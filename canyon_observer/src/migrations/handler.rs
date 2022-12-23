@@ -142,7 +142,7 @@ impl Migrations {
             }
         } else if column_identifier == "data_type" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.postgres_datatype = value.to_owned().expect("[MIGRATIONS - set_column_metadata -> data_type]")
+                dest.datatype = value.to_owned().expect("[MIGRATIONS - set_column_metadata -> data_type]")
             }
         } else if column_identifier == "character_maximum_length" {
             if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
