@@ -4,14 +4,15 @@
 use async_trait::async_trait;
 use canyon_crud::DatabaseType;
 use regex::Regex;
+use std::collections::HashMap;
 use std::fmt::Debug;
-use std::{ops::Not, sync::MutexGuard};
+use std::ops::Not;
 
 use crate::constants::regex_patterns;
-use crate::memory::CanyonMemory;
 use crate::QUERIES_TO_EXECUTE;
 use crate::canyon_crud::{crud::Transaction, DatasourceConfig};
 
+use super::memory::CanyonMemory;
 use super::information_schema::{TableMetadata, ColumnMetadata};
 use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 
@@ -32,7 +33,7 @@ impl MigrationsProcessor {
         canyon_memory: CanyonMemory,
         canyon_entities: Vec<CanyonRegisterEntity<'a>>,
         database_tables: Vec<&'a TableMetadata>,
-        datasource: &'a DatasourceConfig<'_>
+        datasource: &'_ DatasourceConfig<'static>
     ) {
         // The database type formally represented in Canyon
         let db_type = datasource.properties.db_type;
@@ -105,16 +106,16 @@ impl MigrationsProcessor {
 
         
         for operation in &self.operations {
-            operation.generate_sql(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
         for operation in &self.drop_primary_key_operations {
-            operation.generate_sql(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
         for operation in &self.set_primary_key_operations {
-            operation.generate_sql(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
         for operation in &self.constraints_operations {
-            operation.generate_sql(db_type).await; // This should be moved again to runtime
+            operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
         // TODO Still pending to decouple de executions of cargo check to skip the process if this
         // code is not processed by cargo build or cargo run
@@ -490,27 +491,19 @@ impl MigrationsProcessor {
 
     /// Make the detected migrations for the next Canyon-SQL run
     #[allow(clippy::await_holding_lock)]
-    pub async fn from_query_register(datasource_name: &str) {
-        let queries: &MutexGuard<Vec<String>> = &QUERIES_TO_EXECUTE.lock().unwrap();
-
-        if queries.len() > 0 {
-            for i in 0..queries.len() - 1 {
-                let query_to_execute = queries.get(i).unwrap_or_else(|| {
-                    panic!("Failed to retrieve query from the register at index: {i}")
-                });
-    
-                let res = Self::query(query_to_execute, [], datasource_name).await;
+    pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
+        for datasource in queries_to_execute.iter() {
+            for query_to_execute in datasource.1 {
+                let res = Self::query(&query_to_execute, [], datasource.0).await;
                 
                 match res {
                     Ok(_) =>
-                        println!("[OK] - Query: {:?}", queries.get(i).unwrap()),
+                        println!("\t[OK] - {:?} - Query: {:?}", datasource.0, &query_to_execute),
                     Err(e) =>
-                        println!("[ERR] - Query: {:?}\nCause: {:?}", queries.get(i).unwrap(), e),
+                        println!("\t[ERR] - {:?} - Query: {:?}\nCause: {:?}", datasource.0, &query_to_execute, e),
                 }
                 // TODO Ask for user input?
             }
-        } else {
-            println!("No migrations found to apply")
         }
     }
 }
@@ -657,7 +650,7 @@ mod migrations_helper_tests {
 /// Trait that enables implementors to generate the migration queries
 #[async_trait]
 trait DatabaseOperation: Debug {
-    async fn generate_sql(&self, db_type: DatabaseType);
+    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>);
 }
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
@@ -681,7 +674,9 @@ impl<T: Debug> Transaction<T> for TableOperation {}
 
 #[async_trait]
 impl DatabaseOperation for TableOperation {
-    async fn generate_sql(&self, db_type: DatabaseType) {
+    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
+        let db_type = datasource.properties.db_type;
+
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
                 if db_type == DatabaseType::PostgreSql {
@@ -794,7 +789,11 @@ impl DatabaseOperation for TableOperation {
             } else { todo!() }
         };
 
-        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
+        if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(datasource.name) {
+            QUERIES_TO_EXECUTE.lock().unwrap().get_mut(datasource.name).unwrap().push(stmt);
+        } else {
+            QUERIES_TO_EXECUTE.lock().unwrap().insert(datasource.name, vec![stmt]);
+        }
     }
 }
 
@@ -820,7 +819,9 @@ impl Transaction<Self> for ColumnOperation {}
 #[async_trait]
 impl DatabaseOperation for ColumnOperation
 {
-    async fn generate_sql(&self, db_type: DatabaseType) {
+    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
+        let db_type = datasource.properties.db_type;
+
         let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) => 
             if db_type == DatabaseType::PostgreSql {
@@ -903,7 +904,11 @@ impl DatabaseOperation for ColumnOperation
             ),
         };
 
-        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
+        if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(datasource.name) {
+            QUERIES_TO_EXECUTE.lock().unwrap().get_mut(datasource.name).unwrap().push(stmt);
+        } else {
+            QUERIES_TO_EXECUTE.lock().unwrap().insert(datasource.name, vec![stmt]);
+        }
     }
 }
 
@@ -918,7 +923,9 @@ impl Transaction<Self> for SequenceOperation {}
 
 #[async_trait]
 impl DatabaseOperation for SequenceOperation {
-    async fn generate_sql(&self, db_type: DatabaseType) {
+    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
+        let db_type = datasource.properties.db_type;
+
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => 
             if db_type == DatabaseType::PostgreSql {
@@ -930,6 +937,11 @@ impl DatabaseOperation for SequenceOperation {
                 todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {  todo!() }
         };
-        QUERIES_TO_EXECUTE.lock().unwrap().push(stmt)
+
+        if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(datasource.name) {
+            QUERIES_TO_EXECUTE.lock().unwrap().get_mut(datasource.name).unwrap().push(stmt);
+        } else {
+            QUERIES_TO_EXECUTE.lock().unwrap().insert(datasource.name, vec![stmt]);
+        }
     }
 }

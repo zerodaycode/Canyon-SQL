@@ -32,7 +32,7 @@ use canyon_observer::{
             generate_enum_with_fields_values,
             generate_user_struct
         },
-    }, handler::Migrations
+    }, migrations::handler::Migrations
 };
 
 use canyon_observer::{
@@ -76,6 +76,7 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
         CANYON_TOKIO_RUNTIME.block_on(async {
             canyon_connection::init_connections_cache().await;
             Migrations::migrate().await;
+            // println!("Query register at compile time: {:?}", QUERIES_TO_EXECUTE.lock().unwrap())
         });
 
         // The queries to execute at runtime in the managed state

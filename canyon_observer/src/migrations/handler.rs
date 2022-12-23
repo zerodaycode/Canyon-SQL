@@ -5,8 +5,7 @@ use canyon_connection::{
 use partialdebug::placeholder::PartialDebug;
 
 use crate::{
-    CANYON_REGISTER_ENTITIES, 
-    memory::CanyonMemory,
+    CANYON_REGISTER_ENTITIES,
     constants,
     canyon_crud::{
         crud::Transaction,
@@ -14,6 +13,7 @@ use crate::{
         DatabaseType, result::DatabaseResult
     }, 
     migrations::{
+        memory::CanyonMemory,
         information_schema::{
             TableMetadata,
             ColumnMetadata,
@@ -33,9 +33,10 @@ impl Migrations {
     /// migrations over the targeted database
     pub async fn migrate() {
         for datasource in DATASOURCES.iter() {
-            let enabled_migrations = datasource.properties.migrations;
-            if enabled_migrations.is_none() || 
-                enabled_migrations.is_some_and(|status| status.eq(&MigrationsStatus::Disabled)) {
+            if datasource.properties.migrations
+                .filter(|status| !status.eq(&MigrationsStatus::Disabled))
+                .is_none()
+            {
                 println!("Skipped datasource: {:?} for being disabled (or not configured)", datasource.name);
                 continue;
             }
