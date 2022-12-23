@@ -16,7 +16,7 @@ pub struct TableMetadata {
 #[derive(Debug, Default)]
 pub struct ColumnMetadata {
     pub column_name: String,
-    pub postgres_datatype: String,
+    pub datatype: String,
     pub character_maximum_length: Option<i32>,
     pub is_nullable: bool, // Care, postgres type is varchar
     pub column_default: Option<String>,

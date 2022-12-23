@@ -1,5 +1,4 @@
-use canyon_connection::get_database_type_from_datasource_name;
-use canyon_crud::{crud::Transaction, bounds::RowOperations, DatabaseType};
+use canyon_crud::{crud::Transaction, bounds::RowOperations, DatabaseType, DatasourceConfig};
 use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
@@ -59,15 +58,13 @@ impl CanyonMemory {
     /// 
     /// TODO fetch schemas if structures have not default ones
     #[allow(clippy::nonminimal_bool)]
-    pub async fn remember(datasource_name: &str) -> Self {     
-        let database_type = get_database_type_from_datasource_name(datasource_name).await;
-
+    pub async fn remember(datasource: &DatasourceConfig<'static>) -> Self {
         // Creates the memory table if not exists
-        Self::create_memory(datasource_name, &database_type).await;
+        Self::create_memory(datasource.name, &datasource.properties.db_type).await;
         
         // Retrieve the last status data from the `canyon_memory` table
-        // TODO hardcoded schema for SQLSERVER development
-        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource_name)
+        // TODO still pending on the target schema, for now they are created on the default one
+        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource.name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();
@@ -82,7 +79,6 @@ impl CanyonMemory {
             };
             db_rows.push(db_row); 
         }
-        println!("DB rows: {:?}", &db_rows);
         
         // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
@@ -90,7 +86,6 @@ impl CanyonMemory {
             renamed_entities: HashMap::new(),
         };
         Self::find_canyon_entity_annotated_structs(&mut mem).await;
-        println!("In memory entities: {:?}", &mem);
 
         // Insert into the memory table the new discovered entities
         // Care, insert the new ones, delete the olds
@@ -117,11 +112,17 @@ impl CanyonMemory {
             // updated means: the old one. The value to update
             if let Some(old) = need_to_update {
                 updates.push(old.struct_name.clone());
-                QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
+                let stmt = format!(
                     "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}' \
                             WHERE id = {}",
                         filepath, struct_name, old.id
-                ));
+                );
+
+                if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(datasource.name) {
+                    QUERIES_TO_EXECUTE.lock().unwrap().get_mut(datasource.name).unwrap().push(stmt);
+                } else {
+                    QUERIES_TO_EXECUTE.lock().unwrap().insert(datasource.name, vec![stmt]);
+                }
  
                 // if the updated element is the struct name, whe add it to the table_rename Hashmap
                 let rename_table = &old.struct_name != struct_name;
@@ -139,20 +140,32 @@ impl CanyonMemory {
             values_to_insert.pop();
             values_to_insert.push(';');
 
-            QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
+            let stmt = format!(
                 "INSERT INTO canyon_memory (filepath, struct_name) VALUES {}",
                 values_to_insert
-            ));
+            );
+
+            if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(datasource.name) {
+                QUERIES_TO_EXECUTE.lock().unwrap().get_mut(datasource.name).unwrap().push(stmt);
+            } else {
+                QUERIES_TO_EXECUTE.lock().unwrap().insert(datasource.name, vec![stmt]);
+            }
         }
 
         // Deletes the records when a table is dropped on the previous Canyon run
         let in_memory = mem.memory.values().collect::<Vec<&String>>();
         db_rows.into_iter().for_each(|db_row| {
             if !in_memory.contains(&&db_row.struct_name.to_string()) && !updates.contains(&&db_row.struct_name) {
-                QUERIES_TO_EXECUTE.lock().unwrap().push(format!(
+                let stmt = format!(
                     "DELETE FROM canyon_memory WHERE struct_name = '{}'",
                     db_row.struct_name
-                ));
+                );
+
+                if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(datasource.name) {
+                    QUERIES_TO_EXECUTE.lock().unwrap().get_mut(datasource.name).unwrap().push(stmt);
+                } else {
+                    QUERIES_TO_EXECUTE.lock().unwrap().insert(datasource.name, vec![stmt]);
+                }
             }
         });
 
@@ -192,6 +205,8 @@ impl CanyonMemory {
                     }
                 }
 
+                // This limitation will be removed in future versions, when the memory
+                // will be able to track every aspect of an entity
                 match canyon_entity_macro_counter {
                     0 => (),
                     1 => {

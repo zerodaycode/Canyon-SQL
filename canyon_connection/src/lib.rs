@@ -7,12 +7,12 @@ pub extern crate tokio_postgres;
 pub extern crate lazy_static;
 
 pub mod canyon_database_connector;
-mod datasources;
+pub mod datasources;
 
 use std::fs;
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
-use canyon_database_connector::{DatabaseConnection, DatabaseType};
+use canyon_database_connector::DatabaseConnection;
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
 use tokio::sync::Mutex;
@@ -37,19 +37,6 @@ lazy_static! {
 }
 
 
-/// Returns a [`enum@DatabaseType`] for an [`struct@DatabaseConnection`]
-/// by querying the related `datasource_name`
-pub async fn get_database_type_from_datasource_name(
-    datasource_name: &str
-) -> DatabaseType {
-    match CACHED_DATABASE_CONN.lock().await.get(datasource_name) {
-        Some(db_conn) => {
-            db_conn.database_type
-        },
-        None => panic!("No datasource: {datasource_name} found by the provided identifier"),
-    }
-}
-
 /// Convenient free function to initialize a kind of connection pool based on the datasources present defined
 /// in the configuration file.
 /// 
@@ -60,7 +47,7 @@ pub async fn get_database_type_from_datasource_name(
 /// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) sufferes a lot when it has continuous
 /// statements with multiple queries, like and insert followed by a find by id to check if the insert query has done its
 /// job done.
-pub async fn init_connection_cache() {
+pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
         CACHED_DATABASE_CONN.lock().await.insert(
             datasource.name,

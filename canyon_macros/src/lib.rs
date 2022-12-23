@@ -32,8 +32,7 @@ use canyon_observer::{
             generate_enum_with_fields_values,
             generate_user_struct
         },
-    }, 
-    handler::Migrations
+    }, migrations::handler::Migrations
 };
 
 use canyon_observer::{
@@ -74,11 +73,9 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
     let body = func.block.stmts;
 
     if attrs_parse_result.allowed_migrations {
-        // The migrations
-        // TODO This macro probably must be upgraded
         CANYON_TOKIO_RUNTIME.block_on(async {
-            canyon_connection::init_connection_cache().await;
-            Migrations::migrate("sqlserver_docker").await;
+            canyon_connection::init_connections_cache().await;
+            Migrations::migrate().await;
         });
 
         // The queries to execute at runtime in the managed state
@@ -91,7 +88,7 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                     .handle()
                     .block_on( async {
-                        canyon_sql::runtime::init_connection_cache().await;
+                        canyon_sql::runtime::init_connections_cache().await;
                         {
                             #(#queries_tokens)*
                         }
@@ -107,7 +104,7 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                 .handle()
                 .block_on( async {
-                        canyon_sql::runtime::init_connection_cache().await;
+                        canyon_sql::runtime::init_connections_cache().await;
                         #(#body)*
                     }
                 )
@@ -140,7 +137,7 @@ pub fn canyon_tokio_test(
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                     .handle()
                     .block_on( async { 
-                        canyon_sql::runtime::init_connection_cache().await;
+                        canyon_sql::runtime::init_connections_cache().await;
                         #(#body)* 
                     });
             }

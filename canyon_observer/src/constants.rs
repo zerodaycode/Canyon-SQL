@@ -96,6 +96,7 @@ pub mod mssql_queries {
 /// Constant string values that holds regex patterns
 pub mod regex_patterns {
     pub const EXTRACT_RUST_OPT_REGEX: &str = r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>";
+    pub const EXTRACT_FOREIGN_KEY_INFO: &str =  r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)";
 }
 
 /// Constant values that maps the string representation of the Rust
@@ -136,27 +137,36 @@ pub mod rust_type {
     pub const NAIVE_DATE: &str = "NaiveDate";
     pub const OPT_NAIVE_DATE: &str = "Option<NaiveDate>";
 
+    pub const NAIVE_TIME: &str = "NaiveTime";
+    pub const OPT_NAIVE_TIME: &str = "Option<NaiveTime>";
+
     pub const NAIVE_DATE_TIME: &str = "NaiveDateTime";
     pub const OPT_NAIVE_DATE_TIME: &str = "Option<NaiveDateTime>";
 }
 
 /// TODO
 pub mod postgresql_type {
-    pub const INTEGER: &str = "INTEGER";
-    pub const BIGINT: &str = "BIGINT";
-    pub const TEXT: &str = "TEXT";
-    pub const BOOLEAN: &str = "BOOLEAN";
-    pub const DATE: &str = "DATE";
-    pub const DATETIME: &str = "DATETIME";
+    pub const INT_8: &str = "int8";
+    pub const SMALL_INT: &str = "smallint";
+    pub const INTEGER: &str = "integer";
+    pub const BIGINT: &str = "bigint";
+    pub const TEXT: &str = "text";
+    pub const BOOLEAN: &str = "boolean";
+    pub const DATE: &str = "date";
+    pub const TIME: &str = "time";
+    pub const DATETIME: &str = "timestamp without time zone";
 }
 
 pub mod sqlserver_type {
+    pub const TINY_INT: &str = "TINY INT";
+    pub const SMALL_INT: &str = "SMALL INT";
     pub const INT: &str = "INT";
     pub const BIGINT: &str = "BIGINT";
     // TODO More information needed, the number of characters may need to be variable and user-defined
     pub const NVARCHAR: &str = "nvarchar(max)";
     pub const BIT: &str = "BIT";
     pub const DATE: &str = "DATE";
+    pub const TIME: &str = "TIME";
     pub const DATETIME: &str = "DATETIME2";
 }
 
@@ -180,7 +190,7 @@ pub mod mocked_data {
             columns: vec![
                 ColumnMetadata {
                     column_name: "id".to_owned(),
-                    postgres_datatype: "int".to_owned(),
+                    datatype: "int".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
                     column_default: None,
@@ -193,7 +203,7 @@ pub mod mocked_data {
                 }, 
                 ColumnMetadata {
                     column_name: "ext_id".to_owned(),
-                    postgres_datatype: "bigint".to_owned(),
+                    datatype: "bigint".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
                     column_default: None,
@@ -206,7 +216,7 @@ pub mod mocked_data {
                 }, 
                 ColumnMetadata {
                     column_name: "slug".to_owned(),
-                    postgres_datatype: "nvarchar".to_owned(),
+                    datatype: "nvarchar".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
                     column_default: None,
@@ -219,7 +229,7 @@ pub mod mocked_data {
                 }, 
                 ColumnMetadata {
                     column_name: "name".to_owned(),
-                    postgres_datatype: "nvarchar".to_owned(),
+                    datatype: "nvarchar".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
                     column_default: None,
@@ -232,7 +242,7 @@ pub mod mocked_data {
                 }, 
                 ColumnMetadata {
                     column_name: "region".to_owned(), 
-                    postgres_datatype: "nvarchar".to_owned(),
+                    datatype: "nvarchar".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
                     column_default: None,
@@ -245,7 +255,7 @@ pub mod mocked_data {
                 }, 
                 ColumnMetadata {
                     column_name: "image_url".to_owned(),
-                    postgres_datatype: "nvarchar".to_owned(),
+                    datatype: "nvarchar".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
                     column_default: None,

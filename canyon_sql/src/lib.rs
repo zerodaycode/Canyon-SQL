@@ -6,8 +6,11 @@
 
 
 /// Reexported elements to the root of the public API
-// pub use canyon_crud::*;
-pub use canyon_observer;  // TODO Pending of refactor de migrations
+pub mod migrations {
+    pub use canyon_observer::migrations::{
+        handler, processor
+    };
+}
 
 /// The top level reexport. Here we define the path to some really important
 /// things in `Canyon-SQL`, like the `main` macro, the IT macro.
@@ -44,7 +47,7 @@ pub mod db_clients {
 /// Reexport the needed runtime dependencies
 pub mod runtime {
     pub use canyon_connection::CANYON_TOKIO_RUNTIME;
-    pub use canyon_connection::init_connection_cache;
+    pub use canyon_connection::init_connections_cache;
     pub use canyon_connection::tokio;
     pub use canyon_connection::tokio_util;
     pub use canyon_connection::futures;

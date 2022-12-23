@@ -1,5 +1,3 @@
-#![feature(type_name_of_val)]
-
 /// Holds the data needed by Canyon when the user
 /// application it's running.
 ///
@@ -17,13 +15,13 @@ extern crate canyon_crud;
 
 // The migrator tool
 mod constants;
-mod memory;
-pub mod handler;
 pub mod manager;
 
-use std::sync::Mutex;
+use std::{sync::Mutex, collections::HashMap};
+use canyon_connection::lazy_static::lazy_static;
 use crate::migrations::register_types::CanyonRegisterEntity;
 
-pub static CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> =
-    Mutex::new(Vec::new());
-pub static QUERIES_TO_EXECUTE: Mutex<Vec<String>> = Mutex::new(Vec::new());
+pub static CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> = Mutex::new(Vec::new());
+lazy_static!{
+    pub static ref QUERIES_TO_EXECUTE: Mutex<HashMap<&'static str, Vec<String>>> = Mutex::new(HashMap::new());
+}
