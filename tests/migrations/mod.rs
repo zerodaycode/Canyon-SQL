@@ -1,6 +1,6 @@
 ///! Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::{
-    canyon_observer::handler::Migrations,
+    migrations::handler::Migrations,
     crud::Transaction
 };
 

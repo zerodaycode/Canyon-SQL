@@ -119,15 +119,15 @@ fn test_select_query_with_the_querybuilder() {
     // assert!(!filtered_leagues.is_empty());
 }
 
-/* 
+
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let filtered_leagues_result: Result<Vec<League>, _> = League::find_query()
-        .r#where(LeagueFieldValue::id(&50), Comp::Lte)
+    let filtered_leagues_result: Result<Vec<League>, _> = League::select_query()
+        .r#where(LeagueFieldValue::id(&50), Comp::LtEq)
         .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
         .query()
         .await;
@@ -144,7 +144,7 @@ fn test_crud_find_with_querybuilder() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_datasource() {
     // Find all the players where its ID column value is greater that 50
-    let filtered_find_players = Player::find_query_datasource(SQL_SERVER_DS)
+    let filtered_find_players = Player::select_query_datasource(SQL_SERVER_DS)
         .r#where(PlayerFieldValue::id(&50), Comp::Gt)
         .query()
         .await;
@@ -166,7 +166,7 @@ fn test_crud_update_with_querybuilder() {
         .await
         .expect("Failed to update records with the querybuilder"); 
 
-    let found_updated_values = League::find_query()
+    let found_updated_values = League::select_query()
         .r#where(LeagueFieldValue::id(&1), Comp::Gt)
         .and(LeagueFieldValue::id(&7), Comp::Lt)
         .query()
@@ -194,9 +194,9 @@ fn test_crud_update_with_querybuilder_datasource() {
         .await
         .expect("Failed to update records with the querybuilder");
     
-    let found_updated_values = Player::find_query_datasource(SQL_SERVER_DS)
+    let found_updated_values = Player::select_query_datasource(SQL_SERVER_DS)
         .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-        .and(PlayerFieldValue::id(&7), Comp::Lte)
+        .and(PlayerFieldValue::id(&7), Comp::LtEq)
         .query()
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
@@ -238,7 +238,7 @@ fn test_crud_delete_with_querybuilder_datasource() {
         .expect("Error connecting with the database when we are going to delete data! :)");
 
     assert!(
-        Player::find_query_datasource(SQL_SERVER_DS)
+        Player::select_query_datasource(SQL_SERVER_DS)
             .r#where(PlayerFieldValue::id(&122), Comp::Eq)
             .query()
             .await
@@ -246,4 +246,3 @@ fn test_crud_delete_with_querybuilder_datasource() {
             .is_empty()
     );
 }
-*/

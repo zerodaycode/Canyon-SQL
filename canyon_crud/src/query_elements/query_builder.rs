@@ -266,32 +266,6 @@ where
             )
         );
     }
-
-    /// Creates an SQL `SET` clause to especify the columns that must be updated in the sentence
-    pub fn set<Z, S>(mut self, columns: &'a [(Z, S)]) -> Self
-    where
-        Z: FieldIdentifier<T> + Clone,
-        S: ToString,
-    {
-        match columns.len() {
-            0 => return self,
-            _ => self.query.sql.push_str(" SET "),
-        }
-
-        for (idx, column) in columns.iter().enumerate() {
-            self.query.sql.push_str(column.0.as_str());
-            self.query.sql.push_str("=");
-            self.query.sql.push_str("'");
-            self.query.sql.push_str(&(column.1.to_string() + "'"));
-            
-            if !(idx + 1) == columns.len() {
-                self.query.sql.push_str("', ");
-            }
-
-            // TODO Pending to parametrize the SET clause
-        }
-        self
-    }
 }
 
 #[derive(Debug)]
@@ -313,6 +287,12 @@ impl<'a, T> SelectQueryBuilder<'a, T> where
             )
         }
     }
+
+    /// Launches the generated query to the database pointed by the 
+    /// selected datasource
+    #[inline] pub async fn query(&'a mut self)
+        -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> 
+    { self._inner.query().await }
 
     /// Adds a *LEFT JOIN* SQL statement to the underlying
     /// [`Query`] holded by the [`QueryBuilder`], where:
@@ -462,6 +442,32 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
     #[inline] pub async fn query(&'a mut self)
         -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     { self._inner.query().await }
+
+    /// Creates an SQL `SET` clause to especify the columns that must be updated in the sentence
+    pub fn set<Z, S>(mut self, columns: &'a [(Z, S)]) -> Self
+    where
+        Z: FieldIdentifier<T> + Clone,
+        S: ToString,
+    {
+        match columns.len() {
+            0 => return self,
+            _ => self._inner.query.sql.push_str(" SET "),
+        }
+
+        for (idx, column) in columns.iter().enumerate() {
+            self._inner.query.sql.push_str(column.0.as_str());
+            self._inner.query.sql.push_str("=");
+            self._inner.query.sql.push_str("'");
+            self._inner.query.sql.push_str(&(column.1.to_string() + "'"));
+            
+            if !(idx + 1) == columns.len() {
+                self._inner.query.sql.push_str("', ");
+            }
+
+            // TODO Pending to parametrize the SET clause
+        }
+        self
+    }
 }
 
 impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
