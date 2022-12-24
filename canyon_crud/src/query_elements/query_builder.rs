@@ -117,7 +117,7 @@ pub mod ops {
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct QueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
@@ -268,7 +268,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SelectQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
@@ -417,7 +417,7 @@ impl<'a, T> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
 ///  
 /// * `set` - To construct a new `SET` clause to determine the columns to
 /// update with the provided values
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UpdateQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
@@ -444,28 +444,36 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
     { self._inner.query().await }
 
     /// Creates an SQL `SET` clause to especify the columns that must be updated in the sentence
-    pub fn set<Z, S>(mut self, columns: &'a [(Z, S)]) -> Self
+    pub fn set<Z>(&mut self, columns: &'a [(Z, &'a (dyn QueryParameters<'a> + 'a))]) -> &mut Self
     where
-        Z: FieldIdentifier<T> + Clone,
-        S: ToString,
+        Z: FieldIdentifier<T> + Clone
     {
-        match columns.len() {
-            0 => return self,
-            _ => self._inner.query.sql.push_str(" SET "),
+        if columns.len() == 0 { return self; }
+        if self._inner.query.sql.contains("SET") {
+            panic!(
+                "\n{}", String::from("\t[PANIC!] - Don't use chained calls of the .set(...) method. ") +  
+                "\n\tPass all the values in a unique call within the 'columns' " +
+                "array of tuples parameter\n"
+            )
         }
+
+        let cap = columns.len() * 50; // Reserving an enought initial capacity per set clause
+        let mut set_clause = String::with_capacity(cap);
+        set_clause.push_str(" SET ");
 
         for (idx, column) in columns.iter().enumerate() {
-            self._inner.query.sql.push_str(column.0.as_str());
-            self._inner.query.sql.push_str("=");
-            self._inner.query.sql.push_str("'");
-            self._inner.query.sql.push_str(&(column.1.to_string() + "'"));
-            
-            if !(idx + 1) == columns.len() {
-                self._inner.query.sql.push_str("', ");
-            }
+            set_clause.push_str(
+                &format!("{} = ${}", column.0.as_str(), self._inner.query.params.len() + 1
+                )
+            );
 
-            // TODO Pending to parametrize the SET clause
+            if idx < columns.len() - 1 {
+                set_clause.push_str(", ");
+            }
+            self._inner.query.params.push(column.1);
         }
+
+        self._inner.query.sql.push_str(&set_clause);
         self
     }
 }
@@ -525,7 +533,7 @@ impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
 ///  
 /// * `set` - To construct a new `SET` clause to determine the columns to
 /// update with the provided values
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DeleteQueryBuilder<'a, T> where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {

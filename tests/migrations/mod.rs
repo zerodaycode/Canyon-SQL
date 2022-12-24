@@ -37,8 +37,4 @@ fn test_migrations_postgresql_status_query() {
         first_result.columns().get(0).unwrap().type_().schema(),
         "pg_catalog"
     );
-
-    // We know in Postgres that the first result will be the first one
-    // inserted in the initialization script, which is `league`
-    assert_eq!(first_result.get::<&str, String>("table_name"), "league");
 }

@@ -214,15 +214,12 @@ mod sqlserver_query_launcher {
 
             *stmt = format!(
                 "{} OUTPUT inserted.{} VALUES {}",
-                temp2.0.trim(),
-                temp.1.trim(),
-                temp2.1.trim()
+                temp2.0.trim(), temp.1.trim(), temp2.1.trim()
             );
         }
 
         let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-        params
-            .as_ref()
+        params.as_ref()
             .iter()
             .for_each(|param| mssql_query.bind(*param));
 
