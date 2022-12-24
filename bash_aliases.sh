@@ -18,10 +18,28 @@ alias CleanPostgres='rm -rf ./docker/postgres-data'
 alias BuildCanyonWin='cargo build --all-features --target=x86_64-pc-windows-msvc'
 alias BuildCanyonWinFull='cargo clean && cargo build --all-features --target=x86_64-pc-windows-msvc'
 
+# Build the project for Linux targets
+alias BuildCanyonLinux='cargo build --all-features --target=x86_64-unknown-linux-gnu'
+alias BuildCanyonLinuxFull='cargo clean && cargo build --all-features --target=x86_64-unknown-linux-gnu'
+
+# Runs all the tests within Canyon-SQL for Windows targets
+alias TestsWin='cargo test --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --nocapture'
+# Runs all the tests within Canyon-SQL for Linux targets
+alias TestsLinux='cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu -- --show-output --nocapture'
+
 # Runs the integration tests of the project for a Windows target
 alias IntegrationTestsWin='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture'
-alias ITWinIncludeIgnored='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
-alias SqlServerInitialization='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --include-ignored'
+alias ITIncludeIgnoredWin='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
+alias SqlServerInitializationWin='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --include-ignored'
+
+# Runs the integration tests of the project for a Linux target
+alias IntegrationTestsLinux='cargo test --all-features --no-fail-fast -p tests --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture'
+alias ITIncludeIgnoredLinux='cargo test --all-features --no-fail-fast -p tests --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
+alias SqlServerInitializationLinux='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture --include-ignored'
+
+
+# Publish Canyon-SQL to the registry with its dependencies
+alias PublishCanyon='cargo publish -p canyon_connection && cargo publish -p canyon_crud && cargo publish -p canyon_observer && cargo publish -p canyon_macros && cargo publish -p canyon_sql'
 
 # Collects the code coverage for the project (tests must run before this)
 alias CcEnvVars='export CARGO_INCREMENTAL=0
