@@ -82,9 +82,10 @@ pub mod ops {
         /// the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameters`] with the values to filter
         /// inside the `IN` operator
-        fn and_values_in<Z: FieldIdentifier<T>>(
-            &mut self, column: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-        ) -> &mut Self;
+        fn and_values_in<Z, Q>(&mut self, column: Z, values: &'a [Q]) -> &mut Self
+            where 
+                Z: FieldIdentifier<T>,
+                Q: QueryParameters<'a>;
 
         /// Generates an `OR` SQL clause for constraint the query that will create
         /// the filter in conjunction with an `IN` operator that will ac
@@ -94,9 +95,8 @@ pub mod ops {
         /// the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameters`] with the values to filter
         /// inside the `IN` operator
-        fn or_values_in<Z: FieldIdentifier<T>>(
-            &mut self, column: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-        ) -> &mut Self;
+        fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
+            where Z: FieldIdentifier<T>, Q: QueryParameters<'a>;
 
         /// Generates an `OR` SQL clause for constraint the query.
         /// 
@@ -204,9 +204,9 @@ where
         self.query.params.push(value);
     }
 
-    pub fn and_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) {
+    pub fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) 
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    {
         if values.len() == 0 { return; }
 
         self.query.sql.push_str(
@@ -225,19 +225,19 @@ where
                     &format!("${}", self.query.params.len())
                 );
             }
-            self.query.params.push(*qp)
+            self.query.params.push(qp)
         });
 
         self.query.sql.push_str(") ");
     }
 
-    pub fn or_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) {
+    fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    {
         if values.len() == 0 { return; }
 
         self.query.sql.push_str(
-            &format!(" OR {} IN (", r#and.as_str())
+            &format!(" OR {} IN (", r#or.as_str())
         );
         
         let mut counter = 1;
@@ -252,7 +252,7 @@ where
                     &format!("${}", self.query.params.len())
                 );
             }
-            self.query.params.push(*qp)
+            self.query.params.push(qp)
         });
 
         self.query.sql.push_str(") ");
@@ -389,9 +389,9 @@ impl<'a, T> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
     }
 
     #[inline]
-    fn and_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self { self._inner.and_values_in(and, values); self }
+    fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self 
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    { self._inner.and_values_in(and, values); self }
 
     
     #[inline]
@@ -401,9 +401,9 @@ impl<'a, T> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
     }
     
     #[inline]
-    fn or_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self { self._inner.or_values_in(and, values); self }
+    fn or_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    { self._inner.or_values_in(and, values); self }
 
     #[inline]
     fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
@@ -444,9 +444,10 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
     { self._inner.query().await }
 
     /// Creates an SQL `SET` clause to especify the columns that must be updated in the sentence
-    pub fn set<Z>(&mut self, columns: &'a [(Z, &'a (dyn QueryParameters<'a> + 'a))]) -> &mut Self
+    pub fn set<Z, Q>(&mut self, columns: &'a [(Z, Q)]) -> &mut Self
     where
-        Z: FieldIdentifier<T> + Clone
+        Z: FieldIdentifier<T> + Clone,
+        Q: QueryParameters<'a>
     {
         if columns.len() == 0 { return self; }
         if self._inner.query.sql.contains("SET") {
@@ -470,7 +471,7 @@ impl<'a, T> UpdateQueryBuilder<'a, T> where
             if idx < columns.len() - 1 {
                 set_clause.push_str(", ");
             }
-            self._inner.query.params.push(column.1);
+            self._inner.query.params.push(&column.1);
         }
 
         self._inner.query.sql.push_str(&set_clause);
@@ -504,9 +505,9 @@ impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
     }
 
     #[inline]
-    fn and_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self { self._inner.and_values_in(and, values); self }
+    fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self 
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    { self._inner.and_values_in(and, values); self }
 
     
     #[inline]
@@ -516,9 +517,9 @@ impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
     }
     
     #[inline]
-    fn or_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self { self._inner.or_values_in(and, values); self }
+    fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    { self._inner.or_values_in(or, values); self }
 
     #[inline]
     fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
@@ -586,9 +587,9 @@ impl<'a, T> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
     }
 
     #[inline]
-    fn and_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self { self._inner.and_values_in(and, values); self }
+    fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    { self._inner.or_values_in(and, values); self }
 
     
     #[inline]
@@ -598,9 +599,9 @@ impl<'a, T> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T> where
     }
     
     #[inline]
-    fn or_values_in<Z: FieldIdentifier<T>>(
-        &mut self, r#and: Z, values: &'a [&'a (dyn QueryParameters<'a> + 'a)]
-    ) -> &mut Self { self._inner.or_values_in(and, values); self }
+    fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
+        where Z: FieldIdentifier<T>, Q: QueryParameters<'a>
+    { self._inner.or_values_in(or, values); self }
 
     #[inline]
     fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {

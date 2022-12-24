@@ -25,7 +25,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
         .left_join("team", "tournament.id", "player.tournament_id")
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
         .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
-        .and_values_in(LeagueField::name, &[&"LCK", &"STRANGER THINGS"]);
+        .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
         // .query()
         // .await;
     // NOTE: We don't have in the docker the generated relationships
@@ -78,8 +78,8 @@ fn test_crud_update_with_querybuilder() {
     // and where it's region column value is equals to 'Korea'
     let mut q = League::update_query();
         q.set(&[
-            (LeagueField::slug, &"Updated with the QueryBuilder"),
-            (LeagueField::name, &"Random")
+            (LeagueField::slug, "Updated with the QueryBuilder"),
+            (LeagueField::name, "Random")
         ])
         .r#where(LeagueFieldValue::id(&1), Comp::Gt)
         .and(LeagueFieldValue::id(&8), Comp::Lt);
@@ -112,8 +112,8 @@ fn test_crud_update_with_querybuilder_datasource() {
     // and where it's region column value is equals to 'Korea'
     let mut q = Player::update_query_datasource(SQL_SERVER_DS);
         q.set(&[
-            (PlayerField::summoner_name, &"Random updated player name"),
-            (PlayerField::first_name, &"I am an updated first name"),
+            (PlayerField::summoner_name, "Random updated player name"),
+            (PlayerField::first_name, "I am an updated first name"),
         ])
         .r#where(PlayerFieldValue::id(&1), Comp::Gt)
         .and(PlayerFieldValue::id(&8), Comp::Lt)
@@ -207,7 +207,7 @@ fn test_and_clause() {
 fn test_and_clause_with_in_constraint() {
     let mut l = League::select_query();
     l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .and_values_in(LeagueField::id, &[&1, &7, &10]);
+        .and_values_in(LeagueField::id, &[1, 7, 10]);
 
     assert_eq!(
         l.read_sql().trim(),
@@ -235,7 +235,7 @@ fn test_or_clause() {
 fn test_or_clause_with_in_constraint() {
     let mut l = League::select_query();
     l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .or_values_in(LeagueField::id, &[&1, &7, &10]);
+        .or_values_in(LeagueField::id, &[1, 7, 10]);
 
     assert_eq!(
         l.read_sql(),
