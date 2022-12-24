@@ -7,4 +7,4 @@ edition = "2021"
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = { version = "0.1.50" }
 
-canyon_connection = { path = "../canyon_connection" }
+canyon_connection = { version = "0.0.1", path = "../canyon_connection" }
