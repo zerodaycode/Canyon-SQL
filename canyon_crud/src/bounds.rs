@@ -5,8 +5,8 @@ use crate::{
     mapper::RowMapper,
 };
 use canyon_connection::{
-    tiberius::{ColumnData, IntoSql, self},
-    tokio_postgres::{types::ToSql, self}
+    tiberius::{self, ColumnData, IntoSql},
+    tokio_postgres::{self, types::ToSql},
 };
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use std::any::Any;
@@ -35,7 +35,7 @@ use std::any::Any;
 /// `let struct_field_name_from_variant = StructField::some_field.field_name_as_str();`
 pub trait FieldIdentifier<T>
 where
-    T: Transaction<T> + CrudOperations<T> + RowMapper<T>
+    T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
 {
     fn as_str<'a>(&'a self) -> &'static str;
 }
@@ -45,7 +45,7 @@ where
 /// and convert it to a tuple struct formed by the column name as an String,
 /// and the dynamic value of the [`QueryParameters<'_>`] trait object contained
 /// inside the variant requested,
-/// enabling a convertion of that value into something 
+/// enabling a convertion of that value into something
 /// that can be part of an SQL query.
 ///
 ///
@@ -62,7 +62,7 @@ where
 /// ```
 pub trait FieldValueIdentifier<'a, T>
 where
-    T: Transaction<T> + CrudOperations<T> + RowMapper<T>
+    T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
 {
     fn value(self) -> (&'static str, &'a dyn QueryParameters<'a>);
 }
@@ -86,19 +86,22 @@ pub trait InClauseValues: ToSql + ToString {}
 /// from the client crates
 pub trait Row {
     fn as_any(&self) -> &dyn Any;
-    
 }
 impl Row for tokio_postgres::Row {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl Row for tiberius::Row {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 pub struct Column<'a> {
     name: &'a str,
-    type_: ColumnType
+    type_: ColumnType,
 }
 impl<'a> Column<'a> {
     pub fn name(&self) -> &'_ str {
@@ -115,20 +118,23 @@ impl<'a> Column<'a> {
     }
 }
 
-
 pub trait Type {
     fn as_any(&self) -> &dyn Any;
 }
 impl Type for tokio_postgres::types::Type {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 impl Type for tiberius::ColumnType {
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 pub enum ColumnType {
     Postgres(tokio_postgres::types::Type),
-    SqlServer(tiberius::ColumnType)
+    SqlServer(tiberius::ColumnType),
 }
 
 pub trait RowOperations {
@@ -136,81 +142,91 @@ pub trait RowOperations {
     /// function or method dynamically no matter what are the origin
     /// type from any database client provider
     fn get<'a, Output>(&'a self, col_name: &str) -> Output
-        where Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
+    where
+        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
 
-    fn get_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output> 
-        where Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
+    fn get_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+    where
+        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
 
     fn columns<'a>(&'a self) -> Vec<Column>;
 }
 
 impl RowOperations for &dyn Row {
-    fn get<'a, Output>(&'a self, col_name: &str) -> Output 
-        where Output: tokio_postgres::types::FromSql<'a>  + tiberius::FromSql<'a>
+    fn get<'a, Output>(&'a self, col_name: &str) -> Output
+    where
+        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>,
     {
         match self.as_any().downcast_ref::<tokio_postgres::Row>() {
-            Some(row) => { return row.get::<&str, Output>(col_name); },
+            Some(row) => {
+                return row.get::<&str, Output>(col_name);
+            }
             None => (),
         };
         match self.as_any().downcast_ref::<tiberius::Row>() {
-            Some(row) => { 
-                return row.get::<Output, &str>(col_name)
-                    .expect("Failed to obtain a row in the MSSQL migrations"); 
-            },
+            Some(row) => {
+                return row
+                    .get::<Output, &str>(col_name)
+                    .expect("Failed to obtain a row in the MSSQL migrations");
+            }
             None => (),
         };
         panic!()
     }
 
-    fn columns<'a>(&'a self) -> Vec<Column>
-    {
+    fn columns<'a>(&'a self) -> Vec<Column> {
         let mut cols = vec![];
 
         if self.as_any().is::<tokio_postgres::Row>() {
-            self.as_any().downcast_ref::<tokio_postgres::Row>()
+            self.as_any()
+                .downcast_ref::<tokio_postgres::Row>()
                 .expect("Not a tokio postgres Row for column")
                 .columns()
                 .into_iter()
-                .for_each(|c| cols.push(
-                    Column {
+                .for_each(|c| {
+                    cols.push(Column {
                         name: c.name(),
-                        type_: ColumnType::Postgres(c.type_().to_owned())
-                    }
-                ))
+                        type_: ColumnType::Postgres(c.type_().to_owned()),
+                    })
+                })
         } else {
-            self.as_any().downcast_ref::<tiberius::Row>()
+            self.as_any()
+                .downcast_ref::<tiberius::Row>()
                 .expect("Not a Tiberius Row for column")
                 .columns()
                 .into_iter()
-                .for_each(|c| cols.push(
-                    Column {
+                .for_each(|c| {
+                    cols.push(Column {
                         name: c.name(),
-                        type_: ColumnType::SqlServer(c.column_type())
-                    }
-                ))
+                        type_: ColumnType::SqlServer(c.column_type()),
+                    })
+                })
         };
 
         cols
     }
 
-    fn get_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output> 
-        where Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a> 
+    fn get_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+    where
+        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>,
     {
         match self.as_any().downcast_ref::<tokio_postgres::Row>() {
-            Some(row) => { return row.get::<&str, Option<Output>>(col_name); },
+            Some(row) => {
+                return row.get::<&str, Option<Output>>(col_name);
+            }
             None => (),
         };
         match self.as_any().downcast_ref::<tiberius::Row>() {
-            Some(row) => { 
-                return row.try_get::<Output, &str>(col_name)
-                    .expect("Failed to obtain a row in the MSSQL migrations"); 
-            },
+            Some(row) => {
+                return row
+                    .try_get::<Output, &str>(col_name)
+                    .expect("Failed to obtain a row in the MSSQL migrations");
+            }
             None => (),
         };
         panic!()
     }
 }
-
 
 /// Defines a trait for represent type bounds against the allowed
 /// datatypes supported by Canyon to be used as query parameters.
@@ -231,7 +247,7 @@ impl<'a> IntoSql<'a> for &'a dyn QueryParameters<'a> {
     fn into_sql(self) -> ColumnData<'a> {
         self.as_sqlserver_param()
     }
-} 
+}
 
 impl<'a> QueryParameters<'a> for i16 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {

@@ -64,12 +64,14 @@ pub struct DatasourceProperties<'a> {
     pub host: &'a str,
     pub port: Option<u16>,
     pub db_name: &'a str,
-    pub migrations: Option<Migrations>
+    pub migrations: Option<Migrations>,
 }
 
 /// Represents the enabled or disabled migrations for a whole datasource
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Migrations {
-    #[serde(alias="Enabled", alias="enabled")] Enabled,
-    #[serde(alias="Disabled", alias="disabled")] Disabled
+    #[serde(alias = "Enabled", alias = "enabled")]
+    Enabled,
+    #[serde(alias = "Disabled", alias = "disabled")]
+    Disabled,
 }

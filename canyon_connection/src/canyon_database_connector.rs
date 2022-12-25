@@ -9,8 +9,11 @@ use crate::datasources::DatasourceProperties;
 /// Represents the current supported databases by Canyon
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
 pub enum DatabaseType {
-    #[default] #[serde(alias="postgres", alias="postgresql")] PostgreSql,
-    #[serde(alias="sqlserver", alias="mssql")] SqlServer,
+    #[default]
+    #[serde(alias = "postgres", alias = "postgresql")]
+    PostgreSql,
+    #[serde(alias = "sqlserver", alias = "mssql")]
+    SqlServer,
 }
 
 /// A connection with a `PostgreSQL` database
@@ -38,9 +41,9 @@ unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
 
 impl DatabaseConnection {
-    pub async fn new(datasource: &DatasourceProperties<'_>) 
-        -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-    {
+    pub async fn new(
+        datasource: &DatasourceProperties<'_>,
+    ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
             DatabaseType::PostgreSql => {
                 let (new_client, new_connection) = tokio_postgres::connect(
@@ -70,7 +73,7 @@ impl DatabaseConnection {
                     sqlserver_connection: None,
                     database_type: DatabaseType::PostgreSql,
                 })
-            },
+            }
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
@@ -106,11 +109,9 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: Box::leak(
-                            Box::new(
-                                client.expect("A failure happened connecting to the database")
-                            )
-                        ),
+                        client: Box::leak(Box::new(
+                            client.expect("A failure happened connecting to the database"),
+                        )),
                     }),
                     database_type: DatabaseType::SqlServer,
                 })
@@ -141,13 +142,7 @@ mod database_connection_handler {
         let psql_ds = &config.canyon_sql.datasources[0].properties;
         let sqls_ds = &config.canyon_sql.datasources[1].properties;
 
-        assert_eq!(
-            psql_ds.db_type,
-            DatabaseType::PostgreSql
-        );
-        assert_eq!(
-            sqls_ds.db_type,
-            DatabaseType::SqlServer
-        );
+        assert_eq!(psql_ds.db_type, DatabaseType::PostgreSql);
+        assert_eq!(sqls_ds.db_type, DatabaseType::SqlServer);
     }
 }

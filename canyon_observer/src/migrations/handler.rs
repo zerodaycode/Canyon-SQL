@@ -1,25 +1,20 @@
-use canyon_connection::{
-    DATASOURCES,
-    datasources::Migrations as MigrationsStatus
-};
+use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
 use partialdebug::placeholder::PartialDebug;
 
 use crate::{
-    CANYON_REGISTER_ENTITIES,
-    constants,
     canyon_crud::{
+        bounds::{Column, Row, RowOperations},
         crud::Transaction,
-        bounds::{Row, RowOperations, Column},
-        DatabaseType, result::DatabaseResult
-    }, 
+        result::DatabaseResult,
+        DatabaseType,
+    },
+    constants,
     migrations::{
+        information_schema::{ColumnMetadata, ColumnMetadataTypeValue, TableMetadata},
         memory::CanyonMemory,
-        information_schema::{
-            TableMetadata,
-            ColumnMetadata,
-            ColumnMetadataTypeValue
-        }, processor::MigrationsProcessor   
-    }
+        processor::MigrationsProcessor,
+    },
+    CANYON_REGISTER_ENTITIES,
 };
 
 #[derive(PartialDebug)]
@@ -33,53 +28,77 @@ impl Migrations {
     /// migrations over the targeted database
     pub async fn migrate() {
         for datasource in DATASOURCES.iter() {
-            if datasource.properties.migrations
+            if datasource
+                .properties
+                .migrations
                 .filter(|status| !status.eq(&MigrationsStatus::Disabled))
                 .is_none()
             {
-                println!("Skipped datasource: {:?} for being disabled (or not configured)", datasource.name);
+                println!(
+                    "Skipped datasource: {:?} for being disabled (or not configured)",
+                    datasource.name
+                );
                 continue;
             }
-            println!("Processing migrations for datasource: {:?}", datasource.name);
-            
+            println!(
+                "Processing migrations for datasource: {:?}",
+                datasource.name
+            );
+
             let mut migrations_processor = MigrationsProcessor::default();
 
             let canyon_memory = CanyonMemory::remember(&datasource).await;
             let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
 
             // Tracked entities that must be migrated whenever Canyon starts
-            let schema_status = Self::fetch_database(datasource.name, datasource.properties.db_type).await;
+            let schema_status =
+                Self::fetch_database(datasource.name, datasource.properties.db_type).await;
             let database_tables_schema_info = Self::map_rows(schema_status);
-            
+
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
             for parsed_table in database_tables_schema_info.iter() {
-                if canyon_memory.memory.values().any(|f| f.to_lowercase() == parsed_table.table_name) 
-                    || canyon_memory.renamed_entities.values().any(|f| *f == parsed_table.table_name.to_lowercase())
+                if canyon_memory
+                    .memory
+                    .values()
+                    .any(|f| f.to_lowercase() == parsed_table.table_name)
+                    || canyon_memory
+                        .renamed_entities
+                        .values()
+                        .any(|f| *f == parsed_table.table_name.to_lowercase())
                 {
                     user_database_tables.append(&mut vec![parsed_table]);
                 }
             }
 
-            migrations_processor.process(
-                canyon_memory, canyon_tables, user_database_tables, datasource
-            ).await;
+            migrations_processor
+                .process(
+                    canyon_memory,
+                    canyon_tables,
+                    user_database_tables,
+                    datasource,
+                )
+                .await;
         }
     }
 
     /// Fetches a concrete schema metadata by target the database
     /// choosed by it's datasource name property
-    async fn fetch_database(datasource_name: &str, db_type: DatabaseType) -> DatabaseResult<Migrations> {
+    async fn fetch_database(
+        datasource_name: &str,
+        db_type: DatabaseType,
+    ) -> DatabaseResult<Migrations> {
         let query = match db_type {
-            DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA, 
-            DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA
+            DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
+            DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
         };
 
         Self::query(query, &[], datasource_name)
             .await
-            .expect(
-                &format!("Error querying the schema information for the datasource: {}", datasource_name)
-            )
+            .expect(&format!(
+                "Error querying the schema information for the datasource: {}",
+                datasource_name
+            ))
     }
 
     /// Handler for parse the result of query the information of some database schema,
@@ -138,11 +157,15 @@ impl Migrations {
 
         if column_identifier == "column_name" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.column_name = value.to_owned().expect("[MIGRATIONS - set_column_metadata -> column_name]")
+                dest.column_name = value
+                    .to_owned()
+                    .expect("[MIGRATIONS - set_column_metadata -> column_name]")
             }
         } else if column_identifier == "data_type" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.datatype = value.to_owned().expect("[MIGRATIONS - set_column_metadata -> data_type]")
+                dest.datatype = value
+                    .to_owned()
+                    .expect("[MIGRATIONS - set_column_metadata -> data_type]")
             }
         } else if column_identifier == "character_maximum_length" {
             if let ColumnMetadataTypeValue::IntValue(value) = &column_value {
@@ -151,9 +174,10 @@ impl Migrations {
         } else if column_identifier == "is_nullable" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
                 dest.is_nullable = matches!(
-                    value.as_ref()
+                    value
+                        .as_ref()
                         .expect("[MIGRATIONS - set_column_metadata -> is_nullable]")
-                        .as_str(), 
+                        .as_str(),
                     "YES"
                 )
             }
@@ -180,7 +204,8 @@ impl Migrations {
         } else if column_identifier == "is_identity" {
             if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
                 dest.is_identity = matches!(
-                    value.as_ref()
+                    value
+                        .as_ref()
                         .expect("[MIGRATIONS - set_column_metadata -> is_identity]")
                         .as_str(),
                     "YES"

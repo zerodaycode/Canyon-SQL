@@ -1,6 +1,6 @@
 use canyon_connection::{tiberius::ColumnType as TIB_TY, tokio_postgres::types::Type as TP_TYP};
-use canyon_crud::bounds::{Column, Row, ColumnType, RowOperations};
-    
+use canyon_crud::bounds::{Column, ColumnType, Row, RowOperations};
+
 /// Model that represents the database entities that belongs to the current schema.
 ///
 /// Basically, it's an agrupation of rows of results when Canyon queries the `information schema`
@@ -25,7 +25,7 @@ pub struct ColumnMetadata {
     pub primary_key_info: Option<String>,
     pub primary_key_name: Option<String>,
     pub is_identity: bool, // Care, postgres type is varchar
-    pub identity_generation: Option<String>
+    pub identity_generation: Option<String>,
 }
 
 /// Represents the relation between a real value stored inside a [`ColumnMetadata`]
@@ -42,34 +42,21 @@ impl ColumnMetadataTypeValue {
         match col.column_type() {
             ColumnType::Postgres(v) => {
                 match *v {
-                    TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => 
-                    {
-                        Self::StringValue(
-                            row.get_opt::<&str>(col.name())
-                                .map(|opt| opt.to_owned()),
-                        )
+                    TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => {
+                        Self::StringValue(row.get_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
                     }
-                    TP_TYP::INT4 => {
-                        Self::IntValue(
-                            row.get_opt::<i32>(col.name()),
-                        )
-                    }
+                    TP_TYP::INT4 => Self::IntValue(row.get_opt::<i32>(col.name())),
                     _ => Self::NoneValue, // TODO watchout this one
                 }
-            },
-            ColumnType::SqlServer(v) =>
-            {
-                match v {
-                    TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => 
-                        Self::StringValue(
-                            row.get_opt::<&str>(col.name())
-                                .map(|opt| opt.to_owned()),
-                    ),
-                    TIB_TY::Int2 | TIB_TY::Int4 | TIB_TY::Int8 | TIB_TY::Intn => Self::IntValue(
-                        row.get_opt::<i32>(col.name())
-                    ),
-                    _ => Self::NoneValue
+            }
+            ColumnType::SqlServer(v) => match v {
+                TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => {
+                    Self::StringValue(row.get_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
                 }
+                TIB_TY::Int2 | TIB_TY::Int4 | TIB_TY::Int8 | TIB_TY::Intn => {
+                    Self::IntValue(row.get_opt::<i32>(col.name()))
+                }
+                _ => Self::NoneValue,
             },
         }
     }

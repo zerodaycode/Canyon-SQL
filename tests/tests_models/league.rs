@@ -10,5 +10,5 @@ pub struct League {
     slug: String,
     name: String,
     region: String,
-    image_url: String
+    image_url: String,
 }

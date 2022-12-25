@@ -55,10 +55,7 @@ impl CanyonEntity {
             .collect::<Vec<_>>()
     }
 
-    pub fn create_match_arm_for_get_variant_as_str(
-        &self,
-        enum_name: &Ident,
-    ) -> Vec<TokenStream> {
+    pub fn create_match_arm_for_get_variant_as_str(&self, enum_name: &Ident) -> Vec<TokenStream> {
         self.fields
             .iter()
             .map(|f| {
@@ -101,15 +98,15 @@ impl CanyonEntity {
     ) -> Vec<TokenStream> {
         self.fields
             .iter()
-            .map( |f| {
+            .map(|f| {
                 let field_name = &f.name;
                 let field_name_as_string = f.name.to_string();
-                
+
                 quote! {
                     #enum_name::#field_name(v) => (#field_name_as_string, v)
                 }
             })
-        .collect::<Vec<_>>()
+            .collect::<Vec<_>>()
     }
 
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {

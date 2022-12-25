@@ -1,9 +1,9 @@
 #![allow(clippy::nonminimal_bool)]
 
+use crate::constants::SQL_SERVER_DS;
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *SELECT* statements
 use crate::Error;
-use crate::constants::SQL_SERVER_DS;
 use canyon_sql::crud::CrudOperations;
 
 use crate::tests_models::league::*;
@@ -16,11 +16,11 @@ use crate::tests_models::player::*;
 fn test_crud_find_all() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
         League::find_all().await;
-    
+
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());
-    
+
     let find_all_players: Result<Vec<Player>, Box<dyn Error + Send + Sync>> =
         Player::find_all().await;
     assert!(!find_all_players.unwrap().is_empty());
@@ -112,7 +112,10 @@ fn test_crud_count_operation() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_count_datasource_operation() {
     assert_eq!(
-        League::find_all_datasource(SQL_SERVER_DS).await.unwrap().len() as i64,
+        League::find_all_datasource(SQL_SERVER_DS)
+            .await
+            .unwrap()
+            .len() as i64,
         League::count_datasource(SQL_SERVER_DS).await.unwrap()
     );
 }

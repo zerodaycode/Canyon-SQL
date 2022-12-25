@@ -28,19 +28,15 @@ use canyon_observer::{
     manager::{
         entity::CanyonEntity,
         manager_builder::{
-            generate_enum_with_fields,
-            generate_enum_with_fields_values,
-            generate_user_struct
+            generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
         },
-    }, migrations::handler::Migrations
+    },
+    migrations::handler::Migrations,
 };
 
 use canyon_observer::{
-    migrations::register_types::{
-        CanyonRegisterEntity,
-        CanyonRegisterEntityField
-    },
-    CANYON_REGISTER_ENTITIES
+    migrations::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
+    CANYON_REGISTER_ENTITIES,
 };
 
 /// Macro for handling the entry point to the program.
@@ -136,21 +132,20 @@ pub fn canyon_tokio_test(
             #sign {
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                     .handle()
-                    .block_on( async { 
+                    .block_on( async {
                         canyon_sql::runtime::init_connections_cache().await;
-                        #(#body)* 
+                        #(#body)*
                     });
             }
-        }.into()
+        }
+        .into()
     }
 }
 
 /// Generates the enums that contains the `TypeFields` and `TypeFieldsValues`
 /// that the querybuilder requires for construct its queries
 #[proc_macro_derive(Fields)]
-pub fn querybuilder_fields(
-    input: CompilerTokenStream,
-) -> CompilerTokenStream {
+pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let entity_res = syn::parse::<CanyonEntity>(input);
 
     if entity_res.is_err() {
@@ -168,7 +163,8 @@ pub fn querybuilder_fields(
         use canyon_sql::crud::bounds::QueryParameters;
         #_generated_enum_type_for_fields
         #_generated_enum_type_for_fields_values
-    }.into()
+    }
+    .into()
 }
 
 /// Takes data from the struct annotated with the `canyon_entity` macro to fill the Canyon Register
@@ -272,7 +268,8 @@ pub fn canyon_entity(
             ..Default::default()
         };
 
-        field.attributes
+        field
+            .attributes
             .iter()
             .for_each(|attr| new_entity_field.annotations.push(attr.get_as_string()));
 
@@ -295,7 +292,8 @@ pub fn canyon_entity(
         quote! {
             #macro_error
             #generated_user_struct
-        }.into()
+        }
+        .into()
     } else {
         tokens.into()
     }

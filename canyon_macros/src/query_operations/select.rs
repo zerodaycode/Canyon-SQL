@@ -462,7 +462,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
             let f_ident = field_ident.to_string();
 
             rev_fk_quotes.push((
-                quote!{ #quoted_method_signature; },
+                quote! { #quoted_method_signature; },
                 quote! {
                     /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
                     /// performns a search to find the childs that belong to that concrete parent.
@@ -474,7 +474,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             ).as_str());
 
                         let stmt = format!(
-                            "SELECT * FROM {} WHERE {} = $1", 
+                            "SELECT * FROM {} WHERE {} = $1",
                             #table_schema_data,
                             format!("\"{}\"", #f_ident).as_str()
                         );
@@ -487,7 +487,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
 
                         #result_handler
                     }
-                }
+                },
             ));
 
             rev_fk_quotes.push((
@@ -504,7 +504,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             ).as_str());
 
                         let stmt = format!(
-                            "SELECT * FROM {} WHERE {} = $1", 
+                            "SELECT * FROM {} WHERE {} = $1",
                             #table_schema_data,
                             format!("\"{}\"", #f_ident).as_str()
                         );
@@ -517,7 +517,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
 
                         #result_handler
                     }
-                }
+                },
             ));
         }
     }

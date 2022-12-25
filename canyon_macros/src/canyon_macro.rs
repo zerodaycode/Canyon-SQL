@@ -108,13 +108,9 @@ fn report_literals_not_allowed(ident: &str, s: &Lit) -> TokenStream1 {
 /// by the `CanyonManaged` macros again on the queries register
 pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     let data = QUERIES_TO_EXECUTE.lock().unwrap();
-    let data_to_wire = data
-        .iter()
-        .map( |(key, value)| 
-            {
-                quote! { hm.insert(#key, vec![#(#value),*]); }
-            }
-        );
+    let data_to_wire = data.iter().map(|(key, value)| {
+        quote! { hm.insert(#key, vec![#(#value),*]); }
+    });
 
     let tokens = quote! {
         use std::collections::HashMap;

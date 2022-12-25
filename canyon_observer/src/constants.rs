@@ -1,10 +1,7 @@
-pub mod queries {
-    
-}
+pub mod queries {}
 
 pub mod postgresql_queries {
-    pub static CANYON_MEMORY_TABLE: &str =
-        "CREATE TABLE IF NOT EXISTS canyon_memory (
+    pub static CANYON_MEMORY_TABLE: &str = "CREATE TABLE IF NOT EXISTS canyon_memory (
             id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
             filepath VARCHAR NOT NULL,
             struct_name VARCHAR NOT NULL
@@ -37,10 +34,8 @@ pub mod postgresql_queries {
             table_schema = 'public';";
 }
 
-
 pub mod mssql_queries {
-    pub static CANYON_MEMORY_TABLE: &str =
-        "IF OBJECT_ID(N'[dbo].[canyon_memory]', N'U') IS NULL
+    pub static CANYON_MEMORY_TABLE: &str = "IF OBJECT_ID(N'[dbo].[canyon_memory]', N'U') IS NULL
         BEGIN
             CREATE TABLE dbo.canyon_memory (
                 id					INT PRIMARY KEY IDENTITY,
@@ -96,7 +91,8 @@ pub mod mssql_queries {
 /// Constant string values that holds regex patterns
 pub mod regex_patterns {
     pub const EXTRACT_RUST_OPT_REGEX: &str = r"[Oo][Pp][Tt][Ii][Oo][Nn]<(?P<rust_type>[\w<>]+)>";
-    pub const EXTRACT_FOREIGN_KEY_INFO: &str =  r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)";
+    pub const EXTRACT_FOREIGN_KEY_INFO: &str =
+        r"\w+\s\w+\s\((?P<current_column>\w+)\)\s\w+\s(?P<ref_table>\w+)\((?P<ref_column>\w+)\)";
 }
 
 /// Constant values that maps the string representation of the Rust
@@ -178,15 +174,14 @@ pub mod query_chunk {
     // TODO @gbm25
 }
 
-
 pub mod mocked_data {
     use canyon_connection::lazy_static::lazy_static;
 
     use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
 
     lazy_static! {
-        pub static ref TABLE_METADATA_LEAGUE_EX: TableMetadata = TableMetadata { 
-            table_name: "league".to_string(), 
+        pub static ref TABLE_METADATA_LEAGUE_EX: TableMetadata = TableMetadata {
+            table_name: "league".to_string(),
             columns: vec![
                 ColumnMetadata {
                     column_name: "id".to_owned(),
@@ -200,7 +195,7 @@ pub mod mocked_data {
                     primary_key_name: Some("PK__league__3213E83FBDA92571".to_owned()),
                     is_identity: false,
                     identity_generation: None
-                }, 
+                },
                 ColumnMetadata {
                     column_name: "ext_id".to_owned(),
                     datatype: "bigint".to_owned(),
@@ -213,7 +208,7 @@ pub mod mocked_data {
                     primary_key_name: None,
                     is_identity: false,
                     identity_generation: None
-                }, 
+                },
                 ColumnMetadata {
                     column_name: "slug".to_owned(),
                     datatype: "nvarchar".to_owned(),
@@ -226,7 +221,7 @@ pub mod mocked_data {
                     primary_key_name: None,
                     is_identity: false,
                     identity_generation: None
-                }, 
+                },
                 ColumnMetadata {
                     column_name: "name".to_owned(),
                     datatype: "nvarchar".to_owned(),
@@ -239,9 +234,9 @@ pub mod mocked_data {
                     primary_key_name: None,
                     is_identity: false,
                     identity_generation: None
-                }, 
+                },
                 ColumnMetadata {
-                    column_name: "region".to_owned(), 
+                    column_name: "region".to_owned(),
                     datatype: "nvarchar".to_owned(),
                     character_maximum_length: None,
                     is_nullable: false,
@@ -252,7 +247,7 @@ pub mod mocked_data {
                     primary_key_name: None,
                     is_identity: false,
                     identity_generation: None
-                }, 
+                },
                 ColumnMetadata {
                     column_name: "image_url".to_owned(),
                     datatype: "nvarchar".to_owned(),
@@ -264,13 +259,12 @@ pub mod mocked_data {
                     primary_key_info: None,
                     primary_key_name: None,
                     is_identity: false,
-                    identity_generation: None 
+                    identity_generation: None
                 }
             ]
         };
-
-        pub static ref NON_MATCHING_TABLE_METADATA: TableMetadata = TableMetadata { 
-            table_name: "random_name_to_assert_false".to_string(), 
+        pub static ref NON_MATCHING_TABLE_METADATA: TableMetadata = TableMetadata {
+            table_name: "random_name_to_assert_false".to_string(),
             columns: vec![]
         };
     }

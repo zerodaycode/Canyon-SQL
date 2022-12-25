@@ -1,4 +1,4 @@
-use crate::{crud::Transaction, mapper::RowMapper, bounds::Row};
+use crate::{bounds::Row, crud::Transaction, mapper::RowMapper};
 use canyon_connection::{canyon_database_connector::DatabaseType, tiberius, tokio_postgres};
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -81,17 +81,13 @@ impl<T> DatabaseResult<T> {
             DatabaseType::PostgreSql => {
                 self.postgres
                     .iter()
-                    .for_each(|row| results.push(
-                        row as &dyn Row
-                    ));
-            },
+                    .for_each(|row| results.push(row as &dyn Row));
+            }
             DatabaseType::SqlServer => {
                 self.sqlserver
                     .iter()
-                    .for_each(|row| results.push(
-                        row as &dyn Row
-                    ));
-            },
+                    .for_each(|row| results.push(row as &dyn Row));
+            }
         };
 
         results

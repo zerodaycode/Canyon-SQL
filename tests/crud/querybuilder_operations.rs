@@ -6,14 +6,13 @@
 ///
 use canyon_sql::{
     crud::CrudOperations,
-    query::{operators::Comp, ops::QueryBuilder}
+    query::{operators::Comp, ops::QueryBuilder},
 };
 
 use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 use crate::tests_models::tournament::*;
-
 
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
@@ -26,8 +25,8 @@ fn test_generated_sql_by_the_select_querybuilder() {
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
         .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
-        // .query()
-        // .await;
+    // .query()
+    // .await;
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the
     // generated SQL by the SelectQueryBuilder<T> is the spected
@@ -36,7 +35,6 @@ fn test_generated_sql_by_the_select_querybuilder() {
         "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2  AND name IN ($2, $3) "
     )
 }
-
 
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
@@ -77,22 +75,22 @@ fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     let mut q = League::update_query();
-        q.set(&[
-            (LeagueField::slug, "Updated with the QueryBuilder"),
-            (LeagueField::name, "Random")
-        ])
-        .r#where(LeagueFieldValue::id(&1), Comp::Gt)
-        .and(LeagueFieldValue::id(&8), Comp::Lt);
-    
+    q.set(&[
+        (LeagueField::slug, "Updated with the QueryBuilder"),
+        (LeagueField::name, "Random"),
+    ])
+    .r#where(LeagueFieldValue::id(&1), Comp::Gt)
+    .and(LeagueFieldValue::id(&8), Comp::Lt);
+
     /*  Family of QueryBuilders are clone, useful in case of need to read the generated SQL
         let qpr = q.clone();
         println!("PSQL: {:?}", qpr.read_sql());
     */
-    
+
     // We can now back to the original an throw the query
     q.query()
         .await
-        .expect("Failed to update records with the querybuilder"); 
+        .expect("Failed to update records with the querybuilder");
 
     let found_updated_values = League::select_query()
         .r#where(LeagueFieldValue::id(&1), Comp::Gt)
@@ -112,16 +110,16 @@ fn test_crud_update_with_querybuilder_datasource() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
     let mut q = Player::update_query_datasource(SQL_SERVER_DS);
-        q.set(&[
-            (PlayerField::summoner_name, "Random updated player name"),
-            (PlayerField::first_name, "I am an updated first name"),
-        ])
-        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-        .and(PlayerFieldValue::id(&8), Comp::Lt)
-        .query()
-        .await
-        .expect("Failed to update records with the querybuilder");
-    
+    q.set(&[
+        (PlayerField::summoner_name, "Random updated player name"),
+        (PlayerField::first_name, "I am an updated first name"),
+    ])
+    .r#where(PlayerFieldValue::id(&1), Comp::Gt)
+    .and(PlayerFieldValue::id(&8), Comp::Lt)
+    .query()
+    .await
+    .expect("Failed to update records with the querybuilder");
+
     let found_updated_values = Player::select_query_datasource(SQL_SERVER_DS)
         .r#where(PlayerFieldValue::id(&1), Comp::Gt)
         .and(PlayerFieldValue::id(&7), Comp::LtEq)
@@ -129,12 +127,10 @@ fn test_crud_update_with_querybuilder_datasource() {
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
-    found_updated_values
-        .iter()
-        .for_each(|player| {
-            assert_eq!(player.summoner_name, "Random updated player name");
-            assert_eq!(player.first_name, "I am an updated first name");
-        });
+    found_updated_values.iter().for_each(|player| {
+        assert_eq!(player.summoner_name, "Random updated player name");
+        assert_eq!(player.first_name, "I am an updated first name");
+    });
 }
 
 /// Deletes entries from the mapped entity `T` that are in the ranges filtered
@@ -165,14 +161,12 @@ fn test_crud_delete_with_querybuilder_datasource() {
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(
-        Player::select_query_datasource(SQL_SERVER_DS)
-            .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-            .query()
-            .await
-            .unwrap()
-            .is_empty()
-    );
+    assert!(Player::select_query_datasource(SQL_SERVER_DS)
+        .r#where(PlayerFieldValue::id(&122), Comp::Eq)
+        .query()
+        .await
+        .unwrap()
+        .is_empty());
 }
 
 /// Tests for the generated SQL query after use the
@@ -182,10 +176,7 @@ fn test_where_clause() {
     let mut l = League::select_query();
     l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq);
 
-    assert_eq!(
-        l.read_sql(),
-        "SELECT * FROM league WHERE name = $1"
-    )
+    assert_eq!(l.read_sql(), "SELECT * FROM league WHERE name = $1")
 }
 
 /// Tests for the generated SQL query after use the

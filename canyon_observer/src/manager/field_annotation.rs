@@ -11,7 +11,7 @@ pub enum EntityFieldAnnotation {
 }
 
 impl EntityFieldAnnotation {
-    /// Returns the data of the [`EntityFieldAnnotation`] in a understandable format for 
+    /// Returns the data of the [`EntityFieldAnnotation`] in a understandable format for
     /// operations that requires character matching
     pub fn get_as_string(&self) -> String {
         match self {

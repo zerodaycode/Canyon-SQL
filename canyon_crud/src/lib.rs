@@ -8,8 +8,5 @@ pub mod result;
 
 pub use query_elements::operators::*;
 
-pub use canyon_connection::{
-    canyon_database_connector::DatabaseType,
-    datasources::*
-};
+pub use canyon_connection::{canyon_database_connector::DatabaseType, datasources::*};
 pub use chrono;

@@ -3,7 +3,7 @@ use std::{fmt::Debug, marker::PhantomData};
 use crate::{
     bounds::QueryParameters,
     crud::{CrudOperations, Transaction},
-    mapper::RowMapper
+    mapper::RowMapper,
 };
 
 /// Holds a sql sentence details
@@ -19,6 +19,10 @@ where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
     pub fn new(sql: String) -> Query<'a, T> {
-        Self {sql, params: vec![], marker: PhantomData}
+        Self {
+            sql,
+            params: vec![],
+            marker: PhantomData,
+        }
     }
 }

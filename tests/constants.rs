@@ -33,7 +33,6 @@ LEFT JOIN pg_catalog.pg_constraint AS con on
 WHERE
     table_schema = 'public';";
 
-
 pub const SQL_SERVER_CREATE_TABLES: &str = "
 IF OBJECT_ID(N'[dbo].[league]', N'U') IS NULL
 BEGIN
