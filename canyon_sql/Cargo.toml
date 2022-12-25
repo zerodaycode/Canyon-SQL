@@ -5,8 +5,8 @@ edition = "2021"
 authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto<gbm25@gmail.com>"]
 documentation = "https://zerodaycode.github.io/canyon-book/"
 homepage = "https://github.com/zerodaycode/Canyon-SQL"
-readme = "README.md"
-license = "MIT"
+readme = "../README.md"
+license = "../LICENSE"
 license-file = "LICENSE"
 Description = "A Rust ORM and QueryBuilder"
 
