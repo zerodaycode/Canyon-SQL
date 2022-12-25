@@ -1,11 +1,9 @@
 # This is the root Cargo.toml file that serves as manager for the workspace of the project
 
 [workspace]
-
 members = [
     "canyon_sql",
     "canyon_observer",
-    "canyon_manager",
     "canyon_macros",
     "canyon_crud",
     "canyon_connection",

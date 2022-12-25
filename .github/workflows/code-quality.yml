@@ -45,7 +45,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: [canyon_connection, canyon_crud, canyon_macros, canyon_observer, canyon_manager, canyon_observer, canyon_sql]
+        crate: [canyon_connection, canyon_crud, canyon_macros, canyon_observer, canyon_observer, canyon_sql]
     steps:
       - uses: actions/checkout@v3
 

@@ -11,7 +11,8 @@ pub enum EntityFieldAnnotation {
 }
 
 impl EntityFieldAnnotation {
-    /// Returns the data of the [`EntityFieldAnnotation`] in a understandable format for `Canyon`
+    /// Returns the data of the [`EntityFieldAnnotation`] in a understandable format for
+    /// operations that requires character matching
     pub fn get_as_string(&self) -> String {
         match self {
             Self::PrimaryKey(autoincremental) => {
@@ -23,6 +24,7 @@ impl EntityFieldAnnotation {
         }
     }
 
+    /// Retrieves the user defined data in the #[primary_key] attribute
     fn primary_key_parser(
         ident: &Ident,
         attr_args: &Result<Punctuated<MetaNameValue, Token![,]>, syn::Error>,

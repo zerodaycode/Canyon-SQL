@@ -107,33 +107,18 @@ fn report_literals_not_allowed(ident: &str, s: &Lit) -> TokenStream1 {
 /// Creates a TokenScream that is used to load the data generated at compile-time
 /// by the `CanyonManaged` macros again on the queries register
 pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
-    let mut queries = String::new();
-
-    for query in QUERIES_TO_EXECUTE.lock().unwrap().iter() {
-        queries.push_str(&(query.to_owned() + "->"));
-    }
+    let data = QUERIES_TO_EXECUTE.lock().unwrap();
+    let data_to_wire = data.iter().map(|(key, value)| {
+        quote! { hm.insert(#key, vec![#(#value),*]); }
+    });
 
     let tokens = quote! {
-        use canyon_sql::canyon_observer::{
-            QUERIES_TO_EXECUTE,
-            postgresql::migrations::DatabaseSyncOperations
-        };
+        use std::collections::HashMap;
+        use canyon_sql::migrations::processor::MigrationsProcessor;
 
-
-        *QUERIES_TO_EXECUTE.lock().unwrap() = #queries
-            .split("->")
-            .map(str::to_string)
-            .collect::<Vec<String>>();
-
-
-        if QUERIES_TO_EXECUTE.lock().unwrap().len() > 1 {
-            // > 1 because there's an [""] entry
-            for element in QUERIES_TO_EXECUTE.lock().unwrap().iter() {
-                println!("\t{}", element)
-            }
-        }
-
-        DatabaseSyncOperations::from_query_register().await;
+        let mut hm: HashMap<&str, Vec<&str>> = HashMap::new();
+        #(#data_to_wire)*;
+        MigrationsProcessor::from_query_register(&hm).await;
     };
 
     canyon_manager_tokens.push(tokens)

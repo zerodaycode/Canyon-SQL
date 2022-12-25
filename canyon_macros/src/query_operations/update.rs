@@ -39,9 +39,9 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     "UPDATE {} SET {} WHERE {} = ${:?}",
                     #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
                 );
-                let update_values: &[&dyn canyon_sql::bounds::QueryParameters<'_>] = &[#(#update_values),*];
+                let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameters<'_>] = &[#(#update_values),*];
 
-                let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, ""
                 ).await;
 
@@ -62,9 +62,9 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     "UPDATE {} SET {} WHERE {} = ${:?}",
                     #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
                 );
-                let update_values: &[&dyn canyon_sql::bounds::QueryParameters<'_>] = &[#(#update_values_cloned),*];
+                let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameters<'_>] = &[#(#update_values_cloned),*];
 
-                let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, datasource_name
                 ).await;
 
@@ -117,16 +117,30 @@ pub fn generate_update_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// TODO docs
-        fn update_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::generate(format!("UPDATE {}", #table_schema_data), "")
+        /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        ///
+        /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are setted on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        fn update_query<'a>() -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
+            canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, "")
         }
 
-        /// TODO docs
-        fn update_query_datasource(datasource_name: &str)
-            -> query_elements::query_builder::QueryBuilder<'_, #ty>
-        {
-            query_elements::query::Query::generate(format!("UPDATE {}", #table_schema_data), datasource_name)
+        /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        ///
+        /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are setted on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        ///
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`]
+        /// passed as parameter.
+        fn update_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
+            canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, datasource_name)
         }
     }
 }

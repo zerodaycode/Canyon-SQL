@@ -18,13 +18,12 @@ services:
       - ./sql/10-create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
       # copy the sql script to fill tables
       - ./sql/20-fill_tables.sql:/docker-entrypoint-initdb.d/fill_tables.sql
-    networks:
-      cs-network:
-        ipv4_address: 172.28.1.2
-
-networks:
-  cs-network:
-    ipam:
-      driver: default
-      config:
-        - subnet: 172.28.0.0/16
+  sql-server:
+    container_name: sql-server
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    restart: always
+    ports:
+      - "1434:1433"
+    environment:
+      MSSQL_SA_PASSWORD: "SqlServer-10"
+      ACCEPT_EULA: "Y"

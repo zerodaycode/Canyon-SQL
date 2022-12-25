@@ -1,4 +1,4 @@
-use crate::{crud::Transaction, mapper::RowMapper};
+use crate::{bounds::Row, crud::Transaction, mapper::RowMapper};
 use canyon_connection::{canyon_database_connector::DatabaseType, tiberius, tokio_postgres};
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -6,18 +6,18 @@ use std::{fmt::Debug, marker::PhantomData};
 /// results after the query.
 /// and providing methods to deserialize this result into a **user defined struct**
 #[derive(Debug)]
-pub struct DatabaseResult<T: Debug> {
-    pub wrapper: Vec<tokio_postgres::Row>,
+pub struct DatabaseResult<T> {
+    pub postgres: Vec<tokio_postgres::Row>,
     pub sqlserver: Vec<tiberius::Row>,
     pub active_ds: DatabaseType,
     _phantom_data: std::marker::PhantomData<T>,
 }
 
-impl<T: Debug> DatabaseResult<T> {
+impl<T> DatabaseResult<T> {
     pub fn new_postgresql(result: Vec<tokio_postgres::Row>) -> Self {
         Self {
-            wrapper: result,
-            sqlserver: vec![],
+            postgres: result,
+            sqlserver: Vec::with_capacity(0),
             active_ds: DatabaseType::PostgreSql,
             _phantom_data: PhantomData,
         }
@@ -25,7 +25,7 @@ impl<T: Debug> DatabaseResult<T> {
 
     pub fn new_sqlserver(results: Vec<tiberius::Row>) -> Self {
         Self {
-            wrapper: vec![],
+            postgres: Vec::with_capacity(0),
             sqlserver: results,
             active_ds: DatabaseType::SqlServer,
             _phantom_data: PhantomData,
@@ -36,9 +36,9 @@ impl<T: Debug> DatabaseResult<T> {
     /// Z param it's used to constrait the types that can call this method.
     ///
     /// Also, provides a way to statically call `Z::deserialize_<db>` method,
-    /// which it's a complex implementation used by the macros to automatically
+    /// which it's the implementation used by the macros to automatically
     /// map database columns into the fields for T.
-    pub fn get_entities<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    pub fn get_entities<Z: RowMapper<T>>(&self) -> Vec<T>
     where
         T: Transaction<T>,
     {
@@ -48,20 +48,20 @@ impl<T: Debug> DatabaseResult<T> {
         }
     }
 
-    fn map_from_postgresql<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn map_from_postgresql<Z: RowMapper<T>>(&self) -> Vec<T>
     where
         T: Transaction<T>,
     {
         let mut results = Vec::new();
 
-        self.wrapper
+        self.postgres
             .iter()
             .for_each(|row| results.push(Z::deserialize_postgresql(row)));
 
         results
     }
 
-    fn map_from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn map_from_sql_server<Z: RowMapper<T>>(&self) -> Vec<T>
     where
         T: Transaction<T>,
     {
@@ -74,6 +74,25 @@ impl<T: Debug> DatabaseResult<T> {
         results
     }
 
+    pub fn as_canyon_rows(&self) -> Vec<&dyn Row> {
+        let mut results = Vec::new();
+
+        match self.active_ds {
+            DatabaseType::PostgreSql => {
+                self.postgres
+                    .iter()
+                    .for_each(|row| results.push(row as &dyn Row));
+            }
+            DatabaseType::SqlServer => {
+                self.sqlserver
+                    .iter()
+                    .for_each(|row| results.push(row as &dyn Row));
+            }
+        };
+
+        results
+    }
+
     /// Returns the active datasource
     pub fn get_active_ds(&self) -> &DatabaseType {
         &self.active_ds
@@ -82,7 +101,7 @@ impl<T: Debug> DatabaseResult<T> {
     /// Returns how many rows contains the result of the query
     pub fn number_of_results(&self) -> usize {
         match self.active_ds {
-            DatabaseType::PostgreSql => self.wrapper.len(),
+            DatabaseType::PostgreSql => self.postgres.len(),
             DatabaseType::SqlServer => self.sqlserver.len(),
         }
     }

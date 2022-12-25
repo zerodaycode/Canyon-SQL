@@ -41,10 +41,13 @@ jobs:
         with:
           rust-version: ${{ matrix.rust }}
 
+      - name: Load data for MSSQL tests
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+        run: cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast -- --show-output --nocapture --include-ignored
+
       - name: Run all tests, UNIT and INTEGRATION for Linux targets
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo test --verbose --workspace --all-features --no-fail-fast -- --show-output --test-threads=1
 
       - name: Run UNIT tests with no external connections for the rest of the defined targets
-        if: ${{ matrix.os != 'ubuntu-latest' }}
         run: cargo test --verbose --workspace --exclude tests --all-features --no-fail-fast -- --show-output

@@ -1,4 +1,4 @@
-use canyon_manager::manager::field_annotation::EntityFieldAnnotation;
+use canyon_observer::manager::field_annotation::EntityFieldAnnotation;
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -21,7 +21,7 @@ pub fn generate_find_all_unchecked_tokens(
         /// database convention. P.ej. PostgreSQL preferes table names declared
         /// with snake_case identifiers.
         async fn find_all_unchecked<'a>() -> Vec<#ty> {
-            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 ""
@@ -40,7 +40,7 @@ pub fn generate_find_all_unchecked_tokens(
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
         async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<#ty> {
-            <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 datasource_name
@@ -69,7 +69,7 @@ pub fn generate_find_all_tokens(
         async fn find_all<'a>() ->
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 ""
@@ -97,7 +97,7 @@ pub fn generate_find_all_tokens(
         async fn find_all_datasource<'a>(datasource_name: &'a str) ->
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 datasource_name
@@ -112,7 +112,7 @@ pub fn generate_find_all_tokens(
     }
 }
 
-/// Same as above, but with a [`query_elements::query_builder::QueryBuilder`]
+/// Same as above, but with a [`canyon_sql::query::QueryBuilder`]
 pub fn generate_find_all_query_tokens(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &String,
@@ -120,28 +120,30 @@ pub fn generate_find_all_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
+        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention.
-        fn find_query<'a>() -> query_elements::query_builder::QueryBuilder<'a, #ty> {
-            query_elements::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), "")
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are setted on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
         }
 
-        /// Generates a [`canyon_sql::canyon_crud::query_elements::query_builder::QueryBuilder`]
+        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention.
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are setted on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
         ///
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
-        fn find_query_datasource(datasource_name: &str) ->
-            query_elements::query_builder::QueryBuilder<'_, #ty>
-        {
-            query_elements::query::Query::generate(format!("SELECT * FROM {}", #table_schema_data), datasource_name)
+        fn select_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, datasource_name)
         }
     }
 }
@@ -162,15 +164,15 @@ pub fn generate_count_tokens(
         } else {
             let c = count.ok().unwrap();
             match c.get_active_ds() {
-                canyon_sql::canyon_crud::DatabaseType::PostgreSql => {
+                canyon_sql::crud::DatabaseType::PostgreSql => {
                     Ok(
-                        c.wrapper.get(0)
+                        c.postgres.get(0)
                             .expect(&format!("Count operation failed for {:?}", #ty_str))
                             .get::<&str, i64>("count")
                             .to_owned()
                     )
                 },
-                canyon_sql::canyon_crud::DatabaseType::SqlServer => {
+                canyon_sql::crud::DatabaseType::SqlServer => {
                     Ok(
                         c.sqlserver.get(0)
                             .expect(&format!("Count operation failed for {:?}", #ty_str))
@@ -187,7 +189,7 @@ pub fn generate_count_tokens(
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
         /// wrapping a posible success or error coming from the database
         async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            let count = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let count = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 ""
@@ -199,7 +201,7 @@ pub fn generate_count_tokens(
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
         /// wrapping a posible success or error coming from the database with the specified datasource
         async fn count_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            let count = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let count = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 datasource_name
@@ -222,7 +224,7 @@ pub fn generate_find_by_pk_tokens(
     // Disabled if there's no `primary_key` annotation
     if pk.is_empty() {
         return quote! {
-            async fn find_by_pk<'a>(value: &'a dyn canyon_sql::bounds::QueryParameters<'a>)
+            async fn find_by_pk<'a>(value: &'a dyn canyon_sql::crud::bounds::QueryParameters<'a>)
                 -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
             {
                 Err(
@@ -236,7 +238,7 @@ pub fn generate_find_by_pk_tokens(
             }
 
             async fn find_by_pk_datasource<'a>(
-                value: &'a dyn canyon_sql::bounds::QueryParameters<'a>,
+                value: &'a dyn canyon_sql::crud::bounds::QueryParameters<'a>,
                 datasource_name: &'a str
             ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
                 Err(
@@ -259,11 +261,9 @@ pub fn generate_find_by_pk_tokens(
                 n if n.number_of_results() == 0 => Ok(None),
                 _ => Ok(
                     Some(
-                        result
-                            .ok()
-                            .unwrap()
-                            .get_entities::<#ty>()[0]
-                            .clone()
+                        result.unwrap()
+                            .get_entities::<#ty>()
+                            .remove(0)
                     )
                 )
             }
@@ -283,10 +283,10 @@ pub fn generate_find_by_pk_tokens(
         /// querying the database, or, if no errors happens, a success containing
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
-        async fn find_by_pk<'a>(value: &'a dyn canyon_sql::bounds::QueryParameters<'a>) ->
+        async fn find_by_pk<'a>(value: &'a dyn canyon_sql::crud::bounds::QueryParameters<'a>) ->
             Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 vec![value],
                 ""
@@ -312,11 +312,11 @@ pub fn generate_find_by_pk_tokens(
         /// and Option<T> with the data found wrapped in the Some(T) variant,
         /// or None if the value isn't found on the table.
         async fn find_by_pk_datasource<'a>(
-            value: &'a dyn canyon_sql::bounds::QueryParameters<'a>,
+            value: &'a dyn canyon_sql::crud::bounds::QueryParameters<'a>,
             datasource_name: &'a str
         ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
 
-            let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 vec![value],
                 datasource_name
@@ -374,10 +374,9 @@ pub fn generate_find_by_foreign_key_tokens(
                         n if n.number_of_results() == 0 => Ok(None),
                         _ => Ok(Some(
                             result
-                                .ok()
                                 .unwrap()
-                                .get_entities::<#fk_ty>()[0]
-                                .clone()
+                                .get_entities::<#fk_ty>()
+                                .remove(0)
                         ))
                     }
                 }
@@ -388,9 +387,9 @@ pub fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
-                        let result = <#fk_ty as canyon_sql::canyon_crud::crud::Transaction<#fk_ty>>::query(
+                        let result = <#fk_ty as canyon_sql::crud::Transaction<#fk_ty>>::query(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::bounds::QueryParameters<'_>],
+                            &[&self.#field_ident as &dyn canyon_sql::crud::bounds::QueryParameters<'_>],
                             ""
                         ).await;
 
@@ -404,9 +403,9 @@ pub fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type with the specified datasource
                     #quoted_datasource_method_signature {
-                        let result = <#fk_ty as canyon_sql::canyon_crud::crud::Transaction<#fk_ty>>::query(
+                        let result = <#fk_ty as canyon_sql::crud::Transaction<#fk_ty>>::query(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::bounds::QueryParameters<'_>],
+                            &[&self.#field_ident as &dyn canyon_sql::crud::bounds::QueryParameters<'_>],
                             datasource_name
                         ).await;
 
@@ -444,11 +443,11 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                 proc_macro2::Span::call_site(),
             );
             let quoted_method_signature: TokenStream = quote! {
-                async fn #method_name_ident<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) ->
+                async fn #method_name_ident<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) ->
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
             };
             let quoted_datasource_method_signature: TokenStream = quote! {
-                async fn #method_name_ident_ds<'a, F: canyon_sql::bounds::ForeignKeyable<F> + Sync + Send>
+                async fn #method_name_ident_ds<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>
                     (value: &F, datasource_name: &'a str) ->
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
             };
@@ -463,7 +462,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
             let f_ident = field_ident.to_string();
 
             rev_fk_quotes.push((
-                quote!{ #quoted_method_signature; },
+                quote! { #quoted_method_signature; },
                 quote! {
                     /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
                     /// performns a search to find the childs that belong to that concrete parent.
@@ -475,21 +474,20 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             ).as_str());
 
                         let stmt = format!(
-                            "SELECT * FROM {} WHERE {} = {}", 
+                            "SELECT * FROM {} WHERE {} = $1",
                             #table_schema_data,
-                            format!("\"{}\"", #f_ident).as_str(),
-                            lookage_value
+                            format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                        let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                             stmt,
-                            &[],
+                            &[lookage_value],
                             ""
                         ).await;
 
                         #result_handler
                     }
-                }
+                },
             ));
 
             rev_fk_quotes.push((
@@ -506,22 +504,20 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             ).as_str());
 
                         let stmt = format!(
-                            "SELECT * FROM {} WHERE {} = {}", 
+                            "SELECT * FROM {} WHERE {} = $1",
                             #table_schema_data,
-                            format!("\"{}\"", #f_ident).as_str(),
-                            lookage_value  // TODO The unique non-parametrized query parameter
-                            // We must convert it to QueryParameters
+                            format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        let result = <#ty as canyon_sql::canyon_crud::crud::Transaction<#ty>>::query(
+                        let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                             stmt,
-                            &[],
+                            &[lookage_value],
                             datasource_name
                         ).await;
 
                         #result_handler
                     }
-                }
+                },
             ));
         }
     }

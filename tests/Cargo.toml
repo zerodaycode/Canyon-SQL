@@ -8,5 +8,5 @@ publish = false
 canyon_sql = { path = "../canyon_sql" }
 
 [[test]]
-name = "crud_operations"
-path = "crud_operations.rs"
+name = "canyon_integration_tests"
+path = "canyon_integration_tests.rs"

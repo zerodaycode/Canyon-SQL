@@ -1,8 +1,8 @@
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *INSERT* statements
-use canyon_sql::{crud::CrudOperations, *};
+use canyon_sql::crud::CrudOperations;
 
-use crate::constants::PSQL_DS;
+use crate::constants::{PSQL_DS, SQL_SERVER_DS};
 use crate::tests_models::league::*;
 
 /// Deletes a row from the database that is mapped into some instance of a `T` entity.
@@ -14,8 +14,8 @@ use crate::tests_models::league::*;
 ///
 /// Attemp of usage the `t.delete(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
-#[tokio::test]
-async fn test_crud_delete_method_operation() {
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_delete_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
@@ -58,8 +58,8 @@ async fn test_crud_delete_method_operation() {
 }
 
 /// Same as the delete test, but performing the operations with the specified datasource
-#[tokio::test]
-async fn test_crud_delete_datasource_method_operation() {
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_delete_datasource_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
@@ -73,12 +73,12 @@ async fn test_crud_delete_datasource_method_operation() {
 
     // We insert the instance on the database, on the `League` entity
     new_league
-        .insert_datasource(PSQL_DS)
+        .insert_datasource(SQL_SERVER_DS)
         .await
         .expect("Failed insert operation");
     assert_eq!(
         new_league.id,
-        League::find_by_pk_datasource(&new_league.id, PSQL_DS)
+        League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
             .await
             .expect("Request error")
             .expect("None value")
@@ -88,7 +88,7 @@ async fn test_crud_delete_datasource_method_operation() {
     // Now that we have an instance mapped to some entity by a primary key, we can now
     // remove that entry from the database with the delete operation
     new_league
-        .delete_datasource(PSQL_DS)
+        .delete_datasource(SQL_SERVER_DS)
         .await
         .expect("Failed to delete the operation");
 
@@ -96,7 +96,7 @@ async fn test_crud_delete_datasource_method_operation() {
     // the result of the operation, the find by primary key contains Some(v) or None
     // Remeber that `find_by_primary_key(&dyn QueryParameters<'a>) -> Result<Option<T>>, Err>
     assert_eq!(
-        League::find_by_pk_datasource(&new_league.id, PSQL_DS)
+        League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
             .await
             .expect("Unwrapping the result, letting the Option<T>"),
         None

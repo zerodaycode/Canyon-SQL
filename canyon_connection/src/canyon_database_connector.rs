@@ -1,52 +1,36 @@
 use async_std::net::TcpStream;
 
+use serde::Deserialize;
 use tiberius::{AuthMethod, Config};
-use tokio_postgres::{tls::NoTlsStream, Client, Connection, NoTls, Socket};
+use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceProperties;
 
 /// Represents the current supported databases by Canyon
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
 pub enum DatabaseType {
+    #[default]
+    #[serde(alias = "postgres", alias = "postgresql")]
     PostgreSql,
+    #[serde(alias = "sqlserver", alias = "mssql")]
     SqlServer,
-}
-
-impl DatabaseType {
-    /// Returns a variant from Self given a *DatasourceProperties* representing
-    /// some of the available databases in `Canyon-SQL`
-    pub fn from_datasource(datasource: &DatasourceProperties<'_>) -> Self {
-        match datasource.db_type {
-            "postgresql" => Self::PostgreSql,
-            "sqlserver" => Self::SqlServer,
-            _ => todo!(), // TODO Change for boxed dyn error type
-        }
-    }
 }
 
 /// A connection with a `PostgreSQL` database
 pub struct PostgreSqlConnection {
     pub client: Client,
-    pub connection: Connection<Socket, NoTlsStream>,
+    // pub connection: Connection<Socket, NoTlsStream>, // TODO Hold it, or not to hold it... that's the question!
 }
 
 /// A connection with a `SqlServer` database
 pub struct SqlServerConnection {
-    pub client: tiberius::Client<TcpStream>,
+    pub client: &'static mut tiberius::Client<TcpStream>,
 }
 
-/// The Canyon database connection handler. When a new query is launched,
-/// the `new` associated function returns `Self`, containing in one of its
-/// members an active connection against the matched database type on the
-/// datasource triggering this process
-///
-/// !! Future of this impl. Two aspect to discuss:
-/// - Should we store the active connections? And not triggering
-///   this process on every query? Or it's better to open and close
-///   the connection with the database on every query?
-///
-/// - Now that `Mutex` allow const initializations, we should
-///   refactor the initialization in a real static handler?
+/// The Canyon database connection handler. When the client's program
+/// starts, Canyon gets the information about the desired datasources,
+/// process them and generates a pool of 1 to 1 database connection for
+/// every datasource defined.
 pub struct DatabaseConnection {
     pub postgres_connection: Option<PostgreSqlConnection>,
     pub sqlserver_connection: Option<SqlServerConnection>,
@@ -61,7 +45,7 @@ impl DatabaseConnection {
         datasource: &DatasourceProperties<'_>,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
-            "postgresql" => {
+            DatabaseType::PostgreSql => {
                 let (new_client, new_connection) = tokio_postgres::connect(
                     &format!(
                         "postgres://{user}:{pswd}@{host}:{port}/{db}",
@@ -75,16 +59,22 @@ impl DatabaseConnection {
                 )
                 .await?;
 
+                tokio::spawn(async move {
+                    if let Err(e) = new_connection.await {
+                        eprintln!("An error occured while trying to connect to the PostgreSQL database: {e}");
+                    }
+                });
+
                 Ok(Self {
                     postgres_connection: Some(PostgreSqlConnection {
                         client: new_client,
-                        connection: new_connection,
+                        // connection: new_connection,
                     }),
                     sqlserver_connection: None,
-                    database_type: DatabaseType::from_datasource(datasource),
+                    database_type: DatabaseType::PostgreSql,
                 })
             }
-            "sqlserver" => {
+            DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
                 config.host(datasource.host);
@@ -97,7 +87,9 @@ impl DatabaseConnection {
                     datasource.password,
                 ));
 
-                // on production, it is not a good idea to do this
+                // on production, it is not a good idea to do this. We should upgrade
+                // Canyon in future versions to allow the user take care about this
+                // configuration
                 config.trust_cert();
 
                 // Taking the address from the configuration, using async-std's
@@ -117,21 +109,12 @@ impl DatabaseConnection {
                 Ok(Self {
                     postgres_connection: None,
                     sqlserver_connection: Some(SqlServerConnection {
-                        client: client.expect("A failure happened connecting to the database"),
+                        client: Box::leak(Box::new(
+                            client.expect("A failure happened connecting to the database"),
+                        )),
                     }),
-                    database_type: DatabaseType::from_datasource(datasource),
+                    database_type: DatabaseType::SqlServer,
                 })
-            }
-            &_ => {
-                return Err(std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    format!(
-                        "There's no `{}` database supported in Canyon-SQL",
-                        datasource.db_type
-                    ),
-                )
-                .into_inner()
-                .unwrap())
             }
         }
     }
@@ -145,8 +128,8 @@ mod database_connection_handler {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
         [canyon_sql]
         datasources = [
-            {name = 'PostgresDS', properties.db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce'},
-            {name = 'SqlServerDS', properties.db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2'}
+            {name = 'PostgresDS', properties.db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled'},
+            {name = 'SqlServerDS', properties.db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled'}
         ]
     "#;
 
@@ -159,16 +142,7 @@ mod database_connection_handler {
         let psql_ds = &config.canyon_sql.datasources[0].properties;
         let sqls_ds = &config.canyon_sql.datasources[1].properties;
 
-        assert_eq!(
-            DatabaseType::from_datasource(psql_ds),
-            DatabaseType::PostgreSql
-        );
-        assert_eq!(
-            DatabaseType::from_datasource(sqls_ds),
-            DatabaseType::SqlServer
-        );
+        assert_eq!(psql_ds.db_type, DatabaseType::PostgreSql);
+        assert_eq!(sqls_ds.db_type, DatabaseType::SqlServer);
     }
-
-    // TODO Should we check the behaviour of the database handler here or as an
-    // integration test?
 }

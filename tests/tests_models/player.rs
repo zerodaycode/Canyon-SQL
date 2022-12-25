@@ -1,7 +1,7 @@
-use canyon_sql::*;
+use canyon_sql::macros::*;
 
-#[derive(Debug, Clone, CanyonCrud, CanyonMapper, Eq, PartialEq)]
-#[canyon_macros::canyon_entity]
+#[derive(Debug, Clone, Fields, CanyonCrud, CanyonMapper, Eq, PartialEq)]
+#[canyon_entity]
 /// Data model that represents a database entity for Players.
 ///
 /// For test the behaviour of Canyon with entities that no declares primary keys,
