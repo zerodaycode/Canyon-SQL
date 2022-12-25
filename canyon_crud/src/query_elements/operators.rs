@@ -9,13 +9,13 @@ pub enum Comp {
     Eq,
     /// Operator "!=" not equals
     Neq,
-    /// Operator ">" greather than <value>
+    /// Operator ">" greather than value
     Gt,
-    /// Operator ">=" greather or equals than <value>
+    /// Operator ">=" greather or equals than value
     GtEq,
-    /// Operator "<" less than <value>
+    /// Operator "<" less than value
     Lt,
-    /// Operator "=<" less or equals than <value>
+    /// Operator "=<" less or equals than value
     LtEq,
 }
 impl Operator for Comp {

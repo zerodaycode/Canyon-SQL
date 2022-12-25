@@ -41,7 +41,7 @@ pub trait Transaction<T> {
                 .expect("No default datasource found. Check your `canyon.toml` file")
         } else {
             guarded_cache.get(datasource_name)
-                .unwrap_or_else(|| 
+                .unwrap_or_else(||
                     panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
                 ))
         };

@@ -83,7 +83,8 @@ impl MigrationsProcessor {
 
                 // Time to check annotations for the current column
                 // Case when  we only need to add contrains
-                if (current_table_metadata.is_none() && !canyon_register_field.annotations.is_empty())
+                if (current_table_metadata.is_none()
+                    && !canyon_register_field.annotations.is_empty())
                     || (current_table_metadata.is_some() && current_column_metadata.is_none())
                 {
                     self.add_constraints(entity_name.as_str(), canyon_register_field.clone())
@@ -564,7 +565,7 @@ impl MigrationsHelper {
             .renamed_entities
             .get(&entity_name.to_lowercase())
             .map(|e| e.to_owned())
-            .unwrap_or(entity_name.to_string());
+            .unwrap_or_else(|| entity_name.to_string());
 
         database_tables
             .iter()
@@ -579,7 +580,7 @@ impl MigrationsHelper {
         column_name: String,
         current_table_metadata: Option<&TableMetadata>,
     ) -> Option<&ColumnMetadata> {
-        if let Some (metadata_table) = current_table_metadata {
+        if let Some(metadata_table) = current_table_metadata {
             metadata_table
                 .columns
                 .iter()
@@ -815,7 +816,8 @@ impl DatabaseOperation for TableOperation {
             TableOperation::AddTablePrimaryKey(table_name, entity_field) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "ALTER TABLE {table_name} ADD PRIMARY KEY (\"{}\");", entity_field.field_name
+                        "ALTER TABLE {table_name} ADD PRIMARY KEY (\"{}\");",
+                        entity_field.field_name
                     )
                 } else if db_type == DatabaseType::SqlServer {
                     todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -826,9 +828,7 @@ impl DatabaseOperation for TableOperation {
 
             TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => {
                 if db_type == DatabaseType::PostgreSql || db_type == DatabaseType::SqlServer {
-                    format!(
-                        "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"
-                    )
+                    format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
                 } else {
                     todo!()
                 }

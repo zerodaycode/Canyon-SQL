@@ -339,9 +339,10 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&format!(
-            " LEFT JOIN {join_table} ON {col1} = {col2}"
-        ));
+        self._inner
+            .query
+            .sql
+            .push_str(&format!(" LEFT JOIN {join_table} ON {col1} = {col2}"));
         self
     }
 
@@ -354,9 +355,10 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn inner_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&format!(
-            " INNER JOIN {join_table} ON {col1} = {col2}"
-        ));
+        self._inner
+            .query
+            .sql
+            .push_str(&format!(" INNER JOIN {join_table} ON {col1} = {col2}"));
         self
     }
 
@@ -369,9 +371,10 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn right_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&format!(
-            " RIGHT JOIN {join_table} ON {col1} = {col2}"
-        ));
+        self._inner
+            .query
+            .sql
+            .push_str(&format!(" RIGHT JOIN {join_table} ON {col1} = {col2}"));
         self
     }
 
@@ -384,9 +387,10 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn full_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&format!(
-            " FULL JOIN {join_table} ON {col1} = {col2}"
-        ));
+        self._inner
+            .query
+            .sql
+            .push_str(&format!(" FULL JOIN {join_table} ON {col1} = {col2}"));
         self
     }
 }

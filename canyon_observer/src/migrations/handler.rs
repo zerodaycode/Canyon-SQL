@@ -95,7 +95,11 @@ impl Migrations {
 
         Self::query(query, [], datasource_name)
             .await
-            .unwrap_or_else(|_| panic!("Error querying the schema information for the datasource: {datasource_name}"))
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Error querying the schema information for the datasource: {datasource_name}"
+                )
+            })
     }
 
     /// Handler for parse the result of query the information of some database schema,

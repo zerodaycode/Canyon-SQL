@@ -153,7 +153,7 @@ impl CanyonMemory {
             values_to_insert.push(';');
 
             let stmt = format!(
-                "INSERT INTO canyon_memory (filepath, struct_name) VALUES {values_to_insert}"  
+                "INSERT INTO canyon_memory (filepath, struct_name) VALUES {values_to_insert}"
             );
 
             if QUERIES_TO_EXECUTE
