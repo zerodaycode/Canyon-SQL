@@ -673,7 +673,7 @@ mod migrations_helper_tests {
         let parse_result_empty_db_tables =
             MigrationsHelper::entity_already_on_database(MOCKED_ENTITY_NAME, &[]);
         // Always should be false
-        assert_eq!(parse_result_empty_db_tables, false);
+        assert!(parse_result_empty_db_tables);
 
         // Rust has a League entity. Database has a `league` entity. Case should be normalized
         // and a match must raise
@@ -687,7 +687,7 @@ mod migrations_helper_tests {
             MOCKED_ENTITY_NAME,
             &[&constants::mocked_data::NON_MATCHING_TABLE_METADATA],
         );
-        assert_eq!(mocked_league_entity_on_database, false)
+        assert!(mocked_league_entity_on_database)
     }
 }
 
