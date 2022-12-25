@@ -1,6 +1,6 @@
 use canyon_sql::macros::*;
 
-#[derive(Debug, Clone, Fields, CanyonCrud, CanyonMapper, ForeignKeyable, Eq, PartialEq)]
+#[derive(Debug, Fields, CanyonCrud, CanyonMapper, ForeignKeyable, Eq, PartialEq)]
 // #[canyon_entity(table_name = "league", schema = "public")]
 #[canyon_entity(table_name = "league")]
 pub struct League {

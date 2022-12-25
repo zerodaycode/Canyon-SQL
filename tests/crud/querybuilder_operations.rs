@@ -84,9 +84,10 @@ fn test_crud_update_with_querybuilder() {
         .r#where(LeagueFieldValue::id(&1), Comp::Gt)
         .and(LeagueFieldValue::id(&8), Comp::Lt);
     
-    // Family of QueryBuilders are clone, useful in case of need the generated SQL
-    let qpr = q.clone();
-    println!("PSQL: {:?}", qpr.read_sql());
+    /*  Family of QueryBuilders are clone, useful in case of need to read the generated SQL
+        let qpr = q.clone();
+        println!("PSQL: {:?}", qpr.read_sql());
+    */
     
     // We can now back to the original an throw the query
     q.query()

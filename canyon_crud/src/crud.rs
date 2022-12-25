@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display};
+use std::fmt::Display;
 
 use async_trait::async_trait;
 use canyon_connection::CACHED_DATABASE_CONN;
@@ -18,7 +18,7 @@ use crate::bounds::QueryParameters;
 /// automatically map it to an struct.
 #[async_trait]
 #[allow(clippy::question_mark)]
-pub trait Transaction<T: Debug> {
+pub trait Transaction<T> {
     /// Performs a query against the targeted database by the selected datasource.
     /// 
     /// No datasource means take the entry zero 
@@ -77,7 +77,7 @@ pub trait Transaction<T: Debug> {
 #[async_trait]
 pub trait CrudOperations<T>: Transaction<T>
 where
-    T: Debug + CrudOperations<T> + RowMapper<T>,
+    T: CrudOperations<T> + RowMapper<T>
 {
     async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
@@ -153,9 +153,8 @@ mod postgres_query_launcher {
     use crate::bounds::QueryParameters;
     use crate::result::DatabaseResult;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use std::fmt::Debug;
 
-    pub async fn launch<'a, T: Debug>(
+    pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
         // datasource_name: &str,
         stmt: String,
@@ -180,7 +179,7 @@ mod postgres_query_launcher {
 }
 
 mod sqlserver_query_launcher {
-    use std::{fmt::Debug, mem::transmute};
+    use std::mem::transmute;
 
     use canyon_connection::tiberius::Row;
 
@@ -198,9 +197,7 @@ mod sqlserver_query_launcher {
         stmt: &mut String,
         params: Z,
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-    where
-        T: Debug,
-        Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a,
+        where Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a
     {
         // Re-generate de insert statement to adecuate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {

@@ -6,14 +6,14 @@ use std::{fmt::Debug, marker::PhantomData};
 /// results after the query.
 /// and providing methods to deserialize this result into a **user defined struct**
 #[derive(Debug)]
-pub struct DatabaseResult<T: Debug> {
+pub struct DatabaseResult<T> {
     pub postgres: Vec<tokio_postgres::Row>,
     pub sqlserver: Vec<tiberius::Row>,
     pub active_ds: DatabaseType,
     _phantom_data: std::marker::PhantomData<T>,
 }
 
-impl<T: Debug> DatabaseResult<T> {
+impl<T> DatabaseResult<T> {
     pub fn new_postgresql(result: Vec<tokio_postgres::Row>) -> Self {
         Self {
             postgres: result,
@@ -38,7 +38,7 @@ impl<T: Debug> DatabaseResult<T> {
     /// Also, provides a way to statically call `Z::deserialize_<db>` method,
     /// which it's the implementation used by the macros to automatically
     /// map database columns into the fields for T.
-    pub fn get_entities<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    pub fn get_entities<Z: RowMapper<T>>(&self) -> Vec<T>
     where
         T: Transaction<T>,
     {
@@ -48,7 +48,7 @@ impl<T: Debug> DatabaseResult<T> {
         }
     }
 
-    fn map_from_postgresql<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn map_from_postgresql<Z: RowMapper<T>>(&self) -> Vec<T>
     where
         T: Transaction<T>,
     {
@@ -61,7 +61,7 @@ impl<T: Debug> DatabaseResult<T> {
         results
     }
 
-    fn map_from_sql_server<Z: RowMapper<T> + Debug>(&self) -> Vec<T>
+    fn map_from_sql_server<Z: RowMapper<T>>(&self) -> Vec<T>
     where
         T: Transaction<T>,
     {

@@ -261,11 +261,9 @@ pub fn generate_find_by_pk_tokens(
                 n if n.number_of_results() == 0 => Ok(None),
                 _ => Ok(
                     Some(
-                        result
-                            .ok()
-                            .unwrap()
-                            .get_entities::<#ty>()[0]
-                            .clone()
+                        result.unwrap()
+                            .get_entities::<#ty>()
+                            .remove(0)
                     )
                 )
             }
@@ -376,10 +374,9 @@ pub fn generate_find_by_foreign_key_tokens(
                         n if n.number_of_results() == 0 => Ok(None),
                         _ => Ok(Some(
                             result
-                                .ok()
                                 .unwrap()
-                                .get_entities::<#fk_ty>()[0]
-                                .clone()
+                                .get_entities::<#fk_ty>()
+                                .remove(0)
                         ))
                     }
                 }

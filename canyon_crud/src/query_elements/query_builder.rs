@@ -119,21 +119,21 @@ pub mod ops {
 /// Type for construct more complex queries than the classical CRUD ones.
 #[derive(Debug, Clone)]
 pub struct QueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     query: Query<'a, T>,
     datasource_name: &'a str
 }
 
 unsafe impl<'a, T> Send for QueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {}
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T> {}
 unsafe impl<'a, T> Sync for QueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> {}
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T> {}
 
 
 impl<'a, T> QueryBuilder<'a, T>
 where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     /// Returns a new instance of the [`QueryBuilder`]
     pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
@@ -270,13 +270,13 @@ where
 
 #[derive(Debug, Clone)]
 pub struct SelectQueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
     _inner: QueryBuilder<'a, T>,
 }
 
 impl<'a, T> SelectQueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
@@ -419,13 +419,13 @@ impl<'a, T> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T> where
 /// update with the provided values
 #[derive(Debug, Clone)]
 pub struct UpdateQueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
     _inner: QueryBuilder<'a, T>,
 }
 
 impl<'a, T> UpdateQueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
@@ -536,13 +536,13 @@ impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T> where
 /// update with the provided values
 #[derive(Debug, Clone)]
 pub struct DeleteQueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
     _inner: QueryBuilder<'a, T>,
 }
 
 impl<'a, T> DeleteQueryBuilder<'a, T> where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
 {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {

@@ -8,7 +8,7 @@ use crate::{
 
 /// Holds a sql sentence details
 #[derive(Debug, Clone)]
-pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>> {
+pub struct Query<'a, T: CrudOperations<T> + Transaction<T> + RowMapper<T>> {
     pub sql: String,
     pub params: Vec<&'a dyn QueryParameters<'a>>,
     marker: PhantomData<T>,
@@ -16,7 +16,7 @@ pub struct Query<'a, T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T
 
 impl<'a, T> Query<'a, T>
 where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
 {
     pub fn new(sql: String) -> Query<'a, T> {
         Self {sql, params: vec![], marker: PhantomData}
