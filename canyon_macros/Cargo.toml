@@ -7,7 +7,7 @@ homepage = "https://github.com/zerodaycode/Canyon-SQL"
 readme = "../README.md"
 license = "../LICENSE"
 license-file = "LICENSE"
-Description = "A Rust ORM and QueryBuilder"
+description = "A Rust ORM and QueryBuilder"
 
 [lib]
 proc-macro = true

@@ -7,7 +7,7 @@ homepage = "https://github.com/zerodaycode/Canyon-SQL"
 readme = "../README.md"
 license = "../LICENSE"
 license-file = "LICENSE"
-Description = "A Rust ORM and QueryBuilder"
+description = "A Rust ORM and QueryBuilder"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde"] }
