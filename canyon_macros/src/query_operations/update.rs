@@ -39,7 +39,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     "UPDATE {} SET {} WHERE {} = ${:?}",
                     #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
                 );
-                let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameters<'_>] = &[#(#update_values),*];
+                let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameter<'_>] = &[#(#update_values),*];
 
                 let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, ""
@@ -62,7 +62,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     "UPDATE {} SET {} WHERE {} = ${:?}",
                     #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
                 );
-                let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameters<'_>] = &[#(#update_values_cloned),*];
+                let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameter<'_>] = &[#(#update_values_cloned),*];
 
                 let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, datasource_name

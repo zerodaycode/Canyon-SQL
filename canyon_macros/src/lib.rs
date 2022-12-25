@@ -160,7 +160,7 @@ pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
     let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
     quote! {
-        use canyon_sql::crud::bounds::QueryParameters;
+        use canyon_sql::crud::bounds::QueryParameter;
         #_generated_enum_type_for_fields
         #_generated_enum_type_for_fields_values
     }
@@ -485,7 +485,7 @@ pub fn implement_foreignkeyable_for_type(
     let field_idents = fields.iter().map(|(_vis, ident)| {
         let i = ident.to_string();
         quote! {
-            #i => Some(&self.#ident as &dyn canyon_sql::crud::bounds::QueryParameters<'_>)
+            #i => Some(&self.#ident as &dyn canyon_sql::crud::bounds::QueryParameter<'_>)
         }
     });
     let field_idents_cloned = field_idents.clone();
@@ -494,7 +494,7 @@ pub fn implement_foreignkeyable_for_type(
         /// Implementation of the trait `ForeignKeyable` for the type
         /// calling this derive proc macro
         impl canyon_sql::crud::bounds::ForeignKeyable<Self> for #ty {
-            fn get_fk_column(&self, column: &str) -> Option<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> {
+            fn get_fk_column(&self, column: &str) -> Option<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> {
                 match column {
                     #(#field_idents),*,
                     _ => None
@@ -504,7 +504,7 @@ pub fn implement_foreignkeyable_for_type(
         /// Implementation of the trait `ForeignKeyable` for a reference of this type
         /// calling this derive proc macro
         impl canyon_sql::crud::bounds::ForeignKeyable<&Self> for &#ty {
-            fn get_fk_column<'a>(&self, column: &'a str) -> Option<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> {
+            fn get_fk_column<'a>(&self, column: &'a str) -> Option<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> {
                 match column {
                     #(#field_idents_cloned),*,
                     _ => None

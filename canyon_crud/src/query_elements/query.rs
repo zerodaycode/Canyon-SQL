@@ -1,7 +1,7 @@
 use std::{fmt::Debug, marker::PhantomData};
 
 use crate::{
-    bounds::QueryParameters,
+    bounds::QueryParameter,
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
 };
@@ -10,7 +10,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Query<'a, T: CrudOperations<T> + Transaction<T> + RowMapper<T>> {
     pub sql: String,
-    pub params: Vec<&'a dyn QueryParameters<'a>>,
+    pub params: Vec<&'a dyn QueryParameter<'a>>,
     marker: PhantomData<T>,
 }
 

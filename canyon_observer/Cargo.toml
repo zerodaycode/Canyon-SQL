@@ -1,9 +1,13 @@
 [package]
 name = "canyon_observer"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+documentation = "https://zerodaycode.github.io/canyon-book/"
+homepage = "https://github.com/zerodaycode/Canyon-SQL"
+readme = "README.md"
+license = "MIT"
+license-file = "LICENSE"
+Description = "A Rust ORM and QueryBuilder"
 
 [dependencies]
 tokio = { version = "1.9.0", features = ["full"] }
@@ -20,5 +24,5 @@ quote = "1.0.9"
 partialdebug = "0.2.0"
 
 # Internal dependencies
-canyon_crud = { version = "0.0.1", path = "../canyon_crud" }
-canyon_connection = { version = "0.0.1", path = "../canyon_connection" }
+canyon_crud = { version = "0.1.0", path = "../canyon_crud" }
+canyon_connection = { version = "0.1.0", path = "../canyon_connection" }

@@ -44,13 +44,13 @@ impl CanyonEntity {
     /// which this enum is related to.
     ///
     /// Makes a variant `#field_name(#ty)` where `#ty` it's a trait object
-    /// of type [`canyon_crud::bounds::QueryParameters`]
+    /// of type [`canyon_crud::bounds::QueryParameter`]
     pub fn get_fields_as_enum_variants_with_value(&self) -> Vec<TokenStream> {
         self.fields
             .iter()
             .map(|f| {
                 let field_name = &f.name;
-                quote! { #field_name(&'a dyn canyon_sql::crud::bounds::QueryParameters<'a>) }
+                quote! { #field_name(&'a dyn canyon_sql::crud::bounds::QueryParameter<'a>) }
             })
             .collect::<Vec<_>>()
     }

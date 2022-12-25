@@ -48,7 +48,7 @@ fn test_crud_delete_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remeber that `find_by_primary_key(&dyn QueryParameters<'a>) -> Result<Option<T>>, Err>
+    // Remeber that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk(&new_league.id)
             .await
@@ -94,7 +94,7 @@ fn test_crud_delete_datasource_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remeber that `find_by_primary_key(&dyn QueryParameters<'a>) -> Result<Option<T>>, Err>
+    // Remeber that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
             .await

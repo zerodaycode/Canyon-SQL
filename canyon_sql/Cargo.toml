@@ -1,14 +1,20 @@
 [package]
 name = "canyon_sql"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
 authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto<gbm25@gmail.com>"]
+documentation = "https://zerodaycode.github.io/canyon-book/"
+homepage = "https://github.com/zerodaycode/Canyon-SQL"
+readme = "README.md"
+license = "MIT"
+license-file = "LICENSE"
+Description = "A Rust ORM and QueryBuilder"
 
 [dependencies]
 async-trait = { version = "0.1.50" }
 
 # Project crates
-canyon_macros = { version = "0.0.1", path = "../canyon_macros" }
-canyon_observer = { version = "0.0.1", path = "../canyon_observer" }
-canyon_crud = { version = "0.0.1", path = "../canyon_crud" }
-canyon_connection = { version = "0.0.1", path = "../canyon_connection" }
+canyon_macros = { version = "0.1.0", path = "../canyon_macros" }
+canyon_observer = { version = "0.1.0", path = "../canyon_observer" }
+canyon_crud = { version = "0.1.0", path = "../canyon_crud" }
+canyon_connection = { version = "0.1.0", path = "../canyon_connection" }
