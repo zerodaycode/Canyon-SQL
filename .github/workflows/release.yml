@@ -1,0 +1,71 @@
+name: Generate Canyon-SQL release
+
+on:
+  push:
+    tags:        
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+      - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
+
+jobs:
+  publish:
+    name: Publish Canyon-SQL
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v3
+
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+          path: './canyon_connection'
+
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+          path: './canyon_crud'
+
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+          path: './canyon_observer'
+
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+          path: './canyon_macros'
+
+      - uses: katyo/publish-crates@v1
+        with:
+          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
+          path: './canyon_sql'
+
+  release-publisher:
+    permissions:
+        contents: write
+    name: Generate a new release and update the CHANGELOG
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate a new Canyon-SQL release on GitHub
+        uses: actions/create-release@v1
+        id: create-release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ steps.version.outputs.version }}
+          tag_name: ${{ github.ref }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: "Update the CHANGELOG.md for the release"
+        uses: mikepenz/release-changelog-builder-action@{latest-release}
+        with:
+          configuration: "./.github/changelog_configuration.json"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
