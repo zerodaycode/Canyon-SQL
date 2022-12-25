@@ -33,7 +33,7 @@ fn initialize_sql_server_docker_instance() {
         static CONN_STR: &str =
             "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
 
-        let config = Config::from_ado_string(&CONN_STR).unwrap();
+        let config = Config::from_ado_string(CONN_STR).unwrap();
 
         let tcp = TcpStream::connect(config.get_addr()).await.unwrap();
         let tcp2 = TcpStream::connect(config.get_addr()).await.unwrap();
@@ -45,11 +45,11 @@ fn initialize_sql_server_docker_instance() {
 
         // Create the tables
         let query_result = client.query(SQL_SERVER_CREATE_TABLES, &[]).await;
-        assert!(!query_result.is_err());
+        assert!(query_result.is_ok());
 
         let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await;
-        println!("LSQL ERR: {:?}", leagues_sql);
-        assert!(!leagues_sql.is_err());
+        println!("LSQL ERR: {leagues_sql:?}");
+        assert!(leagues_sql.is_ok());
 
         match leagues_sql {
             Ok(ref leagues) => {
@@ -60,10 +60,10 @@ fn initialize_sql_server_docker_instance() {
                         .await
                         .expect("Can't connect to MSSQL");
                     let result = client2.query(SQL_SERVER_FILL_TABLE_VALUES, &[]).await;
-                    assert!(!result.is_err());
+                    assert!(result.is_ok());
                 }
             }
-            Err(e) => eprintln!("Error retrieving the leagues: {:?}", e),
+            Err(e) => eprintln!("Error retrieving the leagues: {e}"),
         }
     });
 }

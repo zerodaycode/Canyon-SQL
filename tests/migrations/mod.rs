@@ -6,8 +6,8 @@ use crate::constants;
 /// Brings the information of the `PostgreSQL` requested schema
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_migrations_postgresql_status_query() {
-    let results = Migrations::query(constants::FETCH_PUBLIC_SCHEMA, &[], constants::PSQL_DS).await;
-    assert!(!results.is_err());
+    let results = Migrations::query(constants::FETCH_PUBLIC_SCHEMA, [], constants::PSQL_DS).await;
+    assert!(results.is_ok());
 
     let public_schema_info = results.ok().unwrap().postgres;
 
