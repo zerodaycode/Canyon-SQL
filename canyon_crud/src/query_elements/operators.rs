@@ -1,5 +1,5 @@
 pub trait Operator {
-    fn as_str<'a>(&'a self) -> &'static str;
+    fn as_str(&self) -> &'static str;
 }
 
 /// Enumerated type for represent the comparison operations
@@ -19,7 +19,7 @@ pub enum Comp {
     LtEq,
 }
 impl Operator for Comp {
-    fn as_str<'a>(&'a self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match *self {
             Self::Eq => " = ",
             Self::Neq => " <> ",

@@ -64,7 +64,7 @@ impl CanyonMemory {
 
         // Retrieve the last status data from the `canyon_memory` table
         // TODO still pending on the target schema, for now they are created on the default one
-        let res = Self::query("SELECT * FROM canyon_memory", &[], datasource.name)
+        let res = Self::query("SELECT * FROM canyon_memory", [], datasource.name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();
@@ -111,7 +111,7 @@ impl CanyonMemory {
 
             // updated means: the old one. The value to update
             if let Some(old) = need_to_update {
-                updates.push(old.struct_name.clone());
+                updates.push(old.struct_name);
                 let stmt = format!(
                     "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}' \
                             WHERE id = {}",
@@ -137,7 +137,7 @@ impl CanyonMemory {
                 }
 
                 // if the updated element is the struct name, whe add it to the table_rename Hashmap
-                let rename_table = &old.struct_name != struct_name;
+                let rename_table = old.struct_name != struct_name;
 
                 if rename_table {
                     mem.renamed_entities.insert(
@@ -153,8 +153,7 @@ impl CanyonMemory {
             values_to_insert.push(';');
 
             let stmt = format!(
-                "INSERT INTO canyon_memory (filepath, struct_name) VALUES {}",
-                values_to_insert
+                "INSERT INTO canyon_memory (filepath, struct_name) VALUES {values_to_insert}"  
             );
 
             if QUERIES_TO_EXECUTE
@@ -180,7 +179,7 @@ impl CanyonMemory {
         let in_memory = mem.memory.values().collect::<Vec<&String>>();
         db_rows.into_iter().for_each(|db_row| {
             if !in_memory.contains(&&db_row.struct_name.to_string())
-                && !updates.contains(&&db_row.struct_name)
+                && !updates.contains(&db_row.struct_name)
             {
                 let stmt = format!(
                     "DELETE FROM canyon_memory WHERE struct_name = '{}'",
@@ -249,7 +248,7 @@ impl CanyonMemory {
                     0 => (),
                     1 => {
                         self.memory.insert(
-                            file.path().display().to_string().replace("\\", "/"),
+                            file.path().display().to_string().replace('\\', "/"),
                             struct_name,
                         );
                     }
@@ -271,7 +270,7 @@ impl CanyonMemory {
             constants::mssql_queries::CANYON_MEMORY_TABLE
         };
 
-        Self::query(query, &[], datasource_name)
+        Self::query(query, [], datasource_name)
             .await
             .expect("Error creating the 'canyon_memory' table");
     }

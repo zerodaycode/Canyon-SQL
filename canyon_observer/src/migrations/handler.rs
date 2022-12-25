@@ -47,7 +47,7 @@ impl Migrations {
 
             let mut migrations_processor = MigrationsProcessor::default();
 
-            let canyon_memory = CanyonMemory::remember(&datasource).await;
+            let canyon_memory = CanyonMemory::remember(datasource).await;
             let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
 
             // Tracked entities that must be migrated whenever Canyon starts
@@ -93,24 +93,21 @@ impl Migrations {
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
         };
 
-        Self::query(query, &[], datasource_name)
+        Self::query(query, [], datasource_name)
             .await
-            .expect(&format!(
-                "Error querying the schema information for the datasource: {}",
-                datasource_name
-            ))
+            .unwrap_or_else(|_| panic!("Error querying the schema information for the datasource: {datasource_name}"))
     }
 
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
-    fn map_rows<'a>(db_results: DatabaseResult<Migrations>) -> Vec<TableMetadata> {
+    fn map_rows(db_results: DatabaseResult<Migrations>) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
 
         for res_row in db_results.as_canyon_rows().into_iter() {
             let unique_table = schema_info
                 .iter_mut()
-                .find(|table| table.table_name == res_row.get::<&str>("table_name").to_owned());
+                .find(|table| table.table_name == *res_row.get::<&str>("table_name").to_owned());
             match unique_table {
                 Some(table) => {
                     /* If a table entity it's already present on the collection, we add it
@@ -151,7 +148,7 @@ impl Migrations {
 
     /// Sets the concrete value for a field of a [`ColumnMetadata`], by reading the properties
     /// of the source [`Column`], filtering the target value by the source property `column name`
-    fn set_column_metadata<'a>(row: &dyn Row, src: &Column, dest: &mut ColumnMetadata) {
+    fn set_column_metadata(row: &dyn Row, src: &Column, dest: &mut ColumnMetadata) {
         let column_identifier = src.name();
         let column_value = ColumnMetadataTypeValue::get_value(row, src);
 

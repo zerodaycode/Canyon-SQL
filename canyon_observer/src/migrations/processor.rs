@@ -83,8 +83,7 @@ impl MigrationsProcessor {
 
                 // Time to check annotations for the current column
                 // Case when  we only need to add contrains
-                if (current_table_metadata.is_none()
-                    && &(&canyon_register_field.annotations).len() > &0)
+                if (current_table_metadata.is_none() && !canyon_register_field.annotations.is_empty())
                     || (current_table_metadata.is_some() && current_column_metadata.is_none())
                 {
                     self.add_constraints(entity_name.as_str(), canyon_register_field.clone())
@@ -172,37 +171,38 @@ impl MigrationsProcessor {
         current_table_metadata: Option<&'a TableMetadata>,
         db_type: DatabaseType,
     ) {
-        if current_table_metadata.is_some() {
-            let columns_name_to_delete: Vec<&ColumnMetadata> = current_table_metadata
-                .unwrap()
-                .columns
-                .iter()
-                .filter(|db_column| {
-                    entity_fields
-                        .iter()
-                        .map(|canyon_field| canyon_field.field_name.to_string())
-                        .any(|canyon_field| canyon_field == db_column.column_name)
-                        .not()
-                })
-                .collect();
+        if current_table_metadata.is_none() {
+            return;
+        }
+        let columns_name_to_delete: Vec<&ColumnMetadata> = current_table_metadata
+            .unwrap()
+            .columns
+            .iter()
+            .filter(|db_column| {
+                entity_fields
+                    .iter()
+                    .map(|canyon_field| canyon_field.field_name.to_string())
+                    .any(|canyon_field| canyon_field == db_column.column_name)
+                    .not()
+            })
+            .collect();
 
-            for column_metadata in columns_name_to_delete {
-                if db_type == DatabaseType::SqlServer && !column_metadata.is_nullable {
-                    self.drop_column_not_null(
-                        entity_name,
-                        column_metadata.column_name.clone(),
-                        MigrationsHelper::get_datatype_from_column_metadata(column_metadata),
-                    )
-                }
-                self.delete_column(entity_name, column_metadata.column_name.clone());
+        for column_metadata in columns_name_to_delete {
+            if db_type == DatabaseType::SqlServer && !column_metadata.is_nullable {
+                self.drop_column_not_null(
+                    entity_name,
+                    column_metadata.column_name.clone(),
+                    MigrationsHelper::get_datatype_from_column_metadata(column_metadata),
+                )
             }
+            self.delete_column(entity_name, column_metadata.column_name.clone());
         }
     }
 
     // Creates or modify (currently only datatype) a column for a given canyon register entity field
-    fn create_or_modify_field<'a>(
+    fn create_or_modify_field(
         &mut self,
-        entity_name: &'a str,
+        entity_name: &str,
         db_type: DatabaseType,
         canyon_register_entity_field: CanyonRegisterEntityField,
         current_column_metadata: Option<&ColumnMetadata>,
@@ -335,9 +335,9 @@ impl MigrationsProcessor {
             )));
     }
 
-    fn add_modify_or_remove_constraints<'a>(
+    fn add_modify_or_remove_constraints(
         &mut self,
-        entity_name: &'a str,
+        entity_name: &str,
         canyon_register_entity_field: CanyonRegisterEntityField,
         current_column_metadata: &ColumnMetadata,
     ) {
@@ -523,7 +523,7 @@ impl MigrationsProcessor {
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
             for query_to_execute in datasource.1 {
-                let res = Self::query(&query_to_execute, [], datasource.0).await;
+                let res = Self::query(query_to_execute, [], datasource.0).await;
 
                 match res {
                     Ok(_) => println!(
@@ -571,7 +571,7 @@ impl MigrationsHelper {
             .find(|table_metadata| {
                 table_metadata.table_name.to_lowercase() == *correct_entity_name.to_lowercase()
             })
-            .map(|e| e.to_owned().clone())
+            .map(|e| e.to_owned())
     }
 
     // Get the column metadata for a given column name
@@ -579,15 +579,13 @@ impl MigrationsHelper {
         column_name: String,
         current_table_metadata: Option<&TableMetadata>,
     ) -> Option<&ColumnMetadata> {
-        if current_table_metadata.is_none() {
-            None
-        } else {
-            current_table_metadata
-                .expect("Can't unwrap the current Table Metadata")
+        if let Some (metadata_table) = current_table_metadata {
+            metadata_table
                 .columns
                 .iter()
                 .find(|column| column.column_name == column_name)
-                .map(|e| e.to_owned().clone())
+        } else {
+            None
         }
     }
 
@@ -603,7 +601,7 @@ impl MigrationsHelper {
 
             format!("{}({})", current_column_metadata.datatype, varchar_len)
         } else {
-            format!("{}", current_column_metadata.datatype)
+            current_column_metadata.datatype.to_string()
         }
     }
 
@@ -761,10 +759,7 @@ impl DatabaseOperation for TableOperation {
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
                 if db_type == DatabaseType::PostgreSql {
-                    format!(
-                        "ALTER TABLE {:?} RENAME TO {:?};",
-                        old_table_name, new_table_name
-                    )
+                    format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};")
                 } else if db_type == DatabaseType::SqlServer {
                     /*
                         Notes: Brackets around `old_table_name`, p.e.
@@ -795,13 +790,8 @@ impl DatabaseOperation for TableOperation {
             ) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "ALTER TABLE {:?} ADD CONSTRAINT {:?} \
-                    FOREIGN KEY ({:?}) REFERENCES {:?} ({:?});",
-                        table_name,
-                        foreign_key_name,
-                        column_foreign_key,
-                        table_to_reference,
-                        column_to_reference
+                        "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
+                        FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
                     )
                 } else if db_type == DatabaseType::SqlServer {
                     todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -813,8 +803,7 @@ impl DatabaseOperation for TableOperation {
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constraint_name) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "ALTER TABLE {:?} DROP CONSTRAINT {:?};",
-                        table_with_foreign_key, constraint_name
+                        "ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constraint_name};",
                     )
                 } else if db_type == DatabaseType::SqlServer {
                     todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -826,8 +815,7 @@ impl DatabaseOperation for TableOperation {
             TableOperation::AddTablePrimaryKey(table_name, entity_field) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "ALTER TABLE {:?} ADD PRIMARY KEY (\"{}\");",
-                        table_name, entity_field.field_name
+                        "ALTER TABLE {table_name} ADD PRIMARY KEY (\"{}\");", entity_field.field_name
                     )
                 } else if db_type == DatabaseType::SqlServer {
                     todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -839,8 +827,7 @@ impl DatabaseOperation for TableOperation {
             TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => {
                 if db_type == DatabaseType::PostgreSql || db_type == DatabaseType::SqlServer {
                     format!(
-                        "ALTER TABLE {:?} DROP CONSTRAINT {:?} CASCADE;",
-                        table_name, primary_key_name
+                        "ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"
                     )
                 } else {
                     todo!()
@@ -912,13 +899,12 @@ impl DatabaseOperation for ColumnOperation {
             },
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is diferent
-                format!("ALTER TABLE {} DROP COLUMN {};", table_name, column_name)
+                format!("ALTER TABLE {table_name} DROP COLUMN {column_name};")
             },
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
             if db_type == DatabaseType::PostgreSql {
                 format!(
-                    "ALTER TABLE {} ALTER COLUMN \"{}\" TYPE {};",
-                    table_name,
+                    "ALTER TABLE {table_name} ALTER COLUMN \"{}\" TYPE {};",
                     entity_field.field_name,
                     entity_field.to_postgres_alter_syntax())
             }  else if db_type == DatabaseType::SqlServer {
@@ -944,7 +930,7 @@ impl DatabaseOperation for ColumnOperation {
 
             ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
                 format!(
-                "ALTER TABLE {} ALTER COLUMN {} {} NULL; DECLARE @tableName VARCHAR(MAX) = '{table_name}'
+                "ALTER TABLE {table_name} ALTER COLUMN {column_name} {column_datatype} NULL; DECLARE @tableName VARCHAR(MAX) = '{table_name}'
                 DECLARE @columnName VARCHAR(MAX) = '{column_name}'
                 DECLARE @ConstraintName nvarchar(200)
                 SELECT @ConstraintName = Name 
@@ -954,23 +940,19 @@ impl DatabaseOperation for ColumnOperation {
                     SELECT column_id FROM sys.columns
                     WHERE NAME = @columnName AND object_id = OBJECT_ID(@tableName))
                 IF @ConstraintName IS NOT NULL
-                    EXEC('ALTER TABLE '+@tableName+' DROP CONSTRAINT ' + @ConstraintName);",
-                table_name, column_name, column_datatype
+                    EXEC('ALTER TABLE '+@tableName+' DROP CONSTRAINT ' + @ConstraintName);"
             ),
 
             ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) => format!(
-                "ALTER TABLE {:?} ALTER COLUMN \"{}\" SET NOT NULL;",
-                table_name, entity_field.field_name
+                "ALTER TABLE {table_name} ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
             ),
 
             ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
-                "ALTER TABLE {:?} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;",
-                table_name, entity_field.field_name
+                "ALTER TABLE {table_name} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;", entity_field.field_name
             ),
 
             ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
-                "ALTER TABLE {:?} ALTER COLUMN \"{}\" DROP IDENTITY;",
-                table_name, entity_field.field_name
+                "ALTER TABLE {table_name} ALTER COLUMN \"{}\" DROP IDENTITY;", entity_field.field_name
             ),
         };
 

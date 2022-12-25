@@ -41,11 +41,9 @@ pub trait Transaction<T> {
                 .expect("No default datasource found. Check your `canyon.toml` file")
         } else {
             guarded_cache.get(datasource_name)
-                .expect(
-                    &format!(
-                        "Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
-                    )
-                )
+                .unwrap_or_else(|| 
+                    panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
+                ))
         };
 
         match database_conn.database_type {
@@ -101,7 +99,7 @@ where
 
     fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
 
-    fn select_query_datasource<'a>(datasource_name: &'a str) -> SelectQueryBuilder<'a, T>;
+    fn select_query_datasource(datasource_name: &str) -> SelectQueryBuilder<'_, T>;
 
     async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 

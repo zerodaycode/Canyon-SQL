@@ -172,11 +172,7 @@ where
 
         let result = T::query(
             self.query.sql.clone(),
-            self.query
-                .params
-                .iter()
-                .map(|arg| *arg)
-                .collect::<Vec<&dyn QueryParameters>>(),
+            self.query.params.to_vec(),
             self.datasource_name,
         )
         .await;
@@ -193,7 +189,7 @@ where
 
         let where_ = String::from(" WHERE ")
             + column_name
-            + &op.as_str()
+            + op.as_str()
             + "$"
             + &(self.query.params.len() + 1).to_string();
 
@@ -206,7 +202,7 @@ where
 
         let and_ = String::from(" AND ")
             + column_name
-            + &op.as_str()
+            + op.as_str()
             + "$"
             + &(self.query.params.len() + 1).to_string()
             + " ";
@@ -220,7 +216,7 @@ where
 
         let and_ = String::from(" OR ")
             + column_name
-            + &op.as_str()
+            + op.as_str()
             + "$"
             + &(self.query.params.len() + 1).to_string()
             + " ";
@@ -234,7 +230,7 @@ where
         Z: FieldIdentifier<T>,
         Q: QueryParameters<'a>,
     {
-        if values.len() == 0 {
+        if values.is_empty() {
             return;
         }
 
@@ -243,7 +239,7 @@ where
             .push_str(&format!(" AND {} IN (", r#and.as_str()));
 
         let mut counter = 1;
-        values.into_iter().for_each(|qp| {
+        values.iter().for_each(|qp| {
             if values.len() != counter {
                 self.query
                     .sql
@@ -265,7 +261,7 @@ where
         Z: FieldIdentifier<T>,
         Q: QueryParameters<'a>,
     {
-        if values.len() == 0 {
+        if values.is_empty() {
             return;
         }
 
@@ -274,7 +270,7 @@ where
             .push_str(&format!(" OR {} IN (", r#or.as_str()));
 
         let mut counter = 1;
-        values.into_iter().for_each(|qp| {
+        values.iter().for_each(|qp| {
             if values.len() != counter {
                 self.query
                     .sql
@@ -319,7 +315,7 @@ where
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
         Self {
             _inner: QueryBuilder::<T>::new(
-                Query::new(format!("SELECT * FROM {}", table_schema_data)),
+                Query::new(format!("SELECT * FROM {table_schema_data}")),
                 datasource_name,
             ),
         }
@@ -343,9 +339,9 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&String::from(format!(
+        self._inner.query.sql.push_str(&format!(
             " LEFT JOIN {join_table} ON {col1} = {col2}"
-        )));
+        ));
         self
     }
 
@@ -358,9 +354,9 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn inner_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&String::from(format!(
+        self._inner.query.sql.push_str(&format!(
             " INNER JOIN {join_table} ON {col1} = {col2}"
-        )));
+        ));
         self
     }
 
@@ -373,9 +369,9 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn right_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&String::from(format!(
+        self._inner.query.sql.push_str(&format!(
             " RIGHT JOIN {join_table} ON {col1} = {col2}"
-        )));
+        ));
         self
     }
 
@@ -388,9 +384,9 @@ where
     ///
     /// > Note: The order on the column paramenters is irrelevant
     pub fn full_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
-        self._inner.query.sql.push_str(&String::from(format!(
+        self._inner.query.sql.push_str(&format!(
             " FULL JOIN {join_table} ON {col1} = {col2}"
-        )));
+        ));
         self
     }
 }
@@ -478,7 +474,7 @@ where
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
         Self {
             _inner: QueryBuilder::<T>::new(
-                Query::new(format!("UPDATE {}", table_schema_data)),
+                Query::new(format!("UPDATE {table_schema_data}")),
                 datasource_name,
             ),
         }
@@ -499,7 +495,7 @@ where
         Z: FieldIdentifier<T> + Clone,
         Q: QueryParameters<'a>,
     {
-        if columns.len() == 0 {
+        if columns.is_empty() {
             return self;
         }
         if self._inner.query.sql.contains("SET") {
@@ -617,7 +613,7 @@ where
     pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
         Self {
             _inner: QueryBuilder::<T>::new(
-                Query::new(format!("DELETE FROM {}", table_schema_data)),
+                Query::new(format!("DELETE FROM {table_schema_data}")),
                 datasource_name,
             ),
         }

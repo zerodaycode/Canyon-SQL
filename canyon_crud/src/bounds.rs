@@ -37,7 +37,7 @@ pub trait FieldIdentifier<T>
 where
     T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
 {
-    fn as_str<'a>(&'a self) -> &'static str;
+    fn as_str(&self) -> &'static str;
 }
 
 /// Represents some kind of introspection to make the implementors
@@ -149,7 +149,7 @@ pub trait RowOperations {
     where
         Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
 
-    fn columns<'a>(&'a self) -> Vec<Column>;
+    fn columns(&self) -> Vec<Column>;
 }
 
 impl RowOperations for &dyn Row {
@@ -157,24 +157,18 @@ impl RowOperations for &dyn Row {
     where
         Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>,
     {
-        match self.as_any().downcast_ref::<tokio_postgres::Row>() {
-            Some(row) => {
-                return row.get::<&str, Output>(col_name);
-            }
-            None => (),
+        if let Some(row) = self.as_any().downcast_ref::<tokio_postgres::Row>() {
+            return row.get::<&str, Output>(col_name);
         };
-        match self.as_any().downcast_ref::<tiberius::Row>() {
-            Some(row) => {
-                return row
-                    .get::<Output, &str>(col_name)
-                    .expect("Failed to obtain a row in the MSSQL migrations");
-            }
-            None => (),
+        if let Some(row) = self.as_any().downcast_ref::<tiberius::Row>() {
+            return row
+                .get::<Output, &str>(col_name)
+                .expect("Failed to obtain a row in the MSSQL migrations");
         };
         panic!()
     }
 
-    fn columns<'a>(&'a self) -> Vec<Column> {
+    fn columns(&self) -> Vec<Column> {
         let mut cols = vec![];
 
         if self.as_any().is::<tokio_postgres::Row>() {
@@ -182,7 +176,7 @@ impl RowOperations for &dyn Row {
                 .downcast_ref::<tokio_postgres::Row>()
                 .expect("Not a tokio postgres Row for column")
                 .columns()
-                .into_iter()
+                .iter()
                 .for_each(|c| {
                     cols.push(Column {
                         name: c.name(),
@@ -194,7 +188,7 @@ impl RowOperations for &dyn Row {
                 .downcast_ref::<tiberius::Row>()
                 .expect("Not a Tiberius Row for column")
                 .columns()
-                .into_iter()
+                .iter()
                 .for_each(|c| {
                     cols.push(Column {
                         name: c.name(),
@@ -210,19 +204,13 @@ impl RowOperations for &dyn Row {
     where
         Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>,
     {
-        match self.as_any().downcast_ref::<tokio_postgres::Row>() {
-            Some(row) => {
-                return row.get::<&str, Option<Output>>(col_name);
-            }
-            None => (),
+        if let Some(row) = self.as_any().downcast_ref::<tokio_postgres::Row>() {
+            return row.get::<&str, Option<Output>>(col_name);
         };
-        match self.as_any().downcast_ref::<tiberius::Row>() {
-            Some(row) => {
-                return row
-                    .try_get::<Output, &str>(col_name)
-                    .expect("Failed to obtain a row in the MSSQL migrations");
-            }
-            None => (),
+        if let Some(row) = self.as_any().downcast_ref::<tiberius::Row>() {
+            return row
+                .try_get::<Output, &str>(col_name)
+                .expect("Failed to obtain a row in the MSSQL migrations");
         };
         panic!()
     }

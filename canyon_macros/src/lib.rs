@@ -119,7 +119,7 @@ pub fn canyon_tokio_test(
 ) -> CompilerTokenStream {
     let func_res = syn::parse::<FunctionParser>(input);
     if func_res.is_err() {
-        return quote! { fn non_valid_test_fn() {} }.into();
+        quote! { fn non_valid_test_fn() {} }.into()
     } else {
         let func = func_res.ok().unwrap();
         let sign = func.sig;
