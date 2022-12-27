@@ -148,7 +148,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
             let datasource_name = "";
-            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> = vec![#(#insert_values),*];
+            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
 
@@ -193,7 +193,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
-            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameters<'_>> = vec![#(#insert_values_cloned),*];
+            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
 
@@ -436,14 +436,14 @@ pub fn generate_multiple_insert_tokens(
         async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use canyon_sql::crud::bounds::QueryParameters;
+            use canyon_sql::crud::bounds::QueryParameter;
             let datasource_name = "";
 
-            let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
+            let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
             for instance in instances.iter() {
-                let intermediate: &[&dyn QueryParameters<'_>] = &[#(#macro_fields),*];
+                let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields),*];
 
-                let mut longer_lived: Vec<&dyn QueryParameters<'_>> = Vec::new();
+                let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
                 for value in intermediate.into_iter() {
                     longer_lived.push(*value)
                 }
@@ -493,13 +493,13 @@ pub fn generate_multiple_insert_tokens(
         async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use canyon_sql::crud::bounds::QueryParameters;
+            use canyon_sql::crud::bounds::QueryParameter;
 
-            let mut final_values: Vec<Vec<&dyn QueryParameters<'_>>> = Vec::new();
+            let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
             for instance in instances.iter() {
-                let intermediate: &[&dyn QueryParameters<'_>] = &[#(#macro_fields_cloned),*];
+                let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields_cloned),*];
 
-                let mut longer_lived: Vec<&dyn QueryParameters<'_>> = Vec::new();
+                let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
                 for value in intermediate.into_iter() {
                     longer_lived.push(*value)
                 }

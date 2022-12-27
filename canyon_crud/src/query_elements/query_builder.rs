@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use crate::{
-    bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameters},
+    bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameter},
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
     query_elements::query::Query,
@@ -91,12 +91,12 @@ pub mod ops {
         /// * `column` - A [`FieldIdentifier`] that will provide the target
         /// column name for the filter, based on the variant that represents
         /// the field name that maps the targeted column name
-        /// * `values` - An array of [`QueryParameters`] with the values to filter
+        /// * `values` - An array of [`QueryParameter`] with the values to filter
         /// inside the `IN` operator
         fn and_values_in<Z, Q>(&mut self, column: Z, values: &'a [Q]) -> &mut Self
         where
             Z: FieldIdentifier<T>,
-            Q: QueryParameters<'a>;
+            Q: QueryParameter<'a>;
 
         /// Generates an `OR` SQL clause for constraint the query that will create
         /// the filter in conjunction with an `IN` operator that will ac
@@ -104,12 +104,12 @@ pub mod ops {
         /// * `column` - A [`FieldIdentifier`] that will provide the target
         /// column name for the filter, based on the variant that represents
         /// the field name that maps the targeted column name
-        /// * `values` - An array of [`QueryParameters`] with the values to filter
+        /// * `values` - An array of [`QueryParameter`] with the values to filter
         /// inside the `IN` operator
         fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
         where
             Z: FieldIdentifier<T>,
-            Q: QueryParameters<'a>;
+            Q: QueryParameter<'a>;
 
         /// Generates an `OR` SQL clause for constraint the query.
         ///
@@ -228,7 +228,7 @@ where
     pub fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q])
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         if values.is_empty() {
             return;
@@ -259,7 +259,7 @@ where
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         if values.is_empty() {
             return;
@@ -429,7 +429,7 @@ where
     fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         self._inner.and_values_in(and, values);
         self
@@ -445,7 +445,7 @@ where
     fn or_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(and, values);
         self
@@ -497,7 +497,7 @@ where
     pub fn set<Z, Q>(&mut self, columns: &'a [(Z, Q)]) -> &mut Self
     where
         Z: FieldIdentifier<T> + Clone,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         if columns.is_empty() {
             return self;
@@ -567,7 +567,7 @@ where
     fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         self._inner.and_values_in(and, values);
         self
@@ -583,7 +583,7 @@ where
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(or, values);
         self
@@ -667,7 +667,7 @@ where
     fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(and, values);
         self
@@ -683,7 +683,7 @@ where
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
-        Q: QueryParameters<'a>,
+        Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(or, values);
         self

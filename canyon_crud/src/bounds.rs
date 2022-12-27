@@ -43,7 +43,7 @@ where
 /// Represents some kind of introspection to make the implementors
 /// able to retrieve a value inside some variant of an associated enum type.
 /// and convert it to a tuple struct formed by the column name as an String,
-/// and the dynamic value of the [`QueryParameters<'_>`] trait object contained
+/// and the dynamic value of the [`QueryParameter<'_>`] trait object contained
 /// inside the variant requested,
 /// enabling a convertion of that value into something
 /// that can be part of an SQL query.
@@ -64,7 +64,7 @@ pub trait FieldValueIdentifier<'a, T>
 where
     T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
 {
-    fn value(self) -> (&'static str, &'a dyn QueryParameters<'a>);
+    fn value(self) -> (&'static str, &'a dyn QueryParameter<'a>);
 }
 
 /// Bounds to some type T in order to make it callable over some fn parameter T
@@ -76,7 +76,7 @@ where
 /// this side of the relation it's representing
 pub trait ForeignKeyable<T> {
     /// Retrieves the field related to the column passed in
-    fn get_fk_column(&self, column: &str) -> Option<&dyn QueryParameters<'_>>;
+    fn get_fk_column(&self, column: &str) -> Option<&dyn QueryParameter<'_>>;
 }
 
 /// To define trait objects that helps to relates the necessary bounds in the 'IN` SQL clause
@@ -218,7 +218,7 @@ impl RowOperations for &dyn Row {
 
 /// Defines a trait for represent type bounds against the allowed
 /// datatypes supported by Canyon to be used as query parameters.
-pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {
+pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
 }
@@ -228,16 +228,16 @@ pub trait QueryParameters<'a>: std::fmt::Debug + Sync + Send {
 ///
 /// This implementation is necessary because of the generic amplitude
 /// of the arguments of the [`Transaction::query`], that should work with
-/// a collection of [`QueryParameters<'a>`], in order to allow a workflow
+/// a collection of [`QueryParameter<'a>`], in order to allow a workflow
 /// that is not dependant of the specific type of the argument that holds
 /// the query parameters of the database connectors
-impl<'a> IntoSql<'a> for &'a dyn QueryParameters<'a> {
+impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
     fn into_sql(self) -> ColumnData<'a> {
         self.as_sqlserver_param()
     }
 }
 
-impl<'a> QueryParameters<'a> for i16 {
+impl<'a> QueryParameter<'a> for i16 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -246,7 +246,7 @@ impl<'a> QueryParameters<'a> for i16 {
         ColumnData::I16(Some(*self))
     }
 }
-impl<'a> QueryParameters<'a> for &i16 {
+impl<'a> QueryParameter<'a> for &i16 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -255,7 +255,7 @@ impl<'a> QueryParameters<'a> for &i16 {
         ColumnData::I16(Some(**self))
     }
 }
-impl<'a> QueryParameters<'a> for Option<i16> {
+impl<'a> QueryParameter<'a> for Option<i16> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -264,7 +264,7 @@ impl<'a> QueryParameters<'a> for Option<i16> {
         ColumnData::I16(*self)
     }
 }
-impl<'a> QueryParameters<'a> for Option<&i16> {
+impl<'a> QueryParameter<'a> for Option<&i16> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -273,7 +273,7 @@ impl<'a> QueryParameters<'a> for Option<&i16> {
         ColumnData::I16(Some(*self.unwrap()))
     }
 }
-impl<'a> QueryParameters<'a> for i32 {
+impl<'a> QueryParameter<'a> for i32 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -282,7 +282,7 @@ impl<'a> QueryParameters<'a> for i32 {
         ColumnData::I32(Some(*self))
     }
 }
-impl<'a> QueryParameters<'a> for &i32 {
+impl<'a> QueryParameter<'a> for &i32 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -291,7 +291,7 @@ impl<'a> QueryParameters<'a> for &i32 {
         ColumnData::I32(Some(**self))
     }
 }
-impl<'a> QueryParameters<'a> for Option<i32> {
+impl<'a> QueryParameter<'a> for Option<i32> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -300,7 +300,7 @@ impl<'a> QueryParameters<'a> for Option<i32> {
         ColumnData::I32(*self)
     }
 }
-impl<'a> QueryParameters<'a> for Option<&i32> {
+impl<'a> QueryParameter<'a> for Option<&i32> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -309,7 +309,7 @@ impl<'a> QueryParameters<'a> for Option<&i32> {
         ColumnData::I32(Some(*self.unwrap()))
     }
 }
-impl<'a> QueryParameters<'a> for f32 {
+impl<'a> QueryParameter<'a> for f32 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -318,7 +318,7 @@ impl<'a> QueryParameters<'a> for f32 {
         ColumnData::F32(Some(*self))
     }
 }
-impl<'a> QueryParameters<'a> for &f32 {
+impl<'a> QueryParameter<'a> for &f32 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -327,7 +327,7 @@ impl<'a> QueryParameters<'a> for &f32 {
         ColumnData::F32(Some(**self))
     }
 }
-impl<'a> QueryParameters<'a> for Option<f32> {
+impl<'a> QueryParameter<'a> for Option<f32> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -336,18 +336,18 @@ impl<'a> QueryParameters<'a> for Option<f32> {
         ColumnData::F32(*self)
     }
 }
-impl<'a> QueryParameters<'a> for Option<&f32> {
+impl<'a> QueryParameter<'a> for Option<&f32> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F32(Some(
-            *self.expect("Error on an f32 value on QueryParameters<'_>"),
+            *self.expect("Error on an f32 value on QueryParameter<'_>"),
         ))
     }
 }
-impl<'a> QueryParameters<'a> for f64 {
+impl<'a> QueryParameter<'a> for f64 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -356,7 +356,7 @@ impl<'a> QueryParameters<'a> for f64 {
         ColumnData::F64(Some(*self))
     }
 }
-impl<'a> QueryParameters<'a> for &f64 {
+impl<'a> QueryParameter<'a> for &f64 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -365,7 +365,7 @@ impl<'a> QueryParameters<'a> for &f64 {
         ColumnData::F64(Some(**self))
     }
 }
-impl<'a> QueryParameters<'a> for Option<f64> {
+impl<'a> QueryParameter<'a> for Option<f64> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -374,18 +374,18 @@ impl<'a> QueryParameters<'a> for Option<f64> {
         ColumnData::F64(*self)
     }
 }
-impl<'a> QueryParameters<'a> for Option<&f64> {
+impl<'a> QueryParameter<'a> for Option<&f64> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
 
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F64(Some(
-            *self.expect("Error on an f64 value on QueryParameters<'_>"),
+            *self.expect("Error on an f64 value on QueryParameter<'_>"),
         ))
     }
 }
-impl<'a> QueryParameters<'a> for i64 {
+impl<'a> QueryParameter<'a> for i64 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -394,7 +394,7 @@ impl<'a> QueryParameters<'a> for i64 {
         ColumnData::I64(Some(*self))
     }
 }
-impl<'a> QueryParameters<'a> for &i64 {
+impl<'a> QueryParameter<'a> for &i64 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -403,7 +403,7 @@ impl<'a> QueryParameters<'a> for &i64 {
         ColumnData::I64(Some(**self))
     }
 }
-impl<'a> QueryParameters<'a> for Option<i64> {
+impl<'a> QueryParameter<'a> for Option<i64> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -412,7 +412,7 @@ impl<'a> QueryParameters<'a> for Option<i64> {
         ColumnData::I64(*self)
     }
 }
-impl<'a> QueryParameters<'a> for Option<&i64> {
+impl<'a> QueryParameter<'a> for Option<&i64> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -421,7 +421,7 @@ impl<'a> QueryParameters<'a> for Option<&i64> {
         ColumnData::I64(Some(*self.unwrap()))
     }
 }
-impl<'a> QueryParameters<'a> for String {
+impl<'a> QueryParameter<'a> for String {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -430,7 +430,7 @@ impl<'a> QueryParameters<'a> for String {
         ColumnData::String(Some(std::borrow::Cow::Owned(self.to_owned())))
     }
 }
-impl<'a> QueryParameters<'a> for &String {
+impl<'a> QueryParameter<'a> for &String {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -439,7 +439,7 @@ impl<'a> QueryParameters<'a> for &String {
         ColumnData::String(Some(std::borrow::Cow::Borrowed(self)))
     }
 }
-impl<'a> QueryParameters<'a> for Option<String> {
+impl<'a> QueryParameter<'a> for Option<String> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -451,7 +451,7 @@ impl<'a> QueryParameters<'a> for Option<String> {
         }
     }
 }
-impl<'a> QueryParameters<'a> for Option<&String> {
+impl<'a> QueryParameter<'a> for Option<&String> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -463,7 +463,7 @@ impl<'a> QueryParameters<'a> for Option<&String> {
         }
     }
 }
-impl<'a> QueryParameters<'_> for &'_ str {
+impl<'a> QueryParameter<'_> for &'_ str {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -472,7 +472,7 @@ impl<'a> QueryParameters<'_> for &'_ str {
         ColumnData::String(Some(std::borrow::Cow::Borrowed(*self)))
     }
 }
-impl<'a> QueryParameters<'a> for Option<&'_ str> {
+impl<'a> QueryParameter<'a> for Option<&'_ str> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -484,7 +484,7 @@ impl<'a> QueryParameters<'a> for Option<&'_ str> {
         }
     }
 }
-impl<'a> QueryParameters<'_> for NaiveDate {
+impl<'a> QueryParameter<'_> for NaiveDate {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -493,7 +493,7 @@ impl<'a> QueryParameters<'_> for NaiveDate {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'a> for Option<NaiveDate> {
+impl<'a> QueryParameter<'a> for Option<NaiveDate> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -502,7 +502,7 @@ impl<'a> QueryParameters<'a> for Option<NaiveDate> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'_> for NaiveTime {
+impl<'a> QueryParameter<'_> for NaiveTime {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -511,7 +511,7 @@ impl<'a> QueryParameters<'_> for NaiveTime {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'a> for Option<NaiveTime> {
+impl<'a> QueryParameter<'a> for Option<NaiveTime> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -520,7 +520,7 @@ impl<'a> QueryParameters<'a> for Option<NaiveTime> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'_> for NaiveDateTime {
+impl<'a> QueryParameter<'_> for NaiveDateTime {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -529,7 +529,7 @@ impl<'a> QueryParameters<'_> for NaiveDateTime {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'a> for Option<NaiveDateTime> {
+impl<'a> QueryParameter<'a> for Option<NaiveDateTime> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -538,7 +538,7 @@ impl<'a> QueryParameters<'a> for Option<NaiveDateTime> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'_> for DateTime<FixedOffset> {
+impl<'a> QueryParameter<'_> for DateTime<FixedOffset> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -547,7 +547,7 @@ impl<'a> QueryParameters<'_> for DateTime<FixedOffset> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'a> for Option<DateTime<FixedOffset>> {
+impl<'a> QueryParameter<'a> for Option<DateTime<FixedOffset>> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -556,7 +556,7 @@ impl<'a> QueryParameters<'a> for Option<DateTime<FixedOffset>> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'_> for DateTime<Utc> {
+impl<'a> QueryParameter<'_> for DateTime<Utc> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
@@ -565,7 +565,7 @@ impl<'a> QueryParameters<'_> for DateTime<Utc> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameters<'_> for Option<DateTime<Utc>> {
+impl<'a> QueryParameter<'_> for Option<DateTime<Utc>> {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }

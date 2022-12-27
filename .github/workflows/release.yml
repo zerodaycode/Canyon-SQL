@@ -47,6 +47,7 @@ jobs:
           path: './canyon_sql'
 
   release-publisher:
+    needs: 'publish'
     permissions:
         contents: write
     name: Generate a new release and update the CHANGELOG

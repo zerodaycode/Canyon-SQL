@@ -10,10 +10,16 @@
 `Canyon-SQL` is a high level abstraction for working with multiple databases concurrently. Is build on top of the `async` language features
 to provide a high speed, high performant library to handling data access for consumers.
 
-## Early stage advice
+## Early stage disclaimer
 
 The library it's still on a `early stage` state.
-Any contrib via `fork` + `PR` it's really appreciated. Currently we are involved in a really active development on the project. Near to december 2022, first release will be published and available in `crates.io`.
+Any contrib via `fork` + `PR` it's really appreciated. Currently we are involved in a really active development on the project.
+
+## Full documentation resources
+
+There is a `work-in-progress` web page, build with `mdBook` containing the official documentation.
+Here is where you will find all the technical documentation for `Canyon-SQL`.
+You can read it [by clicking this link](https://zerodaycode.github.io/canyon-book/)
 
 ## Most important features
 
@@ -33,13 +39,4 @@ Also, in the future, we have plans to allow you to manipulate the whole server, 
 
 Every crate listed above is an `async` based crate, in line with the guidelines of the `Canyon-SQL` design.
 
-There are plans for include more databases, but is not one of the priorities of the development team nowadays.
-
-## Full documentation resources
-
-There is a `work-in-progress` web page, build with `mdBook` containing the official documentation.
-You can read it [by clicking this link](https://zerodaycode.github.io/canyon-book/)
-
-> At this time, and while this comment is in this README.md file, the documentation linked above is outdated
-with the current library implementation. This will took to update probably several weeks, so take in consideration
-wait for this comment to dissapear from here, because the project is under a rewrite process.
+There are plans for include more databases engines.

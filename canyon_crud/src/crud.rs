@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseType;
 use canyon_connection::CACHED_DATABASE_CONN;
 
-use crate::bounds::QueryParameters;
+use crate::bounds::QueryParameter;
 use crate::mapper::RowMapper;
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
@@ -30,7 +30,7 @@ pub trait Transaction<T> {
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
         let guarded_cache = CACHED_DATABASE_CONN.lock().await;
 
@@ -108,11 +108,11 @@ where
     ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
     async fn find_by_pk<'a>(
-        value: &'a dyn QueryParameters<'a>,
+        value: &'a dyn QueryParameter<'a>,
     ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
     async fn find_by_pk_datasource<'a>(
-        value: &'a dyn QueryParameters<'a>,
+        value: &'a dyn QueryParameter<'a>,
         datasource_name: &'a str,
     ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
@@ -158,7 +158,7 @@ where
 }
 
 mod postgres_query_launcher {
-    use crate::bounds::QueryParameters;
+    use crate::bounds::QueryParameter;
     use crate::result::DatabaseResult;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
 
@@ -166,7 +166,7 @@ mod postgres_query_launcher {
         db_conn: &DatabaseConnection,
         // datasource_name: &str,
         stmt: String,
-        params: &'a [&'_ dyn QueryParameters<'_>],
+        params: &'a [&'_ dyn QueryParameter<'_>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let mut m_params = Vec::new();
         for param in params {
@@ -197,7 +197,7 @@ mod sqlserver_query_launcher {
     use canyon_connection::tiberius::Row;
 
     use crate::{
-        bounds::QueryParameters,
+        bounds::QueryParameter,
         canyon_connection::{canyon_database_connector::DatabaseConnection, tiberius::Query},
         result::DatabaseResult,
     };
@@ -208,7 +208,7 @@ mod sqlserver_query_launcher {
         params: Z,
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
     where
-        Z: AsRef<[&'a dyn QueryParameters<'a>]> + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
         // Re-generate de insert statement to adecuate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {
