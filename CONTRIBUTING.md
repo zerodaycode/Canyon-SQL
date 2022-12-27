@@ -1,6 +1,6 @@
-# Contributing to CONTRIBUTING.md
+# Contributing to Canyon-SQL
 
-First off, thanks for taking the time to contribute! 
+First off, thanks for taking the time to contribute!
 
 All types of contributions are encouraged and valued. See the [Table of Contents](#table-of-contents) for different ways to help and details about how this project handles them. Please make sure to read the relevant section before making your contribution. It will make it a lot easier for us maintainers and smooth out the experience for all involved. The community looks forward to your contributions. 
 
@@ -24,14 +24,12 @@ All types of contributions are encouraged and valued. See the [Table of Contents
 - [Commit Messages](#commit-messages)
 - [Join The Project Team](#join-the-project-team)
 
-
 ## Code of Conduct
 
 This project and everyone participating in it is governed by the
 [CONTRIBUTING.md Code of Conduct](blob/master/CODE_OF_CONDUCT.md).
 By participating, you are expected to uphold this code. Please report unacceptable behavior
 to <>.
-
 
 ## I Have a Question
 
@@ -47,15 +45,13 @@ If you then still feel the need to ask a question and need clarification, we rec
 
 We will then take care of the issue as soon as possible.
 
-
-
 ## I Want To Contribute
 
-> ### Legal Notice 
+### Legal Notice
+
 > When contributing to this project, you must agree that you have authored 100% of the content, that you have the necessary rights to the content and that the content you contribute may be provided under the project license.
 
 ### Reporting Bugs
-
 
 #### Before Submitting a Bug Report
 
@@ -72,11 +68,9 @@ A good bug report shouldn't leave others needing to chase you up for more inform
 - Possibly your input and the output
 - Can you reliably reproduce the issue? And can you also reproduce it with older versions?
 
-
 #### How Do I Submit a Good Bug Report?
 
 > You must never report security related issues, vulnerabilities or bugs including sensitive information to the issue tracker, or elsewhere in public. Instead sensitive bugs must be sent by email to <>.
-
 
 We use GitHub issues to track bugs and errors. If you run into an issue with the project:
 
@@ -112,6 +106,6 @@ Enhancement suggestions are tracked as [GitHub issues](/issues).
 - You may want to **include screenshots and animated GIFs** which help you demonstrate the steps or point out the part which the suggestion is related to. You can use [this tool](https://www.cockos.com/licecap/) to record GIFs on macOS and Windows, and [this tool](https://github.com/colinkeenan/silentcast) or [this tool](https://github.com/GNOME/byzanz) on Linux.
 - **Explain why this enhancement would be useful** to most CONTRIBUTING.md users. You may also want to point out the other projects that solved it better and which could serve as inspiration.
 
-
 ## Attribution
+
 This guide is based on the **contributing.md**. [Make your own](https://contributing.md/)!
