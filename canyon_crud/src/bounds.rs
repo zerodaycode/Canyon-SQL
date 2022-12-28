@@ -45,7 +45,7 @@ where
 /// and convert it to a tuple struct formed by the column name as an String,
 /// and the dynamic value of the [`QueryParameter<'_>`] trait object contained
 /// inside the variant requested,
-/// enabling a convertion of that value into something
+/// enabling a conversion of that value into something
 /// that can be part of an SQL query.
 ///
 ///
@@ -229,7 +229,7 @@ pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
 /// This implementation is necessary because of the generic amplitude
 /// of the arguments of the [`Transaction::query`], that should work with
 /// a collection of [`QueryParameter<'a>`], in order to allow a workflow
-/// that is not dependant of the specific type of the argument that holds
+/// that is not dependent of the specific type of the argument that holds
 /// the query parameters of the database connectors
 impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
     fn into_sql(self) -> ColumnData<'a> {

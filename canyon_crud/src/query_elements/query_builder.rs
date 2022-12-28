@@ -337,7 +337,7 @@ where
     /// * `col1` - The left side of the ON operator for the join
     /// * `col2` - The right side of the ON operator for the join
     ///
-    /// > Note: The order on the column paramenters is irrelevant
+    /// > Note: The order on the column parameters is irrelevant
     pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner
             .query
@@ -353,7 +353,7 @@ where
     /// * `col1` - The left side of the ON operator for the join
     /// * `col2` - The right side of the ON operator for the join
     ///
-    /// > Note: The order on the column paramenters is irrelevant
+    /// > Note: The order on the column parameters is irrelevant
     pub fn inner_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner
             .query
@@ -369,7 +369,7 @@ where
     /// * `col1` - The left side of the ON operator for the join
     /// * `col2` - The right side of the ON operator for the join
     ///
-    /// > Note: The order on the column paramenters is irrelevant
+    /// > Note: The order on the column parameters is irrelevant
     pub fn right_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner
             .query
@@ -385,7 +385,7 @@ where
     /// * `col1` - The left side of the ON operator for the join
     /// * `col2` - The right side of the ON operator for the join
     ///
-    /// > Note: The order on the column paramenters is irrelevant
+    /// > Note: The order on the column parameters is irrelevant
     pub fn full_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
         self._inner
             .query
@@ -511,7 +511,7 @@ where
             )
         }
 
-        let cap = columns.len() * 50; // Reserving an enought initial capacity per set clause
+        let cap = columns.len() * 50; // Reserving an enough initial capacity per set clause
         let mut set_clause = String::with_capacity(cap);
         set_clause.push_str(" SET ");
 

@@ -18,7 +18,7 @@ pub fn generate_find_all_unchecked_tokens(
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
-        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
         async fn find_all_unchecked<'a>() -> Vec<#ty> {
             <#ty as canyon_sql::crud::Transaction<#ty>>::query(
@@ -33,7 +33,7 @@ pub fn generate_find_all_unchecked_tokens(
 
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
-        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
         ///
         /// The query it's made against the database with the configured datasource
@@ -64,7 +64,7 @@ pub fn generate_find_all_tokens(
     quote! {
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
-        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
         async fn find_all<'a>() ->
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
@@ -84,7 +84,7 @@ pub fn generate_find_all_tokens(
 
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
-        /// database convention. P.ej. PostgreSQL preferes table names declared
+        /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
         ///
         /// The query it's made against the database with the configured datasource
@@ -125,7 +125,7 @@ pub fn generate_find_all_query_tokens(
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention,
-        /// unless concrete values are setted on the available parameters of the
+        /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
@@ -136,7 +136,7 @@ pub fn generate_find_all_query_tokens(
         ///
         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention,
-        /// unless concrete values are setted on the available parameters of the
+        /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         ///
         /// The query it's made against the database with the configured datasource
@@ -149,7 +149,7 @@ pub fn generate_find_all_query_tokens(
 }
 
 /// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
-/// a posible success or error coming from the database
+/// a possible success or error coming from the database
 pub fn generate_count_tokens(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &String,
@@ -187,7 +187,7 @@ pub fn generate_count_tokens(
 
     quote! {
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
-        /// wrapping a posible success or error coming from the database
+        /// wrapping a possible success or error coming from the database
         async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             let count = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
@@ -199,7 +199,7 @@ pub fn generate_count_tokens(
         }
 
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
-        /// wrapping a posible success or error coming from the database with the specified datasource
+        /// wrapping a possible success or error coming from the database with the specified datasource
         async fn count_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
             let count = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
@@ -329,7 +329,7 @@ pub fn generate_find_by_pk_tokens(
 
 /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
 /// of a T type of as an associated function of same T type, but wrapped as a Result<T, Err>, representing
-/// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
+/// a possible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
 /// derive macro on the parent side of the relation
 pub fn generate_find_by_foreign_key_tokens(
     macro_data: &MacroTokens<'_>,
@@ -421,7 +421,7 @@ pub fn generate_find_by_foreign_key_tokens(
 
 /// Generates the TokenStream for build the __search_by_foreign_key() CRUD
 /// associated function, but wrapped as a Result<T, Err>, representing
-/// a posible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
+/// a possible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
 /// derive macro on the parent side of the relation
 pub fn generate_find_by_reverse_foreign_key_tokens(
     macro_data: &MacroTokens<'_>,
@@ -465,7 +465,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                 quote! { #quoted_method_signature; },
                 quote! {
                     /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
-                    /// performns a search to find the childs that belong to that concrete parent.
+                    /// performns a search to find the children that belong to that concrete parent.
                     #quoted_method_signature
                     {
                         let lookage_value = value.get_fk_column(#column)
@@ -494,7 +494,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                 quote! { #quoted_datasource_method_signature; },
                 quote! {
                     /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
-                    /// performns a search to find the childs that belong to that concrete parent
+                    /// performns a search to find the children that belong to that concrete parent
                     /// with the specified datasource.
                     #quoted_datasource_method_signature
                     {

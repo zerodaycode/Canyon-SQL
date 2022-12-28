@@ -13,7 +13,7 @@ use crate::tests_models::league::*;
 /// operation, because we use that concrete field to construct the clause that targets
 /// that entity.
 ///
-/// Attemp of usage the `t.update(&self)` method on an entity without `#[primary_key]`
+/// Attempt of usage the `t.update(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_update_method_operation() {

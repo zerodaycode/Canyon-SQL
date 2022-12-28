@@ -12,7 +12,7 @@ use crate::tests_models::league::*;
 /// operation, because we use that concrete field to construct the clause that targets
 /// that entity.
 ///
-/// Attemp of usage the `t.delete(&self)` method on an entity without `#[primary_key]`
+/// Attempt of usage the `t.delete(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_method_operation() {
@@ -48,7 +48,7 @@ fn test_crud_delete_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remeber that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk(&new_league.id)
             .await
@@ -94,7 +94,7 @@ fn test_crud_delete_datasource_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remeber that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
             .await

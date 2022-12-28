@@ -61,7 +61,7 @@ impl DatabaseConnection {
 
                 tokio::spawn(async move {
                     if let Err(e) = new_connection.await {
-                        eprintln!("An error occured while trying to connect to the PostgreSQL database: {e}");
+                        eprintln!("An error occurred while trying to connect to the PostgreSQL database: {e}");
                     }
                 });
 
@@ -96,7 +96,7 @@ impl DatabaseConnection {
                 // TcpStream to connect to the server.
                 let tcp = TcpStream::connect(config.get_addr())
                     .await
-                    .expect("Error instanciating the SqlServer TCP Stream");
+                    .expect("Error instantiating the SqlServer TCP Stream");
 
                 // We'll disable the Nagle algorithm. Buffering is handled
                 // internally with a `Sink`.
