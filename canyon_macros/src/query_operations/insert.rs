@@ -14,7 +14,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     // Returns a String with the generic $x placeholder for the query parameters.
     let placeholders = macro_data.placeholders_generator();
 
-    // Retrives the fields of the Struct
+    // Retrieves the fields of the Struct
     let fields = macro_data.get_struct_fields();
 
     let insert_values = fields.iter().map(|ident| {
@@ -71,7 +71,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                             self.#pk_ident = res.sqlserver.get(0)
                                 .expect("No value found on the returning clause")
                                 .get::<#pk_type, &str>(#primary_key)
-                                .expect("SQL Server primary key type failed to be setted as value")
+                                .expect("SQL Server primary key type failed to be set as value")
                                 .to_owned();
 
                             Ok(())
@@ -118,7 +118,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// operation, you instance will have the correct value that is the *PRIMARY KEY*
         /// of the database row that represents.
         ///
-        /// This operation returns a result type, indicating a posible failure querying the database.
+        /// This operation returns a result type, indicating a possible failure querying the database.
         ///
         /// ## *Examples*
         ///```
@@ -164,7 +164,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// operation, you instance will have the correct value that is the *PRIMARY KEY*
         /// of the database row that represents.
         ///
-        /// This operation returns a result type, indicating a posible failure querying the database.
+        /// This operation returns a result type, indicating a possible failure querying the database.
         ///
         /// ## *Examples*
         ///```
@@ -215,7 +215,7 @@ pub fn generate_multiple_insert_tokens(
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data.get_struct_fields_as_strings();
 
-    // Retrives the fields of the Struct
+    // Retrieves the fields of the Struct
     let fields = macro_data.get_struct_fields();
 
     let macro_fields = fields.iter().map(|field| quote! { &instance.#field });
@@ -239,14 +239,14 @@ pub fn generate_multiple_insert_tokens(
                 .collect::<Vec<String>>()
                 .join(", ");
 
-            let mut splitted = mapped_fields.split(", ")
+            let mut split = mapped_fields.split(", ")
                 .collect::<Vec<&str>>();
 
-            let pk_value_index = splitted.iter()
+            let pk_value_index = split.iter()
                 .position(|pk| *pk == format!("\"{}\"", #pk).as_str())
                 .expect("Error. No primary key found when should be there");
-            splitted.retain(|pk| *pk != format!("\"{}\"", #pk).as_str());
-            mapped_fields = splitted.join(", ").to_string();
+            split.retain(|pk| *pk != format!("\"{}\"", #pk).as_str());
+            mapped_fields = split.join(", ").to_string();
 
             let mut fields_placeholders = String::new();
 
@@ -321,7 +321,7 @@ pub fn generate_multiple_insert_tokens(
                                     .get(idx)
                                     .expect("Failed getting the returned IDs for a multi insert")
                                     .get::<#pk_type, &str>(#pk)
-                                    .expect("SQL Server primary key type failed to be setted as value");
+                                    .expect("SQL Server primary key type failed to be set as value");
                             }
 
                             Ok(())
@@ -339,7 +339,7 @@ pub fn generate_multiple_insert_tokens(
                 .collect::<Vec<String>>()
                 .join(", ");
 
-            let mut splitted = mapped_fields.split(", ")
+            let mut split = mapped_fields.split(", ")
                 .collect::<Vec<&str>>();
 
             let mut fields_placeholders = String::new();

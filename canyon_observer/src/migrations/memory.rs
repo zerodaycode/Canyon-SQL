@@ -13,7 +13,7 @@ use crate::{constants, QUERIES_TO_EXECUTE};
 /// file contains a `#[canyon_entity]` annotation and restricting it to just one
 /// annotated struct per file.
 ///
-/// This limitation it's imposed by desing. Canyon, when manages all the entities in
+/// This limitation it's imposed by design. Canyon, when manages all the entities in
 /// the user's source code, needs to know for future migrations the old data about a structure
 /// and the new modified one.
 ///
@@ -40,7 +40,7 @@ use crate::{constants, QUERIES_TO_EXECUTE};
 ///
 /// So, if the user wants or needs to modify the data of it's entity, Canyon can secure that will perform the
 /// correct operations because we can't "remember" how that entity was, and how it should be now, avoiding
-/// potencially dangerous operations due to lack of knowing what entity relates with new data.
+/// potentially dangerous operations due to lack of knowing what entity relates with new data.
 ///
 /// The `memory field` HashMap is made by the filepath as a key, and the struct's name as value
 #[derive(Debug)]
@@ -136,7 +136,7 @@ impl CanyonMemory {
                         .insert(datasource.name, vec![stmt]);
                 }
 
-                // if the updated element is the struct name, whe add it to the table_rename Hashmap
+                // if the updated element is the struct name, we add it to the table_rename Hashmap
                 let rename_table = old.struct_name != struct_name;
 
                 if rename_table {

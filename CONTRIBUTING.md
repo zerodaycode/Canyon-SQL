@@ -87,7 +87,7 @@ Once it's filed:
 
 ### Suggesting Enhancements
 
-If you want to suggest an enhacement or new feature for the project, please [open a new issue](/issues) describing what you desire to improve, and, potentially, how you plan to contribute to the project.
+If you want to suggest an enhancement or new feature for the project, please [open a new issue](/issues) describing what you desire to improve, and, potentially, how you plan to contribute to the project.
 
 #### Before Submitting an Enhancement
 

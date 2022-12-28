@@ -16,7 +16,7 @@ use super::memory::CanyonMemory;
 use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 
 /// Responsible of generating the queries to sync the database status with the
-/// Rust source code managed by Canyon, for succesfully make the migrations
+/// Rust source code managed by Canyon, for successfully make the migrations
 #[derive(Debug, Default)]
 pub struct MigrationsProcessor {
     operations: Vec<Box<dyn DatabaseOperation>>,
@@ -82,7 +82,7 @@ impl MigrationsProcessor {
                 }
 
                 // Time to check annotations for the current column
-                // Case when  we only need to add contrains
+                // Case when  we only need to add constraints
                 if (current_table_metadata.is_none()
                     && !canyon_register_field.annotations.is_empty())
                     || (current_table_metadata.is_some() && current_column_metadata.is_none())
@@ -765,14 +765,14 @@ impl DatabaseOperation for TableOperation {
                     /*
                         Notes: Brackets around `old_table_name`, p.e.
                             exec sp_rename ['league'], 'leagues'  // NOT VALID!
-                        is only allowed for compound names splitted by a dot.
+                        is only allowed for compound names split by a dot.
                             exec sp_rename ['random.league'], 'leagues'  // OK
 
                         CARE! This doesn't mean that we are including the schema.
                             exec sp_rename ['dbo.random.league'], 'leagues' // OK
                             exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
 
-                        Due to the automatic mapped name from Rust to DB and viceversa, this won't
+                        Due to the automatic mapped name from Rust to DB and vice-versa, this won't
                         be an allowed behaviour for now, only with the table_name parameter on the
                         CanyonEntity annotation.
                     */
@@ -867,7 +867,7 @@ enum ColumnOperation {
     // SQL server specific operation - SQL server can't drop a NOT NULL column
     DropNotNullBeforeDropColumn(String, String, String),
     AlterColumnSetNotNull(String, CanyonRegisterEntityField),
-    // TODO if implement throught annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
+    // TODO if implement through annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
     AlterColumnAddIdentity(String, CanyonRegisterEntityField),
     AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
@@ -898,7 +898,7 @@ impl DatabaseOperation for ColumnOperation {
                 todo!()
             },
             ColumnOperation::DeleteColumn(table_name, column_name) => {
-                // TODO Check if operation for SQL server is diferent
+                // TODO Check if operation for SQL server is different
                 format!("ALTER TABLE {table_name} DROP COLUMN {column_name};")
             },
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
@@ -933,9 +933,9 @@ impl DatabaseOperation for ColumnOperation {
                 "ALTER TABLE {table_name} ALTER COLUMN {column_name} {column_datatype} NULL; DECLARE @tableName VARCHAR(MAX) = '{table_name}'
                 DECLARE @columnName VARCHAR(MAX) = '{column_name}'
                 DECLARE @ConstraintName nvarchar(200)
-                SELECT @ConstraintName = Name 
+                SELECT @ConstraintName = Name
                 FROM SYS.DEFAULT_CONSTRAINTS
-                WHERE PARENT_OBJECT_ID = OBJECT_ID(@tableName) 
+                WHERE PARENT_OBJECT_ID = OBJECT_ID(@tableName)
                 AND PARENT_COLUMN_ID = (
                     SELECT column_id FROM sys.columns
                     WHERE NAME = @columnName AND object_id = OBJECT_ID(@tableName))

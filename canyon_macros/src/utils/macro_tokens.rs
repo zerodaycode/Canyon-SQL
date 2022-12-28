@@ -28,7 +28,7 @@ impl<'a> MacroTokens<'a> {
         }
     }
 
-    /// Gives a Vec ot tuples that contains the visibilty, the name and
+    /// Gives a Vec of tuples that contains the visibility, the name and
     /// the type of every field on a Struct
     pub fn _fields_with_visibility_and_types(&self) -> Vec<(Visibility, Ident, Type)> {
         self.fields
@@ -43,7 +43,7 @@ impl<'a> MacroTokens<'a> {
             .collect::<Vec<_>>()
     }
 
-    /// Gives a Vec ot tuples that contains the name and
+    /// Gives a Vec of tuples that contains the name and
     /// the type of every field on a Struct
     pub fn _fields_with_types(&self) -> Vec<(Ident, Type)> {
         self.fields
@@ -73,7 +73,7 @@ impl<'a> MacroTokens<'a> {
     ///
     /// If the type contains a `#[primary_key]` annotation (and), returns the
     /// name of the columns without the fields that maps against the column designed as
-    /// primary key (if its present and its autoincremental attribute is setted to true)
+    /// primary key (if its present and its autoincremental attribute is set to true)
     /// (autoincremental = true) or its without the autoincremental attribute, which leads
     /// to the same behaviour.
     ///

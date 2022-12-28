@@ -279,7 +279,7 @@ pub fn canyon_entity(
     // Fill the register with the data of the attached struct
     CANYON_REGISTER_ENTITIES
         .lock()
-        .expect("Error adquiring Mutex guard on Canyon Entity macro")
+        .expect("Error acquiring Mutex guard on Canyon Entity macro")
         .push(new_entity);
 
     // Assemble everything
@@ -307,7 +307,7 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     // Construct a representation of Rust code as a syntax tree
     // that we can manipulate
 
-    // Calls the helper struct to build the tokens that generates the final CRUD methos
+    // Calls the helper struct to build the tokens that generates the final CRUD methods
     let ast: DeriveInput =
         syn::parse(input).expect("Error parsing `Canyon Entity for generate the CRUD methods");
     let macro_data = MacroTokens::new(&ast);
@@ -366,7 +366,7 @@ fn impl_crud_operations_trait_for_struct(
     let fk_method_signatures = _search_by_fk_tokens.iter().map(|(sign, _)| sign);
     let fk_method_implementations = _search_by_fk_tokens.iter().map(|(_, m_impl)| m_impl);
 
-    // The tokens for generating the methods that enable Canyon to retrive the child entities that are of T type
+    // The tokens for generating the methods that enable Canyon to retrieve the child entities that are of T type
     // given a parent entity U: ForeignKeyable, as an associated function for the child type (T)
     let _search_by_revese_fk_tokens: Vec<(TokenStream, TokenStream)> =
         generate_find_by_reverse_foreign_key_tokens(macro_data, &table_schema_data);
@@ -426,7 +426,7 @@ fn impl_crud_operations_trait_for_struct(
 
             /// Hidden trait for generate the foreign key operations available
             /// in Canyon without have to define them before hand in CrudOperations
-            /// because it's just imposible with the actual system (where the methods
+            /// because it's just impossible with the actual system (where the methods
             /// are generated dynamically based on some properties of the `foreign_key`
             /// annotation)
             #[canyon_sql::macros::async_trait]

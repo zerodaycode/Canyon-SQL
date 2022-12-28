@@ -40,7 +40,7 @@ lazy_static! {
 /// in the configuration file.
 ///
 /// This avoids Canyon to create a new connection to the database on every query, potentially avoiding bottlenecks
-/// derivated from the instanciation of that new conn every time.
+/// derivated from the instantiation of that new conn every time.
 ///
 /// Note: We noticed with the integration tests that the [`tokio_postgres`] crate (PostgreSQL) is able to work in an async environment
 /// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) sufferes a lot when it has continuous

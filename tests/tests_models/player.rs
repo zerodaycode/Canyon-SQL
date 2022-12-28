@@ -7,7 +7,7 @@ use canyon_sql::macros::*;
 /// For test the behaviour of Canyon with entities that no declares primary keys,
 /// or that is configuration isn't autoincremental, we will use this class.
 /// Note that this entity has a primary key declared in the database, but we will
-/// omit this in Canyon, so for us, is like if the primary key wasn't setted up.
+/// omit this in Canyon, so for us, is like if the primary key wasn't set up.
 ///
 /// Remember that the entities that does not declares at least a field as `#[primary_key]`
 /// does not have all the CRUD operations available, only the ones that doesn't

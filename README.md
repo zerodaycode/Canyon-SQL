@@ -29,7 +29,7 @@ You can read it [by clicking this link](https://zerodaycode.github.io/canyon-boo
 a `PostgreSQL` database and an `SqlServer` one in the same project.
 - Is macro based. With a few annotations and a configuration file, you are ready to write your data access.
 - Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints...
-Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programatically approach with `Canyon`!
+Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programmatically approach with `Canyon`!
 
 ## Supported databases
 
@@ -81,7 +81,7 @@ Note the leading reference on the `find_by_pk(...)` parameter. This associated f
 ### Building more complex queries
 
 For exemplify the capabilities of `Canyon`, we will use `SelectQueryBuilder<T>`, which implements the `QueryBuilder<T>` trait
-for build a more complex whery, filteing data and joining tables.
+for build a more complex where, filteing data and joining tables.
 
 ```rust
 let mut select_with_joins = LeagueTournament::select_query();
@@ -101,12 +101,12 @@ let mut select_with_joins = LeagueTournament::select_query();
 ```
 
 > Note: For now, when you use joins, you will need to create a new model with the columns in both tables (in case that you desire the data in such columns), but just follows the habitual process with the CanyonMapper.
-It will try to retrieve the data for every field declared. If you don't declare a field that is in the open clause, in this case (*), that field wont be retrieved. No problem. But if you have fields that aren't mapp
+It will try to retrieve the data for every field declared. If you don't declare a field that is in the open clause, in this case (*), that field won't be retrieved. No problem. But if you have fields that aren't map
 able with some column in the database, the program will panic.
 
 ## More examples
 
-If you want to see more examples, you can take a look into the `tests` folder, at the root of this repository. Every avaliable database operation is tested there, so you can use it to find the usage of the described operations in the documentation metioned above
+If you want to see more examples, you can take a look into the `tests` folder, at the root of this repository. Every available database operation is tested there, so you can use it to find the usage of the described operations in the documentation mentioned above
 
 ## Contributing to CANYON-SQL
 
@@ -115,7 +115,7 @@ You can take a look to our [templated guide]((./CONTRIBUTING.md)).
 
 But, to summarize:
 
-- Take a look at the already opened issues, to see if already exists of it's someone already taking care about solving it. Even tho, you can enter to participate and explain your point of view, or even help to acomplish the task
+- Take a look at the already opened issues, to see if already exists of it's someone already taking care about solving it. Even tho, you can enter to participate and explain your point of view, or even help to accomplish the task
 - Make a fork of `Canyon-SQL`
 - If you opened an issue, create a branch from the base branch of the repo (that's the default), and point it to your fork
 - After complete your changes, open a `PR` to the default branch. Fill the template provided in the best way you're able to do it

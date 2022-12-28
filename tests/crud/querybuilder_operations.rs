@@ -1,7 +1,7 @@
 ///! Tests for the QueryBuilder available operations within Canyon.
 ///
 ///! QueryBuilder are the way of obtain more flexibility that with
-///! the default generated queries, esentially for build the queries
+///! the default generated queries, essentially for build the queries
 ///! with the SQL filters
 ///
 use canyon_sql::{
@@ -68,7 +68,7 @@ fn test_crud_find_with_querybuilder_datasource() {
     assert!(!filtered_find_players.unwrap().is_empty());
 }
 
-/// Updates the values of the range on entries defined by the constraint paramenters
+/// Updates the values of the range on entries defined by the constraint parameters
 /// in the database entity
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_update_with_querybuilder() {

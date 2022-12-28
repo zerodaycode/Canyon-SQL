@@ -33,7 +33,7 @@ impl<T> DatabaseResult<T> {
     }
 
     /// Returns a [`Vec<T>`] filled with instances of the type T.
-    /// Z param it's used to constrait the types that can call this method.
+    /// Z param it's used to constraint the types that can call this method.
     ///
     /// Also, provides a way to statically call `Z::deserialize_<db>` method,
     /// which it's the implementation used by the macros to automatically

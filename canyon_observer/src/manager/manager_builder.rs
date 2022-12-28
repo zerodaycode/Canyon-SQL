@@ -56,8 +56,8 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
         /// will be called though macro code to obtain the &str representation
         /// of the field name.
         ///
-        /// That's particulary useful in Canyon when working with queries being constructed
-        /// through the [`QueryBuilder`], when one of the methods requieres to get
+        /// That's particularly useful in Canyon when working with queries being constructed
+        /// through the [`QueryBuilder`], when one of the methods requires to get
         /// a column name (which is the name of some field of the type) as a parameter
         ///
         /// ```
