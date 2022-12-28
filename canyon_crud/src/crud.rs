@@ -210,7 +210,7 @@ mod sqlserver_query_launcher {
     where
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
-        // Re-generate de insert statement to adecuate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
+        // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {
             let c = stmt.clone();
             let temp = c

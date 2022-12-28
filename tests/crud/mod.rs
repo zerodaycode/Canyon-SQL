@@ -19,7 +19,7 @@ use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
 /// when the docker starts. SqlServer official docker from Microsoft does
 /// not allow you to run `.sql` files against the database (not at least, without)
 /// using a workaround. So, we are going to query the `SqlServer` to check if already
-/// has some data (other processes, persistance or multi-threading envs), af if not,
+/// has some data (other processes, persistence or multi-threading envs), af if not,
 /// we are going to retrieve the inserted data on the `postgreSQL` at start-up and
 /// inserting into the `SqlServer` instance.
 ///

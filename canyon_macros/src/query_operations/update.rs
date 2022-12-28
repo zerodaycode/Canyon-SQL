@@ -9,7 +9,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     let update_columns = macro_data.get_column_names_pk_parsed();
 
-    // Retrives the fields of the Struct
+    // Retrieves the fields of the Struct
     let fields = macro_data.get_struct_fields();
 
     let mut vec_columns_values: Vec<String> = Vec::new();
@@ -33,7 +33,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         quote! {
             /// Updates a database record that matches
             /// the current instance of a T type, returning a result
-            /// indicating a posible failure querying the database.
+            /// indicating a possible failure querying the database.
             async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> {
                 let stmt = format!(
                     "UPDATE {} SET {} WHERE {} = ${:?}",
@@ -53,7 +53,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
             /// Updates a database record that matches
             /// the current instance of a T type, returning a result
-            /// indicating a posible failure querying the database with the
+            /// indicating a possible failure querying the database with the
             /// specified datasource
             async fn update_datasource<'a>(&self, datasource_name: &'a str)
                 -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
@@ -122,7 +122,7 @@ pub fn generate_update_query_tokens(
         ///
         /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention,
-        /// unless concrete values are setted on the available parameters of the
+        /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn update_query<'a>() -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
             canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, "")
@@ -133,7 +133,7 @@ pub fn generate_update_query_tokens(
         ///
         /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention,
-        /// unless concrete values are setted on the available parameters of the
+        /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         ///
         /// The query it's made against the database with the configured datasource

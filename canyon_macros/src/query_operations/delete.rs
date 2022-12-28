@@ -4,7 +4,7 @@ use quote::quote;
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the __delete() CRUD operation
-/// returning a result, indicating a posible failure querying the database
+/// returning a result, indicating a possible failure querying the database
 pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
     let ty = macro_data.ty;
 
@@ -24,7 +24,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         quote! {
             /// Deletes from a database entity the row that matches
             /// the current instance of a T type, returning a result
-            /// indicating a posible failure querying the database.
+            /// indicating a possible failure querying the database.
             async fn delete(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
                 let stmt = format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key);
 
@@ -41,7 +41,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
             /// Deletes from a database entity the row that matches
             /// the current instance of a T type, returning a result
-            /// indicating a posible failure querying the database with the specified datasource.
+            /// indicating a possible failure querying the database with the specified datasource.
             async fn delete_datasource<'a>(&self, datasource_name: &'a str)
                 -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>
             {
@@ -101,7 +101,7 @@ pub fn generate_delete_query_tokens(
         ///
         /// It performs an `DELETE FROM table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention,
-        /// unless concrete values are setted on the available parameters of the
+        /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn delete_query<'a>() -> canyon_sql::query::DeleteQueryBuilder<'a, #ty> {
             canyon_sql::query::DeleteQueryBuilder::new(#table_schema_data, "")
@@ -112,7 +112,7 @@ pub fn generate_delete_query_tokens(
         ///
         /// It performs an `DELETE FROM table_name`, where `table_name` it's the name of your
         /// entity but converted to the corresponding database convention,
-        /// unless concrete values are setted on the available parameters of the
+        /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         ///
         /// The query it's made against the database with the configured datasource

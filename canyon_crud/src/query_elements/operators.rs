@@ -9,9 +9,9 @@ pub enum Comp {
     Eq,
     /// Operator "!=" not equals
     Neq,
-    /// Operator ">" greather than value
+    /// Operator ">" greater than value
     Gt,
-    /// Operator ">=" greather or equals than value
+    /// Operator ">=" greater or equals than value
     GtEq,
     /// Operator "<" less than value
     Lt,

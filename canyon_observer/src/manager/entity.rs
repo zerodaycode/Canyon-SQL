@@ -125,7 +125,7 @@ impl Parse for CanyonEntity {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
         let _struct = input.parse::<ItemStruct>()?;
 
-        // Retrive the struct fields
+        // Retrieve the struct fields
         let mut parsed_fields: Vec<EntityField> = Vec::new();
         for field in _struct.fields {
             let struct_attribute = EntityField::try_from(&field)?;

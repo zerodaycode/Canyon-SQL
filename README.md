@@ -2,8 +2,9 @@
 
 **A full written in `Rust` ORM for multiple databases.**
 
-- [![Linux CI](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
+- ![crates.io](https://img.shields.io/crates/v/canyon_sql.svg)
 - [![Code Coverage Measure](https://zerodaycode.github.io/Canyon-SQL/badges/flat.svg)](https://zerodaycode.github.io/Canyon-SQL)
+- [![Linux CI](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
 - [![Tests on macOS](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/macos-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/macos-tests.yml)
 - [![Tests on Windows](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/windows-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/windows-tests.yml)
 
@@ -27,8 +28,8 @@ You can read it [by clicking this link](https://zerodaycode.github.io/canyon-boo
 - Use of multiple datasources. You can query multiple databases at the same time, even different ones!. This means that you will be able to query concurrently
 a `PostgreSQL` database and an `SqlServer` one in the same project.
 - Is macro based. With a few annotations and a configuration file, you are ready to write your data access.
-- Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints... 
-Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programatically approach with `Canyon`!
+- Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints...
+Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programmatically approach with `Canyon`!
 
 ## Supported databases
 
@@ -40,3 +41,93 @@ Also, in the future, we have plans to allow you to manipulate the whole server, 
 Every crate listed above is an `async` based crate, in line with the guidelines of the `Canyon-SQL` design.
 
 There are plans for include more databases engines.
+
+## Better by example
+
+Let's take a look to see how the `Canyon` code looks like!
+
+### The classical SELECT * FROM {table_name}
+
+```rust
+let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =  League::find_all().await;
+
+// Connection doesn't return an error
+assert!(find_all_result.is_ok());
+// We retrieved elements from the League table
+assert!(!find_all_result.unwrap().is_empty());
+```
+
+### Performing a search over the primary key column
+
+```rust
+let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> = League::find_by_pk(&1).await;
+
+assert!(find_by_pk_result.as_ref().unwrap().is_some());
+
+let some_league = find_by_pk_result.unwrap().unwrap();
+assert_eq!(some_league.id, 1);
+assert_eq!(some_league.ext_id, 100695891328981122_i64);
+assert_eq!(some_league.slug, "european-masters");
+assert_eq!(some_league.name, "European Masters");
+assert_eq!(some_league.region, "EUROPE");
+assert_eq!(
+    some_league.image_url,
+    "http://static.lolesports.com/leagues/EM_Bug_Outline1.png"
+);
+```
+
+Note the leading reference on the `find_by_pk(...)` parameter. This associated function receives an `&dyn QueryParameter<'_>` as argument, not a value.
+
+### Building more complex queries
+
+For exemplify the capabilities of `Canyon`, we will use `SelectQueryBuilder<T>`, which implements the `QueryBuilder<T>` trait
+for build a more complex where, filteing data and joining tables.
+
+```rust
+let mut select_with_joins = LeagueTournament::select_query();
+    select_with_joins
+        .inner_join("tournament", "league.id", "tournament.league_id")
+        .left_join("team", "tournament.id", "player.tournament_id")
+        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
+        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+        .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
+    // NOTE: We don't have in the docker the generated relationships
+    // with the joins, so for now, we are just going to check that the
+    // generated SQL by the SelectQueryBuilder<T> is the spected
+    assert_eq!(
+        select_with_joins.read_sql(),
+        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2  AND name IN ($2, $3) "
+    )
+```
+
+> Note: For now, when you use joins, you will need to create a new model with the columns in both tables (in case that you desire the data in such columns), but just follows the habitual process with the CanyonMapper.
+It will try to retrieve the data for every field declared. If you don't declare a field that is in the open clause, in this case (*), that field won't be retrieved. No problem. But if you have fields that aren't map
+able with some column in the database, the program will panic.
+
+## More examples
+
+If you want to see more examples, you can take a look into the `tests` folder, at the root of this repository. Every available database operation is tested there, so you can use it to find the usage of the described operations in the documentation mentioned above
+
+## Contributing to CANYON-SQL
+
+First of all, thanks for take in consideration help us with the project.
+You can take a look to our [templated guide]((./CONTRIBUTING.md)).
+
+But, to summarize:
+
+- Take a look at the already opened issues, to see if already exists of it's someone already taking care about solving it. Even tho, you can enter to participate and explain your point of view, or even help to accomplish the task
+- Make a fork of `Canyon-SQL`
+- If you opened an issue, create a branch from the base branch of the repo (that's the default), and point it to your fork
+- After complete your changes, open a `PR` to the default branch. Fill the template provided in the best way you're able to do it
+- Wait for the approval. In most of cases, a test over the feature will be required before approve your changes
+
+## What about the tests?
+
+Typically in `Canyon`, isolated unit tests are written as doc-tests, and the integration ones are under the folder `./tests`
+
+If you want to run the tests (because this is the first thing that you want to do after fork the repo), a couple of things have to be considered before.
+
+- You will need Docker installed in the target machine
+- If you have Docker, and `Canyon-SQL` cloned of forked, you can run our docker-compose file `(docker/docker-compose.yml)`, which will initialize a `PostgreSQL` database and will put content on it to make the tests able to work.
+- Finally, some tests runs against `MSSQL`. We didn't found a nice way of inserting data directly when the Docker wakes up, but instead, we run a very special test located at `tests/crud/mod.rs`, that is named `initialize_sql_server_docker_instance`. When you run this one, initial data will be inserted into the tables that are created when this test run.
+(If you know a better way of doing this, please, open a issue to let us know it, and improve this process!)
