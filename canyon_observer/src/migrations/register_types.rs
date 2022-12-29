@@ -262,4 +262,9 @@ impl CanyonRegisterEntityField {
 
         numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental
     }
+
+    /// Return the nullability of a the field
+    pub fn is_nullable(&self) -> bool {
+            self.field_type.to_uppercase().starts_with("OPTION")
+        }
 }
