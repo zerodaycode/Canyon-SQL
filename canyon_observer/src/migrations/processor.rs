@@ -211,13 +211,19 @@ impl MigrationsProcessor {
         // If we do not retrieve data for this database column, it does not exist yet
         // and therefore it has to be created
         if current_column_metadata.is_none() {
-            self.create_column(entity_name.to_string(), canyon_register_entity_field.clone())
+            self.create_column(
+                entity_name.to_string(),
+                canyon_register_entity_field.clone(),
+            )
         } else if !MigrationsHelper::is_same_datatype(
             db_type,
             &canyon_register_entity_field,
             current_column_metadata.unwrap(),
         ) {
-            self.change_column_datatype(entity_name.to_string(), canyon_register_entity_field.clone())
+            self.change_column_datatype(
+                entity_name.to_string(),
+                canyon_register_entity_field.clone(),
+            )
         }
 
         if let Some(column_metadata) = current_column_metadata {
@@ -266,14 +272,17 @@ impl MigrationsProcessor {
 
     fn set_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.operations
-            .push(Box::new(ColumnOperation::AlterColumnSetNotNull(table_name, field)));
+            .push(Box::new(ColumnOperation::AlterColumnSetNotNull(
+                table_name, field,
+            )));
     }
 
     fn drop_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.operations
-            .push(Box::new(ColumnOperation::AlterColumnDropNotNull(table_name, field)));
+            .push(Box::new(ColumnOperation::AlterColumnDropNotNull(
+                table_name, field,
+            )));
     }
-
 
     fn add_constraints(
         &mut self,

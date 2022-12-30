@@ -265,6 +265,6 @@ impl CanyonRegisterEntityField {
 
     /// Return the nullability of a the field
     pub fn is_nullable(&self) -> bool {
-            self.field_type.to_uppercase().starts_with("OPTION")
-        }
+        self.field_type.to_uppercase().starts_with("OPTION")
+    }
 }
