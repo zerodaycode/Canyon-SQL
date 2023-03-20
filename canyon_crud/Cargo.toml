@@ -1,6 +1,6 @@
 [package]
 name = "canyon_crud"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 documentation = "https://zerodaycode.github.io/canyon-book/"
 homepage = "https://github.com/zerodaycode/Canyon-SQL"
@@ -12,4 +12,4 @@ description = "A Rust ORM and QueryBuilder"
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = { version = "0.1.50" }
 
-canyon_connection = { version = "0.1.0", path = "../canyon_connection" }
+canyon_connection = { version = "0.1.1", path = "../canyon_connection" }

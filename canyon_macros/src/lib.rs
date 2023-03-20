@@ -555,12 +555,12 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
             quote! {
-                    #ident: row.get::<i32, &str>(#ident_name)
-                }
+                #ident: row.get::<i32, &str>(#ident_name)
+            }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
             quote! {
-                    #ident: row.get::<i16, &str>(#ident_name)
-                }
+                #ident: row.get::<i16, &str>(#ident_name)
+            }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
             quote! {
                 #ident: row.get::<f32, &str>(#ident_name)
