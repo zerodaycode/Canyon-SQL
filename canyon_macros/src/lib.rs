@@ -143,7 +143,7 @@ pub fn canyon_tokio_test(
 }
 
 /// Generates the enums that contains the `TypeFields` and `TypeFieldsValues`
-/// that the querybuilder requires for construct its queries
+/// that the query-builder requires for construct its queries
 #[proc_macro_derive(Fields)]
 pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let entity_res = syn::parse::<CanyonEntity>(input);
@@ -472,7 +472,7 @@ pub fn implement_foreignkeyable_for_type(
     let ast: DeriveInput = syn::parse(input).unwrap();
     let ty = ast.ident;
 
-    // Recovers the identifiers of the struct's members
+    // Recovers the identifiers of the structs members
     let fields = filter_fields(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,
         _ => {
@@ -519,7 +519,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     // Gets the data from the AST
     let ast: DeriveInput = syn::parse(input).unwrap();
 
-    // Recovers the identifiers of the struct's members
+    // Recovers the identifiers of the structs members
     let fields = fields_with_types(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,
         _ => {
@@ -539,6 +539,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
+    // TODO rework this ugly piece of code in the upcoming versions
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
 
@@ -552,6 +553,14 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
             quote! {
                 #ident: row.get::<i64, &str>(#ident_name)
             }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
+            quote! {
+                    #ident: row.get::<i32, &str>(#ident_name)
+                }
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
+            quote! {
+                    #ident: row.get::<i16, &str>(#ident_name)
+                }
         } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
             quote! {
                 #ident: row.get::<f32, &str>(#ident_name)
