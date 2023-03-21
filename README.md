@@ -3,10 +3,10 @@
 **A full written in `Rust` ORM for multiple databases.**
 
 - ![crates.io](https://img.shields.io/crates/v/canyon_sql.svg)
+- [![Continuous Integration](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml)
+- [![Code Quality](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-quality.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-quality.yml)
 - [![Code Coverage Measure](https://zerodaycode.github.io/Canyon-SQL/badges/flat.svg)](https://zerodaycode.github.io/Canyon-SQL)
-- [![Linux CI](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
-- [![Tests on macOS](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/macos-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/macos-tests.yml)
-- [![Tests on Windows](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/windows-tests.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/windows-tests.yml)
+- [![Code Coverage Status](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
 
 `Canyon-SQL` is a high level abstraction for working with multiple databases concurrently. Is build on top of the `async` language features
 to provide a high speed, high performant library to handling data access for consumers.

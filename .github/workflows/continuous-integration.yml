@@ -49,5 +49,6 @@ jobs:
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo test --verbose --workspace --all-features --no-fail-fast -- --show-output --test-threads=1
 
-      - name: Run UNIT tests with no external connections for the rest of the defined targets
+      - name: Run only UNIT tests for the rest of the defined targets
+        if: ${{ matrix.os != 'ubuntu-latest' }}
         run: cargo test --verbose --workspace --exclude tests --all-features --no-fail-fast -- --show-output
