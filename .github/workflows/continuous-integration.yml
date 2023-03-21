@@ -2,9 +2,9 @@ name: Continuous Integration
 
 on:
   push:
-    branches: '*'
+    branches: ['main', 'development']
   pull_request:
-    branches: '*'
+    branches: ['main', 'development']
 
 env:
   CARGO_TERM_COLOR: always
