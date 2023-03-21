@@ -1,6 +1,6 @@
 [package]
 name = "canyon_macros"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 documentation = "https://zerodaycode.github.io/canyon-book/"
 homepage = "https://github.com/zerodaycode/Canyon-SQL"
@@ -18,6 +18,6 @@ proc-macro2 = "1.0.27"
 futures = "0.3.21"
 tokio = { version = "1.9.0", features = ["full"] }
 
-canyon_observer = { version = "0.1.0", path = "../canyon_observer" }
-canyon_crud = { version = "0.1.0", path = "../canyon_crud" }
-canyon_connection = { version = "0.1.0", path = "../canyon_connection" }
+canyon_observer = { version = "0.1.1", path = "../canyon_observer" }
+canyon_crud = { version = "0.1.1", path = "../canyon_crud" }
+canyon_connection = { version = "0.1.1", path = "../canyon_connection" }

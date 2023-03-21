@@ -21,30 +21,10 @@ jobs:
           toolchain: stable
           override: true
 
-      - uses: katyo/publish-crates@v1
+      - uses: katyo/publish-crates@v2
         with:
           registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-          path: './canyon_connection'
-
-      - uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-          path: './canyon_crud'
-
-      - uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-          path: './canyon_observer'
-
-      - uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-          path: './canyon_macros'
-
-      - uses: katyo/publish-crates@v1
-        with:
-          registry-token: ${{ secrets.CRATES_IO_TOKEN }}
-          path: './canyon_sql'
+          publish-delay: 15000
 
   release-publisher:
     needs: 'publish'

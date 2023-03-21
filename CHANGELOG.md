@@ -9,6 +9,12 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
+## [0.1.1] - 2023 - 03 - 20
+
+### Fix
+
+- Adding more types to the supported ones for Tiberius in the row mapper
+
 ## [0.1.0] - 2022 - 12 - 25
 
 ### Added

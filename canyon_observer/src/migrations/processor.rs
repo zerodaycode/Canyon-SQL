@@ -200,7 +200,7 @@ impl MigrationsProcessor {
         }
     }
 
-    // Creates or modify (currently only datatype) a column for a given canyon register entity field
+    // Creates or modify (currently only datatype and nullability) a column for a given canyon register entity field
     fn create_or_modify_field(
         &mut self,
         entity_name: &str,
@@ -211,13 +211,29 @@ impl MigrationsProcessor {
         // If we do not retrieve data for this database column, it does not exist yet
         // and therefore it has to be created
         if current_column_metadata.is_none() {
-            self.create_column(entity_name.to_string(), canyon_register_entity_field)
+            self.create_column(
+                entity_name.to_string(),
+                canyon_register_entity_field.clone(),
+            )
         } else if !MigrationsHelper::is_same_datatype(
             db_type,
             &canyon_register_entity_field,
             current_column_metadata.unwrap(),
         ) {
-            self.change_column_datatype(entity_name.to_string(), canyon_register_entity_field)
+            self.change_column_datatype(
+                entity_name.to_string(),
+                canyon_register_entity_field.clone(),
+            )
+        }
+
+        if let Some(column_metadata) = current_column_metadata {
+            if canyon_register_entity_field.is_nullable() != column_metadata.is_nullable {
+                if column_metadata.is_nullable {
+                    self.set_not_null(entity_name.to_string(), canyon_register_entity_field)
+                } else {
+                    self.drop_not_null(entity_name.to_string(), canyon_register_entity_field)
+                }
+            }
         }
     }
 
@@ -250,6 +266,20 @@ impl MigrationsProcessor {
     fn change_column_datatype(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.operations
             .push(Box::new(ColumnOperation::AlterColumnType(
+                table_name, field,
+            )));
+    }
+
+    fn set_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
+        self.operations
+            .push(Box::new(ColumnOperation::AlterColumnSetNotNull(
+                table_name, field,
+            )));
+    }
+
+    fn drop_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
+        self.operations
+            .push(Box::new(ColumnOperation::AlterColumnDropNotNull(
                 table_name, field,
             )));
     }
@@ -555,7 +585,7 @@ impl MigrationsHelper {
             .iter()
             .any(|v| v.table_name.to_lowercase() == entity_name.to_lowercase())
     }
-    // Get the table metadata for a given entity name or his old entity name if the table was renamed.
+    /// Get the table metadata for a given entity name or his old entity name if the table was renamed.
     fn get_current_table_metadata<'a>(
         canyon_memory: &'_ CanyonMemory,
         entity_name: &'a str,
@@ -575,7 +605,7 @@ impl MigrationsHelper {
             .map(|e| e.to_owned())
     }
 
-    // Get the column metadata for a given column name
+    /// Get the column metadata for a given column name
     fn get_current_column_metadata(
         column_name: String,
         current_table_metadata: Option<&TableMetadata>,
