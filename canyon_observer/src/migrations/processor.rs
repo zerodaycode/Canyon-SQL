@@ -38,25 +38,25 @@ impl MigrationsProcessor {
         let db_type = datasource.properties.db_type;
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_entities {
-            // TODO Check if its disabled for the current datasource
-            let entity_name = canyon_register_entity.entity_name.to_lowercase();
+            let entity_name = canyon_register_entity.entity_db_table_name;
+            println!("Processing migrations for entity: {entity_name}");
 
             // 1st operation ->
             self.create_or_rename_tables(
                 &canyon_memory,
-                entity_name.as_str(),
+                entity_name,
                 canyon_register_entity.entity_fields.clone(),
                 &database_tables,
             );
 
             let current_table_metadata = MigrationsHelper::get_current_table_metadata(
                 &canyon_memory,
-                entity_name.as_str(),
+                entity_name,
                 &database_tables,
             );
 
             self.delete_fields(
-                entity_name.as_str(),
+                entity_name,
                 canyon_register_entity.entity_fields.clone(),
                 current_table_metadata,
                 db_type,
@@ -74,7 +74,7 @@ impl MigrationsProcessor {
                 // if not, the columns are already create in the previous operation (create table)
                 if current_table_metadata.is_some() {
                     self.create_or_modify_field(
-                        entity_name.as_str(),
+                        entity_name,
                         db_type,
                         canyon_register_field.clone(),
                         current_column_metadata,
@@ -87,13 +87,13 @@ impl MigrationsProcessor {
                     && !canyon_register_field.annotations.is_empty())
                     || (current_table_metadata.is_some() && current_column_metadata.is_none())
                 {
-                    self.add_constraints(entity_name.as_str(), canyon_register_field.clone())
+                    self.add_constraints(entity_name, canyon_register_field.clone())
                 }
 
                 // Case when we need to compare the entity with the database contain
                 if current_table_metadata.is_some() && current_column_metadata.is_some() {
                     self.add_modify_or_remove_constraints(
-                        entity_name.as_str(),
+                        entity_name,
                         canyon_register_field,
                         current_column_metadata.unwrap(),
                     )
@@ -127,7 +127,7 @@ impl MigrationsProcessor {
         database_tables: &'a [&'a TableMetadata],
     ) {
         // 1st operation -> Check if the current entity is already on the target database.
-        // If isn't present (this if case), we
+        println!("Checking create or rename table for: {entity_name}");
         if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
             // [`CanyonMemory`] holds a HashMap with the tables who changed their name in
             // the Rust side. If this table name is present, we don't create a new table,
@@ -583,7 +583,10 @@ impl MigrationsHelper {
     ) -> bool {
         database_tables
             .iter()
-            .any(|v| v.table_name.to_lowercase() == entity_name.to_lowercase())
+            .any(|db_table_data| { 
+                println!("Matching db entity name: {} vs db table name: {entity_name}", db_table_data.table_name);
+                db_table_data.table_name == entity_name
+            })
     }
     /// Get the table metadata for a given entity name or his old entity name if the table was renamed.
     fn get_current_table_metadata<'a>(
@@ -755,19 +758,17 @@ impl DatabaseOperation for TableOperation {
             TableOperation::CreateTable(table_name, table_fields) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "CREATE TABLE {:?} ({:?});",
-                        table_name,
+                        "CREATE TABLE \"{table_name}\" ({});",
                         table_fields
                             .iter()
                             .map(|entity_field| format!(
-                                "{} {}",
+                                "\"{}\" {}", 
                                 entity_field.field_name,
                                 entity_field.to_postgres_syntax()
                             ))
                             .collect::<Vec<String>>()
                             .join(", ")
                     )
-                    .replace('"', "")
                 } else if db_type == DatabaseType::SqlServer {
                     format!(
                         "CREATE TABLE {:?} ({:?});",
@@ -784,7 +785,7 @@ impl DatabaseOperation for TableOperation {
                     )
                     .replace('"', "")
                 } else {
-                    todo!()
+                    todo!("There's no other databases supported in Canyon-SQL right now")
                 }
             }
 
@@ -846,7 +847,7 @@ impl DatabaseOperation for TableOperation {
             TableOperation::AddTablePrimaryKey(table_name, entity_field) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                        "ALTER TABLE {table_name} ADD PRIMARY KEY (\"{}\");",
+                        "ALTER TABLE \"{table_name}\" ADD PRIMARY KEY (\"{}\");",
                         entity_field.field_name
                     )
                 } else if db_type == DatabaseType::SqlServer {
@@ -913,7 +914,7 @@ impl DatabaseOperation for ColumnOperation {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
             if db_type == DatabaseType::PostgreSql {
                 format!(
-                "ALTER TABLE {} ADD COLUMN \"{}\" {};",
+                "ALTER TABLE \"{}\" ADD COLUMN \"{}\" {};",
                 table_name,
                 entity_field.field_name,
                 entity_field.to_postgres_syntax())
@@ -929,14 +930,14 @@ impl DatabaseOperation for ColumnOperation {
             },
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is different
-                format!("ALTER TABLE {table_name} DROP COLUMN {column_name};")
+                format!("ALTER TABLE \"{table_name}\" DROP COLUMN \"{column_name}\";")
             },
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
             if db_type == DatabaseType::PostgreSql {
                 format!(
-                    "ALTER TABLE {table_name} ALTER COLUMN \"{}\" TYPE {};",
-                    entity_field.field_name,
-                    entity_field.to_postgres_alter_syntax())
+                    "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" TYPE {};",
+                    entity_field.field_name, entity_field.to_postgres_alter_syntax()
+                )
             }  else if db_type == DatabaseType::SqlServer {
                 todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
             } else {
@@ -945,14 +946,11 @@ impl DatabaseOperation for ColumnOperation {
             ,
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
             if db_type == DatabaseType::PostgreSql {
-                format!(
-                "ALTER TABLE {:?} ALTER COLUMN \"{}\" DROP NOT NULL;",
-                table_name, entity_field.field_name
-               )
+                format!("ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP NOT NULL;", entity_field.field_name)
             }  else if db_type == DatabaseType::SqlServer {
                 format!(
-                    "ALTER TABLE {} ALTER COLUMN {} {} NULL",
-                    table_name, entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
+                    "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
+                    entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
                 )
             } else {
                 todo!()
@@ -974,15 +972,15 @@ impl DatabaseOperation for ColumnOperation {
             ),
 
             ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) => format!(
-                "ALTER TABLE {table_name} ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
+                "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
             ),
 
             ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
-                "ALTER TABLE {table_name} ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;", entity_field.field_name
+                "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;", entity_field.field_name
             ),
 
             ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
-                "ALTER TABLE {table_name} ALTER COLUMN \"{}\" DROP IDENTITY;", entity_field.field_name
+                "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP IDENTITY;", entity_field.field_name
             ),
         };
 
@@ -1024,8 +1022,8 @@ impl DatabaseOperation for SequenceOperation {
             SequenceOperation::ModifySequence(table_name, entity_field) => {
                 if db_type == DatabaseType::PostgreSql {
                     format!(
-                    "SELECT setval(pg_get_serial_sequence('{:?}', '{}'), max(\"{}\")) from {:?};",
-                    table_name, entity_field.field_name, entity_field.field_name, table_name
+                    "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
+                    entity_field.field_name, entity_field.field_name
                 )
                 } else if db_type == DatabaseType::SqlServer {
                     todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")

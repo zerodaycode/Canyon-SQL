@@ -47,34 +47,41 @@ impl Migrations {
 
             let mut migrations_processor = MigrationsProcessor::default();
 
-            let canyon_memory = CanyonMemory::remember(datasource).await;
-            let canyon_tables = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+            let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
+            let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;
+            // println!("Canyon memory: {:?}", &canyon_memory);
+            // println!("Canyon tables: {:?}", &canyon_entities);
 
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
                 Self::fetch_database(datasource.name, datasource.properties.db_type).await;
             let database_tables_schema_info = Self::map_rows(schema_status);
+            // println!("DB tables: {:?}", &database_tables_schema_info);
+
 
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
             for parsed_table in database_tables_schema_info.iter() {
                 if canyon_memory
                     .memory
-                    .values()
-                    .any(|f| f.to_lowercase() == parsed_table.table_name)
-                    || canyon_memory
-                        .renamed_entities
-                        .values()
-                        .any(|f| *f == parsed_table.table_name.to_lowercase())
+                    .iter()
+                    .any(|f|
+                        f.declared_table_name.eq(&parsed_table.table_name)
+                    ) || canyon_memory
+                            .renamed_entities
+                            .values()
+                            .any(|f| *f == parsed_table.table_name)
                 {
                     user_database_tables.append(&mut vec![parsed_table]);
                 }
             }
 
+            println!("Tables to process: {:?}", user_database_tables.iter().map(|t| &t.table_name).collect::<Vec<_>>());
+
             migrations_processor
                 .process(
                     canyon_memory,
-                    canyon_tables,
+                    canyon_entities,
                     user_database_tables,
                     datasource,
                 )

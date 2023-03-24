@@ -196,11 +196,14 @@ pub fn canyon_entity(
                             .expect("Something went wrong parsing the `table_name` argument")
                             .to_string();
 
-                        if attr_arg_ident == "table_name" || attr_arg_ident == "schema" {
-                            table_name = Some(Box::leak(attr_arg_ident.into_boxed_str()));
+                        if &attr_arg_ident == "table_name" || &attr_arg_ident == "schema" {
                             match nv.lit {
                                 syn::Lit::Str(ref l) => {
-                                    schema_name = Some(Box::leak(l.value().into_boxed_str()))
+                                    if &attr_arg_ident == "table_name" {
+                                        table_name = Some(Box::leak(l.value().into_boxed_str()))
+                                    } else {
+                                        schema_name = Some(Box::leak(l.value().into_boxed_str()))
+                                    }
                                 }
                                 _ => {
                                     parsing_attribute_error = Some(syn::Error::new(
@@ -257,7 +260,9 @@ pub fn canyon_entity(
     let mut new_entity = CanyonRegisterEntity::default();
     let e = Box::leak(entity.struct_name.to_string().into_boxed_str());
     new_entity.entity_name = e;
-    new_entity.user_table_name = table_name;
+    new_entity.entity_db_table_name = table_name.unwrap_or(
+        Box::leak(helpers::default_database_table_name_from_entity_name(e).into_boxed_str())
+    );
     new_entity.user_schema_name = schema_name;
 
     // The entity fields

@@ -81,7 +81,6 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
 }
 
 /// Parses a syn::Identifier to get a snake case database name from the type identifier
-/// TODO: #[macro(table_name = 'user_defined_db_table_name)]'
 pub fn _database_table_name_from_struct(ty: &Ident) -> String {
     let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();
@@ -105,9 +104,8 @@ pub fn _database_table_name_from_struct(ty: &Ident) -> String {
     table_name
 }
 
-/// Parses a syn::Identifier to get a snake case database name from the type identifier
-/// TODO: #[macro(table_name = 'user_defined_db_table_name)]'
-pub fn _database_table_name_from_entity_name(ty: &str) -> String {
+/// Parses a syn::Identifier to create a defaulted snake case database table name
+pub fn default_database_table_name_from_entity_name(ty: &str) -> String {
     let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();
 

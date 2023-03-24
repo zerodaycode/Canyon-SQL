@@ -1,6 +1,6 @@
 use regex::Regex;
 
-use crate::constants::{postgresql_type, regex_patterns, rust_type, sqlserver_type};
+use crate::constants::{postgresql_type, regex_patterns, rust_type, sqlserver_type, NUMERIC_PK_DATATYPE};
 
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
@@ -10,7 +10,7 @@ use crate::constants::{postgresql_type, regex_patterns, rust_type, sqlserver_typ
 #[derive(Debug, Clone, Default)]
 pub struct CanyonRegisterEntity<'a> {
     pub entity_name: &'a str,
-    pub user_table_name: Option<&'a str>,
+    pub entity_db_table_name: &'a str,
     pub user_schema_name: Option<&'a str>,
     pub entity_fields: Vec<CanyonRegisterEntityField>,
 }
@@ -24,8 +24,7 @@ pub struct CanyonRegisterEntityField {
     pub annotations: Vec<String>,
 }
 
-impl CanyonRegisterEntityField {
-    /// Return the postgres datatype and parameters to create a column for a given rust type
+impl CanyonRegisterEntityField {/// Return the postgres datatype and parameters to create a column for a given rust type
     pub fn to_postgres_syntax(&self) -> String {
         let rust_type_clean = self.field_type.replace(' ', "");
 
@@ -211,11 +210,9 @@ impl CanyonRegisterEntityField {
             None => false,
         };
 
-        let numeric = vec!["i16", "i32", "i64"];
-
         let postgres_datatype_syntax = Self::to_postgres_syntax(self);
 
-        if numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental {
+        if NUMERIC_PK_DATATYPE.contains(&self.field_type.as_str()) && pk_is_autoincremental {
             format!("{postgres_datatype_syntax} PRIMARY KEY GENERATED ALWAYS AS IDENTITY")
         } else {
             format!("{postgres_datatype_syntax} PRIMARY KEY")
@@ -235,11 +232,9 @@ impl CanyonRegisterEntityField {
             None => false,
         };
 
-        let numeric = vec!["i16", "i32", "i64"];
-
         let sqlserver_datatype_syntax = Self::to_sqlserver_syntax(self);
 
-        if numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental {
+        if NUMERIC_PK_DATATYPE.contains(&self.field_type.as_str()) && pk_is_autoincremental {
             format!("{sqlserver_datatype_syntax} IDENTITY PRIMARY")
         } else {
             format!("{sqlserver_datatype_syntax} PRIMARY KEY")
@@ -258,9 +253,7 @@ impl CanyonRegisterEntityField {
             None => false,
         };
 
-        let numeric = vec!["i16", "i32", "i64"];
-
-        numeric.contains(&self.field_type.as_str()) && pk_is_autoincremental
+        NUMERIC_PK_DATATYPE.contains(&self.field_type.as_str()) && pk_is_autoincremental
     }
 
     /// Return the nullability of a the field

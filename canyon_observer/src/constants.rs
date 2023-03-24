@@ -1,10 +1,22 @@
-pub mod queries {}
+pub const NUMERIC_PK_DATATYPE: [&str; 6] = ["i16", "u16", "i32", "u32", "i64", "u64"];
+
+pub mod queries {
+    pub const INSERT_INTO_CANYON_MEMORY: &str = 
+        "INSERT INTO canyon_memory (filepath, struct_name, declared_table_name) \
+        VALUES ($1, $2, $3)";
+    pub const UPDATE_CANYON_MEMORY: &str = 
+        "UPDATE canyon_memory SET filepath = $1, struct_name = $2, \
+        declared_table_name = $3 WHERE id = $4";
+    pub const DELETE_FROM_CANYON_MEMORY: &str = 
+        "DELETE FROM canyon_memory WHERE struct_name = $1";
+}
 
 pub mod postgresql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "CREATE TABLE IF NOT EXISTS canyon_memory (
             id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
             filepath VARCHAR NOT NULL,
-            struct_name VARCHAR NOT NULL
+            struct_name VARCHAR NOT NULL,
+            declared_table_name VARCHAR NOT NULL
         )";
 
     pub static FETCH_PUBLIC_SCHEMA: &str =
@@ -38,9 +50,10 @@ pub mod mssql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "IF OBJECT_ID(N'[dbo].[canyon_memory]', N'U') IS NULL
         BEGIN
             CREATE TABLE dbo.canyon_memory (
-                id					INT PRIMARY KEY IDENTITY,
-                filepath			NVARCHAR(250) NOT NULL,
-                struct_name			NVARCHAR(100) NOT NULL
+                id					    INT PRIMARY KEY IDENTITY,
+                filepath			    NVARCHAR(250) NOT NULL,
+                struct_name			    NVARCHAR(100) NOT NULL,
+                declared_table_name	    NVARCHAR(100) NOT NULL
             );
         END";
 
@@ -166,17 +179,8 @@ pub mod sqlserver_type {
     pub const DATETIME: &str = "DATETIME2";
 }
 
-/// Contains fragments queries to be invoked as const items and to be concatenated
-/// with dynamic data
-///
-/// Ex: ` format!("{} PRIMARY KEY GENERATED ALWAYS AS IDENTITY", postgres_datatype_syntax)`
-pub mod query_chunk {
-    // TODO @gbm25
-}
-
 pub mod mocked_data {
     use canyon_connection::lazy_static::lazy_static;
-
     use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
 
     lazy_static! {

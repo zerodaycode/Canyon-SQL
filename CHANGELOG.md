@@ -9,9 +9,19 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
-## [0.1.1] - 2023 - 03 - 20
+## [0.1.2] - 2023 - 03 - 23
+
+### Update
+
+- Removed from `postgresql` migrations the auto conversion to lowercase of the table and column names
 
 ### Fix
+
+- Solved a bug in the canyon_entity proc macro that was wiring the incorrect user table name in the migrations
+
+## [0.1.1] - 2023 - 03 - 20
+
+### Update
 
 - Adding more types to the supported ones for Tiberius in the row mapper
 
