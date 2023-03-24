@@ -1,6 +1,8 @@
 use regex::Regex;
 
-use crate::constants::{postgresql_type, regex_patterns, rust_type, sqlserver_type, NUMERIC_PK_DATATYPE};
+use crate::constants::{
+    postgresql_type, regex_patterns, rust_type, sqlserver_type, NUMERIC_PK_DATATYPE,
+};
 
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
@@ -24,7 +26,8 @@ pub struct CanyonRegisterEntityField {
     pub annotations: Vec<String>,
 }
 
-impl CanyonRegisterEntityField {/// Return the postgres datatype and parameters to create a column for a given rust type
+impl CanyonRegisterEntityField {
+    /// Return the postgres datatype and parameters to create a column for a given rust type
     pub fn to_postgres_syntax(&self) -> String {
         let rust_type_clean = self.field_type.replace(' ', "");
 

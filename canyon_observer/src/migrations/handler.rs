@@ -58,25 +58,29 @@ impl Migrations {
             let database_tables_schema_info = Self::map_rows(schema_status);
             // println!("DB tables: {:?}", &database_tables_schema_info);
 
-
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
             for parsed_table in database_tables_schema_info.iter() {
                 if canyon_memory
                     .memory
                     .iter()
-                    .any(|f|
-                        f.declared_table_name.eq(&parsed_table.table_name)
-                    ) || canyon_memory
-                            .renamed_entities
-                            .values()
-                            .any(|f| *f == parsed_table.table_name)
+                    .any(|f| f.declared_table_name.eq(&parsed_table.table_name))
+                    || canyon_memory
+                        .renamed_entities
+                        .values()
+                        .any(|f| *f == parsed_table.table_name)
                 {
                     user_database_tables.append(&mut vec![parsed_table]);
                 }
             }
 
-            println!("Tables to process: {:?}", user_database_tables.iter().map(|t| &t.table_name).collect::<Vec<_>>());
+            println!(
+                "Tables to process: {:?}",
+                user_database_tables
+                    .iter()
+                    .map(|t| &t.table_name)
+                    .collect::<Vec<_>>()
+            );
 
             migrations_processor
                 .process(

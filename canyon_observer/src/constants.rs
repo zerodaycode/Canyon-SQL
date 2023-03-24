@@ -1,14 +1,13 @@
 pub const NUMERIC_PK_DATATYPE: [&str; 6] = ["i16", "u16", "i32", "u32", "i64", "u64"];
 
 pub mod queries {
-    pub const INSERT_INTO_CANYON_MEMORY: &str = 
+    pub const INSERT_INTO_CANYON_MEMORY: &str =
         "INSERT INTO canyon_memory (filepath, struct_name, declared_table_name) \
         VALUES ($1, $2, $3)";
-    pub const UPDATE_CANYON_MEMORY: &str = 
+    pub const UPDATE_CANYON_MEMORY: &str =
         "UPDATE canyon_memory SET filepath = $1, struct_name = $2, \
         declared_table_name = $3 WHERE id = $4";
-    pub const DELETE_FROM_CANYON_MEMORY: &str = 
-        "DELETE FROM canyon_memory WHERE struct_name = $1";
+    pub const DELETE_FROM_CANYON_MEMORY: &str = "DELETE FROM canyon_memory WHERE struct_name = $1";
 }
 
 pub mod postgresql_queries {
@@ -180,8 +179,8 @@ pub mod sqlserver_type {
 }
 
 pub mod mocked_data {
-    use canyon_connection::lazy_static::lazy_static;
     use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
+    use canyon_connection::lazy_static::lazy_static;
 
     lazy_static! {
         pub static ref TABLE_METADATA_LEAGUE_EX: TableMetadata = TableMetadata {

@@ -1,10 +1,10 @@
+use crate::constants;
 use canyon_crud::bounds::QueryParameter;
 use canyon_crud::{bounds::RowOperations, crud::Transaction, DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
-use crate::constants;
 
 use super::register_types::CanyonRegisterEntity;
 
@@ -59,7 +59,10 @@ impl CanyonMemory {
     /// Queries the database to retrieve internal data about the structures
     /// tracked by `CanyonSQL`
     #[allow(clippy::nonminimal_bool)]
-    pub async fn remember(datasource: &DatasourceConfig<'static>, canyon_entities: &Vec<CanyonRegisterEntity<'_>>) -> Self {
+    pub async fn remember(
+        datasource: &DatasourceConfig<'static>,
+        canyon_entities: &Vec<CanyonRegisterEntity<'_>>,
+    ) -> Self {
         // Creates the memory table if not exists
         Self::create_memory(datasource.name, &datasource.properties.db_type).await;
 
@@ -81,7 +84,7 @@ impl CanyonMemory {
             };
             db_rows.push(db_row);
         }
-        println!("Data in the canyon_memory table: {db_rows:?}"); 
+        println!("Data in the canyon_memory table: {db_rows:?}");
 
         // Parses the source code files looking for the #[canyon_entity] annotated classes
         let mut mem = Self {
@@ -100,23 +103,25 @@ impl CanyonMemory {
             let already_in_db = db_rows.iter().any(|el| {
                 (el.filepath == _struct.filepath && el.struct_name == _struct.struct_name)
                     || ((el.filepath != _struct.filepath && el.struct_name == _struct.struct_name)
-                        || (el.filepath == _struct.filepath && el.struct_name != _struct.struct_name))
+                        || (el.filepath == _struct.filepath
+                            && el.struct_name != _struct.struct_name))
             });
             if !already_in_db {
-                    match CanyonMemory::query(
-                        constants::queries::INSERT_INTO_CANYON_MEMORY,
-                        &[
-                            &_struct.filepath as &dyn QueryParameter,
-                            &_struct.struct_name,
-                            &_struct.declared_table_name
-                        ],
-                        datasource.name
-                    ).await {
-                        Ok(v) => println!("Query insert CM OK: {v:?}"),
-                        Err(e) => println!("Error update CM: {e:?}")
-                    }
+                match CanyonMemory::query(
+                    constants::queries::INSERT_INTO_CANYON_MEMORY,
+                    [
+                        &_struct.filepath as &dyn QueryParameter,
+                        &_struct.struct_name,
+                        &_struct.declared_table_name,
+                    ],
+                    datasource.name,
+                )
+                .await
+                {
+                    Ok(v) => println!("Query insert CM OK: {v:?}"),
+                    Err(e) => println!("Error update CM: {e:?}"),
+                }
             }
-            
 
             // When the struct or the filepath it's already on db but one of the two has been modified
             let need_to_update = db_rows.iter().find(|el| {
@@ -130,16 +135,18 @@ impl CanyonMemory {
 
                 match CanyonMemory::query(
                     constants::queries::UPDATE_CANYON_MEMORY,
-                    &[
+                    [
                         &_struct.filepath as &dyn QueryParameter,
                         &_struct.struct_name,
                         &_struct.declared_table_name,
-                        &old.id
+                        &old.id,
                     ],
-                    datasource.name
-                ).await {
+                    datasource.name,
+                )
+                .await
+                {
                     Ok(v) => println!("Query update CM OK: {v:?}"),
-                    Err(e) => println!("Error update CM: {e:?}")
+                    Err(e) => println!("Error update CM: {e:?}"),
                 }
 
                 // if the updated element is the struct name, we add it to the table_rename Hashmap
@@ -147,8 +154,8 @@ impl CanyonMemory {
 
                 if rename_table {
                     mem.renamed_entities.insert(
-                        _struct.struct_name.to_string(),    // The new one
-                        old.struct_name.to_string(),        // The old one
+                        _struct.struct_name.to_string(), // The new one
+                        old.struct_name.to_string(),     // The old one
                     );
                 }
             }
@@ -156,7 +163,10 @@ impl CanyonMemory {
 
         // Deletes the records when a table is dropped on the previous Canyon run
         db_rows.into_iter().for_each(|db_row| {
-            if !mem.memory.iter().any(|entity| entity.struct_name == db_row.struct_name)
+            if !mem
+                .memory
+                .iter()
+                .any(|entity| entity.struct_name == db_row.struct_name)
                 && !updates.contains(&db_row.struct_name)
             {
                 // crate::add_cm_query_to_execute(stmt, datasource.name, &[&db_row.struct_name]);
@@ -167,7 +177,10 @@ impl CanyonMemory {
 
     /// Parses the Rust source code files to find the one who contains Canyon entities
     /// ie -> annotated with `#[canyon_entity]`
-    async fn find_canyon_entity_annotated_structs(&mut self, canyon_entities: &Vec<CanyonRegisterEntity<'_>>) {
+    async fn find_canyon_entity_annotated_structs(
+        &mut self,
+        canyon_entities: &[CanyonRegisterEntity<'_>],
+    ) {
         for file in WalkDir::new("./src")
             .into_iter()
             .filter_map(|file| file.ok())
@@ -185,7 +198,9 @@ impl CanyonMemory {
                     if line.contains("#[") // separated checks for possible different paths
                         && line.contains("canyon_entity")
                         && !line.starts_with("//")
-                    { canyon_entity_macro_counter += 1; }
+                    {
+                        canyon_entity_macro_counter += 1;
+                    }
 
                     let re = Regex::new(r#"\bstruct\s+(\w+)"#).unwrap();
                     if let Some(captures) = re.captures(line) {
@@ -198,15 +213,15 @@ impl CanyonMemory {
                 match canyon_entity_macro_counter {
                     0 => (),
                     1 => {
-                        let canyon_entity = canyon_entities.iter()
+                        let canyon_entity = canyon_entities
+                            .iter()
                             .find(|ce| ce.entity_name == struct_name);
                         if let Some(c_entity) = canyon_entity {
-                            self.memory.push(
-                                CanyonMemoryAnalyzer {
-                                    filepath: file.path().display().to_string().replace('\\', "/"),
-                                    struct_name: struct_name.clone(),
-                                    declared_table_name: c_entity.entity_db_table_name.to_string()                               }
-                            )
+                            self.memory.push(CanyonMemoryAnalyzer {
+                                filepath: file.path().display().to_string().replace('\\', "/"),
+                                struct_name: struct_name.clone(),
+                                declared_table_name: c_entity.entity_db_table_name.to_string(),
+                            })
                         }
                     }
                     _ => panic!(
@@ -224,7 +239,7 @@ impl CanyonMemory {
             constants::postgresql_queries::CANYON_MEMORY_TABLE
         } else {
             constants::mssql_queries::CANYON_MEMORY_TABLE
-        }; 
+        };
 
         Self::query(query, [], datasource_name)
             .await
@@ -238,7 +253,7 @@ struct CanyonMemoryRow<'a> {
     id: i32,
     filepath: &'a str,
     struct_name: &'a str,
-    declared_table_name: &'a str
+    declared_table_name: &'a str,
 }
 
 /// Represents the data that will be serialized in the `canyon_memory` table
@@ -246,5 +261,5 @@ struct CanyonMemoryRow<'a> {
 pub struct CanyonMemoryAnalyzer {
     pub filepath: String,
     pub struct_name: String,
-    pub declared_table_name: String
+    pub declared_table_name: String,
 }

@@ -260,9 +260,9 @@ pub fn canyon_entity(
     let mut new_entity = CanyonRegisterEntity::default();
     let e = Box::leak(entity.struct_name.to_string().into_boxed_str());
     new_entity.entity_name = e;
-    new_entity.entity_db_table_name = table_name.unwrap_or(
-        Box::leak(helpers::default_database_table_name_from_entity_name(e).into_boxed_str())
-    );
+    new_entity.entity_db_table_name = table_name.unwrap_or(Box::leak(
+        helpers::default_database_table_name_from_entity_name(e).into_boxed_str(),
+    ));
     new_entity.user_schema_name = schema_name;
 
     // The entity fields

@@ -127,7 +127,6 @@ impl MigrationsProcessor {
         database_tables: &'a [&'a TableMetadata],
     ) {
         // 1st operation -> Check if the current entity is already on the target database.
-        println!("Checking create or rename table for: {entity_name}");
         if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
             // [`CanyonMemory`] holds a HashMap with the tables who changed their name in
             // the Rust side. If this table name is present, we don't create a new table,
@@ -583,10 +582,7 @@ impl MigrationsHelper {
     ) -> bool {
         database_tables
             .iter()
-            .any(|db_table_data| { 
-                println!("Matching db entity name: {} vs db table name: {entity_name}", db_table_data.table_name);
-                db_table_data.table_name == entity_name
-            })
+            .any(|db_table_data| db_table_data.table_name == entity_name)
     }
     /// Get the table metadata for a given entity name or his old entity name if the table was renamed.
     fn get_current_table_metadata<'a>(
@@ -762,7 +758,7 @@ impl DatabaseOperation for TableOperation {
                         table_fields
                             .iter()
                             .map(|entity_field| format!(
-                                "\"{}\" {}", 
+                                "\"{}\" {}",
                                 entity_field.field_name,
                                 entity_field.to_postgres_syntax()
                             ))
