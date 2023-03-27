@@ -49,14 +49,11 @@ impl Migrations {
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;
-            // println!("Canyon memory: {:?}", &canyon_memory);
-            // println!("Canyon tables: {:?}", &canyon_entities);
 
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
                 Self::fetch_database(datasource.name, datasource.properties.db_type).await;
             let database_tables_schema_info = Self::map_rows(schema_status);
-            // println!("DB tables: {:?}", &database_tables_schema_info);
 
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
@@ -73,14 +70,6 @@ impl Migrations {
                     user_database_tables.append(&mut vec![parsed_table]);
                 }
             }
-
-            println!(
-                "Tables to process: {:?}",
-                user_database_tables
-                    .iter()
-                    .map(|t| &t.table_name)
-                    .collect::<Vec<_>>()
-            );
 
             migrations_processor
                 .process(
