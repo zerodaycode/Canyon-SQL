@@ -695,7 +695,7 @@ mod migrations_helper_tests {
     use super::*;
     use crate::constants;
 
-    const MOCKED_ENTITY_NAME: &str = "League";
+    const MOCKED_ENTITY_NAME: &str = "league";
 
     #[test]
     fn test_entity_already_on_database() {
