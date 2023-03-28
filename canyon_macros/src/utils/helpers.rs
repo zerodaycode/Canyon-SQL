@@ -104,14 +104,29 @@ pub fn _database_table_name_from_struct(ty: &Ident) -> String {
 /// Parses a syn::Identifier to create a defaulted snake case database table name
 #[test]
 fn test_entity_database_name_defaulter() {
-    assert_eq!(default_database_table_name_from_entity_name("League"), "league".to_owned());
-    assert_eq!(default_database_table_name_from_entity_name("MajorLeague"), "major_league".to_owned());
-    assert_eq!(default_database_table_name_from_entity_name("MajorLeagueTournament"), "major_league_tournament".to_owned());
-    
-    assert_ne!(default_database_table_name_from_entity_name("MajorLeague"), "majorleague".to_owned());
-    assert_ne!(default_database_table_name_from_entity_name("MajorLeague"), "MajorLeague".to_owned());
+    assert_eq!(
+        default_database_table_name_from_entity_name("League"),
+        "league".to_owned()
+    );
+    assert_eq!(
+        default_database_table_name_from_entity_name("MajorLeague"),
+        "major_league".to_owned()
+    );
+    assert_eq!(
+        default_database_table_name_from_entity_name("MajorLeagueTournament"),
+        "major_league_tournament".to_owned()
+    );
+
+    assert_ne!(
+        default_database_table_name_from_entity_name("MajorLeague"),
+        "majorleague".to_owned()
+    );
+    assert_ne!(
+        default_database_table_name_from_entity_name("MajorLeague"),
+        "MajorLeague".to_owned()
+    );
 }
-/// 
+///
 pub fn default_database_table_name_from_entity_name(ty: &str) -> String {
     let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();
