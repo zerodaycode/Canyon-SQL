@@ -27,7 +27,8 @@
         </div>
     </div>
 
-        <div class="level-item has-text-centered">
+        
+	    <div class="level-item has-text-centered">
         <div>
             <p class="heading">Branches</p>
             <p class="title has-text-success">
@@ -35,6 +36,7 @@
         </div>
     </div>
 
+	
     </nav>
 
     <div role="table" aria-label="Coverage report"><div class="columns p-0 m-0" role="row">
@@ -46,8 +48,8 @@
             </div>
             <div
                 class="column is-1 is-narrow p-0 has-text-centered has-text-success-light has-background-success"
-                role="cell" aria-label="1">
-                1
+                role="cell" aria-label="2">
+                2
             </div>
             <div class="column has-background-success-light p-0"
                  role="cell">
@@ -227,7 +229,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F; Database Engine related</pre>
+                <pre class="has-background-white py-0 px-2">pub mod migrations;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -243,7 +245,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub mod postgresql;</pre>
+                <pre class="has-background-white py-0 px-2"></pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -259,7 +261,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2"></pre>
+                <pre class="has-background-white py-0 px-2">extern crate canyon_crud;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -275,7 +277,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">extern crate canyon_crud;</pre>
+                <pre class="has-background-white py-0 px-2"></pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -291,7 +293,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2"></pre>
+                <pre class="has-background-white py-0 px-2">mod constants;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -307,7 +309,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F; The migrator tool</pre>
+                <pre class="has-background-white py-0 px-2">pub mod manager;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -323,7 +325,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">mod constants;</pre>
+                <pre class="has-background-white py-0 px-2"></pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -339,7 +341,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub mod handler;</pre>
+                <pre class="has-background-white py-0 px-2">use crate::migrations::register_types::CanyonRegisterEntity;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -355,7 +357,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">mod memory;</pre>
+                <pre class="has-background-white py-0 px-2">use canyon_connection::lazy_static::lazy_static;</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -371,7 +373,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2"></pre>
+                <pre class="has-background-white py-0 px-2">use std::{collections::HashMap, sync::Mutex};</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -387,7 +389,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">use std::sync::Mutex;</pre>
+                <pre class="has-background-white py-0 px-2"></pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -403,7 +405,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2"></pre>
+                <pre class="has-background-white py-0 px-2">pub static CANYON_REGISTER_ENTITIES: Mutex&lt;Vec&lt;CanyonRegisterEntity&lt;&#x27;static&gt;&gt;&gt; =</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -419,7 +421,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">use crate::postgresql::register_types::CanyonRegisterEntity;</pre>
+                <pre class="has-background-white py-0 px-2">    Mutex::new(Vec::new());</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -435,7 +437,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2"></pre>
+                <pre class="has-background-white py-0 px-2">lazy_static! {</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -451,7 +453,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F; lazy_static! {  &#x2F;&#x2F; TODO implement an access control polity by number of times read the static refs</pre>
+                <pre class="has-background-white py-0 px-2">    pub static ref QUERIES_TO_EXECUTE: Mutex&lt;HashMap&lt;&amp;&#x27;static str, Vec&lt;String&gt;&gt;&gt; =</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -467,7 +469,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub static CANYON_REGISTER_ENTITIES: Mutex&lt;Vec&lt;CanyonRegisterEntity&lt;&#x27;static&gt;&gt;&gt; =</pre>
+                <pre class="has-background-white py-0 px-2">        Mutex::new(HashMap::new());</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -483,7 +485,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">    Mutex::new(Vec::new());</pre>
+                <pre class="has-background-white py-0 px-2">    pub static ref CM_QUERIES_TO_EXECUTE: Mutex&lt;HashMap&lt;&amp;&#x27;static str, Vec&lt;String&gt;&gt;&gt; =</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -499,7 +501,7 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">pub static QUERIES_TO_EXECUTE: Mutex&lt;Vec&lt;String&gt;&gt; = Mutex::new(Vec::new());</pre>
+                <pre class="has-background-white py-0 px-2">        Mutex::new(HashMap::new());</pre>
             </div>
         </div><div class="columns p-0 m-0" role="row">
             <div
@@ -515,13 +517,13 @@
             </div>
             <div class="column has-background-white p-0"
                  role="cell">
-                <pre class="has-background-white py-0 px-2">&#x2F;&#x2F; }</pre>
+                <pre class="has-background-white py-0 px-2">}</pre>
             </div>
         </div></div>
 </div>
         <footer class="footer">
             <div class="content has-text-centered">
-                <p class="heading">Date: 2022-11-10 15:48</p>
+                <p class="heading">Date: 2023-03-28 11:22</p>
             </div>
         </footer>
     </body>
