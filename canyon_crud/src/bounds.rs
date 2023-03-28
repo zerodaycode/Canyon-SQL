@@ -237,6 +237,15 @@ impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
     }
 }
 
+impl<'a> QueryParameter<'a> for bool {
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::Bit(Some(*self))
+    }
+}
 impl<'a> QueryParameter<'a> for i16 {
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self

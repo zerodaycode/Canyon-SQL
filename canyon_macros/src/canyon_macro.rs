@@ -5,7 +5,7 @@ use proc_macro2::{Ident, TokenStream};
 
 use quote::quote;
 
-use canyon_observer::{QUERIES_TO_EXECUTE, CM_QUERIES_TO_EXECUTE};
+use canyon_observer::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
 use syn::{Lit, NestedMeta};
 
 #[derive(Debug)]
@@ -109,7 +109,7 @@ fn report_literals_not_allowed(ident: &str, s: &Lit) -> TokenStream1 {
 pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     let cm_data = CM_QUERIES_TO_EXECUTE.lock().unwrap();
     let data = QUERIES_TO_EXECUTE.lock().unwrap();
-    
+
     let cm_data_to_wire = cm_data.iter().map(|(key, value)| {
         quote! { cm_hm.insert(#key, vec![#(#value),*]); }
     });
@@ -123,10 +123,10 @@ pub fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
 
         let mut cm_hm: HashMap<&str, Vec<&str>> = HashMap::new();
         let mut hm: HashMap<&str, Vec<&str>> = HashMap::new();
-        
+
         #(#cm_data_to_wire)*;
         #(#data_to_wire)*;
-        
+
         MigrationsProcessor::from_query_register(&cm_hm).await;
         MigrationsProcessor::from_query_register(&hm).await;
     };

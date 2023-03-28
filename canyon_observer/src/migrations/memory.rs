@@ -61,7 +61,7 @@ impl CanyonMemory {
     #[allow(clippy::nonminimal_bool)]
     pub async fn remember(
         datasource: &DatasourceConfig<'static>,
-        canyon_entities: &Vec<CanyonRegisterEntity<'_>>,
+        canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
         // Creates the memory table if not exists
         Self::create_memory(datasource.name, &datasource.properties.db_type).await;
@@ -90,18 +90,24 @@ impl CanyonMemory {
             renamed_entities: HashMap::new(),
         };
         Self::find_canyon_entity_annotated_structs(&mut mem, canyon_entities).await;
-        
+
         let mut updates = Vec::new();
 
-        for _struct in &mem.memory { // For every program entity detected
-            let already_in_db = db_rows.iter().find(|el|
-                el.filepath == _struct.filepath || el.struct_name == _struct.struct_name || el.declared_table_name == _struct.declared_table_name
-            );
+        for _struct in &mem.memory {
+            // For every program entity detected
+            let already_in_db = db_rows.iter().find(|el| {
+                el.filepath == _struct.filepath
+                    || el.struct_name == _struct.struct_name
+                    || el.declared_table_name == _struct.declared_table_name
+            });
 
             if let Some(old) = already_in_db {
-                if !(old.filepath == _struct.filepath && old.struct_name == _struct.struct_name && old.declared_table_name == _struct.declared_table_name) {
+                if !(old.filepath == _struct.filepath
+                    && old.struct_name == _struct.struct_name
+                    && old.declared_table_name == _struct.declared_table_name)
+                {
                     updates.push(old.struct_name);
-                let stmt = format!(
+                    let stmt = format!(
                         "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}', declared_table_name = '{}' \
                                 WHERE id = {}",
                         _struct.filepath, _struct.struct_name, _struct.declared_table_name, old.id
@@ -121,7 +127,6 @@ impl CanyonMemory {
             }
 
             if already_in_db.is_none() {
-                println!("\tInsert action for: {_struct:?}");
                 let stmt = format!(
                     "INSERT INTO canyon_memory (filepath, struct_name, declared_table_name) \
                         VALUES ('{}', '{}', '{}')",
@@ -139,7 +144,13 @@ impl CanyonMemory {
                 .any(|entity| entity.struct_name == db_row.struct_name)
                 && !updates.contains(&db_row.struct_name)
             {
-                save_canyon_memory_query(format!("DELETE FROM canyon_memory WHERE struct_name = '{}'", db_row.struct_name), datasource.name);
+                save_canyon_memory_query(
+                    format!(
+                        "DELETE FROM canyon_memory WHERE struct_name = '{}'",
+                        db_row.struct_name
+                    ),
+                    datasource.name,
+                );
             }
         }
         mem
@@ -219,15 +230,10 @@ impl CanyonMemory {
     }
 }
 
-
-fn save_canyon_memory_query<'a>(stmt: String, ds_name: &'static str) {
+fn save_canyon_memory_query(stmt: String, ds_name: &'static str) {
     use crate::CM_QUERIES_TO_EXECUTE;
 
-    if CM_QUERIES_TO_EXECUTE
-        .lock()
-        .unwrap()
-        .contains_key(ds_name)
-    {
+    if CM_QUERIES_TO_EXECUTE.lock().unwrap().contains_key(ds_name) {
         CM_QUERIES_TO_EXECUTE
             .lock()
             .unwrap()
@@ -240,7 +246,7 @@ fn save_canyon_memory_query<'a>(stmt: String, ds_name: &'static str) {
             .unwrap()
             .insert(ds_name, vec![stmt]);
     }
-} 
+}
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]

@@ -25,7 +25,6 @@ pub static CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> =
 lazy_static! {
     pub static ref QUERIES_TO_EXECUTE: Mutex<HashMap<&'static str, Vec<String>>> =
         Mutex::new(HashMap::new());
-
     pub static ref CM_QUERIES_TO_EXECUTE: Mutex<HashMap<&'static str, Vec<String>>> =
         Mutex::new(HashMap::new());
 }
