@@ -26,9 +26,8 @@ pub fn generate_find_all_unchecked_tokens(
                 &[],
                 ""
             ).await
-                .ok()
-                .unwrap()
-                .get_entities::<#ty>()
+            .unwrap()
+            .get_entities::<#ty>()
         }
 
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -45,9 +44,8 @@ pub fn generate_find_all_unchecked_tokens(
                 &[],
                 datasource_name
             ).await
-                .ok()
-                .unwrap()
-                .get_entities::<#ty>()
+            .unwrap()
+            .get_entities::<#ty>()
         }
     }
 }
@@ -69,17 +67,14 @@ pub fn generate_find_all_tokens(
         async fn find_all<'a>() ->
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
-                #stmt,
-                &[],
-                ""
-            ).await;
-
-            if let Err(error) = result {
-                Err(error)
-            } else {
-                Ok(result.ok().unwrap().get_entities::<#ty>())
-            }
+            Ok(
+                <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                    #stmt,
+                    &[],
+                    ""
+                ).await?
+                .get_entities::<#ty>()
+            )
         }
 
         /// Performns a `SELECT * FROM table_name`, where `table_name` it's
@@ -97,17 +92,14 @@ pub fn generate_find_all_tokens(
         async fn find_all_datasource<'a>(datasource_name: &'a str) ->
             Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         {
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
-                #stmt,
-                &[],
-                datasource_name
-            ).await;
-
-            if let Err(error) = result {
-                Err(error)
-            } else {
-                Ok(result.ok().unwrap().get_entities::<#ty>())
-            }
+            Ok(
+                <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                    #stmt,
+                    &[],
+                    datasource_name
+                ).await?
+                .get_entities::<#ty>()
+            )
         }
     }
 }
@@ -159,28 +151,23 @@ pub fn generate_count_tokens(
     let stmt = format!("SELECT COUNT (*) FROM {table_schema_data}");
 
     let result_handling = quote! {
-        if let Err(error) = count {
-            Err(error)
-        } else {
-            let c = count.ok().unwrap();
-            match c.get_active_ds() {
-                canyon_sql::crud::DatabaseType::PostgreSql => {
-                    Ok(
-                        c.postgres.get(0)
-                            .expect(&format!("Count operation failed for {:?}", #ty_str))
-                            .get::<&str, i64>("count")
-                            .to_owned()
-                    )
-                },
-                canyon_sql::crud::DatabaseType::SqlServer => {
-                    Ok(
-                        c.sqlserver.get(0)
-                            .expect(&format!("Count operation failed for {:?}", #ty_str))
-                            .get::<i32, usize>(0)
-                            .expect(&format!("SQL Server failed to return the count values for {:?}", #ty_str))
-                            .into()
-                    )
-                }
+        match count.get_active_ds() {
+            canyon_sql::crud::DatabaseType::PostgreSql => {
+                Ok(
+                    count.postgres.get(0)
+                        .expect(&format!("Count operation failed for {:?}", #ty_str))
+                        .get::<&str, i64>("count")
+                        .to_owned()
+                )
+            },
+            canyon_sql::crud::DatabaseType::SqlServer => {
+                Ok(
+                    count.sqlserver.get(0)
+                        .expect(&format!("Count operation failed for {:?}", #ty_str))
+                        .get::<i32, usize>(0)
+                        .expect(&format!("SQL Server failed to return the count values for {:?}", #ty_str))
+                        .into()
+                )
             }
         }
     };
@@ -193,7 +180,7 @@ pub fn generate_count_tokens(
                 #stmt,
                 &[],
                 ""
-            ).await;
+            ).await?;
 
             #result_handling
         }
@@ -205,7 +192,7 @@ pub fn generate_count_tokens(
                 #stmt,
                 &[],
                 datasource_name
-            ).await;
+            ).await?;
 
             #result_handling
         }
@@ -254,19 +241,11 @@ pub fn generate_find_by_pk_tokens(
     }
 
     let result_handling = quote! {
-        if let Err(error) = result {
-            Err(error)
-        } else {
-            match result.as_ref().ok().unwrap() {
-                n if n.number_of_results() == 0 => Ok(None),
-                _ => Ok(
-                    Some(
-                        result.unwrap()
-                            .get_entities::<#ty>()
-                            .remove(0)
-                    )
-                )
-            }
+        match result {
+            n if n.number_of_results() == 0 => Ok(None),
+            _ => Ok(
+                Some(result.get_entities::<#ty>().remove(0))
+            )
         }
     };
 
@@ -290,7 +269,7 @@ pub fn generate_find_by_pk_tokens(
                 #stmt,
                 vec![value],
                 ""
-            ).await;
+            ).await?;
 
             #result_handling
         }
@@ -320,7 +299,7 @@ pub fn generate_find_by_pk_tokens(
                 #stmt,
                 vec![value],
                 datasource_name
-            ).await;
+            ).await?;
 
             #result_handling
         }
@@ -367,18 +346,11 @@ pub fn generate_find_by_foreign_key_tokens(
                 format!("\"{column}\"").as_str(),
             );
             let result_handler = quote! {
-                if let Err(error) = result {
-                    Err(error)
-                } else {
-                    match result.as_ref().ok().unwrap() {
-                        n if n.number_of_results() == 0 => Ok(None),
-                        _ => Ok(Some(
-                            result
-                                .unwrap()
-                                .get_entities::<#fk_ty>()
-                                .remove(0)
-                        ))
-                    }
+                match result {
+                    n if n.number_of_results() == 0 => Ok(None),
+                    _ => Ok(Some(
+                        result.get_entities::<#fk_ty>().remove(0)
+                    ))
                 }
             };
 
@@ -391,7 +363,7 @@ pub fn generate_find_by_foreign_key_tokens(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::crud::bounds::QueryParameter<'_>],
                             ""
-                        ).await;
+                        ).await?;
 
                         #result_handler
                     }
@@ -407,7 +379,7 @@ pub fn generate_find_by_foreign_key_tokens(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::crud::bounds::QueryParameter<'_>],
                             datasource_name
-                        ).await;
+                        ).await?;
 
                         #result_handler
                     }
@@ -452,13 +424,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
             };
 
-            let result_handler = quote! {
-                if let Err(error) = result {
-                    Err(error)
-                } else {
-                    Ok(result.ok().unwrap().get_entities::<#ty>())
-                }
-            };
+
             let f_ident = field_ident.to_string();
 
             rev_fk_quotes.push((
@@ -479,13 +445,12 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                        Ok(<#ty as canyon_sql::crud::Transaction<#ty>>::query(
                             stmt,
                             &[lookage_value],
                             ""
-                        ).await;
-
-                        #result_handler
+                        ).await?
+                        .get_entities::<#ty>())
                     }
                 },
             ));
@@ -509,13 +474,12 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                        Ok(<#ty as canyon_sql::crud::Transaction<#ty>>::query(
                             stmt,
                             &[lookage_value],
                             datasource_name
-                        ).await;
-
-                        #result_handler
+                        ).await?
+                        .get_entities::<#ty>())
                     }
                 },
             ));

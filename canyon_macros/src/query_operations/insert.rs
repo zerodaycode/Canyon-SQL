@@ -91,17 +91,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
-            ).await;
+            ).await?;
 
-            if let Err(error) = result {
-                Err(error)
-            } else {
-                Ok(())
-            }
+            Ok(())
         }
     };
 

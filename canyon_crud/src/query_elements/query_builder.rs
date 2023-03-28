@@ -163,25 +163,18 @@ where
 
     /// Launches the generated query against the database targeted
     /// by the selected datasource
-    #[allow(clippy::question_mark)]
     pub async fn query(
         &'a mut self,
     ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
-        // Close the query, we are ready to go
         self.query.sql.push(';');
 
-        let result = T::query(
+        Ok(T::query(
             self.query.sql.clone(),
             self.query.params.to_vec(),
             self.datasource_name,
         )
-        .await;
-
-        if let Err(error) = result {
-            Err(error)
-        } else {
-            Ok(result.ok().unwrap().get_entities::<T>())
-        }
+        .await?
+        .get_entities::<T>())
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {
@@ -511,8 +504,7 @@ where
             )
         }
 
-        let cap = columns.len() * 50; // Reserving an enough initial capacity per set clause
-        let mut set_clause = String::with_capacity(cap);
+        let mut set_clause = String::new();
         set_clause.push_str(" SET ");
 
         for (idx, column) in columns.iter().enumerate() {
