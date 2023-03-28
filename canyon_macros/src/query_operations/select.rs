@@ -424,7 +424,6 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
             };
 
-
             let f_ident = field_ident.to_string();
 
             rev_fk_quotes.push((

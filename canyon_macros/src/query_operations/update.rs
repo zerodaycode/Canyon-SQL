@@ -44,7 +44,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, ""
                 ).await?;
-                
+
                 Ok(())
             }
 
