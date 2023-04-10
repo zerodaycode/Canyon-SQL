@@ -64,7 +64,7 @@ impl CanyonMemory {
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
         // Creates the memory table if not exists
-        Self::create_memory(datasource.name, &datasource.properties.db_type).await;
+        Self::create_memory(datasource.name, &datasource.db_type).await;
 
         // Retrieve the last status data from the `canyon_memory` table
         let res = Self::query("SELECT * FROM canyon_memory", [], datasource.name)

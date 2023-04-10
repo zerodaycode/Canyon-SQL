@@ -35,7 +35,7 @@ impl MigrationsProcessor {
         datasource: &'_ DatasourceConfig<'static>,
     ) {
         // The database type formally represented in Canyon
-        let db_type = datasource.properties.db_type;
+        let db_type = datasource.db_type;
         // For each entity (table) on the register (Rust structs)
         for canyon_register_entity in canyon_entities {
             let entity_name = canyon_register_entity.entity_db_table_name;
@@ -748,7 +748,7 @@ impl<T: Debug> Transaction<T> for TableOperation {}
 #[async_trait]
 impl DatabaseOperation for TableOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
-        let db_type = datasource.properties.db_type;
+        let db_type = datasource.db_type;
 
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
@@ -904,7 +904,7 @@ impl Transaction<Self> for ColumnOperation {}
 #[async_trait]
 impl DatabaseOperation for ColumnOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
-        let db_type = datasource.properties.db_type;
+        let db_type = datasource.db_type;
 
         let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
@@ -1012,7 +1012,7 @@ impl Transaction<Self> for SequenceOperation {}
 #[async_trait]
 impl DatabaseOperation for SequenceOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
-        let db_type = datasource.properties.db_type;
+        let db_type = datasource.db_type;
 
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => {

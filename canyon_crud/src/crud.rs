@@ -18,7 +18,6 @@ use crate::result::DatabaseResult;
 /// the result of the query and, if the user desires,
 /// automatically map it to an struct.
 #[async_trait]
-#[allow(clippy::question_mark)]
 pub trait Transaction<T> {
     /// Performs a query against the targeted database by the selected datasource.
     ///

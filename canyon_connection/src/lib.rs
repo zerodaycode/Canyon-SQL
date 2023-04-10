@@ -50,7 +50,7 @@ pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
         CACHED_DATABASE_CONN.lock().await.insert(
             datasource.name,
-            DatabaseConnection::new(&datasource.properties)
+            DatabaseConnection::new(&datasource)
                 .await
                 .unwrap_or_else(|_| {
                     panic!(

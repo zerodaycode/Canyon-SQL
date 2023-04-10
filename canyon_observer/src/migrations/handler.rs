@@ -52,7 +52,7 @@ impl Migrations {
 
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
-                Self::fetch_database(datasource.name, datasource.properties.db_type).await;
+                Self::fetch_database(datasource.name, datasource.db_type).await;
             let database_tables_schema_info = Self::map_rows(schema_status);
 
             // We filter the tables from the schema that aren't Canyon entities

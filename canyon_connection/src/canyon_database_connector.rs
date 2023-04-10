@@ -4,7 +4,7 @@ use serde::Deserialize;
 use tiberius::{AuthMethod, Config};
 use tokio_postgres::{Client, NoTls};
 
-use crate::datasources::DatasourceProperties;
+use crate::datasources::DatasourceConfig;
 
 /// Represents the current supported databases by Canyon
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
@@ -41,18 +41,18 @@ unsafe impl Sync for DatabaseConnection {}
 
 impl DatabaseConnection {
     pub async fn new(
-        datasource: &DatasourceProperties<'_>,
+        datasource: &DatasourceConfig<'_>,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
             DatabaseType::PostgreSql => {
                 let (new_client, new_connection) = tokio_postgres::connect(
                     &format!(
                         "postgres://{user}:{pswd}@{host}:{port}/{db}",
-                        user = datasource.username,
-                        pswd = datasource.password,
-                        host = datasource.host,
-                        port = datasource.port.unwrap_or_default(),
-                        db = datasource.db_name
+                        user = datasource.properties.username,
+                        pswd = datasource.properties.password,
+                        host = datasource.properties.host,
+                        port = datasource.properties.port.unwrap_or_default(),
+                        db = datasource.properties.db_name
                     )[..],
                     NoTls,
                 )
@@ -72,14 +72,14 @@ impl DatabaseConnection {
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
-                config.host(datasource.host);
-                config.port(datasource.port.unwrap_or_default());
-                config.database(datasource.db_name);
+                config.host(datasource.properties.host);
+                config.port(datasource.properties.port.unwrap_or_default());
+                config.database(datasource.properties.db_name);
 
                 // Using SQL Server authentication.
                 config.authentication(AuthMethod::sql_server(
-                    datasource.username,
-                    datasource.password,
+                    datasource.properties.username,
+                    datasource.properties.password,
                 ));
 
                 // on production, it is not a good idea to do this. We should upgrade
@@ -135,8 +135,8 @@ mod database_connection_handler {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
         [canyon_sql]
         datasources = [
-            {name = 'PostgresDS', properties.db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled'},
-            {name = 'SqlServerDS', properties.db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled'}
+            {name = 'PostgresDS', db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled'},
+            {name = 'SqlServerDS', db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled'}
         ]
     "#;
 
@@ -146,10 +146,7 @@ mod database_connection_handler {
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
             .expect("A failure happened retrieving the [canyon_sql] section");
 
-        let psql_ds = &config.canyon_sql.datasources[0].properties;
-        let sqls_ds = &config.canyon_sql.datasources[1].properties;
-
-        assert_eq!(psql_ds.db_type, DatabaseType::PostgreSql);
-        assert_eq!(sqls_ds.db_type, DatabaseType::SqlServer);
+        assert_eq!(config.canyon_sql.datasources[0].db_type, DatabaseType::PostgreSql);
+        assert_eq!(config.canyon_sql.datasources[1].db_type, DatabaseType::SqlServer);
     }
 }
