@@ -9,7 +9,8 @@ fn load_ds_config_from_array() {
     [canyon_sql]
     datasources = [
         {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-        {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+        {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },
+        {name = 'SqlServerDS', auth = { sqlserver = { integrated = {} } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
     ]
     "#;
 
@@ -18,6 +19,7 @@ fn load_ds_config_from_array() {
 
     let ds_0 = &config.canyon_sql.datasources[0];
     let ds_1 = &config.canyon_sql.datasources[1];
+    let ds_2 = &config.canyon_sql.datasources[2];
 
     assert_eq!(ds_0.name, "PostgresDS");
     assert_eq!(ds_0.get_db_type(), DatabaseType::PostgreSql);
@@ -46,6 +48,8 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_1.properties.port, Some(3340));
     assert_eq!(ds_1.properties.db_name, "triforce2");
     assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
+
+    assert_eq!(ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated))
 }
 ///
 #[derive(Deserialize, Debug, Clone)]
