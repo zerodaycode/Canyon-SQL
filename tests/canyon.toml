@@ -2,7 +2,6 @@
 
 [[canyon_sql.datasources]]
 name = 'postgres_docker'
-db_type = 'postgresql'
 
 [canyon_sql.datasources.auth]
 postgresql = { basic = { username = 'postgres', password = 'postgres'}}
@@ -15,7 +14,6 @@ db_name = 'postgres'
 
 [[canyon_sql.datasources]]
 name = 'sqlserver_docker'
-db_type = 'sqlserver'
 
 [canyon_sql.datasources.auth]
 sqlserver = { basic = { username = 'sa', password = 'SqlServer-10' } }

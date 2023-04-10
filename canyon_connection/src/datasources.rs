@@ -8,8 +8,8 @@ fn load_ds_config_from_array() {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
     [canyon_sql]
     datasources = [
-        {name = 'PostgresDS', db_type = 'postgresql', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-        {name = 'SqlServerDS', db_type = 'sqlserver', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+        {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+        {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
     ]
     "#;
 
@@ -20,7 +20,7 @@ fn load_ds_config_from_array() {
     let ds_1 = &config.canyon_sql.datasources[1];
 
     assert_eq!(ds_0.name, "PostgresDS");
-    assert_eq!(ds_0.db_type, DatabaseType::PostgreSql);
+    assert_eq!(ds_0.get_db_type(), DatabaseType::PostgreSql);
     assert_eq!(
         ds_0.auth,
         Auth::Postgres(PostgresAuth::Basic {
@@ -34,7 +34,7 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_0.properties.migrations, Some(Migrations::Enabled));
 
     assert_eq!(ds_1.name, "SqlServerDS");
-    assert_eq!(ds_1.db_type, DatabaseType::SqlServer);
+    assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);
     assert_eq!(
         ds_1.auth,
         Auth::SqlServer(SqlServerAuth::Basic {
@@ -60,9 +60,17 @@ pub struct Datasources {
 #[derive(Deserialize, Debug, Clone)]
 pub struct DatasourceConfig {
     pub name: String,
-    pub db_type: DatabaseType,
     pub auth: Auth,
     pub properties: DatasourceProperties,
+}
+
+impl DatasourceConfig {
+    pub fn get_db_type(&self) -> DatabaseType {
+        match self.auth {
+            Auth::Postgres(_) => DatabaseType::PostgreSql,
+            Auth::SqlServer(_) => DatabaseType::SqlServer,
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]

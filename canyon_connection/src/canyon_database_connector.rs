@@ -43,7 +43,7 @@ impl DatabaseConnection {
     pub async fn new(
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        match datasource.db_type {
+        match datasource.get_db_type() {
             DatabaseType::PostgreSql => {
                 let (username, password) = match &datasource.auth {
                     crate::datasources::Auth::Postgres(postgres_auth) => match postgres_auth {
@@ -152,8 +152,8 @@ mod database_connection_handler {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
         [canyon_sql]
         datasources = [
-            {name = 'PostgresDS', db_type = 'postgresql', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-            {name = 'SqlServerDS', db_type = 'sqlserver', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+            {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+            {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
         ]
     "#;
 
@@ -164,11 +164,11 @@ mod database_connection_handler {
             .expect("A failure happened retrieving the [canyon_sql] section");
 
         assert_eq!(
-            config.canyon_sql.datasources[0].db_type,
+            config.canyon_sql.datasources[0].get_db_type(),
             DatabaseType::PostgreSql
         );
         assert_eq!(
-            config.canyon_sql.datasources[1].db_type,
+            config.canyon_sql.datasources[1].get_db_type(),
             DatabaseType::SqlServer
         );
     }
