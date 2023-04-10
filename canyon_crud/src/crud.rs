@@ -164,7 +164,6 @@ mod postgres_query_launcher {
 
     pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
-        // datasource_name: &str,
         stmt: String,
         params: &'a [&'_ dyn QueryParameter<'_>],
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
@@ -173,21 +172,15 @@ mod postgres_query_launcher {
             m_params.push(param.as_postgres_param());
         }
 
-        let query_result = db_conn
-            .postgres_connection
-            .as_ref()
-            .unwrap()
-            .client
-            .query(&stmt, m_params.as_slice())
-            .await;
-
-        if let Err(error) = query_result {
-            Err(Box::new(error))
-        } else {
-            Ok(DatabaseResult::new_postgresql(
-                query_result.expect("A really bad error happened querying PostgreSQL"),
-            ))
-        }
+        Ok(DatabaseResult::new_postgresql(
+            db_conn
+                .postgres_connection
+                .as_ref()
+                .unwrap()
+                .client
+                .query(&stmt, m_params.as_slice())
+                .await?,
+        ))
     }
 }
 

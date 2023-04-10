@@ -41,13 +41,11 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 );
                 let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameter<'_>] = &[#(#update_values),*];
 
-                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, ""
-                ).await;
+                ).await?;
 
-                if let Err(e) = result {
-                    Err(e)
-                } else { Ok(()) }
+                Ok(())
             }
 
 
@@ -64,13 +62,11 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 );
                 let update_values: &[&dyn canyon_sql::crud::bounds::QueryParameter<'_>] = &[#(#update_values_cloned),*];
 
-                let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                     stmt, update_values, datasource_name
-                ).await;
+                ).await?;
 
-                if let Err(e) = result {
-                    Err(e)
-                } else { Ok(()) }
+                Ok(())
             }
         }
     } else {
