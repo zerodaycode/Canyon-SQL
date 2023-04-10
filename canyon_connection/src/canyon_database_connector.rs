@@ -45,11 +45,18 @@ impl DatabaseConnection {
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
             DatabaseType::PostgreSql => {
+                let (username, password) = match datasource.auth.as_ref() {
+                    Some(auth_method) => match auth_method {
+                        crate::datasources::Auth::Basic { username, password }=> (username.as_str(), password.as_str()),
+                        crate::datasources::Auth::Integrated => todo!("Auth method `Integrated` not supported in PostgreSQL databases"),
+                    },
+                    None => ("postgres", "postgres"),
+                };
                 let (new_client, new_connection) = tokio_postgres::connect(
                     &format!(
                         "postgres://{user}:{pswd}@{host}:{port}/{db}",
-                        user = datasource.properties.username,
-                        pswd = datasource.properties.password,
+                        user = username,
+                        pswd = password,
                         host = datasource.properties.host,
                         port = datasource.properties.port.unwrap_or_default(),
                         db = datasource.properties.db_name
@@ -77,11 +84,17 @@ impl DatabaseConnection {
                 config.database(&datasource.properties.db_name);
 
                 // Using SQL Server authentication.
-                config.authentication(AuthMethod::sql_server(
-                    &datasource.properties.username,
-                    &datasource.properties.password,
-                ));
-
+                config.authentication(
+                    match datasource.auth.as_ref() {
+                        Some(auth_method) => match auth_method {
+                            crate::datasources::Auth::Basic { username, password } => 
+                                AuthMethod::sql_server(username, password),
+                            crate::datasources::Auth::Integrated => AuthMethod::Integrated
+                        },
+                        None => AuthMethod::Integrated,
+                    }
+                );
+                
                 // on production, it is not a good idea to do this. We should upgrade
                 // Canyon in future versions to allow the user take care about this
                 // configuration

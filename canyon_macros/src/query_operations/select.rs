@@ -30,7 +30,7 @@ pub fn generate_find_all_unchecked_tokens(
             .get_entities::<#ty>()
         }
 
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.

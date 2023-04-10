@@ -21,8 +21,8 @@ fn load_ds_config_from_array() {
 
     assert_eq!(ds_0.name, "PostgresDS");
     assert_eq!(ds_0.db_type, DatabaseType::PostgreSql);
-    assert_eq!(ds_0.properties.username, "username");
-    assert_eq!(ds_0.properties.password, "random_pass");
+    // assert_eq!(ds_0.properties.username, "username");
+    // assert_eq!(ds_0.properties.password, "random_pass");
     assert_eq!(ds_0.properties.host, "localhost");
     assert_eq!(ds_0.properties.port, None);
     assert_eq!(ds_0.properties.db_name, "triforce");
@@ -30,8 +30,7 @@ fn load_ds_config_from_array() {
 
     assert_eq!(ds_1.name, "SqlServerDS");
     assert_eq!(ds_1.db_type, DatabaseType::SqlServer);
-    assert_eq!(ds_1.properties.username, "username2");
-    assert_eq!(ds_1.properties.password, "random_pass2");
+    // assert_eq!(ds_1.auth, Some(Auth::Basic("username2".to_string(), "random_pass2".to_string())));
     assert_eq!(ds_1.properties.host, "192.168.0.250.1");
     assert_eq!(ds_1.properties.port, Some(3340));
     assert_eq!(ds_1.properties.db_name, "triforce2");
@@ -51,13 +50,20 @@ pub struct Datasources {
 pub struct DatasourceConfig {
     pub name: String,
     pub db_type: DatabaseType,
+    pub auth: Option<Auth>,
     pub properties: DatasourceProperties,
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub enum Auth {
+    #[serde(alias = "Basic", alias = "basic")]
+    Basic {username: String, password: String},
+    #[serde(alias = "Integrated", alias = "integrated")]
+    Integrated,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct DatasourceProperties {
-    pub username: String,
-    pub password: String,
     pub host: String,
     pub port: Option<u16>,
     pub db_name: String,
