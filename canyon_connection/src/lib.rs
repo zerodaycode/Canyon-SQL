@@ -32,7 +32,7 @@ lazy_static! {
     pub static ref DATASOURCES: Vec<DatasourceConfig<'static>> =
         CONFIG_FILE.canyon_sql.datasources.clone();
 
-    pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, &'static mut DatabaseConnection>> =
+    pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
         Mutex::new(IndexMap::new());
 }
 
@@ -50,16 +50,14 @@ pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
         CACHED_DATABASE_CONN.lock().await.insert(
             datasource.name,
-            Box::leak(Box::new(
-                DatabaseConnection::new(&datasource.properties)
-                    .await
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Error pooling a new connection for the datasource: {:?}",
-                            datasource.name
-                        )
-                    }),
-            )),
+            DatabaseConnection::new(&datasource.properties)
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "Error pooling a new connection for the datasource: {:?}",
+                        datasource.name
+                    )
+                }),
         );
     }
 }

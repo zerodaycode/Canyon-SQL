@@ -31,10 +31,9 @@ pub struct SqlServerConnection {
 /// starts, Canyon gets the information about the desired datasources,
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
-pub struct DatabaseConnection {
-    pub postgres_connection: Option<PostgreSqlConnection>,
-    pub sqlserver_connection: Option<SqlServerConnection>,
-    pub database_type: DatabaseType,
+pub enum DatabaseConnection {
+    Postgres(PostgreSqlConnection),
+    SqlServer(SqlServerConnection),
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -65,14 +64,10 @@ impl DatabaseConnection {
                     }
                 });
 
-                Ok(Self {
-                    postgres_connection: Some(PostgreSqlConnection {
-                        client: new_client,
-                        // connection: new_connection,
-                    }),
-                    sqlserver_connection: None,
-                    database_type: DatabaseType::PostgreSql,
-                })
+                Ok(DatabaseConnection::Postgres(PostgreSqlConnection {
+                    client: new_client,
+                    // connection: new_connection,
+                }))
             }
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
@@ -106,16 +101,28 @@ impl DatabaseConnection {
                 // Handling TLS, login and other details related to the SQL Server.
                 let client = tiberius::Client::connect(config, tcp).await;
 
-                Ok(Self {
-                    postgres_connection: None,
-                    sqlserver_connection: Some(SqlServerConnection {
-                        client: Box::leak(Box::new(
-                            client.expect("A failure happened connecting to the database"),
-                        )),
-                    }),
-                    database_type: DatabaseType::SqlServer,
-                })
+                Ok(DatabaseConnection::SqlServer(SqlServerConnection {
+                    client: Box::leak(Box::new(
+                        client.expect("A failure happened connecting to the database"),
+                    )),
+                }))
             }
+        }
+    }
+
+    pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
+        if let DatabaseConnection::Postgres(conn) = self {
+            Some(conn)
+        } else {
+            None
+        }
+    }
+
+    pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
+        if let DatabaseConnection::SqlServer(conn) = self {
+            Some(conn)
+        } else {
+            None
         }
     }
 }
