@@ -26,10 +26,10 @@ lazy_static! {
 
     static ref RAW_CONFIG_FILE: String = fs::read_to_string(CONFIG_FILE_IDENTIFIER)
         .expect("Error opening or reading the Canyon configuration file");
-    static ref CONFIG_FILE: CanyonSqlConfig<'static> = toml::from_str(RAW_CONFIG_FILE.as_str())
+    static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(RAW_CONFIG_FILE.as_str())
         .expect("Error generating the configuration for Canyon-SQL");
 
-    pub static ref DATASOURCES: Vec<DatasourceConfig<'static>> =
+    pub static ref DATASOURCES: Vec<DatasourceConfig> =
         CONFIG_FILE.canyon_sql.datasources.clone();
 
     pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
@@ -49,7 +49,7 @@ lazy_static! {
 pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
         CACHED_DATABASE_CONN.lock().await.insert(
-            datasource.name,
+            &datasource.name,
             DatabaseConnection::new(&datasource)
                 .await
                 .unwrap_or_else(|_| {

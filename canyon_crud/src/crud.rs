@@ -36,9 +36,11 @@ pub trait Transaction<T> {
         let database_conn = if datasource_name.is_empty() {
             guarded_cache
             .get_mut(
-                DATASOURCES.get(0)
+                DATASOURCES
+                    .get(0)
                     .expect("We didn't found any valid datasource configuration. Check your `canyon.toml` file")
                     .name
+                    .as_str()
             ).unwrap_or_else(|| panic!("No default datasource found. Check your `canyon.toml` file"))
         } else {
             guarded_cache.get_mut(datasource_name)
@@ -227,7 +229,7 @@ mod sqlserver_query_launcher {
             .query(
                 db_conn
                     .sqlserver_connection()
-                    .expect("Error quering the MSSQL database")
+                    .expect("Error querying the MSSQL database")
                     .client
             ).await?
             .into_results()

@@ -41,7 +41,7 @@ unsafe impl Sync for DatabaseConnection {}
 
 impl DatabaseConnection {
     pub async fn new(
-        datasource: &DatasourceConfig<'_>,
+        datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
             DatabaseType::PostgreSql => {
@@ -72,14 +72,14 @@ impl DatabaseConnection {
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
-                config.host(datasource.properties.host);
+                config.host(&datasource.properties.host);
                 config.port(datasource.properties.port.unwrap_or_default());
-                config.database(datasource.properties.db_name);
+                config.database(&datasource.properties.db_name);
 
                 // Using SQL Server authentication.
                 config.authentication(AuthMethod::sql_server(
-                    datasource.properties.username,
-                    datasource.properties.password,
+                    &datasource.properties.username,
+                    &datasource.properties.password,
                 ));
 
                 // on production, it is not a good idea to do this. We should upgrade

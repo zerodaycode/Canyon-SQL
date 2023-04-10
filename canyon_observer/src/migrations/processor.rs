@@ -9,7 +9,7 @@ use std::ops::Not;
 
 use crate::canyon_crud::{crud::Transaction, DatasourceConfig};
 use crate::constants::regex_patterns;
-use crate::QUERIES_TO_EXECUTE;
+use crate::save_migrations_query_to_execute;
 
 use super::information_schema::{ColumnMetadata, TableMetadata};
 use super::memory::CanyonMemory;
@@ -32,7 +32,7 @@ impl MigrationsProcessor {
         canyon_memory: CanyonMemory,
         canyon_entities: Vec<CanyonRegisterEntity<'a>>,
         database_tables: Vec<&'a TableMetadata>,
-        datasource: &'_ DatasourceConfig<'static>,
+        datasource: &'_ DatasourceConfig,
     ) {
         // The database type formally represented in Canyon
         let db_type = datasource.db_type;
@@ -723,7 +723,7 @@ mod migrations_helper_tests {
 /// Trait that enables implementors to generate the migration queries
 #[async_trait]
 trait DatabaseOperation: Debug {
-    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>);
+    async fn generate_sql(&self, datasource: &DatasourceConfig);
 }
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
@@ -747,7 +747,7 @@ impl<T: Debug> Transaction<T> for TableOperation {}
 
 #[async_trait]
 impl DatabaseOperation for TableOperation {
-    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
+    async fn generate_sql(&self, datasource: &DatasourceConfig) {
         let db_type = datasource.db_type;
 
         let stmt = match self {
@@ -862,23 +862,7 @@ impl DatabaseOperation for TableOperation {
             }
         };
 
-        if QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .contains_key(datasource.name)
-        {
-            QUERIES_TO_EXECUTE
-                .lock()
-                .unwrap()
-                .get_mut(datasource.name)
-                .unwrap()
-                .push(stmt);
-        } else {
-            QUERIES_TO_EXECUTE
-                .lock()
-                .unwrap()
-                .insert(datasource.name, vec![stmt]);
-        }
+        save_migrations_query_to_execute(stmt, &datasource.name);
     }
 }
 
@@ -903,7 +887,7 @@ impl Transaction<Self> for ColumnOperation {}
 
 #[async_trait]
 impl DatabaseOperation for ColumnOperation {
-    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
+    async fn generate_sql(&self, datasource: &DatasourceConfig) {
         let db_type = datasource.db_type;
 
         let stmt = match self {
@@ -980,23 +964,7 @@ impl DatabaseOperation for ColumnOperation {
             ),
         };
 
-        if QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .contains_key(datasource.name)
-        {
-            QUERIES_TO_EXECUTE
-                .lock()
-                .unwrap()
-                .get_mut(datasource.name)
-                .unwrap()
-                .push(stmt);
-        } else {
-            QUERIES_TO_EXECUTE
-                .lock()
-                .unwrap()
-                .insert(datasource.name, vec![stmt]);
-        }
+        save_migrations_query_to_execute(stmt, &datasource.name);
     }
 }
 
@@ -1011,7 +979,7 @@ impl Transaction<Self> for SequenceOperation {}
 
 #[async_trait]
 impl DatabaseOperation for SequenceOperation {
-    async fn generate_sql(&self, datasource: &DatasourceConfig<'static>) {
+    async fn generate_sql(&self, datasource: &DatasourceConfig) {
         let db_type = datasource.db_type;
 
         let stmt = match self {
@@ -1029,22 +997,6 @@ impl DatabaseOperation for SequenceOperation {
             }
         };
 
-        if QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .contains_key(datasource.name)
-        {
-            QUERIES_TO_EXECUTE
-                .lock()
-                .unwrap()
-                .get_mut(datasource.name)
-                .unwrap()
-                .push(stmt);
-        } else {
-            QUERIES_TO_EXECUTE
-                .lock()
-                .unwrap()
-                .insert(datasource.name, vec![stmt]);
-        }
+        save_migrations_query_to_execute(stmt, &datasource.name);
     }
 }

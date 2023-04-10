@@ -39,32 +39,28 @@ fn load_ds_config_from_array() {
 }
 ///
 #[derive(Deserialize, Debug, Clone)]
-pub struct CanyonSqlConfig<'a> {
-    #[serde(borrow)]
-    pub canyon_sql: Datasources<'a>,
+pub struct CanyonSqlConfig {
+    pub canyon_sql: Datasources,
 }
 #[derive(Deserialize, Debug, Clone)]
-pub struct Datasources<'a> {
-    #[serde(borrow)]
-    pub datasources: Vec<DatasourceConfig<'a>>,
+pub struct Datasources {
+    pub datasources: Vec<DatasourceConfig>,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy)]
-pub struct DatasourceConfig<'a> {
-    #[serde(borrow)]
-    pub name: &'a str,
+#[derive(Deserialize, Debug, Clone)]
+pub struct DatasourceConfig {
+    pub name: String,
     pub db_type: DatabaseType,
-    pub properties: DatasourceProperties<'a>,
+    pub properties: DatasourceProperties,
 }
 
-#[derive(Deserialize, Debug, Clone, Copy)]
-pub struct DatasourceProperties<'a> {
-    
-    pub username: &'a str,
-    pub password: &'a str,
-    pub host: &'a str,
+#[derive(Deserialize, Debug, Clone)]
+pub struct DatasourceProperties {
+    pub username: String,
+    pub password: String,
+    pub host: String,
     pub port: Option<u16>,
-    pub db_name: &'a str,
+    pub db_name: String,
     pub migrations: Option<Migrations>,
 }
 
