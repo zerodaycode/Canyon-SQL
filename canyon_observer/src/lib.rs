@@ -31,11 +31,7 @@ lazy_static! {
 
 /// Stores a newly generated SQL statement from the migrations into the register
 pub fn save_migrations_query_to_execute(stmt: String, ds_name: &str) {
-    if QUERIES_TO_EXECUTE
-        .lock()
-        .unwrap()
-        .contains_key(ds_name)
-    {
+    if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(ds_name) {
         QUERIES_TO_EXECUTE
             .lock()
             .unwrap()

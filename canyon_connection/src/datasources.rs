@@ -6,11 +6,11 @@ use crate::canyon_database_connector::DatabaseType;
 #[test]
 fn load_ds_config_from_array() {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
-        [canyon_sql]
-        datasources = [
-            {name = 'PostgresDS', db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations = 'enabled'},
-            {name = 'SqlServerDS', db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2'}
-        ]
+    [canyon_sql]
+    datasources = [
+        {name = 'PostgresDS', db_type = 'postgresql', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+        {name = 'SqlServerDS', db_type = 'sqlserver', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+    ]
     "#;
 
     let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
@@ -21,8 +21,13 @@ fn load_ds_config_from_array() {
 
     assert_eq!(ds_0.name, "PostgresDS");
     assert_eq!(ds_0.db_type, DatabaseType::PostgreSql);
-    // assert_eq!(ds_0.properties.username, "username");
-    // assert_eq!(ds_0.properties.password, "random_pass");
+    assert_eq!(
+        ds_0.auth,
+        Auth::Postgres(PostgresAuth::Basic {
+            username: "postgres".to_string(),
+            password: "postgres".to_string()
+        })
+    );
     assert_eq!(ds_0.properties.host, "localhost");
     assert_eq!(ds_0.properties.port, None);
     assert_eq!(ds_0.properties.db_name, "triforce");
@@ -30,11 +35,17 @@ fn load_ds_config_from_array() {
 
     assert_eq!(ds_1.name, "SqlServerDS");
     assert_eq!(ds_1.db_type, DatabaseType::SqlServer);
-    // assert_eq!(ds_1.auth, Some(Auth::Basic("username2".to_string(), "random_pass2".to_string())));
+    assert_eq!(
+        ds_1.auth,
+        Auth::SqlServer(SqlServerAuth::Basic {
+            username: "sa".to_string(),
+            password: "SqlServer-10".to_string()
+        })
+    );
     assert_eq!(ds_1.properties.host, "192.168.0.250.1");
     assert_eq!(ds_1.properties.port, Some(3340));
     assert_eq!(ds_1.properties.db_name, "triforce2");
-    assert_eq!(ds_1.properties.migrations, None);
+    assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
 }
 ///
 #[derive(Deserialize, Debug, Clone)]
@@ -50,14 +61,28 @@ pub struct Datasources {
 pub struct DatasourceConfig {
     pub name: String,
     pub db_type: DatabaseType,
-    pub auth: Option<Auth>,
+    pub auth: Auth,
     pub properties: DatasourceProperties,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Auth {
+    #[serde(alias = "PostgreSQL", alias = "postgresql")]
+    Postgres(PostgresAuth),
+    #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
+    SqlServer(SqlServerAuth),
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub enum PostgresAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic {username: String, password: String},
+    Basic { username: String, password: String },
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+pub enum SqlServerAuth {
+    #[serde(alias = "Basic", alias = "basic")]
+    Basic { username: String, password: String },
     #[serde(alias = "Integrated", alias = "integrated")]
     Integrated,
 }

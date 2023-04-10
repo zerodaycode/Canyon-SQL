@@ -45,12 +45,15 @@ impl DatabaseConnection {
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.db_type {
             DatabaseType::PostgreSql => {
-                let (username, password) = match datasource.auth.as_ref() {
-                    Some(auth_method) => match auth_method {
-                        crate::datasources::Auth::Basic { username, password }=> (username.as_str(), password.as_str()),
-                        crate::datasources::Auth::Integrated => todo!("Auth method `Integrated` not supported in PostgreSQL databases"),
+                let (username, password) = match &datasource.auth {
+                    crate::datasources::Auth::Postgres(postgres_auth) => match postgres_auth {
+                        crate::datasources::PostgresAuth::Basic { username, password } => {
+                            (username.as_str(), password.as_str())
+                        }
                     },
-                    None => ("postgres", "postgres"),
+                    crate::datasources::Auth::SqlServer(_) => {
+                        panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
+                    }
                 };
                 let (new_client, new_connection) = tokio_postgres::connect(
                     &format!(
@@ -84,17 +87,18 @@ impl DatabaseConnection {
                 config.database(&datasource.properties.db_name);
 
                 // Using SQL Server authentication.
-                config.authentication(
-                    match datasource.auth.as_ref() {
-                        Some(auth_method) => match auth_method {
-                            crate::datasources::Auth::Basic { username, password } => 
-                                AuthMethod::sql_server(username, password),
-                            crate::datasources::Auth::Integrated => AuthMethod::Integrated
-                        },
-                        None => AuthMethod::Integrated,
+                config.authentication(match &datasource.auth {
+                    crate::datasources::Auth::Postgres(_) => {
+                        panic!("Found PostgreSQL auth configuration for a SqlServer database")
                     }
-                );
-                
+                    crate::datasources::Auth::SqlServer(sql_server_auth) => match sql_server_auth {
+                        crate::datasources::SqlServerAuth::Basic { username, password } => {
+                            AuthMethod::sql_server(username, password)
+                        }
+                        crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
+                    },
+                });
+
                 // on production, it is not a good idea to do this. We should upgrade
                 // Canyon in future versions to allow the user take care about this
                 // configuration
@@ -148,8 +152,8 @@ mod database_connection_handler {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
         [canyon_sql]
         datasources = [
-            {name = 'PostgresDS', db_type = 'postgresql', properties.username = 'username', properties.password = 'random_pass', properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled'},
-            {name = 'SqlServerDS', db_type = 'sqlserver', properties.username = 'username2', properties.password = 'random_pass2', properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled'}
+            {name = 'PostgresDS', db_type = 'postgresql', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+            {name = 'SqlServerDS', db_type = 'sqlserver', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
         ]
     "#;
 
@@ -159,7 +163,13 @@ mod database_connection_handler {
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
             .expect("A failure happened retrieving the [canyon_sql] section");
 
-        assert_eq!(config.canyon_sql.datasources[0].db_type, DatabaseType::PostgreSql);
-        assert_eq!(config.canyon_sql.datasources[1].db_type, DatabaseType::SqlServer);
+        assert_eq!(
+            config.canyon_sql.datasources[0].db_type,
+            DatabaseType::PostgreSql
+        );
+        assert_eq!(
+            config.canyon_sql.datasources[1].db_type,
+            DatabaseType::SqlServer
+        );
     }
 }

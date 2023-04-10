@@ -206,9 +206,7 @@ mod sqlserver_query_launcher {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {
             let c = stmt.clone();
-            let temp = c
-                .split_once("RETURNING")
-                .unwrap();
+            let temp = c.split_once("RETURNING").unwrap();
             let temp2 = temp.0.split_once("VALUES").unwrap();
 
             *stmt = format!(
@@ -230,8 +228,9 @@ mod sqlserver_query_launcher {
                 db_conn
                     .sqlserver_connection()
                     .expect("Error querying the MSSQL database")
-                    .client
-            ).await?
+                    .client,
+            )
+            .await?
             .into_results()
             .await?
             .into_iter()
