@@ -23,8 +23,8 @@ jobs:
         - { rust: stable,            os: windows-latest }
 
     steps:
-      - name: Upgrading Rust
-        run: rustup update
+      - name: Installing vendored OpenSSL
+        run: cargo install cargo-generate --features vendored-openssl
 
       - name: Make the USER own the working directory
         if: ${{ matrix.os == 'ubuntu-latest' }}
