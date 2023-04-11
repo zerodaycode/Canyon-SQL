@@ -43,12 +43,16 @@ jobs:
 
       - name: Load data for MSSQL tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast -- --show-output --nocapture --include-ignored
+        run: cargo test initialize_sql_server_docker_instance -p tests --target=x86_64-unknown-linux-gnu --all-features --no-fail-fast -- --show-output --nocapture --include-ignored
 
       - name: Run all tests, UNIT and INTEGRATION for Linux targets
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: cargo test --verbose --workspace --all-features --no-fail-fast -- --show-output --test-threads=1
 
-      - name: Run only UNIT tests for the rest of the defined targets
-        if: ${{ matrix.os != 'ubuntu-latest' }}
+      - name: Run only UNIT tests for Windows
+        if: ${{ matrix.os == 'windows-latest' }}
+        run: cargo test --verbose --workspace --target=x86_64-pc-windows-msvc --exclude tests --all-features --no-fail-fast -- --show-output-
+
+      - name: Run only UNIT tests for MacOS
+        if: ${{ matrix.os == 'MacOS-latest' }}
         run: cargo test --verbose --workspace --exclude tests --all-features --no-fail-fast -- --show-output
