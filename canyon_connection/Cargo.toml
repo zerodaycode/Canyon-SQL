@@ -16,7 +16,7 @@ tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
 futures = "0.3.25"
 indexmap = "1.9.1"
 
-tiberius = { version = "0.11.3", features = ["tds73", "chrono"] }
+tiberius = { version = "0.12.1", features = ["tds73", "chrono", "winauth", "integrated-auth-gssapi"] }
 async-std = { version = "1.12.0" }
 
 lazy_static = "1.4.0"
