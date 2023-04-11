@@ -23,6 +23,9 @@ jobs:
         - { rust: stable,            os: windows-latest }
 
     steps:
+      - name: Upgrading Rust
+        run: rustup update
+
       - name: Make the USER own the working directory
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: sudo chown -R $USER:$USER ${{ github.workspace }}
