@@ -9,7 +9,22 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
-- Solved a bug in the canyon_entity proc macro that was wiring the incorrect user table name in the migrations
+## [0.2.0] - 2023 - 04 - 13
+
+### Feature [BREAKING CHANGES]
+
+- The configuration file has been reworked, by providing a whole category dedicated
+to the authentication against the database server.
+- We removed the database type property, since the database type can be inferred by
+the new mandatory auth property
+- Included support for the `MSSQL` integrated authentication via the cfg feature `mssql-integrated-auth`
+
+## [0.1.2] - 2023 - 03 - 28
+
+### Update
+
+- Implemented bool types for QueryParameters<'_>.
+- Minimal performance improvements
 
 ## [0.1.1] - 2023 - 03 - 20
 
