@@ -34,6 +34,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Make the USER own the working directory. Installing `gssapi` headers
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
+
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
@@ -53,6 +58,11 @@ jobs:
         crate: [canyon_connection, canyon_crud, canyon_macros, canyon_observer, canyon_sql]
     steps:
       - uses: actions/checkout@v3
+
+      - name: Make the USER own the working directory. Installing `gssapi` headers
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
 
       - name: Caching project dependencies
         id: project-cache

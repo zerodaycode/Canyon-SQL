@@ -12,7 +12,7 @@ description = "A Rust ORM and QueryBuilder"
 proc-macro = true
 
 [dependencies]
-syn = { version = "1.0.86", features = ["full"] }
+syn = { version = "1.0.109", features = ["full"] }
 quote = "1.0.9"
 proc-macro2 = "1.0.27"
 futures = "0.3.21"
