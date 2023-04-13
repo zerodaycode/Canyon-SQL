@@ -26,13 +26,13 @@ lazy_static! {
 
     static ref RAW_CONFIG_FILE: String = fs::read_to_string(CONFIG_FILE_IDENTIFIER)
         .expect("Error opening or reading the Canyon configuration file");
-    static ref CONFIG_FILE: CanyonSqlConfig<'static> = toml::from_str(RAW_CONFIG_FILE.as_str())
+    static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(RAW_CONFIG_FILE.as_str())
         .expect("Error generating the configuration for Canyon-SQL");
 
-    pub static ref DATASOURCES: Vec<DatasourceConfig<'static>> =
+    pub static ref DATASOURCES: Vec<DatasourceConfig> =
         CONFIG_FILE.canyon_sql.datasources.clone();
 
-    pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, &'static mut DatabaseConnection>> =
+    pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
         Mutex::new(IndexMap::new());
 }
 
@@ -40,26 +40,24 @@ lazy_static! {
 /// in the configuration file.
 ///
 /// This avoids Canyon to create a new connection to the database on every query, potentially avoiding bottlenecks
-/// derivated from the instantiation of that new conn every time.
+/// coming from the instantiation of that new conn every time.
 ///
 /// Note: We noticed with the integration tests that the [`tokio_postgres`] crate (PostgreSQL) is able to work in an async environment
-/// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) sufferes a lot when it has continuous
+/// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) suffers a lot when it has continuous
 /// statements with multiple queries, like and insert followed by a find by id to check if the insert query has done its
 /// job done.
 pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
         CACHED_DATABASE_CONN.lock().await.insert(
-            datasource.name,
-            Box::leak(Box::new(
-                DatabaseConnection::new(&datasource.properties)
-                    .await
-                    .unwrap_or_else(|_| {
-                        panic!(
-                            "Error pooling a new connection for the datasource: {:?}",
-                            datasource.name
-                        )
-                    }),
-            )),
+            &datasource.name,
+            DatabaseConnection::new(datasource)
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "Error pooling a new connection for the datasource: {:?}",
+                        datasource.name
+                    )
+                }),
         );
     }
 }

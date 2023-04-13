@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Make the USER own the working directory. Installing `gssapi` headers
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
+
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
@@ -22,12 +27,17 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           components: clippy
-      - run: cargo clippy --workspace --all-targets --verbose --all-features -- -A clippy::question_mark
+      - run: cargo clippy --workspace --all-targets --verbose --all-features
   rustfmt:
     name: Verify code formatting
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Make the USER own the working directory. Installing `gssapi` headers
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
 
       - name: Caching project dependencies
         id: project-cache
@@ -49,6 +59,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Make the USER own the working directory. Installing `gssapi` headers
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
+
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
@@ -57,4 +72,4 @@ jobs:
         with:
           rust-version: nightly
 
-      - run: cargo rustdoc -p ${{ matrix.crate }} --all-features -- -D warnings
+      - run: cargo rustdoc --target=x86_64-unknown-linux-gnu -p ${{ matrix.crate }} --all-features -- -D warnings

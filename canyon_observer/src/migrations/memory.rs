@@ -60,14 +60,14 @@ impl CanyonMemory {
     #[cfg(not(cargo_check))]
     #[allow(clippy::nonminimal_bool)]
     pub async fn remember(
-        datasource: &DatasourceConfig<'static>,
+        datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
         // Creates the memory table if not exists
-        Self::create_memory(datasource.name, &datasource.properties.db_type).await;
+        Self::create_memory(&datasource.name, &datasource.get_db_type()).await;
 
         // Retrieve the last status data from the `canyon_memory` table
-        let res = Self::query("SELECT * FROM canyon_memory", [], datasource.name)
+        let res = Self::query("SELECT * FROM canyon_memory", [], &datasource.name)
             .await
             .expect("Error querying Canyon Memory");
         let mem_results = res.as_canyon_rows();
@@ -112,7 +112,7 @@ impl CanyonMemory {
                                 WHERE id = {}",
                         _struct.filepath, _struct.struct_name, _struct.declared_table_name, old.id
                     );
-                    save_canyon_memory_query(stmt, datasource.name);
+                    save_canyon_memory_query(stmt, &datasource.name);
 
                     // if the updated element is the struct name, we add it to the table_rename Hashmap
                     let rename_table = old.declared_table_name != _struct.declared_table_name;
@@ -132,7 +132,7 @@ impl CanyonMemory {
                         VALUES ('{}', '{}', '{}')",
                     _struct.filepath, _struct.struct_name, _struct.declared_table_name
                 );
-                save_canyon_memory_query(stmt, datasource.name)
+                save_canyon_memory_query(stmt, &datasource.name)
             }
         }
 
@@ -149,7 +149,7 @@ impl CanyonMemory {
                         "DELETE FROM canyon_memory WHERE struct_name = '{}'",
                         db_row.struct_name
                     ),
-                    datasource.name,
+                    &datasource.name,
                 );
             }
         }
@@ -230,7 +230,7 @@ impl CanyonMemory {
     }
 }
 
-fn save_canyon_memory_query(stmt: String, ds_name: &'static str) {
+fn save_canyon_memory_query(stmt: String, ds_name: &str) {
     use crate::CM_QUERIES_TO_EXECUTE;
 
     if CM_QUERIES_TO_EXECUTE.lock().unwrap().contains_key(ds_name) {
@@ -244,7 +244,7 @@ fn save_canyon_memory_query(stmt: String, ds_name: &'static str) {
         CM_QUERIES_TO_EXECUTE
             .lock()
             .unwrap()
-            .insert(ds_name, vec![stmt]);
+            .insert(ds_name.to_owned(), vec![stmt]);
     }
 }
 

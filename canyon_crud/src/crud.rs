@@ -1,8 +1,8 @@
 use std::fmt::Display;
 
 use async_trait::async_trait;
-use canyon_connection::canyon_database_connector::DatabaseType;
-use canyon_connection::CACHED_DATABASE_CONN;
+use canyon_connection::canyon_database_connector::DatabaseConnection;
+use canyon_connection::{CACHED_DATABASE_CONN, DATASOURCES};
 
 use crate::bounds::QueryParameter;
 use crate::mapper::RowMapper;
@@ -18,7 +18,6 @@ use crate::result::DatabaseResult;
 /// the result of the query and, if the user desires,
 /// automatically map it to an struct.
 #[async_trait]
-#[allow(clippy::question_mark)]
 pub trait Transaction<T> {
     /// Performs a query against the targeted database by the selected datasource.
     ///
@@ -32,22 +31,26 @@ pub trait Transaction<T> {
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
-        let guarded_cache = CACHED_DATABASE_CONN.lock().await;
+        let mut guarded_cache = CACHED_DATABASE_CONN.lock().await;
 
         let database_conn = if datasource_name.is_empty() {
             guarded_cache
-                .values()
-                .next()
-                .expect("No default datasource found. Check your `canyon.toml` file")
+            .get_mut(
+                DATASOURCES
+                    .get(0)
+                    .expect("We didn't found any valid datasource configuration. Check your `canyon.toml` file")
+                    .name
+                    .as_str()
+            ).unwrap_or_else(|| panic!("No default datasource found. Check your `canyon.toml` file"))
         } else {
-            guarded_cache.get(datasource_name)
+            guarded_cache.get_mut(datasource_name)
                 .unwrap_or_else(||
                     panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
                 ))
         };
 
-        match database_conn.database_type {
-            DatabaseType::PostgreSql => {
+        match database_conn {
+            DatabaseConnection::Postgres(_) => {
                 postgres_query_launcher::launch::<T>(
                     database_conn,
                     stmt.to_string(),
@@ -55,7 +58,7 @@ pub trait Transaction<T> {
                 )
                 .await
             }
-            DatabaseType::SqlServer => {
+            DatabaseConnection::SqlServer(_) => {
                 sqlserver_query_launcher::launch::<T, Z>(
                     database_conn,
                     &mut stmt.to_string(),
@@ -174,8 +177,7 @@ mod postgres_query_launcher {
 
         Ok(DatabaseResult::new_postgresql(
             db_conn
-                .postgres_connection
-                .as_ref()
+                .postgres_connection()
                 .unwrap()
                 .client
                 .query(&stmt, m_params.as_slice())
@@ -185,8 +187,6 @@ mod postgres_query_launcher {
 }
 
 mod sqlserver_query_launcher {
-    use std::mem::transmute;
-
     use canyon_connection::tiberius::Row;
 
     use crate::{
@@ -196,7 +196,7 @@ mod sqlserver_query_launcher {
     };
 
     pub async fn launch<'a, T, Z>(
-        db_conn: &&mut DatabaseConnection,
+        db_conn: &mut DatabaseConnection,
         stmt: &mut String,
         params: Z,
     ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
@@ -206,12 +206,8 @@ mod sqlserver_query_launcher {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {
             let c = stmt.clone();
-            let temp = c
-                .split_once("RETURNING")
-                .expect("An error happened generating an INSERT statement for a SQL SERVER client");
-            let temp2 = temp.0.split_once("VALUES").expect(
-                "An error happened generating an INSERT statement for a SQL SERVER client [1]",
-            );
+            let temp = c.split_once("RETURNING").unwrap();
+            let temp2 = temp.0.split_once("VALUES").unwrap();
 
             *stmt = format!(
                 "{} OUTPUT inserted.{} VALUES {}",
@@ -227,12 +223,10 @@ mod sqlserver_query_launcher {
             .iter()
             .for_each(|param| mssql_query.bind(*param));
 
-        #[allow(mutable_transmutes)]
         let _results: Vec<Row> = mssql_query
             .query(
-                unsafe { transmute::<&DatabaseConnection, &mut DatabaseConnection>(db_conn) }
-                    .sqlserver_connection
-                    .as_mut()
+                db_conn
+                    .sqlserver_connection()
                     .expect("Error querying the MSSQL database")
                     .client,
             )

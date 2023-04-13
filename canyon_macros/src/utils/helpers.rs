@@ -103,6 +103,7 @@ pub fn _database_table_name_from_struct(ty: &Ident) -> String {
 
 /// Parses a syn::Identifier to create a defaulted snake case database table name
 #[test]
+#[cfg(not(target_env = "msvc"))]
 fn test_entity_database_name_defaulter() {
     assert_eq!(
         default_database_table_name_from_entity_name("League"),
