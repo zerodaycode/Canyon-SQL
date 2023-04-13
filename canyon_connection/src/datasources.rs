@@ -95,6 +95,7 @@ pub enum PostgresAuth {
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },
+    #[cfg(feature = "mssql-integrated-auth")]
     #[serde(alias = "Integrated", alias = "integrated")]
     Integrated,
 }

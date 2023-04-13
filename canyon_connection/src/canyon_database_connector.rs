@@ -95,6 +95,7 @@ impl DatabaseConnection {
                         crate::datasources::SqlServerAuth::Basic { username, password } => {
                             AuthMethod::sql_server(username, password)
                         }
+                        #[cfg(feature = "mssql-integrated-auth")]
                         crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
                     },
                 });
