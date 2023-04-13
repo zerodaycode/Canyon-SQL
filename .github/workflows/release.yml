@@ -14,6 +14,9 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v3
 
+      - name: Installing `gssapi` headers
+        run: sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
+
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1
         with:
