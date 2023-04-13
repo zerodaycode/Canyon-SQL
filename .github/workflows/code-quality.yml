@@ -15,6 +15,11 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Make the USER own the working directory. Installing `gssapi` headers
+        run: |
+          sudo chown -R $USER:$USER ${{ github.workspace }}
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
+
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2

@@ -23,9 +23,6 @@ jobs:
         - { rust: stable,            os: windows-latest }
 
     steps:
-      - name: Installing vendored OpenSSL
-        run: cargo install cargo-generate --features vendored-openssl
-
       - name: Make the USER own the working directory. Installing `gssapi` headers
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
