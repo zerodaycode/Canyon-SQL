@@ -79,7 +79,7 @@ impl DatasourceConfig {
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Auth {
-    #[serde(alias = "PostgreSQL", alias = "postgresql")]
+    #[serde(alias = "PostgreSQL", alias = "postgresql", alias = "postgres")]
     #[cfg(feature = "postgres")]
     Postgres(PostgresAuth),
     #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
