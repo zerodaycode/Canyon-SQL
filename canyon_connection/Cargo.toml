@@ -25,5 +25,8 @@ serde = { version = "1.0.138", features = ["derive"] }
 toml = "0.7.3"
 
 [features]
+default = ["postgres"]
+postgres = []
+mssql = []
 mssql-integrated-auth = []
 

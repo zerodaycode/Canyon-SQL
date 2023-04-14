@@ -1,8 +1,8 @@
-use async_std::net::TcpStream;
+#[cfg(feature = "mssql")] use async_std::net::TcpStream;
 
 use serde::Deserialize;
-use tiberius::{AuthMethod, Config};
-use tokio_postgres::{Client, NoTls};
+#[cfg(feature = "mssql")] use tiberius::{AuthMethod, Config};
+#[cfg(feature = "postgres")] use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceConfig;
 
@@ -11,17 +11,21 @@ use crate::datasources::DatasourceConfig;
 pub enum DatabaseType {
     #[default]
     #[serde(alias = "postgres", alias = "postgresql")]
+    #[cfg(feature = "postgres")]
     PostgreSql,
     #[serde(alias = "sqlserver", alias = "mssql")]
+    #[cfg(feature = "mssql")]
     SqlServer,
 }
 
 /// A connection with a `PostgreSQL` database
+#[cfg(feature = "postgres")]
 pub struct PostgreSqlConnection {
     pub client: Client,
     // pub connection: Connection<Socket, NoTlsStream>, // TODO Hold it, or not to hold it... that's the question!
 }
 
+#[cfg(feature = "mssql")]
 /// A connection with a `SqlServer` database
 pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
@@ -32,8 +36,8 @@ pub struct SqlServerConnection {
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
 pub enum DatabaseConnection {
-    Postgres(PostgreSqlConnection),
-    SqlServer(SqlServerConnection),
+    #[cfg(feature = "postgres")] Postgres(PostgreSqlConnection),
+    #[cfg(feature = "mssql")] SqlServer(SqlServerConnection),
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -44,6 +48,7 @@ impl DatabaseConnection {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.get_db_type() {
+            #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => {
                 let (username, password) = match &datasource.auth {
                     crate::datasources::Auth::Postgres(postgres_auth) => match postgres_auth {
@@ -51,6 +56,7 @@ impl DatabaseConnection {
                             (username.as_str(), password.as_str())
                         }
                     },
+                    #[cfg(feature = "mssql")]
                     crate::datasources::Auth::SqlServer(_) => {
                         panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
                     }
@@ -79,6 +85,7 @@ impl DatabaseConnection {
                     // connection: new_connection,
                 }))
             }
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
@@ -88,7 +95,7 @@ impl DatabaseConnection {
 
                 // Using SQL Server authentication.
                 config.authentication(match &datasource.auth {
-                    crate::datasources::Auth::Postgres(_) => {
+                    #[cfg(feature = "postgres")] crate::datasources::Auth::Postgres(_) => {
                         panic!("Found PostgreSQL auth configuration for a SqlServer database")
                     }
                     crate::datasources::Auth::SqlServer(sql_server_auth) => match sql_server_auth {
@@ -128,6 +135,7 @@ impl DatabaseConnection {
         }
     }
 
+    #[cfg(feature = "postgres")]
     pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
         if let DatabaseConnection::Postgres(conn) = self {
             Some(conn)
@@ -136,6 +144,7 @@ impl DatabaseConnection {
         }
     }
 
+    #[cfg(feature = "mssql")]
     pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
         if let DatabaseConnection::SqlServer(conn) = self {
             Some(conn)
