@@ -9,10 +9,9 @@ use crate::mapper::RowMapper;
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
-use crate::result::DatabaseResult;
 
 /// This traits defines and implements a query against a database given
-/// an statemt `stmt` and the params to pass the to the client.
+/// an statement `stmt` and the params to pass the to the client.
 ///
 /// It returns a [`DatabaseResult`], which is the core Canyon type to wrap
 /// the result of the query and, if the user desires,
@@ -26,10 +25,11 @@ pub trait Transaction<T> {
         stmt: S,
         params: Z,
         datasource_name: &'a str,
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+        T: Transaction<T> + RowMapper<T>
     {
         let mut guarded_cache = CACHED_DATABASE_CONN.lock().await;
 
@@ -50,7 +50,7 @@ pub trait Transaction<T> {
         };
 
         match database_conn {
-            DatabaseConnection::Postgres(_) => {
+            #[cfg(feature = "postgres")] DatabaseConnection::Postgres(_) => {
                 postgres_query_launcher::launch::<T>(
                     database_conn,
                     stmt.to_string(),
@@ -58,7 +58,7 @@ pub trait Transaction<T> {
                 )
                 .await
             }
-            DatabaseConnection::SqlServer(_) => {
+            #[cfg(feature = "mssql")] DatabaseConnection::SqlServer(_) => {
                 sqlserver_query_launcher::launch::<T, Z>(
                     database_conn,
                     &mut stmt.to_string(),
@@ -84,7 +84,7 @@ pub trait Transaction<T> {
 ///
 /// See it's definition and docs to see the implementations.
 /// Also, you can find the written macro-code that performs the auto-mapping
-/// in the *canyon_sql::canyon_macros* crates, on the root of this project.
+/// in the *canyon_sql_root::canyon_macros* crates, on the root of this project.
 #[async_trait]
 pub trait CrudOperations<T>: Transaction<T>
 where
@@ -121,12 +121,12 @@ where
 
     async fn insert<'a>(
         &mut self,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     async fn insert_datasource<'a>(
         &mut self,
         datasource_name: &'a str,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     async fn multi_insert<'a>(
         instances: &'a mut [&'a mut T],
@@ -137,71 +137,79 @@ where
         datasource_name: &'a str,
     ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     async fn update_datasource<'a>(
         &self,
         datasource_name: &'a str,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     fn update_query<'a>() -> UpdateQueryBuilder<'a, T>;
 
     fn update_query_datasource(datasource_name: &str) -> UpdateQueryBuilder<'_, T>;
 
-    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     async fn delete_datasource<'a>(
         &self,
         datasource_name: &'a str,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>;
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     fn delete_query<'a>() -> DeleteQueryBuilder<'a, T>;
 
     fn delete_query_datasource(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
 }
 
+#[cfg(feature = "postgres")]
 mod postgres_query_launcher {
     use crate::bounds::QueryParameter;
-    use crate::result::DatabaseResult;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
+    use crate::crud::Transaction;
+    use crate::mapper::RowMapper;
 
     pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
         stmt: String,
         params: &'a [&'_ dyn QueryParameter<'_>],
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+        where T: Transaction<T> + RowMapper<T>
+    {
         let mut m_params = Vec::new();
         for param in params {
             m_params.push(param.as_postgres_param());
         }
 
-        Ok(DatabaseResult::new_postgresql(
-            db_conn
-                .postgres_connection()
-                .unwrap()
-                .client
-                .query(&stmt, m_params.as_slice())
-                .await?,
-        ))
+        let r = db_conn
+            .postgres_connection()
+            .unwrap()
+            .client
+            .query(&stmt, m_params.as_slice())
+            .await?;
+
+        Ok(
+            r.iter().map(|row| T::deserialize_postgresql(row)).collect()
+        )
     }
 }
 
-mod sqlserver_query_launcher {
-    use canyon_connection::tiberius::Row;
 
+#[cfg(feature = "mssql")]
+mod sqlserver_query_launcher {
     use crate::{
         bounds::QueryParameter,
         canyon_connection::{canyon_database_connector::DatabaseConnection, tiberius::Query},
-        result::DatabaseResult,
     };
+    use crate::crud::Transaction;
+    use crate::mapper::RowMapper;
 
     pub async fn launch<'a, T, Z>(
         db_conn: &mut DatabaseConnection,
         stmt: &mut String,
         params: Z,
-    ) -> Result<DatabaseResult<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
     where
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+        T: Transaction<T> + RowMapper<T>
     {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {
@@ -223,7 +231,7 @@ mod sqlserver_query_launcher {
             .iter()
             .for_each(|param| mssql_query.bind(*param));
 
-        let _results: Vec<Row> = mssql_query
+        let _results = mssql_query
             .query(
                 db_conn
                     .sqlserver_connection()
@@ -235,8 +243,9 @@ mod sqlserver_query_launcher {
             .await?
             .into_iter()
             .flatten()
+            .map(|row| T::deserialize_sqlserver(&row))
             .collect::<Vec<_>>();
 
-        Ok(DatabaseResult::new_sqlserver(_results))
+        Ok(_results)
     }
 }

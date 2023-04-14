@@ -16,7 +16,7 @@ pub fn generate_find_all_unchecked_tokens(
     let stmt = format!("SELECT * FROM {table_schema_data}");
 
     quote! {
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
@@ -27,7 +27,6 @@ pub fn generate_find_all_unchecked_tokens(
                 ""
             ).await
             .unwrap()
-            .get_entities::<#ty>()
         }
 
         /// Performs a `SELECT * FROM table_name`, where `table_name` it's
@@ -45,7 +44,6 @@ pub fn generate_find_all_unchecked_tokens(
                 datasource_name
             ).await
             .unwrap()
-            .get_entities::<#ty>()
         }
     }
 }
@@ -60,7 +58,7 @@ pub fn generate_find_all_tokens(
     let stmt = format!("SELECT * FROM {table_schema_data}");
 
     quote! {
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
@@ -73,11 +71,10 @@ pub fn generate_find_all_tokens(
                     &[],
                     ""
                 ).await?
-                .get_entities::<#ty>()
             )
         }
 
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
@@ -98,7 +95,6 @@ pub fn generate_find_all_tokens(
                     &[],
                     datasource_name
                 ).await?
-                .get_entities::<#ty>()
             )
         }
     }
@@ -151,25 +147,26 @@ pub fn generate_count_tokens(
     let stmt = format!("SELECT COUNT (*) FROM {table_schema_data}");
 
     let result_handling = quote! {
-        match count.get_active_ds() {
-            canyon_sql::crud::DatabaseType::PostgreSql => {
-                Ok(
-                    count.postgres.get(0)
-                        .expect(&format!("Count operation failed for {:?}", #ty_str))
-                        .get::<&str, i64>("count")
-                        .to_owned()
-                )
-            },
-            canyon_sql::crud::DatabaseType::SqlServer => {
-                Ok(
-                    count.sqlserver.get(0)
-                        .expect(&format!("Count operation failed for {:?}", #ty_str))
-                        .get::<i32, usize>(0)
-                        .expect(&format!("SQL Server failed to return the count values for {:?}", #ty_str))
-                        .into()
-                )
-            }
-        }
+        // match count.get_active_ds() {
+        //     canyon_sql_root::crud::DatabaseType::PostgreSql => {
+        //         Ok(
+        //             count.postgres.get(0)
+        //                 .expect(&format!("Count operation failed for {:?}", #ty_str))
+        //                 .get::<&str, i64>("count")
+        //                 .to_owned()
+        //         )
+        //     },
+        //     canyon_sql_root::crud::DatabaseType::SqlServer => {
+        //         Ok(
+        //             count.sqlserver.get(0)
+        //                 .expect(&format!("Count operation failed for {:?}", #ty_str))
+        //                 .get::<i32, usize>(0)
+        //                 .expect(&format!("SQL Server failed to return the count values for {:?}", #ty_str))
+        //                 .into()
+        //         )
+        //     }
+        // }
+        Ok(0 as i64)  // TODO
     };
 
     quote! {
@@ -240,11 +237,12 @@ pub fn generate_find_by_pk_tokens(
         };
     }
 
+    // TOODO no tenemos number_OF_results
     let result_handling = quote! {
         match result {
-            n if n.number_of_results() == 0 => Ok(None),
+            n if n.len() == 0 => Ok(None),
             _ => Ok(
-                Some(result.get_entities::<#ty>().remove(0))
+                Some(result.remove(0))
             )
         }
     };
@@ -347,9 +345,10 @@ pub fn generate_find_by_foreign_key_tokens(
             );
             let result_handler = quote! {
                 match result {
-                    n if n.number_of_results() == 0 => Ok(None),
+                    // TODO Noof
+                    n if n.len() == 0 => Ok(None),
                     _ => Ok(Some(
-                        result.get_entities::<#fk_ty>().remove(0)
+                        result.remove(0)
                     ))
                 }
             };
@@ -448,8 +447,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             stmt,
                             &[lookage_value],
                             ""
-                        ).await?
-                        .get_entities::<#ty>())
+                        ).await?)
                     }
                 },
             ));
@@ -477,8 +475,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             stmt,
                             &[lookage_value],
                             datasource_name
-                        ).await?
-                        .get_entities::<#ty>())
+                        ).await?)
                     }
                 },
             ));

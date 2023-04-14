@@ -1,6 +1,6 @@
 [package]
-name = "canyon_macros"
-version.workspace = true
+name = "canyon_sql"
+version = "0.2.0"
 edition.workspace = true
 authors.workspace = true
 documentation.workspace = true
@@ -9,16 +9,11 @@ readme.workspace = true
 license.workspace = true
 description.workspace = true
 
-[lib]
-proc-macro = true
-
 [dependencies]
-syn = { version = "1.0.109", features = ["full"] }
-quote = "1.0.9"
-proc-macro2 = "1.0.27"
-futures = "0.3.21"
-tokio = { version = "1.9.0", features = ["full"] }
+async-trait = { version = "0.1.50" }
 
+# Project crates
+canyon_macros = { version = "0.2.0", path = "../canyon_macros" }
 canyon_observer = { version = "0.2.0", path = "../canyon_observer" }
 canyon_crud = { version = "0.2.0", path = "../canyon_crud" }
-canyon_connection = { version = "0.2.0", path = "../canyon_connection" }
+canyon_connection = { version = "0.2.0", path = "../canyon_connection", features = ["postgres"] }

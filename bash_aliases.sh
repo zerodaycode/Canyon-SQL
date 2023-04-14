@@ -39,7 +39,7 @@ alias SqlServerInitializationLinux='cargo test initialize_sql_server_docker_inst
 
 
 # Publish Canyon-SQL to the registry with its dependencies
-alias PublishCanyon='cargo publish -p canyon_connection && cargo publish -p canyon_crud && cargo publish -p canyon_observer && cargo publish -p canyon_macros && cargo publish -p canyon_sql'
+alias PublishCanyon='cargo publish -p canyon_connection && cargo publish -p canyon_crud && cargo publish -p canyon_observer && cargo publish -p canyon_macros && cargo publish -p canyon_sql_root'
 
 # Collects the code coverage for the project (tests must run before this)
 alias CcEnvVars='export CARGO_INCREMENTAL=0

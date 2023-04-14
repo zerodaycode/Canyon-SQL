@@ -6,7 +6,7 @@ use crate::canyon_database_connector::DatabaseType;
 #[test]
 fn load_ds_config_from_array() {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
-    [canyon_sql]
+    [canyon_sql_root]
     datasources = [
         {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
         {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },
@@ -15,7 +15,7 @@ fn load_ds_config_from_array() {
     "#;
 
     let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
-        .expect("A failure happened retrieving the [canyon_sql] section");
+        .expect("A failure happened retrieving the [canyon_sql_root] section");
 
     let ds_0 = &config.canyon_sql.datasources[0];
     let ds_1 = &config.canyon_sql.datasources[1];
@@ -56,6 +56,7 @@ fn load_ds_config_from_array() {
 pub struct CanyonSqlConfig {
     pub canyon_sql: Datasources,
 }
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Datasources {
     pub datasources: Vec<DatasourceConfig>,

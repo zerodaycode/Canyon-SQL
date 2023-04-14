@@ -56,6 +56,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 datasource_name
             ).await;
 
+            // TODO Convertir a canyon rows
             match result {
                 Ok(res) => {
                     match res.get_active_ds() {
@@ -296,7 +297,9 @@ pub fn generate_multiple_insert_tokens(
                 datasource_name
             ).await;
 
-            match result {
+            match result { // TODO Falta el ds correcto
+                // TODO Recuperar datasource fuera del código cliente
+                /* .for_each(|row| results.push(row as &dyn Row)); */
                 Ok(res) => {
                     match res.get_active_ds() {
                         canyon_sql::crud::DatabaseType::PostgreSql => {

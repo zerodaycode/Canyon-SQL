@@ -4,6 +4,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
+use canyon_crud::bounds::Row;
 
 use super::register_types::CanyonRegisterEntity;
 
@@ -70,11 +71,11 @@ impl CanyonMemory {
         let res = Self::query("SELECT * FROM canyon_memory", [], &datasource.name)
             .await
             .expect("Error querying Canyon Memory");
-        let mem_results = res.as_canyon_rows();
+        let mem_results = res.map(|row| &row as &dyn Row);
 
         // Manually maps the results
         let mut db_rows = Vec::new();
-        for row in mem_results.iter() {
+        for row in mem_results {
             let db_row = CanyonMemoryRow {
                 id: row.get::<i32>("id"),
                 filepath: row.get::<&str>("filepath"),

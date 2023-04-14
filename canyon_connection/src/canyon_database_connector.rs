@@ -160,7 +160,7 @@ mod database_connection_handler {
     use crate::CanyonSqlConfig;
 
     const CONFIG_FILE_MOCK_ALT: &str = r#"
-        [canyon_sql]
+        [canyon_sql_root]
         datasources = [
             {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
             {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
@@ -171,7 +171,7 @@ mod database_connection_handler {
     #[test]
     fn check_from_datasource() {
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
-            .expect("A failure happened retrieving the [canyon_sql] section");
+            .expect("A failure happened retrieving the [canyon_sql_root] section");
 
         assert_eq!(
             config.canyon_sql.datasources[0].get_db_type(),

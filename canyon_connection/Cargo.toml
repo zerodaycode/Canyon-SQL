@@ -1,32 +1,29 @@
 [package]
 name = "canyon_connection"
-version = "0.2.0"
-edition = "2021"
-documentation = "https://zerodaycode.github.io/canyon-book/"
-homepage = "https://github.com/zerodaycode/Canyon-SQL"
-readme = "../README.md"
-license = "MIT"
-description = "A Rust ORM and QueryBuilder"
-
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+description.workspace = true
 
 [dependencies]
-tokio = { version = "1.21.2", features = ["full"] }
-tokio-util = { version = "0.7.4", features = ["compat"] }
-tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
-futures = "0.3.25"
-indexmap = "1.9.1"
+tokio = { workspace = true, features = ["full"], optional = true }
+tokio-util = { workspace = true, features = ["compat"], optional = true }
+tokio-postgres = { workspace = true, features = ["with-chrono-0_4"], optional = true }
+tiberius = { workspace = true, features = ["tds73", "chrono", "integrated-auth-gssapi"], optional = true }
 
-tiberius = { version = "0.12.1", features = ["tds73", "chrono", "integrated-auth-gssapi"] }
-async-std = { version = "1.12.0" }
-
-lazy_static = "1.4.0"
-
-serde = { version = "1.0.138", features = ["derive"] }
-toml = "0.7.3"
+futures = { workspace = true }
+indexmap = { workspace = true }
+async-std = { workspace = true }
+lazy_static = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+toml = { workspace = true }
 
 [features]
 default = ["postgres"]
-postgres = []
-mssql = []
-mssql-integrated-auth = []
-
+postgres = ["tokio", "tokio-postgres", "tokio-util"]
+mssql = ["tiberius", "tiberius/tds73", "tiberius/chrono"]
+mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]

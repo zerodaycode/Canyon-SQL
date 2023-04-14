@@ -1,4 +1,5 @@
-use canyon_connection::{tiberius, tokio_postgres};
+#[cfg(feature = "postgres")] use canyon_connection::tokio_postgres;
+#[cfg(feature = "mssql")] use canyon_connection::tiberius;
 
 use crate::crud::Transaction;
 

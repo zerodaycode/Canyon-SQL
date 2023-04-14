@@ -5,7 +5,6 @@ use crate::{
     canyon_crud::{
         bounds::{Column, Row, RowOperations},
         crud::Transaction,
-        result::DatabaseResult,
         DatabaseType,
     },
     constants,
@@ -87,7 +86,7 @@ impl Migrations {
     async fn fetch_database(
         datasource_name: &str,
         db_type: DatabaseType,
-    ) -> DatabaseResult<Migrations> {
+    ) -> Vec<Migrations> {
         let query = match db_type {
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
@@ -105,10 +104,12 @@ impl Migrations {
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
-    fn map_rows(db_results: DatabaseResult<Migrations>) -> Vec<TableMetadata> {
+    fn map_rows(db_results: Vec<Migrations>) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
 
-        for res_row in db_results.as_canyon_rows().into_iter() {
+        for res_row in db_results.iter()
+            .map(|row| &row as &dyn Row)
+        {
             let unique_table = schema_info
                 .iter_mut()
                 .find(|table| table.table_name == *res_row.get::<&str>("table_name").to_owned());

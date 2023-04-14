@@ -1,15 +1,27 @@
 [package]
 name = "canyon_crud"
-version = "0.2.0"
-edition = "2021"
-documentation = "https://zerodaycode.github.io/canyon-book/"
-homepage = "https://github.com/zerodaycode/Canyon-SQL"
-readme = "../README.md"
-license = "MIT"
-description = "A Rust ORM and QueryBuilder"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+description.workspace = true
 
 [dependencies]
+tokio = { workspace = true, features = ["full"], optional = true }
+tokio-util = { workspace = true, features = ["compat"], optional = true }
+tokio-postgres = { workspace = true, features = ["with-chrono-0_4"], optional = true }
+tiberius = { workspace = true, features = ["tds73", "chrono", "integrated-auth-gssapi"], optional = true }
+
 chrono = { version = "0.4", features = ["serde"] }
 async-trait = { version = "0.1.50" }
 
-canyon_connection = { version = "0.2.0", path = "../canyon_connection" }
+canyon_connection = { version = "0.2.0", path = "../canyon_connection", features = ["postgres", "mssql"] }
+
+[features]
+default = ["postgres"]
+postgres = ["tokio", "tokio-postgres", "tokio-util"]
+mssql = ["tiberius", "tiberius/tds73", "tiberius/chrono"]
+mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]
