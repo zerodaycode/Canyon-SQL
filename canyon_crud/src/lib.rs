@@ -4,6 +4,7 @@ pub mod bounds;
 pub mod crud;
 pub mod mapper;
 pub mod query_elements;
+pub mod rows;
 
 pub use query_elements::operators::*;
 

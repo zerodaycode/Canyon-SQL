@@ -15,7 +15,7 @@ use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
 use canyon_database_connector::DatabaseConnection;
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 
 const CONFIG_FILE_IDENTIFIER: &str = "canyon.toml";
 
@@ -59,5 +59,28 @@ pub async fn init_connections_cache() {
                     )
                 }),
         );
+    }
+}
+
+
+///
+pub fn get_database_connection<'a>(
+    datasource_name: &str,
+    guarded_cache: &'a mut MutexGuard<IndexMap<&str, DatabaseConnection>>
+) -> &'a mut DatabaseConnection {
+    if datasource_name.is_empty() {
+        guarded_cache
+            .get_mut(
+                DATASOURCES
+                    .get(0)
+                    .expect("We didn't found any valid datasource configuration. Check your `canyon.toml` file")
+                    .name
+                    .as_str()
+            ).unwrap_or_else(|| panic!("No default datasource found. Check your `canyon.toml` file"))
+    } else {
+        guarded_cache.get_mut(datasource_name)
+            .unwrap_or_else(||
+                panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}")
+            )
     }
 }

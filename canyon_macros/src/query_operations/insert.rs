@@ -50,38 +50,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query_for_rows(
                 stmt,
                 values,
                 datasource_name
-            ).await;
-
-            // TODO Convertir a canyon rows
-            match result {
-                Ok(res) => {
-                    match res.get_active_ds() {
-                        canyon_sql::crud::DatabaseType::PostgreSql => {
-                            self.#pk_ident = res.postgres.get(0)
-                                .expect("No value found on the returning clause")
-                                .get::<&str, #pk_type>(#primary_key)
-                                .to_owned();
-
-                            Ok(())
-                        },
-                        canyon_sql::crud::DatabaseType::SqlServer => {
-                            self.#pk_ident = res.sqlserver.get(0)
-                                .expect("No value found on the returning clause")
-                                .get::<#pk_type, &str>(#primary_key)
-                                .expect("SQL Server primary key type failed to be set as value")
-                                .to_owned();
-
-                            Ok(())
-                        }
-                    }
-                },
-                Err(e) => Err(e)
-            }
-        }
+            ).await
+            .set_primary_key_after_insert();
+         }
     } else {
         quote! {
             let stmt = format!(

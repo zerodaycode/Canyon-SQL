@@ -145,55 +145,71 @@ pub enum ColumnType {
 }
 
 pub trait RowOperations {
-    /// Abstracts the different forms of use the common `get` row
-    /// function or method dynamically no matter what are the origin
-    /// type from any database client provider
-    fn get<'a, Output>(&'a self, col_name: &str) -> Output
-    where
-        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
+    #[cfg(feature = "postgres")]
+    fn get_postgres<'a, Output>(&'a self, col_name: &str) -> Output
+        where Output: tokio_postgres::types::FromSql<'a>;
+    #[cfg(feature = "mssql")]
+    fn get_mssql<'a, Output>(&self, col_name: &str) -> Output
+        where Output: tiberius::FromSql<'a>;
 
-    fn get_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
-    where
-        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>;
+    #[cfg(feature = "postgres")]
+    fn get_postgres_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+        where Output: tokio_postgres::types::FromSql<'a>;
+    #[cfg(feature = "mssql")]
+    fn get_mssql_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+        where Output: tokio_postgres::types::FromSql<'a>;
 
     fn columns(&self) -> Vec<Column>;
 }
 
 impl RowOperations for &dyn Row {
-    fn get<'a, Output>(&'a self, col_name: &str) -> Output
-    where
-        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>,
+    #[cfg(feature = "postgres")]
+    fn get_postgres<'a, Output>(&'a self, col_name: &str) -> Output
+        where Output: tokio_postgres::types::FromSql<'a>
     {
         if let Some(row) = self.as_any().downcast_ref::<tokio_postgres::Row>() {
             return row.get::<&str, Output>(col_name);
         };
+        panic!() // TODO into result and propagate
+    }
+    #[cfg(feature = "mssql")]
+    fn get_mssql<'a, Output>(&'a self, col_name: &str) -> Output
+        where Output: tiberius::FromSql<'a>
+    {
         if let Some(row) = self.as_any().downcast_ref::<tiberius::Row>() {
             return row
                 .get::<Output, &str>(col_name)
                 .expect("Failed to obtain a row in the MSSQL migrations");
         };
-        panic!()
+        panic!() // TODO into result and propagate
     }
 
-    fn get_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
-    where
-        Output: tokio_postgres::types::FromSql<'a> + tiberius::FromSql<'a>,
+    #[cfg(feature = "postgres")]
+    fn get_postgres_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+        where Output: tokio_postgres::types::FromSql<'a>
     {
         if let Some(row) = self.as_any().downcast_ref::<tokio_postgres::Row>() {
             return row.get::<&str, Option<Output>>(col_name);
         };
+        panic!() // TODO into result and propagate
+    }
+
+    #[cfg(feature = "mssql")]
+    fn get_mssql_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+        where Output: tiberius::FromSql<'a>
+    {
         if let Some(row) = self.as_any().downcast_ref::<tiberius::Row>() {
             return row
-                .try_get:where
-                .expect("Failed to obtain a row in the MSSQL migrations");
+                .try_get
+                .expect("Failed to obtain a row for MSSQL");
         };
-        panic!()
+        panic!() // TODO into result and propagate
     }
 
     fn columns(&self) -> Vec<Column> {
         let mut cols = vec![];
 
-        if self.as_any().is::<tokio_postgres::Row>() {
+        /* if self.as_any().is::<tokio_postgres::Row>() {
             self.as_any()
                 .downcast_ref::<tokio_postgres::Row>()
                 .expect("Not a tokio postgres Row for column")
@@ -217,7 +233,7 @@ impl RowOperations for &dyn Row {
                         type_: ColumnType::SqlServer(c.column_type()),
                     })
                 })
-        };
+        }; */
 
         cols
     }

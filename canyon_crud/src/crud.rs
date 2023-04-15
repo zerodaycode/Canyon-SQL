@@ -2,13 +2,14 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseConnection;
-use canyon_connection::{CACHED_DATABASE_CONN, DATASOURCES};
+use canyon_connection::{CACHED_DATABASE_CONN, get_database_connection};
 
 use crate::bounds::QueryParameter;
 use crate::mapper::RowMapper;
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
+use crate::rows::CanyonRows;
 
 /// This traits defines and implements a query against a database given
 /// an statement `stmt` and the params to pass the to the client.
@@ -18,36 +19,22 @@ use crate::query_elements::query_builder::{
 /// automatically map it to an struct.
 #[async_trait]
 pub trait Transaction<T> {
-    /// Performs a query against the targeted database by the selected datasource.
-    ///
-    /// No datasource means take the entry zero
+    /// Performs a query against the targeted database by the selected or
+    /// the defaulted datasource, wrapping the resultant collection of entities
+    /// in [`super::rows::Rows`]. This ones provides custom operations that
+    /// facilitates the macro operations.
     async fn query<'a, S, Z>(
         stmt: S,
         params: Z,
         datasource_name: &'a str,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-    where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        T: Transaction<T> + RowMapper<T>
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+        where
+            S: AsRef<str> + Display + Sync + Send + 'a,
+            Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+            T: Transaction<T> + RowMapper<T>
     {
         let mut guarded_cache = CACHED_DATABASE_CONN.lock().await;
-
-        let database_conn = if datasource_name.is_empty() {
-            guarded_cache
-            .get_mut(
-                DATASOURCES
-                    .get(0)
-                    .expect("We didn't found any valid datasource configuration. Check your `canyon.toml` file")
-                    .name
-                    .as_str()
-            ).unwrap_or_else(|| panic!("No default datasource found. Check your `canyon.toml` file"))
-        } else {
-            guarded_cache.get_mut(datasource_name)
-                .unwrap_or_else(||
-                    panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}"
-                ))
-        };
+        let database_conn = get_database_connection(datasource_name, &mut guarded_cache);
 
         match database_conn {
             #[cfg(feature = "postgres")] DatabaseConnection::Postgres(_) => {
@@ -56,7 +43,7 @@ pub trait Transaction<T> {
                     stmt.to_string(),
                     params.as_ref(),
                 )
-                .await
+                    .await
             }
             #[cfg(feature = "mssql")] DatabaseConnection::SqlServer(_) => {
                 sqlserver_query_launcher::launch::<T, Z>(
@@ -64,7 +51,7 @@ pub trait Transaction<T> {
                     &mut stmt.to_string(),
                     params,
                 )
-                .await
+                    .await
             }
         }
     }
@@ -166,12 +153,13 @@ mod postgres_query_launcher {
     use canyon_connection::canyon_database_connector::DatabaseConnection;
     use crate::crud::Transaction;
     use crate::mapper::RowMapper;
+    use crate::rows::CanyonRows;
 
     pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
         stmt: String,
         params: &'a [&'_ dyn QueryParameter<'_>],
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>>
         where T: Transaction<T> + RowMapper<T>
     {
         let mut m_params = Vec::new();
@@ -186,9 +174,7 @@ mod postgres_query_launcher {
             .query(&stmt, m_params.as_slice())
             .await?;
 
-        Ok(
-            r.iter().map(|row| T::deserialize_postgresql(row)).collect()
-        )
+        Ok(CanyonRows::Postgres(r))
     }
 }
 
@@ -201,12 +187,13 @@ mod sqlserver_query_launcher {
     };
     use crate::crud::Transaction;
     use crate::mapper::RowMapper;
+    use crate::rows::CanyonRows;
 
     pub async fn launch<'a, T, Z>(
         db_conn: &mut DatabaseConnection,
         stmt: &mut String,
         params: Z,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>>
     where
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
         T: Transaction<T> + RowMapper<T>
@@ -240,12 +227,8 @@ mod sqlserver_query_launcher {
             )
             .await?
             .into_results()
-            .await?
-            .into_iter()
-            .flatten()
-            .map(|row| T::deserialize_sqlserver(&row))
-            .collect::<Vec<_>>();
+            .await?;
 
-        Ok(_results)
+        Ok(CanyonRows::Tiberius(_results))
     }
 }
