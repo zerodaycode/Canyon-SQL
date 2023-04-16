@@ -10,20 +10,13 @@ license.workspace = true
 description.workspace = true
 
 [dependencies]
-tokio = { workspace = true, features = ["full"], optional = true }
-tokio-util = { workspace = true, features = ["compat"], optional = true }
-tokio-postgres = { workspace = true, features = ["with-chrono-0_4"], optional = true }
-tiberius = { workspace = true, features = ["tds73", "chrono", "integrated-auth-gssapi"], optional = true }
-
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+tokio-postgres = { workspace = true, optional = true }
+tiberius = { workspace = true, optional = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 async-std = { workspace = true }
 lazy_static = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true }
-
-[features]
-default = ["postgres"]
-postgres = ["tokio", "tokio-postgres", "tokio-util"]
-mssql = ["tiberius", "tiberius/tds73", "tiberius/chrono"]
-mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]

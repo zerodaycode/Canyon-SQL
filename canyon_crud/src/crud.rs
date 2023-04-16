@@ -19,25 +19,39 @@ use crate::rows::CanyonRows;
 /// automatically map it to an struct.
 #[async_trait]
 pub trait Transaction<T> {
+    // /// Performs a query against the targeted database by the selected or
+    // /// the defaulted datasource, returning a collection of instances of *T*
+    // async fn query<'a, S, Z>(
+    //     stmt: S,
+    //     params: Z,
+    //     datasource_name: &'a str,
+    // ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    //     where
+    //         S: AsRef<str> + Display + Sync + Send + 'a,
+    //         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+    // {
+    //     Self::query_for_rows(stmt, params, datasource_name)
+    //         .await
+    //         .map(|res| res.into_results())
+    // }
+
     /// Performs a query against the targeted database by the selected or
     /// the defaulted datasource, wrapping the resultant collection of entities
-    /// in [`super::rows::Rows`]. This ones provides custom operations that
-    /// facilitates the macro operations.
+    /// in [`super::rows::Rows`]
     async fn query<'a, S, Z>(
         stmt: S,
         params: Z,
         datasource_name: &'a str,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
         where
             S: AsRef<str> + Display + Sync + Send + 'a,
-            Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-            T: Transaction<T> + RowMapper<T>
+            Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
     {
         let mut guarded_cache = CACHED_DATABASE_CONN.lock().await;
         let database_conn = get_database_connection(datasource_name, &mut guarded_cache);
 
-        match database_conn {
-            #[cfg(feature = "postgres")] DatabaseConnection::Postgres(_) => {
+        match *database_conn {
+            #[cfg(feature = "tokio-postgres")] DatabaseConnection::Postgres(_) => {
                 postgres_query_launcher::launch::<T>(
                     database_conn,
                     stmt.to_string(),
@@ -45,7 +59,7 @@ pub trait Transaction<T> {
                 )
                     .await
             }
-            #[cfg(feature = "mssql")] DatabaseConnection::SqlServer(_) => {
+            #[cfg(feature = "tiberius")] DatabaseConnection::SqlServer(_) => {
                 sqlserver_query_launcher::launch::<T, Z>(
                     database_conn,
                     &mut stmt.to_string(),
@@ -147,21 +161,17 @@ where
     fn delete_query_datasource(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
 }
 
-#[cfg(feature = "postgres")]
+#[cfg(feature = "tokio-postgres")]
 mod postgres_query_launcher {
     use crate::bounds::QueryParameter;
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use crate::crud::Transaction;
-    use crate::mapper::RowMapper;
     use crate::rows::CanyonRows;
 
     pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
         stmt: String,
         params: &'a [&'_ dyn QueryParameter<'_>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-        where T: Transaction<T> + RowMapper<T>
-    {
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let mut m_params = Vec::new();
         for param in params {
             m_params.push(param.as_postgres_param());
@@ -179,24 +189,21 @@ mod postgres_query_launcher {
 }
 
 
-#[cfg(feature = "mssql")]
+#[cfg(feature = "tiberius")]
 mod sqlserver_query_launcher {
     use crate::{
         bounds::QueryParameter,
         canyon_connection::{canyon_database_connector::DatabaseConnection, tiberius::Query},
     };
-    use crate::crud::Transaction;
-    use crate::mapper::RowMapper;
     use crate::rows::CanyonRows;
 
     pub async fn launch<'a, T, Z>(
         db_conn: &mut DatabaseConnection,
         stmt: &mut String,
         params: Z,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
     where
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        T: Transaction<T> + RowMapper<T>
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
     {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {

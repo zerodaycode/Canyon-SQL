@@ -50,13 +50,28 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            <#ty as canyon_sql::crud::Transaction<#ty>>::query_for_rows(
+            let rows = <#ty as canyon_sql::crud::Transaction<#ty>>::query_for_rows(
                 stmt,
                 values,
                 datasource_name
-            ).await
-            .set_primary_key_after_insert();
-         }
+            ).await;
+
+            match rows {
+                #[cfg(feature = "tokio-postgres")] Self::Postgres(v) => {
+                v.remove(0)
+                    .expect("No value found on the returning clause for Postgres")
+                    .get::<&str, #pk_type>(#primary_key)
+            }
+                #[cfg(feature = "tiberius")] Self::Tiberius(v) => {
+                    v.into_iter()
+                        .flatten()
+                        .collect::<Vec<_>>()
+                        .remove(0)
+                        .get::<#pk_type, &str>(#primary_key)
+                        .expect("SQL Server primary key type failed to be set as value")
+                }
+            }
+        }
     } else {
         quote! {
             let stmt = format!(

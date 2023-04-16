@@ -52,7 +52,7 @@ impl Migrations {
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
                 Self::fetch_database(&datasource.name, datasource.get_db_type()).await;
-            let database_tables_schema_info = Self::map_rows(schema_status);
+            let database_tables_schema_info = Self::map_rows(schema_status, datasource.get_db_type());
 
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
@@ -98,21 +98,26 @@ impl Migrations {
                 panic!(
                     "Error querying the schema information for the datasource: {datasource_name}"
                 )
-            })
+            }).into_results()
     }
 
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
-    fn map_rows(db_results: Vec<Migrations>) -> Vec<TableMetadata> {
+    fn map_rows(db_results: Vec<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
+        let row_retriever_fn_ptr = match db_type {
+            DatabaseType::PostgreSql => RowOperations::get_postgres::<&str>,
+            DatabaseType::SqlServer => RowOperations::get_mssql::<&str>,
+        };
 
         for res_row in db_results.iter()
             .map(|row| &row as &dyn Row)
         {
             let unique_table = schema_info
                 .iter_mut()
-                .find(|table| table.table_name == *res_row.get::<&str>("table_name").to_owned());
+                // TODO To be able to remove row from our code, use a match statement to get table name
+                .find(|table| table.table_name == *row_retriever_fn_ptr("table_name").to_owned());
             match unique_table {
                 Some(table) => {
                     /* If a table entity it's already present on the collection, we add it
@@ -124,7 +129,7 @@ impl Migrations {
                     collection yet, we must create a new instance and attach it
                     the founded columns data in this iteration */
                     let mut new_table = TableMetadata {
-                        table_name: res_row.get::<&str>("table_name").to_owned(),
+                        table_name: row_retriever_fn_ptr("table_name").to_owned(),
                         columns: Vec::new(),
                     };
                     Self::get_columns_metadata(res_row, &mut new_table);

@@ -219,10 +219,9 @@ impl CanyonMemory {
     /// Generates, if not exists the `canyon_memory` table
     #[cfg(not(cargo_check))]
     async fn create_memory(datasource_name: &str, database_type: &DatabaseType) {
-        let query = if database_type == &DatabaseType::PostgreSql {
-            constants::postgresql_queries::CANYON_MEMORY_TABLE
-        } else {
-            constants::mssql_queries::CANYON_MEMORY_TABLE
+        let query = match database_type {
+            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>  constants::postgresql_queries::CANYON_MEMORY_TABLE,
+            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE
         };
 
         Self::query(query, [], datasource_name)

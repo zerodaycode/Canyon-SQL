@@ -1,32 +1,31 @@
-#[cfg(feature = "mssql")] use async_std::net::TcpStream;
+#[cfg(feature = "tiberius")] use async_std::net::TcpStream;
 
 use serde::Deserialize;
-#[cfg(feature = "mssql")] use tiberius::{AuthMethod, Config};
-#[cfg(feature = "postgres")] use tokio_postgres::{Client, NoTls};
+#[cfg(feature = "tiberius")] use tiberius::{AuthMethod, Config};
+#[cfg(feature = "tokio-postgres")] use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceConfig;
 
 /// Represents the current supported databases by Canyon
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {
-    #[default]
     #[serde(alias = "postgres", alias = "postgresql")]
-    #[cfg(feature = "postgres")]
+    #[cfg(feature = "tokio-postgres")]
     PostgreSql,
     #[serde(alias = "sqlserver", alias = "mssql")]
-    #[cfg(feature = "mssql")]
+    #[cfg(feature = "tiberius")]
     SqlServer,
 }
 
 /// A connection with a `PostgreSQL` database
-#[cfg(feature = "postgres")]
+#[cfg(feature = "tokio-postgres")]
 pub struct PostgreSqlConnection {
     pub client: Client,
     // pub connection: Connection<Socket, NoTlsStream>, // TODO Hold it, or not to hold it... that's the question!
 }
 
-#[cfg(feature = "mssql")]
 /// A connection with a `SqlServer` database
+#[cfg(feature = "tiberius")]
 pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
 }
@@ -36,8 +35,8 @@ pub struct SqlServerConnection {
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
 pub enum DatabaseConnection {
-    #[cfg(feature = "postgres")] Postgres(PostgreSqlConnection),
-    #[cfg(feature = "mssql")] SqlServer(SqlServerConnection),
+    #[cfg(feature = "tokio-postgres")] Postgres(PostgreSqlConnection),
+    #[cfg(feature = "tiberius")] SqlServer(SqlServerConnection),
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -48,7 +47,7 @@ impl DatabaseConnection {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.get_db_type() {
-            #[cfg(feature = "postgres")]
+            #[cfg(feature = "tokio-postgres")]
             DatabaseType::PostgreSql => {
                 let (username, password) = match &datasource.auth {
                     crate::datasources::Auth::Postgres(postgres_auth) => match postgres_auth {
@@ -56,7 +55,7 @@ impl DatabaseConnection {
                             (username.as_str(), password.as_str())
                         }
                     },
-                    #[cfg(feature = "mssql")]
+                    #[cfg(feature = "tiberius")]
                     crate::datasources::Auth::SqlServer(_) => {
                         panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
                     }
@@ -85,7 +84,7 @@ impl DatabaseConnection {
                     // connection: new_connection,
                 }))
             }
-            #[cfg(feature = "mssql")]
+            #[cfg(feature = "tiberius")]
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
@@ -95,14 +94,14 @@ impl DatabaseConnection {
 
                 // Using SQL Server authentication.
                 config.authentication(match &datasource.auth {
-                    #[cfg(feature = "postgres")] crate::datasources::Auth::Postgres(_) => {
+                    #[cfg(feature = "tokio-postgres")] crate::datasources::Auth::Postgres(_) => {
                         panic!("Found PostgreSQL auth configuration for a SqlServer database")
                     }
                     crate::datasources::Auth::SqlServer(sql_server_auth) => match sql_server_auth {
                         crate::datasources::SqlServerAuth::Basic { username, password } => {
                             AuthMethod::sql_server(username, password)
                         }
-                        #[cfg(feature = "mssql-integrated-auth")]
+                        #[cfg(feature = "mssql-integrated-auth")] // TODO pending, or remove the cfg?
                         crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
                     },
                 });
@@ -135,21 +134,19 @@ impl DatabaseConnection {
         }
     }
 
-    #[cfg(feature = "postgres")]
+    #[cfg(feature = "tokio-postgres")]
     pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
-        if let DatabaseConnection::Postgres(conn) = self {
-            Some(conn)
-        } else {
-            None
+        match self {
+            DatabaseConnection::Postgres(conn) => Some(conn),
+            _ => panic!()
         }
     }
 
-    #[cfg(feature = "mssql")]
+    #[cfg(feature = "tiberius")]
     pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
-        if let DatabaseConnection::SqlServer(conn) = self {
-            Some(conn)
-        } else {
-            None
+        match self {
+            DatabaseConnection::SqlServer(conn) => Some(conn),
+            _ => panic!()
         }
     }
 }

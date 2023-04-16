@@ -1,4 +1,5 @@
-use canyon_connection::{tiberius::ColumnType as TIB_TY, tokio_postgres::types::Type as TP_TYP};
+#[cfg(feature = "tokio-postgres")] use canyon_connection::tokio_postgres::types::Type as TP_TYP;
+#[cfg(feature = "tiberius")] use canyon_connection::tiberius::ColumnType as TIB_TY;
 use canyon_crud::bounds::{Column, ColumnType, Row, RowOperations};
 
 /// Model that represents the database entities that belongs to the current schema.
@@ -40,7 +41,7 @@ impl ColumnMetadataTypeValue {
     /// Retrieves the value stored in a [`Column`] for a passed [`Row`]
     pub fn get_value(row: &dyn Row, col: &Column) -> Self {
         match col.column_type() {
-            ColumnType::Postgres(v) => {
+            #[cfg(feature = "tokio-postgres")] ColumnType::Postgres(v) => {
                 match *v {
                     TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => {
                         Self::StringValue(row.get_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
@@ -49,7 +50,7 @@ impl ColumnMetadataTypeValue {
                     _ => Self::NoneValue, // TODO watchout this one
                 }
             }
-            ColumnType::SqlServer(v) => match v {
+            #[cfg(feature = "tiberius")] ColumnType::SqlServer(v) => match v {
                 TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => {
                     Self::StringValue(row.get_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
                 }

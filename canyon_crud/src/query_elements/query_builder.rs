@@ -26,7 +26,7 @@ pub mod ops {
     /// hierarchy.
     ///
     /// For example, the [`super::QueryBuilder`] type holds the data
-    /// necessary for track the SQL sentece while it's being generated
+    /// necessary for track the SQL sentence while it's being generated
     /// thought the fluent builder, and provides the behaviour of
     /// the common elements defined in this trait.
     ///
@@ -44,7 +44,7 @@ pub mod ops {
     /// just one type.
     pub trait QueryBuilder<'a, T>
     where
-        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+        T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
     {
         /// Returns a read-only reference to the underlying SQL sentence,
         /// with the same lifetime as self
@@ -173,7 +173,7 @@ where
             self.query.params.to_vec(),
             self.datasource_name,
         )
-        .await?)
+        .await?.into_results::<T>())
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {

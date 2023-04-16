@@ -49,7 +49,7 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_1.properties.db_name, "triforce2");
     assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
 
-    #[cfg(feature = "postgres")] assert_eq!(ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated))
+    #[cfg(feature = "tokio-postgres")] assert_eq!(ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated))
 }
 ///
 #[derive(Deserialize, Debug, Clone)]
@@ -72,8 +72,8 @@ pub struct DatasourceConfig {
 impl DatasourceConfig {
     pub fn get_db_type(&self) -> DatabaseType {
         match self.auth {
-            #[cfg(feature = "postgres")] Auth::Postgres(_) => DatabaseType::PostgreSql,
-            #[cfg(feature = "mssql")] Auth::SqlServer(_) => DatabaseType::SqlServer,
+            #[cfg(feature = "tokio-postgres")] Auth::Postgres(_) => DatabaseType::PostgreSql,
+            #[cfg(feature = "tiberius")] Auth::SqlServer(_) => DatabaseType::SqlServer,
         }
     }
 }
@@ -81,22 +81,22 @@ impl DatasourceConfig {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Auth {
     #[serde(alias = "PostgreSQL", alias = "postgresql", alias = "postgres")]
-    #[cfg(feature = "postgres")]
+    #[cfg(feature = "tokio-postgres")]
     Postgres(PostgresAuth),
     #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
-    #[cfg(feature = "mssql")]
+    #[cfg(feature = "tiberius")]
     SqlServer(SqlServerAuth),
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
-#[cfg(feature = "postgres")]
+#[cfg(feature = "tokio-postgres")]
 pub enum PostgresAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
-#[cfg(feature = "mssql")]
+#[cfg(feature = "tiberius")]
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },

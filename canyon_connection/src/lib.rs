@@ -1,10 +1,10 @@
-#[cfg(feature = "mssql")] pub extern crate async_std;
+#[cfg(feature = "tiberius")] pub extern crate async_std;
 pub extern crate futures;
 pub extern crate lazy_static;
-#[cfg(feature = "mssql")] pub extern crate tiberius;
-#[cfg(feature = "postgres")] pub extern crate tokio;
-#[cfg(feature = "postgres")] pub extern crate tokio_postgres;
-#[cfg(feature = "postgres")] pub extern crate tokio_util;
+#[cfg(feature = "tiberius")] pub extern crate tiberius;
+pub extern crate tokio;
+#[cfg(feature = "tokio-postgres")] pub extern crate tokio_postgres;
+#[cfg(feature = "tokio-postgres")] pub extern crate tokio_util;
 
 pub mod canyon_database_connector;
 pub mod datasources;
