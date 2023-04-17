@@ -15,17 +15,24 @@ pub enum CanyonRows<T> {
 }
 
 impl<T> CanyonRows<T> {
-    // /// Type constructor, returning the correct variant of Self wrapping the collection of results
-    // /// by the given database connection
-    // pub fn new(
-    //     conn: &DatabaseConnection,
-    //     res: Vec<T>
-    // ) -> Self {
-    //     match conn {
-    //         #[cfg(feature = "tokio-postgres")] DatabaseConnection::Postgres(_) => Self::Postgres(res),
-    //         #[cfg(feature = "tiberius")] DatabaseConnection::SqlServer(_) => Self::Tiberius(res)
-    //     }
-    // }
+    #[cfg(feature = "tokio-postgres")]
+    pub fn get_postgres_rows(self) -> Vec<tokio_postgres::Row> {
+        match self {
+            Self::Postgres(v) => v,
+            _ => panic!("This branch will never ever should be reachable")
+        }
+    }
+
+    #[cfg(feature = "tiberius")]
+    pub fn get_tiberius_rows(self) -> Vec<tiberius::Row> {
+        match self {
+            Self::Tiberius(v) => v
+                .iter()
+                .flatten()
+                .collect(),
+            _ => panic!("This branch will never ever should be reachable")
+        }
+    }
 
     /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of T
     pub fn into_results<Z: RowMapper<T>>(self) -> Vec<T> where T: Transaction<T> {

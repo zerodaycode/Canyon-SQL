@@ -107,8 +107,8 @@ impl Migrations {
     fn map_rows(db_results: Vec<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
         let row_retriever_fn_ptr = match db_type {
-            DatabaseType::PostgreSql => RowOperations::get_postgres::<&str>,
-            DatabaseType::SqlServer => RowOperations::get_mssql::<&str>,
+            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => RowOperations::get_postgres::<&str>,
+            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => RowOperations::get_mssql::<&str>,
         };
 
         for res_row in db_results.iter()

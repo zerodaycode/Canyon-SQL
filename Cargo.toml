@@ -55,7 +55,7 @@ license = "MIT"
 description = "A Rust ORM and QueryBuilder"
 
 [features]
-default = ["postgres", "canyon_connection/tokio-postgres", "canyon_crud/tokio-postgres", "canyon_observer/tokio-postgres"]
+default = ["postgres"]
 postgres = ["canyon_connection/tokio-postgres", "canyon_crud/tokio-postgres", "canyon_observer/tokio-postgres"]
-mssql = ["canyon_connection/tiberius"]
+mssql = ["canyon_connection/tiberius", "canyon_observer/tiberius", "canyon_observer/tiberius"]
 mssql-integrated-auth = ["mssql"]

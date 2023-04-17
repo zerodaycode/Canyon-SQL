@@ -91,7 +91,17 @@ pub trait Row {
         self
     }
 }
+#[cfg(feature = "tokio-postgres")] impl Row for &tokio_postgres::Row {
+    fn as_any(&self) -> &dyn Any {
+        *self
+    }
+}
 #[cfg(feature = "tiberius")] impl Row for tiberius::Row {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+#[cfg(feature = "tiberius")] impl Row for &tiberius::Row {
     fn as_any(&self) -> &dyn Any {
         self
     }
