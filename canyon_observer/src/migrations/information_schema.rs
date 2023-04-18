@@ -44,9 +44,9 @@ impl ColumnMetadataTypeValue {
             #[cfg(feature = "tokio-postgres")] ColumnType::Postgres(v) => {
                 match *v {
                     TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => {
-                        Self::StringValue(row.get_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
+                        Self::StringValue(row.get_postgres_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
                     }
-                    TP_TYP::INT4 => Self::IntValue(row.get_opt::<i32>(col.name())),
+                    TP_TYP::INT4 => Self::IntValue(row.get_postgres_opt::<i32>(col.name())),
                     _ => Self::NoneValue, // TODO watchout this one
                 }
             }

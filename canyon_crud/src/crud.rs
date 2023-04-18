@@ -236,6 +236,6 @@ mod sqlserver_query_launcher {
             .into_results()
             .await?;
 
-        Ok(CanyonRows::Tiberius(_results))
+        Ok(CanyonRows::Tiberius(_results.iter().flatten().collect()))
     }
 }

@@ -1,5 +1,6 @@
 use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
 use partialdebug::placeholder::PartialDebug;
+use canyon_crud::rows::CanyonRows;
 
 use crate::{
     canyon_crud::{
@@ -86,38 +87,35 @@ impl Migrations {
     async fn fetch_database(
         datasource_name: &str,
         db_type: DatabaseType,
-    ) -> Vec<Migrations> {
+    ) -> CanyonRows<Migrations> {
         let query = match db_type {
-            DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
-            DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
+            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
+            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
         };
 
-        Self::query(query, [], datasource_name)
-            .await
-            .unwrap_or_else(|_| {
-                panic!(
-                    "Error querying the schema information for the datasource: {datasource_name}"
-                )
-            }).into_results()
+        Self::query(query, [], datasource_name).await
+            .unwrap_or_else(|_| {panic!(
+                "Error querying the schema information for the datasource: {datasource_name}"
+            )})
     }
 
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
-    fn map_rows(db_results: Vec<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
+    fn map_rows(db_results: CanyonRows<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
         let row_retriever_fn_ptr = match db_type {
             #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => RowOperations::get_postgres::<&str>,
             #[cfg(feature = "tiberius")] DatabaseType::SqlServer => RowOperations::get_mssql::<&str>,
         };
 
-        for res_row in db_results.iter()
+        for res_row in db_results.into_iter()
             .map(|row| &row as &dyn Row)
         {
             let unique_table = schema_info
                 .iter_mut()
                 // TODO To be able to remove row from our code, use a match statement to get table name
-                .find(|table| table.table_name == *row_retriever_fn_ptr("table_name").to_owned());
+                .find(|table| table.table_name == row_retriever_fn_ptr(&res_row, "table_name"));
             match unique_table {
                 Some(table) => {
                     /* If a table entity it's already present on the collection, we add it
@@ -129,7 +127,7 @@ impl Migrations {
                     collection yet, we must create a new instance and attach it
                     the founded columns data in this iteration */
                     let mut new_table = TableMetadata {
-                        table_name: row_retriever_fn_ptr("table_name").to_owned(),
+                        table_name: row_retriever_fn_ptr(&res_row, "table_name").to_string(),
                         columns: Vec::new(),
                     };
                     Self::get_columns_metadata(res_row, &mut new_table);
