@@ -74,7 +74,7 @@ impl CanyonMemory {
         // Manually maps the results
         let mut db_rows = Vec::new();
         #[cfg(feature = "tokio-postgres")] {
-            let mem_results: Vec<tokio_postgres::Row> = res.get_postgres_rows();
+            let mem_results: &Vec<tokio_postgres::Row> = res.get_postgres_rows();
             for row in mem_results {
                 let db_row = CanyonMemoryRow {
                     id: row.get::<&str, i32>("id"),
@@ -86,13 +86,13 @@ impl CanyonMemory {
             }
         }
         #[cfg(feature = "tiberius")] {
-            let mem_results: Vec<tiberius::Row> = res.get_tiberius_rows();
+            let mem_results: &Vec<tiberius::Row> = res.get_tiberius_rows();
             for row in mem_results {
                 let db_row = CanyonMemoryRow {
-                    id: row.get::<i32, &str>("id"),
-                    filepath: row.get::<&str, &str>("filepath"),
-                    struct_name: row.get::<&str, &str>("struct_name"),
-                    declared_table_name: row.get::<&str, &str>("declared_table_name"),
+                    id: row.get::<i32, &str>("id").unwrap(),
+                    filepath: row.get::<&str, &str>("filepath").unwrap().to_string(),
+                    struct_name: row.get::<&str, &str>("struct_name").unwrap().to_string(),
+                    declared_table_name: row.get::<&str, &str>("declared_table_name").unwrap().to_string(),
                 };
                 db_rows.push(db_row);
             }

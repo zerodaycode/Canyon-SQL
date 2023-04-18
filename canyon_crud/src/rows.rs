@@ -16,7 +16,7 @@ pub enum CanyonRows<T> {
 
 impl<T> CanyonRows<T> {
     #[cfg(feature = "tokio-postgres")]
-    pub fn get_postgres_rows(self) -> Vec<tokio_postgres::Row> {
+    pub fn get_postgres_rows(&self) -> &Vec<tokio_postgres::Row> {
         match self {
             Self::Postgres(v) => v,
             _ => panic!("This branch will never ever should be reachable")
@@ -24,7 +24,7 @@ impl<T> CanyonRows<T> {
     }
 
     #[cfg(feature = "tiberius")]
-    pub fn get_tiberius_rows(self) -> Vec<tiberius::Row> {
+    pub fn get_tiberius_rows(&self) -> &Vec<tiberius::Row> {
         match self {
             Self::Tiberius(v) => v,
             _ => panic!("This branch will never ever should be reachable")
@@ -47,28 +47,44 @@ impl<T> CanyonRows<T> {
     }
 }
 
-#[cfg(feature = "tokio-postgres")]
-impl<T> IntoIterator for CanyonRows<T> {
-    type Item = tokio_postgres::Row;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
+// #[cfg(feature = "tokio-postgres")]
+// impl<T> IntoIterator for CanyonRows<T> {
+//     type Item = tokio_postgres::Row;
+//     type IntoIter = std::vec::IntoIter<Self::Item>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         match self {
+//             Self::Postgres(v) => v.into_iter(),
+//             _ => panic!()
+//         }
+//     }
+// }
+//
+// #[cfg(feature = "tiberius")]
+// impl<T> IntoIterator for CanyonRows<T> {
+//     type Item = tiberius::Row;
+//     type IntoIter = std::vec::IntoIter<Self::Item>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         match self {
+//             Self::Tiberius(v) => v.into_iter(),
+//             _ => panic!()
+//         }
+//     }
+// }
+//
+// #[cfg(all(feature = "tokio-postgres", feature = "tiberius"))]
+// impl<T> IntoIterator for CanyonRows<T> {
+//     if cfg!(feature = "tokio-postgres") {
+//     type Item = tokio_postgres::Row;
+//     } else { type Item = tiberius::Row; }
+//     type IntoIter = std::vec::IntoIter<Self::Item>;
+//
+//     fn into_iter(self) -> Self::IntoIter {
+//         match self {
+//             Self::Tiberius(v) => v.into_iter(),
+//             _ => panic!()
+//         }
+//     }
+// }
 
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            Self::Postgres(v) => v.into_iter(),
-            _ => panic!()
-        }
-    }
-}
-
-#[cfg(feature = "tiberius")]
-impl<T> IntoIterator for CanyonRows<T> {
-    type Item = tiberius::Row;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            Self::Tiberius(v) => v.into_iter(),
-            _ => panic!()
-        }
-    }
-}

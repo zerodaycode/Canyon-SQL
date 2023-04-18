@@ -7,7 +7,7 @@ use crate::{
 use canyon_connection::tokio_postgres::{self, types::ToSql};
 
 #[cfg(feature = "tiberius")]
-use canyon_connection::tiberius::{self, ColumnData, FromSql, IntoSql};
+use canyon_connection::tiberius::{self, ColumnData, IntoSql};
 
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 use std::any::Any;
@@ -91,21 +91,13 @@ pub trait Row {
         self
     }
 }
-#[cfg(feature = "tokio-postgres")] impl Row for &tokio_postgres::Row {
-    fn as_any(&self) -> &dyn Any {
-        *self
-    }
-}
+
 #[cfg(feature = "tiberius")] impl Row for tiberius::Row {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
-#[cfg(feature = "tiberius")] impl Row for &tiberius::Row {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-}
+
 
 /// Generic abstraction for hold a Column type that will be one of the Column
 /// types present in the dependent crates
@@ -144,7 +136,6 @@ pub trait Type {
 }
 
 /// Wrapper over the dependencies Column's types
-// #[derive(Copy)]
 pub enum ColumnType {
     #[cfg(feature = "tokio-postgres")] Postgres(tokio_postgres::types::Type),
     #[cfg(feature = "tiberius")] SqlServer(tiberius::ColumnType),
@@ -152,25 +143,25 @@ pub enum ColumnType {
 
 pub trait RowOperations {
     #[cfg(feature = "tokio-postgres")]
-    fn get_postgres<'a, Output>(&'a self, col_name: &str) -> Output
+    fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> Output
         where Output: tokio_postgres::types::FromSql<'a>;
     #[cfg(feature = "tiberius")]
-    fn get_mssql<'a, Output>(&self, col_name: &str) -> Output
+    fn get_mssql<'a, Output>(&'a self, col_name: &'a str) -> Output
         where Output: tiberius::FromSql<'a>;
 
     #[cfg(feature = "tokio-postgres")]
-    fn get_postgres_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+    fn get_postgres_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
         where Output: tokio_postgres::types::FromSql<'a>;
     #[cfg(feature = "tiberius")]
-    fn get_mssql_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
-        where Output: tokio_postgres::types::FromSql<'a>;
+    fn get_mssql_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
+        where Output: tiberius::FromSql<'a>;
 
     fn columns(&self) -> Vec<Column>;
 }
 
 impl RowOperations for &dyn Row {
     #[cfg(feature = "tokio-postgres")]
-    fn get_postgres<'a, Output>(&'a self, col_name: &str) -> Output
+    fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> Output
         where Output: tokio_postgres::types::FromSql<'a>
     {
         if let Some(row) = self.as_any().downcast_ref::<tokio_postgres::Row>() {
@@ -179,7 +170,7 @@ impl RowOperations for &dyn Row {
         panic!() // TODO into result and propagate
     }
     #[cfg(feature = "tiberius")]
-    fn get_mssql<'a, Output>(&'a self, col_name: &str) -> Output
+    fn get_mssql<'a, Output>(&'a self, col_name: &'a str) -> Output
         where Output: tiberius::FromSql<'a>
     {
         if let Some(row) = self.as_any().downcast_ref::<tiberius::Row>() {
@@ -191,7 +182,7 @@ impl RowOperations for &dyn Row {
     }
 
     #[cfg(feature = "tokio-postgres")]
-    fn get_postgres_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+    fn get_postgres_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
         where Output: tokio_postgres::types::FromSql<'a>
     {
         if let Some(row) = self.as_any().downcast_ref::<tokio_postgres::Row>() {
@@ -201,13 +192,11 @@ impl RowOperations for &dyn Row {
     }
 
     #[cfg(feature = "tiberius")]
-    fn get_mssql_opt<'a, Output>(&'a self, col_name: &str) -> Option<Output>
+    fn get_mssql_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
         where Output: tiberius::FromSql<'a>
     {
         if let Some(row) = self.as_any().downcast_ref::<tiberius::Row>() {
-            return row
-                .try_get
-                .expect("Failed to obtain a row for MSSQL");
+            return row.get::<Output, &str>(col_name);
         };
         panic!() // TODO into result and propagate
     }

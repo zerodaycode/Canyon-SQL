@@ -303,7 +303,7 @@ pub fn generate_multiple_insert_tokens(
 
                             Ok(())
                         },
-                        #[cfg(feature = "tiberius")] Self::Tiberius(mut v) =>
+                        #[cfg(feature = "tiberius")] Self::Tiberius(mut v) => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = v
                                     .get(idx)
@@ -313,6 +313,7 @@ pub fn generate_multiple_insert_tokens(
                             }
 
                             Ok(()),
+                        },
                         _ => panic!() // TODO remove when the generics will be refactored
                     }
                 },

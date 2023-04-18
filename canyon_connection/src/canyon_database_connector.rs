@@ -1,8 +1,8 @@
-#[cfg(feature = "tiberius")] use async_std::net::TcpStream;
-
 use serde::Deserialize;
-#[cfg(feature = "tiberius")] use tiberius::{AuthMethod, Config};
+
 #[cfg(feature = "tokio-postgres")] use tokio_postgres::{Client, NoTls};
+#[cfg(feature = "tiberius")] use tiberius::{AuthMethod, Config};
+#[cfg(feature = "tiberius")] use async_std::net::TcpStream;
 
 use crate::datasources::DatasourceConfig;
 
@@ -158,7 +158,7 @@ mod database_connection_handler {
     use crate::CanyonSqlConfig;
 
     const CONFIG_FILE_MOCK_ALT: &str = r#"
-        [canyon_sql_root]
+        [canyon_sql]
         datasources = [
             {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
             {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
