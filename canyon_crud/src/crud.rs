@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseConnection;
-use canyon_connection::{CACHED_DATABASE_CONN, get_database_connection};
+use canyon_connection::{get_database_connection, CACHED_DATABASE_CONN};
 
 use crate::bounds::QueryParameter;
 use crate::mapper::RowMapper;
@@ -43,29 +43,31 @@ pub trait Transaction<T> {
         params: Z,
         datasource_name: &'a str,
     ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-        where
-            S: AsRef<str> + Display + Sync + Send + 'a,
-            Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    where
+        S: AsRef<str> + Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
         let mut guarded_cache = CACHED_DATABASE_CONN.lock().await;
         let database_conn = get_database_connection(datasource_name, &mut guarded_cache);
 
         match database_conn {
-            #[cfg(feature = "tokio-postgres")] DatabaseConnection::Postgres(_) => {
+            #[cfg(feature = "tokio-postgres")]
+            DatabaseConnection::Postgres(_) => {
                 postgres_query_launcher::launch::<T>(
                     database_conn,
                     stmt.to_string(),
                     params.as_ref(),
                 )
-                    .await
-            },
-            #[cfg(feature = "tiberius")] DatabaseConnection::SqlServer(_) => {
+                .await
+            }
+            #[cfg(feature = "tiberius")]
+            DatabaseConnection::SqlServer(_) => {
                 sqlserver_query_launcher::launch::<T, Z>(
                     database_conn,
                     &mut stmt.to_string(),
                     params,
                 )
-                    .await
+                .await
             }
         }
     }
@@ -120,9 +122,7 @@ where
         datasource_name: &'a str,
     ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
-    async fn insert<'a>(
-        &mut self,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    async fn insert<'a>(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
     async fn insert_datasource<'a>(
         &mut self,
@@ -164,8 +164,8 @@ where
 #[cfg(feature = "tokio-postgres")]
 mod postgres_query_launcher {
     use crate::bounds::QueryParameter;
-    use canyon_connection::canyon_database_connector::DatabaseConnection;
     use crate::rows::CanyonRows;
+    use canyon_connection::canyon_database_connector::DatabaseConnection;
 
     pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
@@ -188,14 +188,13 @@ mod postgres_query_launcher {
     }
 }
 
-
 #[cfg(feature = "tiberius")]
 mod sqlserver_query_launcher {
+    use crate::rows::CanyonRows;
     use crate::{
         bounds::QueryParameter,
         canyon_connection::{canyon_database_connector::DatabaseConnection, tiberius::Query},
     };
-    use crate::rows::CanyonRows;
 
     pub async fn launch<'a, T, Z>(
         db_conn: &mut DatabaseConnection,
@@ -203,7 +202,7 @@ mod sqlserver_query_launcher {
         params: Z,
     ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
     where
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         if stmt.contains("RETURNING") {
@@ -236,6 +235,8 @@ mod sqlserver_query_launcher {
             .into_results()
             .await?;
 
-        Ok(CanyonRows::Tiberius(_results.into_iter().flatten().collect()))
+        Ok(CanyonRows::Tiberius(
+            _results.into_iter().flatten().collect(),
+        ))
     }
 }

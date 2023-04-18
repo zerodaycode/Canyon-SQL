@@ -1,8 +1,11 @@
 use serde::Deserialize;
 
-#[cfg(feature = "tokio-postgres")] use tokio_postgres::{Client, NoTls};
-#[cfg(feature = "tiberius")] use tiberius::{AuthMethod, Config};
-#[cfg(feature = "tiberius")] use async_std::net::TcpStream;
+#[cfg(feature = "tiberius")]
+use async_std::net::TcpStream;
+#[cfg(feature = "tiberius")]
+use tiberius::{AuthMethod, Config};
+#[cfg(feature = "tokio-postgres")]
+use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceConfig;
 
@@ -35,8 +38,10 @@ pub struct SqlServerConnection {
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
 pub enum DatabaseConnection {
-    #[cfg(feature = "tokio-postgres")] Postgres(PostgreSqlConnection),
-    #[cfg(feature = "tiberius")] SqlServer(SqlServerConnection),
+    #[cfg(feature = "tokio-postgres")]
+    Postgres(PostgreSqlConnection),
+    #[cfg(feature = "tiberius")]
+    SqlServer(SqlServerConnection),
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -94,14 +99,16 @@ impl DatabaseConnection {
 
                 // Using SQL Server authentication.
                 config.authentication(match &datasource.auth {
-                    #[cfg(feature = "tokio-postgres")] crate::datasources::Auth::Postgres(_) => {
+                    #[cfg(feature = "tokio-postgres")]
+                    crate::datasources::Auth::Postgres(_) => {
                         panic!("Found PostgreSQL auth configuration for a SqlServer database")
                     }
                     crate::datasources::Auth::SqlServer(sql_server_auth) => match sql_server_auth {
                         crate::datasources::SqlServerAuth::Basic { username, password } => {
                             AuthMethod::sql_server(username, password)
                         }
-                        #[cfg(feature = "mssql-integrated-auth")] // TODO pending, or remove the cfg?
+                        #[cfg(feature = "mssql-integrated-auth")]
+                        // TODO pending, or remove the cfg?
                         crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
                     },
                 });
@@ -139,7 +146,7 @@ impl DatabaseConnection {
     pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
         match self {
             DatabaseConnection::Postgres(conn) => Some(conn),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 
@@ -147,7 +154,7 @@ impl DatabaseConnection {
     pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
         match self {
             DatabaseConnection::SqlServer(conn) => Some(conn),
-            _ => panic!()
+            _ => panic!(),
         }
     }
 }
@@ -171,11 +178,13 @@ mod database_connection_handler {
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
             .expect("A failure happened retrieving the [canyon_sql_root] section");
 
-        #[cfg(feature = "tokio-postgres")] assert_eq!(
+        #[cfg(feature = "tokio-postgres")]
+        assert_eq!(
             config.canyon_sql.datasources[0].get_db_type(),
             DatabaseType::PostgreSql
         );
-        #[cfg(feature = "tiberius")] assert_eq!(
+        #[cfg(feature = "tiberius")]
+        assert_eq!(
             config.canyon_sql.datasources[1].get_db_type(),
             DatabaseType::SqlServer
         );

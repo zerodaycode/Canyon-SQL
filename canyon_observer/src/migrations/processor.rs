@@ -246,7 +246,8 @@ impl MigrationsProcessor {
         )));
     }
 
-    #[cfg(feature = "tiberius")] fn drop_column_not_null(
+    #[cfg(feature = "tiberius")]
+    fn drop_column_not_null(
         &mut self,
         table_name: &str,
         column_name: String,
@@ -644,7 +645,8 @@ impl MigrationsHelper {
         canyon_register_entity_field: &CanyonRegisterEntityField,
         current_column_metadata: &ColumnMetadata,
     ) -> bool {
-        #[cfg(feature = "tokio-postgres")] {
+        #[cfg(feature = "tokio-postgres")]
+        {
             if db_type == DatabaseType::PostgreSql {
                 return canyon_register_entity_field
                     .to_postgres_alter_syntax()
@@ -652,7 +654,8 @@ impl MigrationsHelper {
                     == current_column_metadata.datatype;
             }
         }
-        #[cfg(feature = "tiberius")] {
+        #[cfg(feature = "tiberius")]
+        {
             if db_type == DatabaseType::SqlServer {
                 // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
                 return canyon_register_entity_field
@@ -883,11 +886,15 @@ enum ColumnOperation {
     AlterColumnType(String, CanyonRegisterEntityField),
     AlterColumnDropNotNull(String, CanyonRegisterEntityField),
     // SQL server specific operation - SQL server can't drop a NOT NULL column
-    #[cfg(feature = "tiberius")] DropNotNullBeforeDropColumn(String, String, String),
-    #[cfg(feature = "tokio-postgres")] AlterColumnSetNotNull(String, CanyonRegisterEntityField),
+    #[cfg(feature = "tiberius")]
+    DropNotNullBeforeDropColumn(String, String, String),
+    #[cfg(feature = "tokio-postgres")]
+    AlterColumnSetNotNull(String, CanyonRegisterEntityField),
     // TODO if implement through annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
-    #[cfg(feature = "tokio-postgres")] AlterColumnAddIdentity(String, CanyonRegisterEntityField),
-    #[cfg(feature = "tokio-postgres")] AlterColumnDropIdentity(String, CanyonRegisterEntityField),
+    #[cfg(feature = "tokio-postgres")]
+    AlterColumnAddIdentity(String, CanyonRegisterEntityField),
+    #[cfg(feature = "tokio-postgres")]
+    AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
 
 impl Transaction<Self> for ColumnOperation {}

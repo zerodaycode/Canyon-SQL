@@ -73,7 +73,8 @@ impl CanyonMemory {
 
         // Manually maps the results
         let mut db_rows = Vec::new();
-        #[cfg(feature = "tokio-postgres")] {
+        #[cfg(feature = "tokio-postgres")]
+        {
             let mem_results: &Vec<tokio_postgres::Row> = res.get_postgres_rows();
             for row in mem_results {
                 let db_row = CanyonMemoryRow {
@@ -85,14 +86,18 @@ impl CanyonMemory {
                 db_rows.push(db_row);
             }
         }
-        #[cfg(feature = "tiberius")] {
+        #[cfg(feature = "tiberius")]
+        {
             let mem_results: &Vec<tiberius::Row> = res.get_tiberius_rows();
             for row in mem_results {
                 let db_row = CanyonMemoryRow {
                     id: row.get::<i32, &str>("id").unwrap(),
                     filepath: row.get::<&str, &str>("filepath").unwrap().to_string(),
                     struct_name: row.get::<&str, &str>("struct_name").unwrap().to_string(),
-                    declared_table_name: row.get::<&str, &str>("declared_table_name").unwrap().to_string(),
+                    declared_table_name: row
+                        .get::<&str, &str>("declared_table_name")
+                        .unwrap()
+                        .to_string(),
                 };
                 db_rows.push(db_row);
             }
@@ -104,7 +109,7 @@ impl CanyonMemory {
     async fn populate_memory(
         datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
-        db_rows: Vec<CanyonMemoryRow>
+        db_rows: Vec<CanyonMemoryRow>,
     ) -> CanyonMemory {
         let mut mem = Self {
             memory: Vec::new(),
@@ -240,8 +245,10 @@ impl CanyonMemory {
     #[cfg(not(cargo_check))]
     async fn create_memory(datasource_name: &str, database_type: &DatabaseType) {
         let query = match database_type {
-            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>  constants::postgresql_queries::CANYON_MEMORY_TABLE,
-            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE
+            #[cfg(feature = "tokio-postgres")]
+            DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
+            #[cfg(feature = "tiberius")]
+            DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE,
         };
 
         Self::query(query, [], datasource_name)

@@ -1,8 +1,10 @@
 use regex::Regex;
 
+#[cfg(feature = "tokio-postgres")]
+use crate::constants::postgresql_type;
+#[cfg(feature = "tiberius")]
+use crate::constants::sqlserver_type;
 use crate::constants::{regex_patterns, rust_type, NUMERIC_PK_DATATYPE};
-#[cfg(feature = "tokio-postgres")] use crate::constants::postgresql_type;
-#[cfg(feature = "tiberius")] use crate::constants::sqlserver_type;
 
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
@@ -28,7 +30,8 @@ pub struct CanyonRegisterEntityField {
 
 impl CanyonRegisterEntityField {
     /// Return the postgres datatype and parameters to create a column for a given rust type
-    #[cfg(feature = "tokio-postgres")] pub fn to_postgres_syntax(&self) -> String {
+    #[cfg(feature = "tokio-postgres")]
+    pub fn to_postgres_syntax(&self) -> String {
         let rust_type_clean = self.field_type.replace(' ', "");
 
         match rust_type_clean.as_str() {
@@ -74,7 +77,8 @@ impl CanyonRegisterEntityField {
 
     /// Return the postgres datatype and parameters to create a column for a given rust type
     /// for Microsoft SQL Server
-    #[cfg(feature = "tiberius")] pub fn to_sqlserver_syntax(&self) -> String {
+    #[cfg(feature = "tiberius")]
+    pub fn to_sqlserver_syntax(&self) -> String {
         let rust_type_clean = self.field_type.replace(' ', "");
 
         match rust_type_clean.as_str() {
@@ -120,7 +124,8 @@ impl CanyonRegisterEntityField {
         }
     }
 
-    #[cfg(feature = "tokio-postgres")] pub fn to_postgres_alter_syntax(&self) -> String {
+    #[cfg(feature = "tokio-postgres")]
+    pub fn to_postgres_alter_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
         let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
 
@@ -162,7 +167,8 @@ impl CanyonRegisterEntityField {
         }
     }
 
-    #[cfg(feature = "tiberius")] pub fn to_sqlserver_alter_syntax(&self) -> String {
+    #[cfg(feature = "tiberius")]
+    pub fn to_sqlserver_alter_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
         let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");
 

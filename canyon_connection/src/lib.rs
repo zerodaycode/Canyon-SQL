@@ -1,10 +1,14 @@
-#[cfg(feature = "tiberius")] pub extern crate async_std;
+#[cfg(feature = "tiberius")]
+pub extern crate async_std;
 pub extern crate futures;
 pub extern crate lazy_static;
-#[cfg(feature = "tiberius")] pub extern crate tiberius;
+#[cfg(feature = "tiberius")]
+pub extern crate tiberius;
 pub extern crate tokio;
-#[cfg(feature = "tokio-postgres")] pub extern crate tokio_postgres;
-#[cfg(feature = "tokio-postgres")] pub extern crate tokio_util;
+#[cfg(feature = "tokio-postgres")]
+pub extern crate tokio_postgres;
+#[cfg(feature = "tokio-postgres")]
+pub extern crate tokio_util;
 
 pub mod canyon_database_connector;
 pub mod datasources;
@@ -62,11 +66,10 @@ pub async fn init_connections_cache() {
     }
 }
 
-
 ///
 pub fn get_database_connection<'a>(
     datasource_name: &str,
-    guarded_cache: &'a mut MutexGuard<IndexMap<&str, DatabaseConnection>>
+    guarded_cache: &'a mut MutexGuard<IndexMap<&str, DatabaseConnection>>,
 ) -> &'a mut DatabaseConnection {
     if datasource_name.is_empty() {
         guarded_cache

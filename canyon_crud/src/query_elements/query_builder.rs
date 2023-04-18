@@ -173,7 +173,8 @@ where
             self.query.params.to_vec(),
             self.datasource_name,
         )
-        .await?.into_results::<T>())
+        .await?
+        .into_results::<T>())
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {

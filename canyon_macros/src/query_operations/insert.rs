@@ -94,7 +94,6 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         }
     };
 
-
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
         /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified

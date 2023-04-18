@@ -1,6 +1,6 @@
 use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
-use partialdebug::placeholder::PartialDebug;
 use canyon_crud::rows::CanyonRows;
+use partialdebug::placeholder::PartialDebug;
 
 use crate::{
     canyon_crud::{
@@ -53,7 +53,8 @@ impl Migrations {
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
                 Self::fetch_database(&datasource.name, datasource.get_db_type()).await;
-            let database_tables_schema_info = Self::map_rows(schema_status, datasource.get_db_type());
+            let database_tables_schema_info =
+                Self::map_rows(schema_status, datasource.get_db_type());
 
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
@@ -89,14 +90,19 @@ impl Migrations {
         db_type: DatabaseType,
     ) -> CanyonRows<Migrations> {
         let query = match db_type {
-            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
-            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
+            #[cfg(feature = "tokio-postgres")]
+            DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
+            #[cfg(feature = "tiberius")]
+            DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
         };
 
-        Self::query(query, [], datasource_name).await
-            .unwrap_or_else(|_| {panic!(
-                "Error querying the schema information for the datasource: {datasource_name}"
-            )})
+        Self::query(query, [], datasource_name)
+            .await
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Error querying the schema information for the datasource: {datasource_name}"
+                )
+            })
     }
 
     /// Handler for parse the result of query the information of some database schema,
@@ -104,9 +110,11 @@ impl Migrations {
     /// the data well organized for every entity present on that schema
     fn map_rows(db_results: CanyonRows<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
         match db_results {
-            #[cfg(feature = "tokio-postgres")] CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
-            #[cfg(feature = "tiberius")] CanyonRows::Tiberius(v) => Self::process_tib_rows(v, db_type),
-            _ => panic!()
+            #[cfg(feature = "tokio-postgres")]
+            CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
+            #[cfg(feature = "tiberius")]
+            CanyonRows::Tiberius(v) => Self::process_tib_rows(v, db_type),
+            _ => panic!(),
         }
     }
 
@@ -195,7 +203,10 @@ impl Migrations {
     }
 
     #[cfg(feature = "tokio-postgres")]
-    fn process_tp_rows(db_results: Vec<tokio_postgres::Row>, db_type: DatabaseType) -> Vec<TableMetadata> {
+    fn process_tp_rows(
+        db_results: Vec<tokio_postgres::Row>,
+        db_type: DatabaseType,
+    ) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
         for res_row in db_results.iter() {
             let unique_table = schema_info
@@ -225,7 +236,10 @@ impl Migrations {
     }
 
     #[cfg(feature = "tiberius")]
-    fn process_tib_rows(db_results: Vec<tiberius::Row>, db_type: DatabaseType) -> Vec<TableMetadata> {
+    fn process_tib_rows(
+        db_results: Vec<tiberius::Row>,
+        db_type: DatabaseType,
+    ) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
         for res_row in db_results.iter() {
             let unique_table = schema_info
@@ -255,21 +269,27 @@ impl Migrations {
     }
 }
 
-
 #[cfg(feature = "tokio-postgres")]
 fn get_table_name_from_tp_row(res_row: &tokio_postgres::Row) -> String {
     res_row.get::<&str, String>("table_name")
 }
 #[cfg(feature = "tiberius")]
 fn get_table_name_from_tib_row(res_row: &tiberius::Row) -> String {
-    res_row.get::<&str, &str>("table_name").unwrap_or_default().to_string()
+    res_row
+        .get::<&str, &str>("table_name")
+        .unwrap_or_default()
+        .to_string()
 }
 
-fn check_for_table_name(table: &&mut TableMetadata, db_type: DatabaseType, res_row: &dyn Row) -> bool {
+fn check_for_table_name(
+    table: &&mut TableMetadata,
+    db_type: DatabaseType,
+    res_row: &dyn Row,
+) -> bool {
     match db_type {
-        #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
-            table.table_name == res_row.get_postgres::<&str>("table_name"),
-        #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
-            table.table_name == res_row.get_mssql::<&str>("table_name")
+        #[cfg(feature = "tokio-postgres")]
+        DatabaseType::PostgreSql => table.table_name == res_row.get_postgres::<&str>("table_name"),
+        #[cfg(feature = "tiberius")]
+        DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),
     }
 }

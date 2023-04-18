@@ -3,11 +3,10 @@
 /// Here it's where all the available functionalities and features
 /// reaches the top most level, grouping them and making them visible
 /// through this crate, building the *public API* of the library
-
 extern crate canyon_connection;
 extern crate canyon_crud;
-extern crate canyon_observer;
 extern crate canyon_macros;
+extern crate canyon_observer;
 
 // extern crate async_trait;
 
@@ -43,8 +42,10 @@ pub mod query {
 
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
-    #[cfg(feature = "postgres")] pub use canyon_connection::tokio_postgres;
-    #[cfg(feature = "mssql")] pub use canyon_connection::tiberius;
+    #[cfg(feature = "mssql")]
+    pub use canyon_connection::tiberius;
+    #[cfg(feature = "postgres")]
+    pub use canyon_connection::tokio_postgres;
 }
 
 /// Reexport the needed runtime dependencies

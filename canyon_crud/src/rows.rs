@@ -1,6 +1,6 @@
-use std::marker::PhantomData;
 use crate::crud::Transaction;
 use crate::mapper::RowMapper;
+use std::marker::PhantomData;
 
 /// Lightweight wrapper over the collection of results of the different crates
 /// supported by Canyon-SQL.
@@ -9,9 +9,11 @@ use crate::mapper::RowMapper;
 /// operations that are too difficult or to ugly to implement in the macros that
 /// will call the query method of Crud.
 pub enum CanyonRows<T> {
-    #[cfg(feature = "tokio-postgres")] Postgres(Vec<tokio_postgres::Row>),
-    #[cfg(feature = "tiberius")] Tiberius(Vec<tiberius::Row>),
-    UnusableTypeMarker(PhantomData<T>)
+    #[cfg(feature = "tokio-postgres")]
+    Postgres(Vec<tokio_postgres::Row>),
+    #[cfg(feature = "tiberius")]
+    Tiberius(Vec<tiberius::Row>),
+    UnusableTypeMarker(PhantomData<T>),
 }
 
 impl<T> CanyonRows<T> {
@@ -19,7 +21,7 @@ impl<T> CanyonRows<T> {
     pub fn get_postgres_rows(&self) -> &Vec<tokio_postgres::Row> {
         match self {
             Self::Postgres(v) => v,
-            _ => panic!("This branch will never ever should be reachable")
+            _ => panic!("This branch will never ever should be reachable"),
         }
     }
 
@@ -27,22 +29,21 @@ impl<T> CanyonRows<T> {
     pub fn get_tiberius_rows(&self) -> &Vec<tiberius::Row> {
         match self {
             Self::Tiberius(v) => v,
-            _ => panic!("This branch will never ever should be reachable")
+            _ => panic!("This branch will never ever should be reachable"),
         }
     }
 
     /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of T
-    pub fn into_results<Z: RowMapper<T>>(self) -> Vec<T> where T: Transaction<T> {
+    pub fn into_results<Z: RowMapper<T>>(self) -> Vec<T>
+    where
+        T: Transaction<T>,
+    {
         match self {
-            #[cfg(feature = "tokio-postgres")] Self::Postgres(v) => v
-                .iter()
-                .map(|row| Z::deserialize_postgresql(row))
-                .collect(),
-            #[cfg(feature = "tiberius")] Self::Tiberius(v) => v
-                .iter()
-                .map(|row| Z::deserialize_sqlserver(&row))
-                .collect(),
-            _ => panic!("This branch will never ever should be reachable")
+            #[cfg(feature = "tokio-postgres")]
+            Self::Postgres(v) => v.iter().map(|row| Z::deserialize_postgresql(row)).collect(),
+            #[cfg(feature = "tiberius")]
+            Self::Tiberius(v) => v.iter().map(|row| Z::deserialize_sqlserver(&row)).collect(),
+            _ => panic!("This branch will never ever should be reachable"),
         }
     }
 }
@@ -87,4 +88,3 @@ impl<T> CanyonRows<T> {
 //         }
 //     }
 // }
-
