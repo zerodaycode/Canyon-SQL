@@ -34,7 +34,6 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         ._fields_with_types()
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
-
     let insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;
         let pk_type = &pk_data.1;
@@ -54,22 +53,25 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 stmt,
                 values,
                 datasource_name
-            ).await;
+            ).await?;
 
             match rows {
-                #[cfg(feature = "tokio-postgres")] Self::Postgres(v) => {
-                v.remove(0)
-                    .expect("No value found on the returning clause for Postgres")
-                    .get::<&str, #pk_type>(#primary_key)
-            }
-                #[cfg(feature = "tiberius")] Self::Tiberius(v) => {
-                    v.into_iter()
-                        .flatten()
-                        .collect::<Vec<_>>()
-                        .remove(0)
+                #[cfg(feature = "tokio-postgres")] Self::Postgres(mut v) => {
+                    instance.#pk_ident = v
+                        .get(idx)
+                        .expect("Failed getting the returned IDs for a multi insert")
+                        .get::<&str, #pk_type>(#primary_key);
+                    Ok(())
+                },
+                #[cfg(feature = "tiberius")] Self::Tiberius(mut v) => {
+                    instance.#pk_ident = v
+                        .get(idx)
+                        .expect("Failed getting the returned IDs for a multi insert")
                         .get::<#pk_type, &str>(#primary_key)
-                        .expect("SQL Server primary key type failed to be set as value")
-                }
+                        .expect("SQL Server primary key type failed to be set as value");
+                    Ok(())
+                },
+                _ => panic!() // TODO remove when the generics will be refactored
             }
         }
     } else {
@@ -91,6 +93,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             Ok(())
         }
     };
+
 
     quote! {
         /// Inserts into a database entity the current data in `self`, generating a new
@@ -287,15 +290,12 @@ pub fn generate_multiple_insert_tokens(
                 datasource_name
             ).await;
 
-            match result { // TODO Falta el ds correcto
-                // TODO Recuperar datasource fuera del código cliente
-                /* .for_each(|row| results.push(row as &dyn Row)); */
+            match result {
                 Ok(res) => {
-                    match res.get_active_ds() {
-                        canyon_sql::crud::DatabaseType::PostgreSql => {
+                    match res {
+                        #[cfg(feature = "tokio-postgres")] Self::Postgres(mut v) => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
-                                instance.#pk_ident = res
-                                    .postgres
+                                instance.#pk_ident = v
                                     .get(idx)
                                     .expect("Failed getting the returned IDs for a multi insert")
                                     .get::<&str, #pk_type>(#pk);
@@ -303,18 +303,17 @@ pub fn generate_multiple_insert_tokens(
 
                             Ok(())
                         },
-                        canyon_sql::crud::DatabaseType::SqlServer => {
+                        #[cfg(feature = "tiberius")] Self::Tiberius(mut v) =>
                             for (idx, instance) in instances.iter_mut().enumerate() {
-                                instance.#pk_ident = res
-                                    .sqlserver
+                                instance.#pk_ident = v
                                     .get(idx)
                                     .expect("Failed getting the returned IDs for a multi insert")
                                     .get::<#pk_type, &str>(#pk)
                                     .expect("SQL Server primary key type failed to be set as value");
                             }
 
-                            Ok(())
-                        }
+                            Ok(()),
+                        _ => panic!() // TODO remove when the generics will be refactored
                     }
                 },
                 Err(e) => Err(e)

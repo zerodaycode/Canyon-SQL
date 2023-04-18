@@ -147,39 +147,28 @@ pub fn generate_count_tokens(
     let stmt = format!("SELECT COUNT (*) FROM {table_schema_data}");
 
     let result_handling = quote! {
-        // match count.get_active_ds() {
-        //     canyon_sql_root::crud::DatabaseType::PostgreSql => {
-        //         Ok(
-        //             count.postgres.get(0)
-        //                 .expect(&format!("Count operation failed for {:?}", #ty_str))
-        //                 .get::<&str, i64>("count")
-        //                 .to_owned()
-        //         )
-        //     },
-        //     canyon_sql_root::crud::DatabaseType::SqlServer => {
-        //         Ok(
-        //             count.sqlserver.get(0)
-        //                 .expect(&format!("Count operation failed for {:?}", #ty_str))
-        //                 .get::<i32, usize>(0)
-        //                 .expect(&format!("SQL Server failed to return the count values for {:?}", #ty_str))
-        //                 .into()
-        //         )
-        //     }
-        // }
-        Ok(0 as i64)  // TODO
+        match count {
+            #[cfg(feature = "tokio-postgres")] Self::Postgres(mut v) => Ok(
+                v.remove(0).get::<&str, i64>("count")
+            ),
+            #[cfg(feature = "tiberius")] Self::Tiberius(mut v) =>
+                v.remove(0)
+                    .get::<i64, &str>("count")
+                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into()),
+            _ => panic!() // TODO remove when the generics will be refactored
+        }
     };
 
     quote! {
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
         /// wrapping a possible success or error coming from the database
         async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            let count = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 ""
-            ).await?;
-
-            #result_handling
+            ).await
+            .get_by_idx_and_key(0, "count")
         }
 
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
