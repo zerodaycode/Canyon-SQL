@@ -169,7 +169,7 @@ impl MigrationsProcessor {
         entity_name: &'a str,
         entity_fields: Vec<CanyonRegisterEntityField>,
         current_table_metadata: Option<&'a TableMetadata>,
-        db_type: DatabaseType,
+        _db_type: DatabaseType,
     ) {
         if current_table_metadata.is_none() {
             return;
@@ -188,12 +188,15 @@ impl MigrationsProcessor {
             .collect();
 
         for column_metadata in columns_name_to_delete {
-            if db_type == DatabaseType::SqlServer && !column_metadata.is_nullable {
-                self.drop_column_not_null(
-                    entity_name,
-                    column_metadata.column_name.clone(),
-                    MigrationsHelper::get_datatype_from_column_metadata(column_metadata),
-                )
+            #[cfg(feature = "tiberius")]
+            {
+                if _db_type == DatabaseType::SqlServer && !column_metadata.is_nullable {
+                    self.drop_column_not_null(
+                        entity_name,
+                        column_metadata.column_name.clone(),
+                        MigrationsHelper::get_datatype_from_column_metadata(column_metadata),
+                    )
+                }
             }
             self.delete_column(entity_name, column_metadata.column_name.clone());
         }
@@ -243,7 +246,7 @@ impl MigrationsProcessor {
         )));
     }
 
-    fn drop_column_not_null(
+    #[cfg(feature = "tiberius")] fn drop_column_not_null(
         &mut self,
         table_name: &str,
         column_name: String,
@@ -619,6 +622,7 @@ impl MigrationsHelper {
         }
     }
 
+    #[cfg(feature = "tiberius")]
     fn get_datatype_from_column_metadata(current_column_metadata: &ColumnMetadata) -> String {
         // TODO Add all SQL Server text datatypes
         if vec!["nvarchar", "varchar"]
@@ -640,20 +644,25 @@ impl MigrationsHelper {
         canyon_register_entity_field: &CanyonRegisterEntityField,
         current_column_metadata: &ColumnMetadata,
     ) -> bool {
-        if db_type == DatabaseType::PostgreSql {
-            canyon_register_entity_field
-                .to_postgres_alter_syntax()
-                .to_lowercase()
-                == current_column_metadata.datatype
-        } else if db_type == DatabaseType::SqlServer {
-            // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
-            canyon_register_entity_field
-                .to_sqlserver_alter_syntax()
-                .to_lowercase()
-                == current_column_metadata.datatype
-        } else {
-            todo!()
+        #[cfg(feature = "tokio-postgres")] {
+            if db_type == DatabaseType::PostgreSql {
+                return canyon_register_entity_field
+                    .to_postgres_alter_syntax()
+                    .to_lowercase()
+                    == current_column_metadata.datatype;
+            }
         }
+        #[cfg(feature = "tiberius")] {
+            if db_type == DatabaseType::SqlServer {
+                // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
+                return canyon_register_entity_field
+                    .to_sqlserver_alter_syntax()
+                    .to_lowercase()
+                    == current_column_metadata.datatype;
+            }
+        }
+
+        return false;
     }
 
     fn extract_foreign_key_annotation(field_annotations: &[String]) -> (String, String) {
@@ -752,60 +761,60 @@ impl DatabaseOperation for TableOperation {
 
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
-                if db_type == DatabaseType::PostgreSql {
-                    format!(
-                        "CREATE TABLE \"{table_name}\" ({});",
-                        table_fields
-                            .iter()
-                            .map(|entity_field| format!(
-                                "\"{}\" {}",
-                                entity_field.field_name,
-                                entity_field.to_postgres_syntax()
-                            ))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
-                } else if db_type == DatabaseType::SqlServer {
-                    format!(
-                        "CREATE TABLE {:?} ({:?});",
-                        table_name,
-                        table_fields
-                            .iter()
-                            .map(|entity_field| format!(
-                                "{} {}",
-                                entity_field.field_name,
-                                entity_field.to_sqlserver_syntax()
-                            ))
-                            .collect::<Vec<String>>()
-                            .join(", ")
-                    )
-                    .replace('"', "")
-                } else {
-                    todo!("There's no other databases supported in Canyon-SQL right now")
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => {
+                        format!(
+                            "CREATE TABLE \"{table_name}\" ({});",
+                            table_fields
+                                .iter()
+                                .map(|entity_field| format!(
+                                    "\"{}\" {}",
+                                    entity_field.field_name,
+                                    entity_field.to_postgres_syntax()
+                                ))
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        )
+                    }
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer => {
+                        format!(
+                            "CREATE TABLE {:?} ({:?});",
+                            table_name,
+                            table_fields
+                                .iter()
+                                .map(|entity_field| format!(
+                                    "{} {}",
+                                    entity_field.field_name,
+                                    entity_field.to_sqlserver_syntax()
+                                ))
+                                .collect::<Vec<String>>()
+                                .join(", ")
+                        )
+                            .replace('"', "")
+                    }
                 }
             }
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
-                if db_type == DatabaseType::PostgreSql {
-                    format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};")
-                } else if db_type == DatabaseType::SqlServer {
-                    /*
-                        Notes: Brackets around `old_table_name`, p.e.
-                            exec sp_rename ['league'], 'leagues'  // NOT VALID!
-                        is only allowed for compound names split by a dot.
-                            exec sp_rename ['random.league'], 'leagues'  // OK
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        /*
+                            Notes: Brackets around `old_table_name`, p.e.
+                                exec sp_rename ['league'], 'leagues'  // NOT VALID!
+                            is only allowed for compound names split by a dot.
+                                exec sp_rename ['random.league'], 'leagues'  // OK
 
-                        CARE! This doesn't mean that we are including the schema.
-                            exec sp_rename ['dbo.random.league'], 'leagues' // OK
-                            exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
+                            CARE! This doesn't mean that we are including the schema.
+                                exec sp_rename ['dbo.random.league'], 'leagues' // OK
+                                exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
 
-                        Due to the automatic mapped name from Rust to DB and vice-versa, this won't
-                        be an allowed behaviour for now, only with the table_name parameter on the
-                        CanyonEntity annotation.
-                    */
-                    format!("exec sp_rename '{old_table_name}', '{new_table_name}';")
-                } else {
-                    todo!()
+                            Due to the automatic mapped name from Rust to DB and vice-versa, this won't
+                            be an allowed behaviour for now, only with the table_name parameter on the
+                            CanyonEntity annotation.
+                        */
+                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';")
                 }
             }
 
@@ -816,48 +825,46 @@ impl DatabaseOperation for TableOperation {
                 table_to_reference,
                 column_to_reference,
             ) => {
-                if db_type == DatabaseType::PostgreSql {
-                    format!(
-                        "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
-                        FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
-                    )
-                } else if db_type == DatabaseType::SqlServer {
-                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
-                } else {
-                    todo!()
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!(
+                            "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
+                            FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
+                        ),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constraint_name) => {
-                if db_type == DatabaseType::PostgreSql {
-                    format!(
-                        "ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constraint_name};",
-                    )
-                } else if db_type == DatabaseType::SqlServer {
-                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
-                } else {
-                    todo!()
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!(
+                            "ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constraint_name};",
+                        ),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
 
             TableOperation::AddTablePrimaryKey(table_name, entity_field) => {
-                if db_type == DatabaseType::PostgreSql {
-                    format!(
-                        "ALTER TABLE \"{table_name}\" ADD PRIMARY KEY (\"{}\");",
-                        entity_field.field_name
-                    )
-                } else if db_type == DatabaseType::SqlServer {
-                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
-                } else {
-                    todo!()
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!(
+                            "ALTER TABLE \"{table_name}\" ADD PRIMARY KEY (\"{}\");",
+                            entity_field.field_name
+                        ),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
 
             TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => {
-                if db_type == DatabaseType::PostgreSql || db_type == DatabaseType::SqlServer {
-                    format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
-                } else {
-                    todo!()
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
                 }
             }
         };
@@ -876,11 +883,11 @@ enum ColumnOperation {
     AlterColumnType(String, CanyonRegisterEntityField),
     AlterColumnDropNotNull(String, CanyonRegisterEntityField),
     // SQL server specific operation - SQL server can't drop a NOT NULL column
-    DropNotNullBeforeDropColumn(String, String, String),
-    AlterColumnSetNotNull(String, CanyonRegisterEntityField),
+    #[cfg(feature = "tiberius")] DropNotNullBeforeDropColumn(String, String, String),
+    #[cfg(feature = "tokio-postgres")] AlterColumnSetNotNull(String, CanyonRegisterEntityField),
     // TODO if implement through annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
-    AlterColumnAddIdentity(String, CanyonRegisterEntityField),
-    AlterColumnDropIdentity(String, CanyonRegisterEntityField),
+    #[cfg(feature = "tokio-postgres")] AlterColumnAddIdentity(String, CanyonRegisterEntityField),
+    #[cfg(feature = "tokio-postgres")] AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
 
 impl Transaction<Self> for ColumnOperation {}
@@ -892,51 +899,47 @@ impl DatabaseOperation for ColumnOperation {
 
         let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
-            if db_type == DatabaseType::PostgreSql {
-                format!(
-                "ALTER TABLE \"{}\" ADD COLUMN \"{}\" {};",
-                table_name,
-                entity_field.field_name,
-                entity_field.to_postgres_syntax())
-            }  else if db_type == DatabaseType::SqlServer {
-                format!(
-                    "ALTER TABLE {} ADD \"{}\" {};",
-                    table_name,
-                    entity_field.field_name,
-                    entity_field.to_sqlserver_syntax()
-                )
-            } else {
-                todo!()
-            },
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!(
+                            "ALTER TABLE \"{}\" ADD COLUMN \"{}\" {};",
+                            table_name,
+                            entity_field.field_name,
+                            entity_field.to_postgres_syntax()
+                        ),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        format!(
+                            "ALTER TABLE {} ADD \"{}\" {};",
+                            table_name,
+                            entity_field.field_name,
+                            entity_field.to_sqlserver_syntax()
+                        )
+                }
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is different
                 format!("ALTER TABLE \"{table_name}\" DROP COLUMN \"{column_name}\";")
             },
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
-            if db_type == DatabaseType::PostgreSql {
-                format!(
-                    "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" TYPE {};",
-                    entity_field.field_name, entity_field.to_postgres_alter_syntax()
-                )
-            }  else if db_type == DatabaseType::SqlServer {
-                todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
-            } else {
-                todo!()
-            }
-            ,
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!(
+                            "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" TYPE {};",
+                            entity_field.field_name, entity_field.to_postgres_alter_syntax()
+                        ),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
+                }
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
-            if db_type == DatabaseType::PostgreSql {
-                format!("ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP NOT NULL;", entity_field.field_name)
-            }  else if db_type == DatabaseType::SqlServer {
-                format!(
-                    "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
-                    entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
-                )
-            } else {
-                todo!()
-            }
-
-            ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!("ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP NOT NULL;", entity_field.field_name),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        format!(
+                            "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
+                            entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
+                        )
+                }
+            #[cfg(feature = "tiberius")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
                 format!(
                 "ALTER TABLE {table_name} ALTER COLUMN {column_name} {column_datatype} NULL; DECLARE @tableName VARCHAR(MAX) = '{table_name}'
                 DECLARE @columnName VARCHAR(MAX) = '{column_name}'
@@ -955,11 +958,11 @@ impl DatabaseOperation for ColumnOperation {
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
             ),
 
-            ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
+            #[cfg(feature = "tokio-postgres")] ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;", entity_field.field_name
             ),
 
-            ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
+            #[cfg(feature = "tokio-postgres")] ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP IDENTITY;", entity_field.field_name
             ),
         };
@@ -984,15 +987,14 @@ impl DatabaseOperation for SequenceOperation {
 
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => {
-                if db_type == DatabaseType::PostgreSql {
-                    format!(
-                    "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
-                    entity_field.field_name, entity_field.field_name
-                )
-                } else if db_type == DatabaseType::SqlServer {
-                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
-                } else {
-                    todo!()
+                match db_type {
+                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                        format!(
+                            "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
+                            entity_field.field_name, entity_field.field_name
+                        ),
+                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
         };

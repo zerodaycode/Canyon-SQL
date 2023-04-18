@@ -53,11 +53,9 @@ impl<T> IntoIterator for CanyonRows<T> {
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        #[cfg(feature = "tokio-postgres")] {
-            match self {
-                Self::Postgres(v) => v.into_iter(),
-                _ => panic!()
-            }
+        match self {
+            Self::Postgres(v) => v.into_iter(),
+            _ => panic!()
         }
     }
 }
@@ -68,11 +66,9 @@ impl<T> IntoIterator for CanyonRows<T> {
     type IntoIter = std::vec::IntoIter<Self::Item>;
 
     fn into_iter(self) -> Self::IntoIter {
-        #[cfg(feature = "tokio-postgres")] {
-            match self {
-                Self::Postgres(v) => v.into_iter(),
-                _ => panic!()
-            }
+        match self {
+            Self::Tiberius(v) => v.into_iter(),
+            _ => panic!()
         }
     }
 }

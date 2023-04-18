@@ -104,33 +104,32 @@ impl Migrations {
     /// the data well organized for every entity present on that schema
     fn map_rows(db_results: CanyonRows<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
         let mut schema_info: Vec<TableMetadata> = Vec::new();
-        let row_retriever_fn_ptr = match db_type {
-            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => RowOperations::get_postgres::<&str>,
-            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => RowOperations::get_mssql::<&str>,
-        };
 
         for res_row in db_results.into_iter()
-            .map(|row| &row as &dyn Row)
+            // .map(|row| &row as &dyn Row)
         {
             let unique_table = schema_info
                 .iter_mut()
                 // TODO To be able to remove row from our code, use a match statement to get table name
-                .find(|table| table.table_name == row_retriever_fn_ptr(&res_row, "table_name"));
+                .find(|table| check_for_table_name(table, &res_row as &dyn Row));
             match unique_table {
                 Some(table) => {
                     /* If a table entity it's already present on the collection, we add it
                     the founded columns related to the table */
-                    Self::get_columns_metadata(res_row, table);
+                    Self::get_columns_metadata(&res_row as &dyn Row, table);
                 }
                 None => {
                     /* If there's no table for a given "table_name" property on the
                     collection yet, we must create a new instance and attach it
                     the founded columns data in this iteration */
                     let mut new_table = TableMetadata {
-                        table_name: row_retriever_fn_ptr(&res_row, "table_name").to_string(),
+                        table_name: match db_type {
+                            #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => get_table_name_from_tp_row(&res_row),
+                            #[cfg(feature = "tiberius")] DatabaseType::SqlServer => get_table_name_from_tib_row(&res_row),
+                        },
                         columns: Vec::new(),
                     };
-                    Self::get_columns_metadata(res_row, &mut new_table);
+                    Self::get_columns_metadata(&res_row as &dyn Row, &mut new_table);
                     schema_info.push(new_table);
                 }
             };
@@ -221,5 +220,24 @@ impl Migrations {
                 dest.identity_generation = value.to_owned()
             }
         };
+    }
+}
+
+
+#[cfg(feature = "tokio-postgres")]
+fn get_table_name_from_tp_row(res_row: &tokio_postgres::Row) -> String {
+    res_row.get::<&str, String>("table_name")
+}
+#[cfg(feature = "tiberius")]
+fn get_table_name_from_tib_row(res_row: &tiberius::Row) -> String {
+    res_row.get::<&str, &str>("table_name").unwrap_or_default().to_string()
+}
+
+fn check_for_table_name(table: &&mut TableMetadata, res_row: &dyn Row) -> bool {
+    #[cfg(feature = "tokio-postgres")] {
+        table.table_name == res_row.get_postgres::<&str>("table_name")
+    }
+    #[cfg(feature = "tiberius")] {
+        table.table_name == row_retriever_fn_ptr(&res_row, "table_name")
     }
 }

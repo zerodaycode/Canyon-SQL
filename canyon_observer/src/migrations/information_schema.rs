@@ -52,10 +52,10 @@ impl ColumnMetadataTypeValue {
             }
             #[cfg(feature = "tiberius")] ColumnType::SqlServer(v) => match v {
                 TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => {
-                    Self::StringValue(row.get_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
+                    Self::StringValue(row.get_mssql_opt::<&str>(col.name()).map(|opt| opt.to_owned()))
                 }
                 TIB_TY::Int2 | TIB_TY::Int4 | TIB_TY::Int8 | TIB_TY::Intn => {
-                    Self::IntValue(row.get_opt::<i32>(col.name()))
+                    Self::IntValue(row.get_mssql_opt::<i32>(col.name()))
                 }
                 _ => Self::NoneValue,
             },

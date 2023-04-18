@@ -135,6 +135,7 @@ impl DatabaseConnection {
     }
 
     #[cfg(feature = "tokio-postgres")]
+    #[allow(unreachable_patterns)]
     pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
         match self {
             DatabaseConnection::Postgres(conn) => Some(conn),

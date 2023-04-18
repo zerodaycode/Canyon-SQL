@@ -215,31 +215,36 @@ impl RowOperations for &dyn Row {
     fn columns(&self) -> Vec<Column> {
         let mut cols = vec![];
 
-        /* if self.as_any().is::<tokio_postgres::Row>() {
-            self.as_any()
-                .downcast_ref::<tokio_postgres::Row>()
-                .expect("Not a tokio postgres Row for column")
-                .columns()
-                .iter()
-                .for_each(|c| {
-                    cols.push(Column {
-                        name: c.name(),
-                        type_: ColumnType::Postgres(c.type_().to_owned()),
+        #[cfg(feature = "tokio-postgres")] {
+            if self.as_any().is::<tokio_postgres::Row>() {
+                self.as_any()
+                    .downcast_ref::<tokio_postgres::Row>()
+                    .expect("Not a tokio postgres Row for column")
+                    .columns()
+                    .iter()
+                    .for_each(|c| {
+                        cols.push(Column {
+                            name: c.name(),
+                            type_: ColumnType::Postgres(c.type_().to_owned()),
+                        })
                     })
-                })
-        } else {
-            self.as_any()
-                .downcast_ref::<tiberius::Row>()
-                .expect("Not a Tiberius Row for column")
-                .columns()
-                .iter()
-                .for_each(|c| {
-                    cols.push(Column {
-                        name: c.name(),
-                        type_: ColumnType::SqlServer(c.column_type()),
+            }
+        }
+        #[cfg(feature = "tiberius")] {
+            if self.as_any().is::<tiberius::Row>() {
+                self.as_any()
+                    .downcast_ref::<tiberius::Row>()
+                    .expect("Not a Tiberius Row for column")
+                    .columns()
+                    .iter()
+                    .for_each(|c| {
+                        cols.push(Column {
+                            name: c.name(),
+                            type_: ColumnType::SqlServer(c.column_type()),
+                        })
                     })
-                })
-        }; */
+            };
+        }
 
         cols
     }

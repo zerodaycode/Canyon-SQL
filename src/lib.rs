@@ -4,6 +4,13 @@
 /// reaches the top most level, grouping them and making them visible
 /// through this crate, building the *public API* of the library
 
+extern crate canyon_connection;
+extern crate canyon_crud;
+extern crate canyon_observer;
+extern crate canyon_macros;
+
+// extern crate async_trait;
+
 /// Reexported elements to the root of the public API
 pub mod migrations {
     pub use canyon_observer::migrations::{handler, processor};
@@ -15,7 +22,7 @@ pub use canyon_macros::main;
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
 pub mod macros {
-    pub use async_trait::*;
+    // pub use async_trait::*;
     pub use canyon_macros::*;
 }
 
@@ -36,8 +43,8 @@ pub mod query {
 
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
-    pub use canyon_connection::tiberius;
-    pub use canyon_connection::tokio_postgres;
+    #[cfg(feature = "postgres")] pub use canyon_connection::tokio_postgres;
+    #[cfg(feature = "mssql")] pub use canyon_connection::tiberius;
 }
 
 /// Reexport the needed runtime dependencies
