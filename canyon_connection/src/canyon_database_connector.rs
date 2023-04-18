@@ -171,11 +171,11 @@ mod database_connection_handler {
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
             .expect("A failure happened retrieving the [canyon_sql_root] section");
 
-        assert_eq!(
+        #[cfg(feature = "tokio-postgres")] assert_eq!(
             config.canyon_sql.datasources[0].get_db_type(),
             DatabaseType::PostgreSql
         );
-        assert_eq!(
+        #[cfg(feature = "tiberius")] assert_eq!(
             config.canyon_sql.datasources[1].get_db_type(),
             DatabaseType::SqlServer
         );

@@ -19,7 +19,7 @@ fn load_ds_config_from_array() {
 
     let ds_0 = &config.canyon_sql.datasources[0];
     let ds_1 = &config.canyon_sql.datasources[1];
-    let ds_2 = &config.canyon_sql.datasources[2];
+    let _ds_2 = &config.canyon_sql.datasources[2];
 
     assert_eq!(ds_0.name, "PostgresDS");
     assert_eq!(ds_0.get_db_type(), DatabaseType::PostgreSql);
@@ -35,9 +35,9 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_0.properties.db_name, "triforce");
     assert_eq!(ds_0.properties.migrations, Some(Migrations::Enabled));
 
-    assert_eq!(ds_1.name, "SqlServerDS");
-    assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);
-    assert_eq!(
+    #[cfg(feature = "tiberius")] assert_eq!(ds_1.name, "SqlServerDS");
+    #[cfg(feature = "tiberius")] assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);
+    #[cfg(feature = "tiberius")] assert_eq!(
         ds_1.auth,
         Auth::SqlServer(SqlServerAuth::Basic {
             username: "sa".to_string(),
@@ -49,7 +49,7 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_1.properties.db_name, "triforce2");
     assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
 
-    #[cfg(feature = "tokio-postgres")] assert_eq!(ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated))
+    #[cfg(feature = "tiberius")] assert_eq!(_ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated))
 }
 ///
 #[derive(Deserialize, Debug, Clone)]
@@ -100,7 +100,6 @@ pub enum PostgresAuth {
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },
-    #[cfg(feature = "mssql-integrated-auth")]
     #[serde(alias = "Integrated", alias = "integrated")]
     Integrated,
 }
