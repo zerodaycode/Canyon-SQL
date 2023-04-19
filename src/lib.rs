@@ -8,7 +8,7 @@ extern crate canyon_crud;
 extern crate canyon_macros;
 extern crate canyon_observer;
 
-// extern crate async_trait;
+extern crate async_trait;
 
 /// Reexported elements to the root of the public API
 pub mod migrations {
@@ -21,8 +21,15 @@ pub use canyon_macros::main;
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
 pub mod macros {
-    // pub use async_trait::*;
+    pub use async_trait::*;
     pub use canyon_macros::*;
+}
+
+/// connection module serves to reexport the public elements of the `canyon_connection` crate,
+/// exposing them through the public API
+pub mod connection {
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::Postgres;
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::SqlServer;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
@@ -32,6 +39,7 @@ pub mod crud {
     pub use canyon_crud::crud::*;
     pub use canyon_crud::mapper::*;
     pub use canyon_crud::DatabaseType;
+    pub use canyon_crud::rows::CanyonRows;
 }
 
 /// Re-exports the query elements from the `crud`crate
@@ -42,10 +50,10 @@ pub mod query {
 
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
-    #[cfg(feature = "mssql")]
-    pub use canyon_connection::tiberius;
     #[cfg(feature = "postgres")]
     pub use canyon_connection::tokio_postgres;
+    #[cfg(feature = "mssql")]
+    pub use canyon_connection::tiberius;
 }
 
 /// Reexport the needed runtime dependencies

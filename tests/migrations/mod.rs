@@ -9,8 +9,8 @@ fn test_migrations_postgresql_status_query() {
     let results = Migrations::query(constants::FETCH_PUBLIC_SCHEMA, [], constants::PSQL_DS).await;
     assert!(results.is_ok());
 
-    let public_schema_info = results.ok().unwrap().postgres;
-
+    let res = results.unwrap();
+    let public_schema_info = res.get_postgres_rows();
     let first_result = public_schema_info.get(0).unwrap();
 
     assert_eq!(first_result.columns().get(0).unwrap().name(), "table_name");

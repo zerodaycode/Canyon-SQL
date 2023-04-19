@@ -46,6 +46,17 @@ impl<T> CanyonRows<T> {
             _ => panic!("This branch will never ever should be reachable"),
         }
     }
+
+    /// Returns the number of elements present on the wrapped collection
+    pub fn len(&self) -> usize {
+        match self {
+            #[cfg(feature = "tokio-postgres")]
+            Self::Postgres(v) => v.len(),
+            #[cfg(feature = "tiberius")]
+            Self::Tiberius(v) => v.len(),
+            _ => panic!("This branch will never ever should be reachable"),
+        }
+    }
 }
 
 // #[cfg(feature = "tokio-postgres")]

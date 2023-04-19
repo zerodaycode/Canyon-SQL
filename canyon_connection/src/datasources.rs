@@ -6,7 +6,7 @@ use crate::canyon_database_connector::DatabaseType;
 #[test]
 fn load_ds_config_from_array() {
     const CONFIG_FILE_MOCK_ALT: &str = r#"
-    [canyon_sql_root]
+    [canyon_sql]
     datasources = [
         {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
         {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },

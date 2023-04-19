@@ -12,8 +12,8 @@ description.workspace = true
 [dependencies]
 tokio = { workspace = true }
 tokio-util = { workspace = true }
-tokio-postgres = { workspace = true, optional = true }
-tiberius = { workspace = true, optional = true}
+tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"], optional = true }
+tiberius = { version = "0.12.1", features = ["tds73", "chrono", "integrated-auth-gssapi"], optional = true }
 futures = { workspace = true }
 indexmap = { workspace = true }
 async-std = { workspace = true }

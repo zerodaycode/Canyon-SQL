@@ -27,6 +27,7 @@ pub fn generate_find_all_unchecked_tokens(
                 ""
             ).await
             .unwrap()
+            .into_results::<#ty>()
         }
 
         /// Performs a `SELECT * FROM table_name`, where `table_name` it's
@@ -44,6 +45,7 @@ pub fn generate_find_all_unchecked_tokens(
                 datasource_name
             ).await
             .unwrap()
+            .into_results::<#ty>()
         }
     }
 }
@@ -71,6 +73,7 @@ pub fn generate_find_all_tokens(
                     &[],
                     ""
                 ).await?
+                .into_results::<#ty>()
             )
         }
 
@@ -95,6 +98,7 @@ pub fn generate_find_all_tokens(
                     &[],
                     datasource_name
                 ).await?
+                .into_results::<#ty>()
             )
         }
     }
@@ -148,27 +152,33 @@ pub fn generate_count_tokens(
 
     let result_handling = quote! {
         match count {
-            #[cfg(feature = "tokio-postgres")] Self::Postgres(mut v) => Ok(
+            // #[cfg(feature = "tokio-postgres")]
+            canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
                 v.remove(0).get::<&str, i64>("count")
             ),
-            #[cfg(feature = "tiberius")] Self::Tiberius(mut v) =>
+            // #[cfg(feature = "tiberius")]
+            canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
                 v.remove(0)
-                    .get::<i64, &str>("count")
-                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into()),
+                    .get::<i32, usize>(0)
+                    .map(|c| c as i64)
+                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
+                    .into(),
             _ => panic!() // TODO remove when the generics will be refactored
         }
+        // Ok(0 as i64)
     };
 
     quote! {
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
         /// wrapping a possible success or error coming from the database
         async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            let count = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 #stmt,
                 &[],
                 ""
-            ).await
-            .get_by_idx_and_key(0, "count")
+            ).await?;
+
+            #result_handling
         }
 
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
@@ -226,12 +236,11 @@ pub fn generate_find_by_pk_tokens(
         };
     }
 
-    // TOODO no tenemos number_OF_results
     let result_handling = quote! {
         match result {
             n if n.len() == 0 => Ok(None),
             _ => Ok(
-                Some(result.remove(0))
+                Some(result.into_results::<#ty>().remove(0))
             )
         }
     };
@@ -334,10 +343,9 @@ pub fn generate_find_by_foreign_key_tokens(
             );
             let result_handler = quote! {
                 match result {
-                    // TODO Noof
                     n if n.len() == 0 => Ok(None),
                     _ => Ok(Some(
-                        result.remove(0)
+                        result.into_results::<#fk_ty>().remove(0)
                     ))
                 }
             };
@@ -422,8 +430,8 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                     #quoted_method_signature
                     {
                         let lookage_value = value.get_fk_column(#column)
-                        .expect(format!(
-                            "Column: {:?} not found in type: {:?}", #column, #table
+                            .expect(format!(
+                                "Column: {:?} not found in type: {:?}", #column, #table
                             ).as_str());
 
                         let stmt = format!(
@@ -436,7 +444,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             stmt,
                             &[lookage_value],
                             ""
-                        ).await?)
+                        ).await?.into_results::<#ty>())
                     }
                 },
             ));
@@ -464,7 +472,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             stmt,
                             &[lookage_value],
                             datasource_name
-                        ).await?)
+                        ).await?.into_results::<#ty>())
                     }
                 },
             ));

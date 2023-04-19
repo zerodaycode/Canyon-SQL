@@ -1,13 +1,14 @@
 [package]
 name = "canyon_sql"
-version = "0.2.0"
+version.workspace = true
+edition.workspace = true
 
 [workspace]
 members = [
     "canyon_connection",
+    "canyon_crud",
     "canyon_observer",
     "canyon_macros",
-    "canyon_crud",
 
     "tests"
 ]
@@ -18,6 +19,7 @@ canyon_macros = { version = "0.2.0", path = "canyon_macros" }
 canyon_observer = { version = "0.2.0", path = "canyon_observer" }
 canyon_crud = { version = "0.2.0", path = "canyon_crud" }
 canyon_connection = { version = "0.2.0", path = "canyon_connection" }
+async-trait = "0.1.68"
 
 [workspace.dependencies]
 canyon_crud = { version = "0.2.0", path = "canyon_crud" }

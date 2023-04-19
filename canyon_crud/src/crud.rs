@@ -50,7 +50,7 @@ pub trait Transaction<T> {
         let mut guarded_cache = CACHED_DATABASE_CONN.lock().await;
         let database_conn = get_database_connection(datasource_name, &mut guarded_cache);
 
-        match database_conn {
+        match *database_conn {
             #[cfg(feature = "tokio-postgres")]
             DatabaseConnection::Postgres(_) => {
                 postgres_query_launcher::launch::<T>(
