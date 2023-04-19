@@ -1,6 +1,6 @@
 use regex::Regex;
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 use crate::constants::postgresql_type;
 #[cfg(feature = "tiberius")]
 use crate::constants::sqlserver_type;
@@ -30,7 +30,7 @@ pub struct CanyonRegisterEntityField {
 
 impl CanyonRegisterEntityField {
     /// Return the postgres datatype and parameters to create a column for a given rust type
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     pub fn to_postgres_syntax(&self) -> String {
         let rust_type_clean = self.field_type.replace(' ', "");
 
@@ -124,7 +124,7 @@ impl CanyonRegisterEntityField {
         }
     }
 
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     pub fn to_postgres_alter_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
         let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");

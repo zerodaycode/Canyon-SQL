@@ -152,11 +152,11 @@ pub fn generate_count_tokens(
 
     let result_handling = quote! {
         match count {
-            // #[cfg(feature = "tokio-postgres")]
+            // #[cfg(feature = "postgres")]
             canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
                 v.remove(0).get::<&str, i64>("count")
             ),
-            // #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
                 v.remove(0)
                     .get::<i32, usize>(0)

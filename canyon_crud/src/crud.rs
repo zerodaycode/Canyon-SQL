@@ -51,7 +51,7 @@ pub trait Transaction<T> {
         let database_conn = get_database_connection(datasource_name, &mut guarded_cache);
 
         match *database_conn {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(_) => {
                 postgres_query_launcher::launch::<T>(
                     database_conn,
@@ -60,7 +60,7 @@ pub trait Transaction<T> {
                 )
                 .await
             }
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             DatabaseConnection::SqlServer(_) => {
                 sqlserver_query_launcher::launch::<T, Z>(
                     database_conn,
@@ -161,7 +161,7 @@ where
     fn delete_query_datasource(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
 }
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 mod postgres_query_launcher {
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
@@ -188,7 +188,7 @@ mod postgres_query_launcher {
     }
 }
 
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 mod sqlserver_query_launcher {
     use crate::rows::CanyonRows;
     use crate::{

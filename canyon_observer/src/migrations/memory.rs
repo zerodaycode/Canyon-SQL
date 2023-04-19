@@ -73,7 +73,7 @@ impl CanyonMemory {
 
         // Manually maps the results
         let mut db_rows = Vec::new();
-        #[cfg(feature = "tokio-postgres")]
+        #[cfg(feature = "postgres")]
         {
             let mem_results: &Vec<tokio_postgres::Row> = res.get_postgres_rows();
             for row in mem_results {
@@ -244,7 +244,7 @@ impl CanyonMemory {
     /// Generates, if not exists the `canyon_memory` table
     async fn create_memory(datasource_name: &str, database_type: &DatabaseType) {
         let query = match database_type {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
             #[cfg(feature = "tiberius")]
             DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE,

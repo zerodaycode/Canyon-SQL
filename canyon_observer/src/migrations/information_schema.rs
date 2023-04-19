@@ -1,6 +1,6 @@
 #[cfg(feature = "tiberius")]
 use canyon_connection::tiberius::ColumnType as TIB_TY;
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 use canyon_connection::tokio_postgres::types::Type as TP_TYP;
 use canyon_crud::bounds::{Column, ColumnType, Row, RowOperations};
 
@@ -43,7 +43,7 @@ impl ColumnMetadataTypeValue {
     /// Retrieves the value stored in a [`Column`] for a passed [`Row`]
     pub fn get_value(row: &dyn Row, col: &Column) -> Self {
         match col.column_type() {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             ColumnType::Postgres(v) => {
                 match *v {
                     TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => Self::StringValue(

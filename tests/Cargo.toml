@@ -10,3 +10,8 @@ canyon_sql = { path = ".." }
 [[test]]
 name = "canyon_integration_tests"
 path = "canyon_integration_tests.rs"
+
+[features]
+default = ["postgres"]
+postgres = ["canyon_sql/postgres"]
+mssql = []

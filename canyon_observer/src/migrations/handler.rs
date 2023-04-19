@@ -90,7 +90,7 @@ impl Migrations {
         db_type: DatabaseType,
     ) -> CanyonRows<Migrations> {
         let query = match db_type {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
             #[cfg(feature = "tiberius")]
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
@@ -110,7 +110,7 @@ impl Migrations {
     /// the data well organized for every entity present on that schema
     fn map_rows(db_results: CanyonRows<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
         match db_results {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
             #[cfg(feature = "tiberius")]
             CanyonRows::Tiberius(v) => Self::process_tib_rows(v, db_type),
@@ -202,7 +202,7 @@ impl Migrations {
         };
     }
 
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn process_tp_rows(
         db_results: Vec<tokio_postgres::Row>,
         db_type: DatabaseType,
@@ -269,7 +269,7 @@ impl Migrations {
     }
 }
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 fn get_table_name_from_tp_row(res_row: &tokio_postgres::Row) -> String {
     res_row.get::<&str, String>("table_name")
 }
@@ -287,7 +287,7 @@ fn check_for_table_name(
     res_row: &dyn Row,
 ) -> bool {
     match db_type {
-        #[cfg(feature = "tokio-postgres")]
+        #[cfg(feature = "postgres")]
         DatabaseType::PostgreSql => table.table_name == res_row.get_postgres::<&str>("table_name"),
         #[cfg(feature = "tiberius")]
         DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),

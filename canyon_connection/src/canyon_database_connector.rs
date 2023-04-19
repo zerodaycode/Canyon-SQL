@@ -1,10 +1,10 @@
 use serde::Deserialize;
 
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 use tiberius::{AuthMethod, Config};
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceConfig;
@@ -13,22 +13,22 @@ use crate::datasources::DatasourceConfig;
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {
     #[serde(alias = "postgres", alias = "postgresql")]
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     PostgreSql,
     #[serde(alias = "sqlserver", alias = "mssql")]
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     SqlServer,
 }
 
 /// A connection with a `PostgreSQL` database
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 pub struct PostgreSqlConnection {
     pub client: Client,
     // pub connection: Connection<Socket, NoTlsStream>, // TODO Hold it, or not to hold it... that's the question!
 }
 
 /// A connection with a `SqlServer` database
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
 }
@@ -38,9 +38,9 @@ pub struct SqlServerConnection {
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
 pub enum DatabaseConnection {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     Postgres(PostgreSqlConnection),
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     SqlServer(SqlServerConnection),
 }
 
@@ -52,7 +52,7 @@ impl DatabaseConnection {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.get_db_type() {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => {
                 let (username, password) = match &datasource.auth {
                     crate::datasources::Auth::Postgres(postgres_auth) => match postgres_auth {
@@ -60,7 +60,7 @@ impl DatabaseConnection {
                             (username.as_str(), password.as_str())
                         }
                     },
-                    #[cfg(feature = "tiberius")]
+                    #[cfg(feature = "mssql")]
                     crate::datasources::Auth::SqlServer(_) => {
                         panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
                     }
@@ -89,7 +89,7 @@ impl DatabaseConnection {
                     // connection: new_connection,
                 }))
             }
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
@@ -99,7 +99,7 @@ impl DatabaseConnection {
 
                 // Using SQL Server authentication.
                 config.authentication(match &datasource.auth {
-                    #[cfg(feature = "tokio-postgres")]
+                    #[cfg(feature = "postgres")]
                     crate::datasources::Auth::Postgres(_) => {
                         panic!("Found PostgreSQL auth configuration for a SqlServer database")
                     }
@@ -139,7 +139,7 @@ impl DatabaseConnection {
         }
     }
 
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     #[allow(unreachable_patterns)]
     pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
         match self {
@@ -148,7 +148,7 @@ impl DatabaseConnection {
         }
     }
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
         match self {
             DatabaseConnection::SqlServer(conn) => Some(conn),
@@ -176,12 +176,12 @@ mod database_connection_handler {
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
             .expect("A failure happened retrieving the [canyon_sql_root] section");
 
-        #[cfg(feature = "tokio-postgres")]
+        #[cfg(feature = "postgres")]
         assert_eq!(
             config.canyon_sql.datasources[0].get_db_type(),
             DatabaseType::PostgreSql
         );
-        #[cfg(feature = "tiberius")]
+        #[cfg(feature = "mssql")]
         assert_eq!(
             config.canyon_sql.datasources[1].get_db_type(),
             DatabaseType::SqlServer

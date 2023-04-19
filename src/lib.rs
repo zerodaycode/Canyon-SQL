@@ -28,8 +28,11 @@ pub mod macros {
 /// connection module serves to reexport the public elements of the `canyon_connection` crate,
 /// exposing them through the public API
 pub mod connection {
-    #[cfg(feature = "postgres")] pub use canyon_connection::canyon_database_connector::DatabaseConnection::Postgres;
-    #[cfg(feature = "mssql")] pub use canyon_connection::canyon_database_connector::DatabaseConnection::SqlServer;
+    #[cfg(feature = "postgres")]
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::Postgres;
+
+    #[cfg(feature = "mssql")]
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::SqlServer;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,

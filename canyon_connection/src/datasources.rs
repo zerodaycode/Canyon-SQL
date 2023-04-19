@@ -35,11 +35,11 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_0.properties.db_name, "triforce");
     assert_eq!(ds_0.properties.migrations, Some(Migrations::Enabled));
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     assert_eq!(ds_1.name, "SqlServerDS");
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     assert_eq!(
         ds_1.auth,
         Auth::SqlServer(SqlServerAuth::Basic {
@@ -52,7 +52,7 @@ fn load_ds_config_from_array() {
     assert_eq!(ds_1.properties.db_name, "triforce2");
     assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     assert_eq!(_ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated))
 }
 ///
@@ -76,9 +76,9 @@ pub struct DatasourceConfig {
 impl DatasourceConfig {
     pub fn get_db_type(&self) -> DatabaseType {
         match self.auth {
-            #[cfg(feature = "tokio-postgres")]
+            #[cfg(feature = "postgres")]
             Auth::Postgres(_) => DatabaseType::PostgreSql,
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             Auth::SqlServer(_) => DatabaseType::SqlServer,
         }
     }
@@ -87,22 +87,22 @@ impl DatasourceConfig {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Auth {
     #[serde(alias = "PostgreSQL", alias = "postgresql", alias = "postgres")]
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     Postgres(PostgresAuth),
     #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     SqlServer(SqlServerAuth),
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 pub enum PostgresAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },

@@ -1,6 +1,6 @@
 pub const NUMERIC_PK_DATATYPE: [&str; 6] = ["i16", "u16", "i32", "u32", "i64", "u64"];
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 pub mod postgresql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "CREATE TABLE IF NOT EXISTS canyon_memory (
             id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -144,7 +144,7 @@ pub mod rust_type {
     pub const OPT_NAIVE_DATE_TIME: &str = "Option<NaiveDateTime>";
 }
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 pub mod postgresql_type {
     pub const INT_8: &str = "int8";
     pub const SMALL_INT: &str = "smallint";

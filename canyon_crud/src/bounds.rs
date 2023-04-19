@@ -3,10 +3,10 @@ use crate::{
     mapper::RowMapper,
 };
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 use canyon_connection::tokio_postgres::{self, types::ToSql};
 
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 use canyon_connection::tiberius::{self, ColumnData, IntoSql};
 
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
@@ -86,14 +86,14 @@ pub trait Row {
     fn as_any(&self) -> &dyn Any;
 }
 
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 impl Row for tokio_postgres::Row {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 impl Row for tiberius::Row {
     fn as_any(&self) -> &dyn Any {
         self
@@ -116,8 +116,8 @@ impl<'a> Column<'a> {
     }
     // pub fn type_(&'a self) -> &'_ dyn Type {
     //     match (*self).type_ {
-    //         #[cfg(feature = "tokio-postgres")] ColumnType::Postgres(v) => v as &'a dyn Type,
-    //         #[cfg(feature = "tiberius")] ColumnType::SqlServer(v) => v as &'a dyn Type,
+    //         #[cfg(feature = "postgres")] ColumnType::Postgres(v) => v as &'a dyn Type,
+    //         #[cfg(feature = "mssql")] ColumnType::SqlServer(v) => v as &'a dyn Type,
     //     }
     // }
 }
@@ -125,13 +125,13 @@ impl<'a> Column<'a> {
 pub trait Type {
     fn as_any(&self) -> &dyn Any;
 }
-#[cfg(feature = "tokio-postgres")]
+#[cfg(feature = "postgres")]
 impl Type for tokio_postgres::types::Type {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 impl Type for tiberius::ColumnType {
     fn as_any(&self) -> &dyn Any {
         self
@@ -140,27 +140,27 @@ impl Type for tiberius::ColumnType {
 
 /// Wrapper over the dependencies Column's types
 pub enum ColumnType {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     Postgres(tokio_postgres::types::Type),
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     SqlServer(tiberius::ColumnType),
 }
 
 pub trait RowOperations {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> Output
     where
         Output: tokio_postgres::types::FromSql<'a>;
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn get_mssql<'a, Output>(&'a self, col_name: &'a str) -> Output
     where
         Output: tiberius::FromSql<'a>;
 
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn get_postgres_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
     where
         Output: tokio_postgres::types::FromSql<'a>;
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn get_mssql_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
     where
         Output: tiberius::FromSql<'a>;
@@ -169,7 +169,7 @@ pub trait RowOperations {
 }
 
 impl RowOperations for &dyn Row {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> Output
     where
         Output: tokio_postgres::types::FromSql<'a>,
@@ -179,7 +179,7 @@ impl RowOperations for &dyn Row {
         };
         panic!() // TODO into result and propagate
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn get_mssql<'a, Output>(&'a self, col_name: &'a str) -> Output
     where
         Output: tiberius::FromSql<'a>,
@@ -192,7 +192,7 @@ impl RowOperations for &dyn Row {
         panic!() // TODO into result and propagate
     }
 
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn get_postgres_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
     where
         Output: tokio_postgres::types::FromSql<'a>,
@@ -203,7 +203,7 @@ impl RowOperations for &dyn Row {
         panic!() // TODO into result and propagate
     }
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn get_mssql_opt<'a, Output>(&'a self, col_name: &'a str) -> Option<Output>
     where
         Output: tiberius::FromSql<'a>,
@@ -217,7 +217,7 @@ impl RowOperations for &dyn Row {
     fn columns(&self) -> Vec<Column> {
         let mut cols = vec![];
 
-        #[cfg(feature = "tokio-postgres")]
+        #[cfg(feature = "postgres")]
         {
             if self.as_any().is::<tokio_postgres::Row>() {
                 self.as_any()
@@ -233,7 +233,7 @@ impl RowOperations for &dyn Row {
                     })
             }
         }
-        #[cfg(feature = "tiberius")]
+        #[cfg(feature = "mssql")]
         {
             if self.as_any().is::<tiberius::Row>() {
                 self.as_any()
@@ -257,9 +257,9 @@ impl RowOperations for &dyn Row {
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
 pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
 }
 
@@ -271,7 +271,7 @@ pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
 /// a collection of [`QueryParameter<'a>`], in order to allow a workflow
 /// that is not dependent of the specific type of the argument that holds
 /// the query parameters of the database connectors
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
     fn into_sql(self) -> ColumnData<'a> {
         self.as_sqlserver_param()
@@ -279,131 +279,131 @@ impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
 }
 
 impl<'a> QueryParameter<'a> for bool {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::Bit(Some(*self))
     }
 }
 impl<'a> QueryParameter<'a> for i16 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I16(Some(*self))
     }
 }
 impl<'a> QueryParameter<'a> for &i16 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I16(Some(**self))
     }
 }
 impl<'a> QueryParameter<'a> for Option<i16> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I16(*self)
     }
 }
 impl<'a> QueryParameter<'a> for Option<&i16> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I16(Some(*self.unwrap()))
     }
 }
 impl<'a> QueryParameter<'a> for i32 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I32(Some(*self))
     }
 }
 impl<'a> QueryParameter<'a> for &i32 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I32(Some(**self))
     }
 }
 impl<'a> QueryParameter<'a> for Option<i32> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I32(*self)
     }
 }
 impl<'a> QueryParameter<'a> for Option<&i32> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I32(Some(*self.unwrap()))
     }
 }
 impl<'a> QueryParameter<'a> for f32 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F32(Some(*self))
     }
 }
 impl<'a> QueryParameter<'a> for &f32 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F32(Some(**self))
     }
 }
 impl<'a> QueryParameter<'a> for Option<f32> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F32(*self)
     }
 }
 impl<'a> QueryParameter<'a> for Option<&f32> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F32(Some(
             *self.expect("Error on an f32 value on QueryParameter<'_>"),
@@ -411,42 +411,42 @@ impl<'a> QueryParameter<'a> for Option<&f32> {
     }
 }
 impl<'a> QueryParameter<'a> for f64 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F64(Some(*self))
     }
 }
 impl<'a> QueryParameter<'a> for &f64 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F64(Some(**self))
     }
 }
 impl<'a> QueryParameter<'a> for Option<f64> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F64(*self)
     }
 }
 impl<'a> QueryParameter<'a> for Option<&f64> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::F64(Some(
             *self.expect("Error on an f64 value on QueryParameter<'_>"),
@@ -454,71 +454,71 @@ impl<'a> QueryParameter<'a> for Option<&f64> {
     }
 }
 impl<'a> QueryParameter<'a> for i64 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I64(Some(*self))
     }
 }
 impl<'a> QueryParameter<'a> for &i64 {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I64(Some(**self))
     }
 }
 impl<'a> QueryParameter<'a> for Option<i64> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I64(*self)
     }
 }
 impl<'a> QueryParameter<'a> for Option<&i64> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I64(Some(*self.unwrap()))
     }
 }
 impl<'a> QueryParameter<'a> for String {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::String(Some(std::borrow::Cow::Owned(self.to_owned())))
     }
 }
 impl<'a> QueryParameter<'a> for &String {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::String(Some(std::borrow::Cow::Borrowed(self)))
     }
 }
 impl<'a> QueryParameter<'a> for Option<String> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         match self {
             Some(string) => ColumnData::String(Some(std::borrow::Cow::Owned(string.to_owned()))),
@@ -527,11 +527,11 @@ impl<'a> QueryParameter<'a> for Option<String> {
     }
 }
 impl<'a> QueryParameter<'a> for Option<&String> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         match self {
             Some(string) => ColumnData::String(Some(std::borrow::Cow::Borrowed(string))),
@@ -540,21 +540,21 @@ impl<'a> QueryParameter<'a> for Option<&String> {
     }
 }
 impl<'a> QueryParameter<'_> for &'_ str {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::String(Some(std::borrow::Cow::Borrowed(*self)))
     }
 }
 impl<'a> QueryParameter<'a> for Option<&'_ str> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         match *self {
             Some(str) => ColumnData::String(Some(std::borrow::Cow::Borrowed(str))),
@@ -563,101 +563,101 @@ impl<'a> QueryParameter<'a> for Option<&'_ str> {
     }
 }
 impl<'a> QueryParameter<'_> for NaiveDate {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'a> for Option<NaiveDate> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'_> for NaiveTime {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'a> for Option<NaiveTime> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'_> for NaiveDateTime {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'a> for Option<NaiveDateTime> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'_> for DateTime<FixedOffset> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'a> for Option<DateTime<FixedOffset>> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'_> for DateTime<Utc> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }
 }
 impl<'a> QueryParameter<'_> for Option<DateTime<Utc>> {
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         self.into_sql()
     }

@@ -21,8 +21,8 @@ async-trait = { version = "0.1.50" }
 
 canyon_connection = { workspace = true, path = "../canyon_connection" }
 
-#[features]
-#default = ["postgres"]
-#postgres = ["tokio", "tokio-postgres", "tokio-util"]
-#mssql = ["tiberius", "tiberius/tds73", "tiberius/chrono"]
+[features]
+default = ["postgres"]
+postgres = ["tokio-postgres"]
+mssql = ["tiberius"]
 #mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]

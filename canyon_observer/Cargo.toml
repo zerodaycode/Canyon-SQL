@@ -25,3 +25,8 @@ syn = { version = "1.0.86", features = ["full", "parsing"] }
 quote = "1.0.9"
 partialdebug = "0.2.0"
 
+[features]
+default = ["postgres"]
+postgres = ["tokio-postgres"]
+mssql = ["tiberius"]
+#mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]

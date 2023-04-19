@@ -36,7 +36,35 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
     let insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;
+        let pk_ident_str = &pk_data.0.to_string();
         let pk_type = &pk_data.1;
+
+        let postgres_db_conn_match_arm = if cfg!(feature = "canyon_sql/postgres") {
+            quote! {
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .expect("Failed getting the returned IDs for an insert")
+                        .get::<&str, #pk_type>(#primary_key);
+                    Ok(())
+                }
+            }
+        } else {
+            println!("No feature postgres detected for: {:?}", pk_ident_str);
+            quote! {}
+        };
+
+        let mssql_db_conn_match_arm = if cfg!(feature = "mssql") {
+            quote! {
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .expect("Failed getting the returned IDs for an insert")
+                        .get::<&str, #pk_type>(#primary_key);
+                    Ok(())
+                }
+            }
+        } else { quote! {} };
 
         quote! {
             #remove_pk_value_from_fn_entry;
@@ -56,24 +84,9 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             ).await?;
 
            match rows {
-                // #[cfg(feature = "tokio-postgres")]
-                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
-                    self.#pk_ident = v
-                        .get(0)
-                        .expect("Failed getting the returned IDs for an insert")
-                        .get::<&str, #pk_type>(#primary_key);
-                    Ok(())
-                },
-                // #[cfg(feature = "tiberius")]
-                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
-                    self.#pk_ident = v
-                        .get(0)
-                        .expect("Failed getting the returned IDs for an insert")
-                        .get::<#pk_type, &str>(#primary_key)
-                        .expect("SQL Server primary key type failed to be set as value");
-                    Ok(())
-                },
-                _ => panic!() // TODO remove when the generics will be refactored
+                #postgres_db_conn_match_arm
+                #mssql_db_conn_match_arm
+                _ => panic!("Reached the panic match arm of insert for the DatabaseConnection type") // TODO remove when the generics will be refactored
             }
         }
     } else {
@@ -294,7 +307,7 @@ pub fn generate_multiple_insert_tokens(
             match result {
                 Ok(res) => {
                     match res {
-                        // #[cfg(feature = "tokio-postgres")]
+                        // #[cfg(feature = "postgres")]
                         canyon_sql::crud::CanyonRows::Postgres(mut v) => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = v
@@ -305,7 +318,7 @@ pub fn generate_multiple_insert_tokens(
 
                             Ok(())
                         },
-                        // #[cfg(feature = "tiberius")]
+                        #[cfg(feature = "mssql")]
                         canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = v

@@ -645,7 +645,7 @@ impl MigrationsHelper {
         canyon_register_entity_field: &CanyonRegisterEntityField,
         current_column_metadata: &ColumnMetadata,
     ) -> bool {
-        #[cfg(feature = "tokio-postgres")]
+        #[cfg(feature = "postgres")]
         {
             if db_type == DatabaseType::PostgreSql {
                 return canyon_register_entity_field
@@ -765,7 +765,7 @@ impl DatabaseOperation for TableOperation {
         let stmt = match self {
             TableOperation::CreateTable(table_name, table_fields) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql => {
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql => {
                         format!(
                             "CREATE TABLE \"{table_name}\" ({});",
                             table_fields
@@ -800,7 +800,7 @@ impl DatabaseOperation for TableOperation {
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
                     #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
                         /*
@@ -829,7 +829,7 @@ impl DatabaseOperation for TableOperation {
                 column_to_reference,
             ) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
                             FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
@@ -841,7 +841,7 @@ impl DatabaseOperation for TableOperation {
 
             TableOperation::DeleteTableForeignKey(table_with_foreign_key, constraint_name) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constraint_name};",
                         ),
@@ -852,7 +852,7 @@ impl DatabaseOperation for TableOperation {
 
             TableOperation::AddTablePrimaryKey(table_name, entity_field) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "ALTER TABLE \"{table_name}\" ADD PRIMARY KEY (\"{}\");",
                             entity_field.field_name
@@ -864,7 +864,7 @@ impl DatabaseOperation for TableOperation {
 
             TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
                     #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
                         format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
@@ -888,12 +888,12 @@ enum ColumnOperation {
     // SQL server specific operation - SQL server can't drop a NOT NULL column
     #[cfg(feature = "tiberius")]
     DropNotNullBeforeDropColumn(String, String, String),
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     AlterColumnSetNotNull(String, CanyonRegisterEntityField),
     // TODO if implement through annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     AlterColumnAddIdentity(String, CanyonRegisterEntityField),
-    #[cfg(feature = "tokio-postgres")]
+    #[cfg(feature = "postgres")]
     AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
 
@@ -907,7 +907,7 @@ impl DatabaseOperation for ColumnOperation {
         let stmt = match self {
             ColumnOperation::CreateColumn(table_name, entity_field) =>
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "ALTER TABLE \"{}\" ADD COLUMN \"{}\" {};",
                             table_name,
@@ -928,7 +928,7 @@ impl DatabaseOperation for ColumnOperation {
             },
             ColumnOperation::AlterColumnType(table_name, entity_field) =>
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" TYPE {};",
                             entity_field.field_name, entity_field.to_postgres_alter_syntax()
@@ -938,7 +938,7 @@ impl DatabaseOperation for ColumnOperation {
                 }
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP NOT NULL;", entity_field.field_name),
                     #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
                         format!(
@@ -965,11 +965,11 @@ impl DatabaseOperation for ColumnOperation {
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
             ),
 
-            #[cfg(feature = "tokio-postgres")] ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
+            #[cfg(feature = "postgres")] ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;", entity_field.field_name
             ),
 
-            #[cfg(feature = "tokio-postgres")] ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
+            #[cfg(feature = "postgres")] ColumnOperation::AlterColumnDropIdentity(table_name, entity_field) => format!(
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP IDENTITY;", entity_field.field_name
             ),
         };
@@ -995,7 +995,7 @@ impl DatabaseOperation for SequenceOperation {
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => {
                 match db_type {
-                    #[cfg(feature = "tokio-postgres")] DatabaseType::PostgreSql =>
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
                             entity_field.field_name, entity_field.field_name
