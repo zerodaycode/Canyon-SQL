@@ -55,28 +55,26 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 datasource_name
             ).await?;
 
-            Ok(())
-
-           /* match rows {
+           match rows {
                 // #[cfg(feature = "tokio-postgres")]
-                canyon_sql::connection::Postgres(mut v) => {
-                    instance.#pk_ident = v
-                        .get(idx)
-                        .expect("Failed getting the returned IDs for a multi insert")
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .expect("Failed getting the returned IDs for an insert")
                         .get::<&str, #pk_type>(#primary_key);
                     Ok(())
                 },
                 // #[cfg(feature = "tiberius")]
-                canyon_sql::connection::Tiberius(mut v) => {
-                    instance.#pk_ident = v
-                        .get(idx)
-                        .expect("Failed getting the returned IDs for a multi insert")
+                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .expect("Failed getting the returned IDs for an insert")
                         .get::<#pk_type, &str>(#primary_key)
                         .expect("SQL Server primary key type failed to be set as value");
                     Ok(())
                 },
                 _ => panic!() // TODO remove when the generics will be refactored
-            } */
+            }
         }
     } else {
         quote! {
@@ -296,7 +294,8 @@ pub fn generate_multiple_insert_tokens(
             match result {
                 Ok(res) => {
                     match res {
-                        #[cfg(feature = "tokio-postgres")] Self::Postgres(mut v) => {
+                        // #[cfg(feature = "tokio-postgres")]
+                        canyon_sql::crud::CanyonRows::Postgres(mut v) => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = v
                                     .get(idx)
@@ -306,7 +305,8 @@ pub fn generate_multiple_insert_tokens(
 
                             Ok(())
                         },
-                        #[cfg(feature = "tiberius")] Self::Tiberius(mut v) => {
+                        // #[cfg(feature = "tiberius")]
+                        canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
                             for (idx, instance) in instances.iter_mut().enumerate() {
                                 instance.#pk_ident = v
                                     .get(idx)
@@ -315,7 +315,7 @@ pub fn generate_multiple_insert_tokens(
                                     .expect("SQL Server primary key type failed to be set as value");
                             }
 
-                            Ok(()),
+                            Ok(())
                         },
                         _ => panic!() // TODO remove when the generics will be refactored
                     }
@@ -378,16 +378,13 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name
-            ).await;
+            ).await?;
 
-            match result {
-                Ok(res) => Ok(()),
-                Err(e) => Err(e)
-            }
+            Ok(())
         }
     };
 
@@ -445,8 +442,7 @@ pub fn generate_multiple_insert_tokens(
 
             let mut mapped_fields: String = String::new();
 
-            // #multi_insert_transaction
-            Ok(())
+            #multi_insert_transaction
         }
 
         /// Inserts multiple instances of some type `T` into its related table with the specified
@@ -502,8 +498,7 @@ pub fn generate_multiple_insert_tokens(
 
             let mut mapped_fields: String = String::new();
 
-            // #multi_insert_transaction
-            Ok(())
+            #multi_insert_transaction
         }
     }
 }

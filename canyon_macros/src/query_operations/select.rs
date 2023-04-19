@@ -165,7 +165,6 @@ pub fn generate_count_tokens(
                     .into(),
             _ => panic!() // TODO remove when the generics will be refactored
         }
-        // Ok(0 as i64)
     };
 
     quote! {
