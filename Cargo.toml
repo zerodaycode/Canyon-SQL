@@ -2,6 +2,12 @@
 name = "canyon_sql"
 version.workspace = true
 edition.workspace = true
+authors.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+description.workspace = true
 
 [workspace]
 members = [
