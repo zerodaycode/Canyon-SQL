@@ -5,10 +5,9 @@ pub extern crate lazy_static;
 #[cfg(feature = "mssql")]
 pub extern crate tiberius;
 pub extern crate tokio;
+pub extern crate tokio_util;
 #[cfg(feature = "postgres")]
 pub extern crate tokio_postgres;
-#[cfg(feature = "postgres")]
-pub extern crate tokio_util;
 
 pub mod canyon_database_connector;
 pub mod datasources;

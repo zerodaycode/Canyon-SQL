@@ -1,3 +1,4 @@
+pub extern crate async_trait;
 extern crate canyon_connection;
 
 pub mod bounds;

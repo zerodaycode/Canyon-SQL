@@ -24,6 +24,5 @@ serde = { workspace = true, features = ["derive"] }
 async-std = { workspace = true, optional = true }
 
 [features]
-default = ["postgres"]
 postgres = ["tokio-postgres"]
 mssql = ["tiberius", "async-std"]

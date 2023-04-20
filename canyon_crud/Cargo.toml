@@ -10,18 +10,13 @@ license.workspace = true
 description.workspace = true
 
 [dependencies]
-#tokio = { workspace = true, features = ["full"], optional = true }
-#tokio-util = { workspace = true, features = ["compat"], optional = true }
-#tokio-postgres = { workspace = true, features = ["with-chrono-0_4"], optional = true }
-#tiberius = { workspace = true, features = ["tds73", "chrono", "integrated-auth-gssapi"], optional = true }
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
-chrono = { version = "0.4", features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
 async-trait = { workspace = true }
 
 canyon_connection = { workspace = true, path = "../canyon_connection" }
 
 [features]
-default = ["postgres"]
 postgres = ["tokio-postgres", "canyon_connection/postgres"]
 mssql = ["tiberius", "canyon_connection/mssql"]

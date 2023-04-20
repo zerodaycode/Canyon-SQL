@@ -318,8 +318,10 @@ impl MigrationsProcessor {
             if attr.starts_with("Annotation: PrimaryKey") {
                 Self::add_primary_key(self, entity_name, canyon_register_entity_field.clone());
 
-                if canyon_register_entity_field.is_autoincremental() {
-                    Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
+                #[cfg(feature = "postgres")] {
+                    if canyon_register_entity_field.is_autoincremental() {
+                        Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
+                    }
                 }
             }
         }
@@ -355,6 +357,7 @@ impl MigrationsProcessor {
             )));
     }
 
+    #[cfg(feature = "postgres")]
     fn add_identity(&mut self, entity_name: &str, field: CanyonRegisterEntityField) {
         self.constraints_operations
             .push(Box::new(ColumnOperation::AlterColumnAddIdentity(
@@ -390,19 +393,22 @@ impl MigrationsProcessor {
         if field_is_primary_key && current_column_metadata.primary_key_info.is_none() {
             Self::add_primary_key(self, entity_name, canyon_register_entity_field.clone());
 
-            if canyon_register_entity_field.is_autoincremental() {
-                Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
+            #[cfg(feature = "postgres")] {
+                if canyon_register_entity_field.is_autoincremental() {
+                    Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
+                }
             }
         }
         // Case when the field contains a primary key annotation, and it's already on the database
         else if field_is_primary_key && current_column_metadata.primary_key_info.is_some() {
-            let is_autoincr_rust = canyon_register_entity_field.is_autoincremental();
-            let is_autoincr_in_db = current_column_metadata.is_identity;
-
-            if !is_autoincr_rust && is_autoincr_in_db {
-                Self::drop_identity(self, entity_name, canyon_register_entity_field.clone())
-            } else if is_autoincr_rust && !is_autoincr_in_db {
-                Self::add_identity(self, entity_name, canyon_register_entity_field.clone())
+            #[cfg(feature = "postgres")] {
+                let is_autoincr_rust = canyon_register_entity_field.is_autoincremental();
+                let is_autoincr_in_db = current_column_metadata.is_identity;
+                if !is_autoincr_rust && is_autoincr_in_db {
+                    Self::drop_identity(self, entity_name, canyon_register_entity_field.clone())
+                } else if is_autoincr_rust && !is_autoincr_in_db {
+                    Self::add_identity(self, entity_name, canyon_register_entity_field.clone())
+                }
             }
         }
         // Case when field doesn't contains a primary key annotation, but there is one in the database column
@@ -417,8 +423,10 @@ impl MigrationsProcessor {
                     .to_string(),
             );
 
-            if current_column_metadata.is_identity {
-                Self::drop_identity(self, entity_name, canyon_register_entity_field.clone());
+            #[cfg(feature = "postgres")] {
+                if current_column_metadata.is_identity {
+                    Self::drop_identity(self, entity_name, canyon_register_entity_field.clone());
+                }
             }
         }
 
@@ -531,6 +539,7 @@ impl MigrationsProcessor {
             )));
     }
 
+    #[cfg(feature = "postgres")]
     fn drop_identity(
         &mut self,
         entity_name: &str,
@@ -822,40 +831,40 @@ impl DatabaseOperation for TableOperation {
             }
 
             TableOperation::AddTableForeignKey(
-                table_name,
-                foreign_key_name,
-                column_foreign_key,
-                table_to_reference,
-                column_to_reference,
+                _table_name,
+                _foreign_key_name,
+                _column_foreign_key,
+                _table_to_reference,
+                _column_to_reference,
             ) => {
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
-                            "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
-                            FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
+                            "ALTER TABLE {_table_name} ADD CONSTRAINT {_foreign_key_name} \
+                            FOREIGN KEY ({_column_foreign_key}) REFERENCES {_table_to_reference} ({_column_to_reference});"
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
 
-            TableOperation::DeleteTableForeignKey(table_with_foreign_key, constraint_name) => {
+            TableOperation::DeleteTableForeignKey(_table_with_foreign_key, _constraint_name) => {
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
-                            "ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constraint_name};",
+                            "ALTER TABLE {_table_with_foreign_key} DROP CONSTRAINT {_constraint_name};",
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
 
-            TableOperation::AddTablePrimaryKey(table_name, entity_field) => {
+            TableOperation::AddTablePrimaryKey(_table_name, _entity_field) => {
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
-                            "ALTER TABLE \"{table_name}\" ADD PRIMARY KEY (\"{}\");",
-                            entity_field.field_name
+                            "ALTER TABLE \"{_table_name}\" ADD PRIMARY KEY (\"{}\");",
+                            _entity_field.field_name
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -885,12 +894,10 @@ enum ColumnOperation {
     // AlterColumnName,
     AlterColumnType(String, CanyonRegisterEntityField),
     AlterColumnDropNotNull(String, CanyonRegisterEntityField),
-    // SQL server specific operation - SQL server can't drop a NOT NULL column
-    #[cfg(feature = "mssql")]
-    DropNotNullBeforeDropColumn(String, String, String),
-    #[cfg(feature = "postgres")]
     AlterColumnSetNotNull(String, CanyonRegisterEntityField),
-    // TODO if implement through annotations, modify for both GENERATED {ALWAYS, BY DEFAULT}
+
+    #[cfg(feature = "mssql")] // SQL server specific operation - SQL server can't drop a NOT NULL column
+    DropNotNullBeforeDropColumn(String, String, String),
     #[cfg(feature = "postgres")]
     AlterColumnAddIdentity(String, CanyonRegisterEntityField),
     #[cfg(feature = "postgres")]
@@ -926,12 +933,12 @@ impl DatabaseOperation for ColumnOperation {
                 // TODO Check if operation for SQL server is different
                 format!("ALTER TABLE \"{table_name}\" DROP COLUMN \"{column_name}\";")
             },
-            ColumnOperation::AlterColumnType(table_name, entity_field) =>
+            ColumnOperation::AlterColumnType(_table_name, _entity_field) =>
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
-                            "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" TYPE {};",
-                            entity_field.field_name, entity_field.to_postgres_alter_syntax()
+                            "ALTER TABLE \"{_table_name}\" ALTER COLUMN \"{}\" TYPE {};",
+                            _entity_field.field_name, _entity_field.to_postgres_alter_syntax()
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -961,9 +968,18 @@ impl DatabaseOperation for ColumnOperation {
                     EXEC('ALTER TABLE '+@tableName+' DROP CONSTRAINT ' + @ConstraintName);"
             ),
 
-            ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) => format!(
-                "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
-            ),
+            ColumnOperation::AlterColumnSetNotNull(table_name, entity_field) => {
+                match db_type {
+                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql => format!(
+                        "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" SET NOT NULL;", entity_field.field_name
+                    ),
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer => format!(
+                        "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NOT NULL",
+                        entity_field.field_name,
+                        entity_field.to_sqlserver_alter_syntax()
+                    )
+                }
+            }
 
             #[cfg(feature = "postgres")] ColumnOperation::AlterColumnAddIdentity(table_name, entity_field) => format!(
                 "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" ADD GENERATED ALWAYS AS IDENTITY;", entity_field.field_name
@@ -979,33 +995,26 @@ impl DatabaseOperation for ColumnOperation {
 }
 
 /// Helper for operations involving sequences
+#[cfg(feature = "postgres")]
 #[derive(Debug)]
-#[allow(dead_code)]
 enum SequenceOperation {
     ModifySequence(String, CanyonRegisterEntityField),
 }
-
+#[cfg(feature = "postgres")]
 impl Transaction<Self> for SequenceOperation {}
 
+#[cfg(feature = "postgres")]
 #[async_trait]
 impl DatabaseOperation for SequenceOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig) {
-        let db_type = datasource.get_db_type();
-
         let stmt = match self {
             SequenceOperation::ModifySequence(table_name, entity_field) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
-                            entity_field.field_name, entity_field.field_name
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
-                }
+                format!(
+                    "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
+                    entity_field.field_name, entity_field.field_name
+                )
             }
         };
-
         save_migrations_query_to_execute(stmt, &datasource.name);
     }
 }

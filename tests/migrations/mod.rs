@@ -1,9 +1,11 @@
+#![allow(unused_imports)]
 ///! Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::{crud::Transaction, migrations::handler::Migrations};
 
 use crate::constants;
 
 /// Brings the information of the `PostgreSQL` requested schema
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_migrations_postgresql_status_query() {
     let results = Migrations::query(constants::FETCH_PUBLIC_SCHEMA, [], constants::PSQL_DS).await;

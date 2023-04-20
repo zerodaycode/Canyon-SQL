@@ -140,19 +140,18 @@ impl DatabaseConnection {
     }
 
     #[cfg(feature = "postgres")]
-    #[allow(unreachable_patterns)]
-    pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
+    pub fn postgres_connection(&self) -> &PostgreSqlConnection {
         match self {
-            DatabaseConnection::Postgres(conn) => Some(conn),
-            _ => panic!(),
+            DatabaseConnection::Postgres(conn) => conn,
+            #[cfg(all(feature = "postgres", feature = "mssql"))] _ => panic!(),
         }
     }
 
     #[cfg(feature = "mssql")]
-    pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
+    pub fn sqlserver_connection(&mut self) -> &mut SqlServerConnection {
         match self {
-            DatabaseConnection::SqlServer(conn) => Some(conn),
-            _ => panic!(),
+            DatabaseConnection::SqlServer(conn) => conn,
+            #[cfg(all(feature = "postgres", feature = "mssql"))] _ => panic!(),
         }
     }
 }

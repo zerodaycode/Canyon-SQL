@@ -26,6 +26,5 @@ quote = "1.0.9"
 partialdebug = "0.2.0"
 
 [features]
-default = ["postgres"]
 postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres"]
 mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql"]

@@ -179,7 +179,6 @@ mod postgres_query_launcher {
 
         let r = db_conn
             .postgres_connection()
-            .unwrap()
             .client
             .query(&stmt, m_params.as_slice())
             .await?;
@@ -228,7 +227,6 @@ mod sqlserver_query_launcher {
             .query(
                 db_conn
                     .sqlserver_connection()
-                    .expect("Error querying the MSSQL database")
                     .client,
             )
             .await?
