@@ -11,6 +11,7 @@
 /// in order to perform the migrations
 pub mod migrations;
 
+extern crate canyon_connection;
 extern crate canyon_crud;
 
 mod constants;

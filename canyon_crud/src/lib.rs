@@ -1,10 +1,11 @@
+pub extern crate async_trait;
 extern crate canyon_connection;
 
 pub mod bounds;
 pub mod crud;
 pub mod mapper;
 pub mod query_elements;
-pub mod result;
+pub mod rows;
 
 pub use query_elements::operators::*;
 

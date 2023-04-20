@@ -1,15 +1,22 @@
 [package]
 name = "canyon_crud"
-version = "0.2.0"
-edition = "2021"
-documentation = "https://zerodaycode.github.io/canyon-book/"
-homepage = "https://github.com/zerodaycode/Canyon-SQL"
-readme = "../README.md"
-license = "MIT"
-description = "A Rust ORM and QueryBuilder"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+description.workspace = true
 
 [dependencies]
-chrono = { version = "0.4", features = ["serde"] }
-async-trait = { version = "0.1.50" }
+tokio-postgres = { workspace = true, optional = true }
+tiberius = { workspace = true, optional = true }
+chrono = { workspace = true }
+async-trait = { workspace = true }
 
-canyon_connection = { version = "0.2.0", path = "../canyon_connection" }
+canyon_connection = { workspace = true }
+
+[features]
+postgres = ["tokio-postgres", "canyon_connection/postgres"]
+mssql = ["tiberius", "canyon_connection/mssql"]

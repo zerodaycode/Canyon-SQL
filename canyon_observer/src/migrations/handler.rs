@@ -1,11 +1,11 @@
 use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
+use canyon_crud::rows::CanyonRows;
 use partialdebug::placeholder::PartialDebug;
 
 use crate::{
     canyon_crud::{
         bounds::{Column, Row, RowOperations},
         crud::Transaction,
-        result::DatabaseResult,
         DatabaseType,
     },
     constants,
@@ -53,7 +53,8 @@ impl Migrations {
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
                 Self::fetch_database(&datasource.name, datasource.get_db_type()).await;
-            let database_tables_schema_info = Self::map_rows(schema_status);
+            let database_tables_schema_info =
+                Self::map_rows(schema_status, datasource.get_db_type());
 
             // We filter the tables from the schema that aren't Canyon entities
             let mut user_database_tables = vec![];
@@ -87,9 +88,11 @@ impl Migrations {
     async fn fetch_database(
         datasource_name: &str,
         db_type: DatabaseType,
-    ) -> DatabaseResult<Migrations> {
+    ) -> CanyonRows<Migrations> {
         let query = match db_type {
+            #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
         };
 
@@ -105,34 +108,14 @@ impl Migrations {
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
-    fn map_rows(db_results: DatabaseResult<Migrations>) -> Vec<TableMetadata> {
-        let mut schema_info: Vec<TableMetadata> = Vec::new();
-
-        for res_row in db_results.as_canyon_rows().into_iter() {
-            let unique_table = schema_info
-                .iter_mut()
-                .find(|table| table.table_name == *res_row.get::<&str>("table_name").to_owned());
-            match unique_table {
-                Some(table) => {
-                    /* If a table entity it's already present on the collection, we add it
-                    the founded columns related to the table */
-                    Self::get_columns_metadata(res_row, table);
-                }
-                None => {
-                    /* If there's no table for a given "table_name" property on the
-                    collection yet, we must create a new instance and attach it
-                    the founded columns data in this iteration */
-                    let mut new_table = TableMetadata {
-                        table_name: res_row.get::<&str>("table_name").to_owned(),
-                        columns: Vec::new(),
-                    };
-                    Self::get_columns_metadata(res_row, &mut new_table);
-                    schema_info.push(new_table);
-                }
-            };
+    fn map_rows(db_results: CanyonRows<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
+        match db_results {
+            #[cfg(feature = "postgres")]
+            CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
+            #[cfg(feature = "mssql")]
+            CanyonRows::Tiberius(v) => Self::process_tib_rows(v, db_type),
+            _ => panic!(),
         }
-
-        schema_info
     }
 
     /// Parses all the [`Row`] after query the information of the targeted schema,
@@ -217,5 +200,96 @@ impl Migrations {
                 dest.identity_generation = value.to_owned()
             }
         };
+    }
+
+    #[cfg(feature = "postgres")]
+    fn process_tp_rows(
+        db_results: Vec<tokio_postgres::Row>,
+        db_type: DatabaseType,
+    ) -> Vec<TableMetadata> {
+        let mut schema_info: Vec<TableMetadata> = Vec::new();
+        for res_row in db_results.iter() {
+            let unique_table = schema_info
+                .iter_mut()
+                .find(|table| check_for_table_name(table, db_type, res_row as &dyn Row));
+            match unique_table {
+                Some(table) => {
+                    /* If a table entity it's already present on the collection, we add it
+                    the founded columns related to the table */
+                    Self::get_columns_metadata(res_row as &dyn Row, table);
+                }
+                None => {
+                    /* If there's no table for a given "table_name" property on the
+                    collection yet, we must create a new instance and attach it
+                    the founded columns data in this iteration */
+                    let mut new_table = TableMetadata {
+                        table_name: get_table_name_from_tp_row(res_row),
+                        columns: Vec::new(),
+                    };
+                    Self::get_columns_metadata(res_row as &dyn Row, &mut new_table);
+                    schema_info.push(new_table);
+                }
+            };
+        }
+
+        schema_info
+    }
+
+    #[cfg(feature = "mssql")]
+    fn process_tib_rows(
+        db_results: Vec<tiberius::Row>,
+        db_type: DatabaseType,
+    ) -> Vec<TableMetadata> {
+        let mut schema_info: Vec<TableMetadata> = Vec::new();
+        for res_row in db_results.iter() {
+            let unique_table = schema_info
+                .iter_mut()
+                .find(|table| check_for_table_name(table, db_type, res_row as &dyn Row));
+            match unique_table {
+                Some(table) => {
+                    /* If a table entity it's already present on the collection, we add it
+                    the founded columns related to the table */
+                    Self::get_columns_metadata(res_row as &dyn Row, table);
+                }
+                None => {
+                    /* If there's no table for a given "table_name" property on the
+                    collection yet, we must create a new instance and attach it
+                    the founded columns data in this iteration */
+                    let mut new_table = TableMetadata {
+                        table_name: get_table_name_from_tib_row(res_row),
+                        columns: Vec::new(),
+                    };
+                    Self::get_columns_metadata(res_row as &dyn Row, &mut new_table);
+                    schema_info.push(new_table);
+                }
+            };
+        }
+
+        schema_info
+    }
+}
+
+#[cfg(feature = "postgres")]
+fn get_table_name_from_tp_row(res_row: &tokio_postgres::Row) -> String {
+    res_row.get::<&str, String>("table_name")
+}
+#[cfg(feature = "mssql")]
+fn get_table_name_from_tib_row(res_row: &tiberius::Row) -> String {
+    res_row
+        .get::<&str, &str>("table_name")
+        .unwrap_or_default()
+        .to_string()
+}
+
+fn check_for_table_name(
+    table: &&mut TableMetadata,
+    db_type: DatabaseType,
+    res_row: &dyn Row,
+) -> bool {
+    match db_type {
+        #[cfg(feature = "postgres")]
+        DatabaseType::PostgreSql => table.table_name == res_row.get_postgres::<&str>("table_name"),
+        #[cfg(feature = "mssql")]
+        DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),
     }
 }

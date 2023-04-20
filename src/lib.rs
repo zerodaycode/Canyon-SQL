@@ -3,6 +3,10 @@
 /// Here it's where all the available functionalities and features
 /// reaches the top most level, grouping them and making them visible
 /// through this crate, building the *public API* of the library
+extern crate canyon_connection;
+extern crate canyon_crud;
+extern crate canyon_macros;
+extern crate canyon_observer;
 
 /// Reexported elements to the root of the public API
 pub mod migrations {
@@ -15,8 +19,18 @@ pub use canyon_macros::main;
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
 pub mod macros {
-    pub use async_trait::*;
+    pub use canyon_crud::async_trait::*;
     pub use canyon_macros::*;
+}
+
+/// connection module serves to reexport the public elements of the `canyon_connection` crate,
+/// exposing them through the public API
+pub mod connection {
+    #[cfg(feature = "postgres")]
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::Postgres;
+
+    #[cfg(feature = "mssql")]
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::SqlServer;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
@@ -25,7 +39,7 @@ pub mod crud {
     pub use canyon_crud::bounds;
     pub use canyon_crud::crud::*;
     pub use canyon_crud::mapper::*;
-    pub use canyon_crud::result::*;
+    pub use canyon_crud::rows::CanyonRows;
     pub use canyon_crud::DatabaseType;
 }
 
@@ -37,7 +51,9 @@ pub mod query {
 
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
+    #[cfg(feature = "mssql")]
     pub use canyon_connection::tiberius;
+    #[cfg(feature = "postgres")]
     pub use canyon_connection::tokio_postgres;
 }
 

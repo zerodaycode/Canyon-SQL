@@ -34,10 +34,61 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         ._fields_with_types()
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
-
     let insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;
         let pk_type = &pk_data.1;
+
+        let postgres_enabled = cfg!(feature = "postgres");
+        let mssql_enabled = cfg!(feature = "mssql");
+
+        let match_rows = if postgres_enabled && mssql_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .ok_or("Failed getting the returned IDs for an insert")?
+                        .get::<&str, #pk_type>(#primary_key);
+                    Ok(())
+                }
+                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .ok_or("Failed getting the returned IDs for a multi insert")?
+                        .get::<#pk_type, &str>(#primary_key)
+                        .ok_or("SQL Server primary key type failed to be set as value")?;
+                    Ok(())
+                }
+            }
+        } else if postgres_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .ok_or("Failed getting the returned IDs for an insert")?
+                        .get::<&str, #pk_type>(#primary_key);
+                    Ok(())
+                }
+            }
+        } else if mssql_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .ok_or("Failed getting the returned IDs for a multi insert")?
+                        .get::<#pk_type, &str>(#primary_key)
+                        .ok_or("SQL Server primary key type failed to be set as value")?;
+                    Ok(())
+                }
+            }
+        } else {
+            quote! {
+                panic!(
+                    "Reached a branch in the implementation of the Row Mapper macro that should never be reached.\
+                    This is a severe bug of Canyon-SQL. Please, open us an issue at \
+                    https://github.com/zerodaycode/Canyon-SQL/issues and let us know about that failure."
+                )
+            }
+        };
 
         quote! {
             #remove_pk_value_from_fn_entry;
@@ -50,35 +101,15 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            let rows = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
-            ).await;
+            ).await?;
 
-            match result {
-                Ok(res) => {
-                    match res.get_active_ds() {
-                        canyon_sql::crud::DatabaseType::PostgreSql => {
-                            self.#pk_ident = res.postgres.get(0)
-                                .expect("No value found on the returning clause")
-                                .get::<&str, #pk_type>(#primary_key)
-                                .to_owned();
-
-                            Ok(())
-                        },
-                        canyon_sql::crud::DatabaseType::SqlServer => {
-                            self.#pk_ident = res.sqlserver.get(0)
-                                .expect("No value found on the returning clause")
-                                .get::<#pk_type, &str>(#primary_key)
-                                .expect("SQL Server primary key type failed to be set as value")
-                                .to_owned();
-
-                            Ok(())
-                        }
-                    }
-                },
-                Err(e) => Err(e)
+           match rows {
+                #match_rows
+                _ => panic!("Reached the panic match arm of insert for the DatabaseConnection type") // TODO remove when the generics will be refactored
             }
         }
     } else {
@@ -228,6 +259,70 @@ pub fn generate_multiple_insert_tokens(
         let pk_ident = &pk_data.0;
         let pk_type = &pk_data.1;
 
+        let postgres_enabled = cfg!(feature = "postgres");
+        let mssql_enabled = cfg!(feature = "mssql");
+
+        let match_multi_insert_rows = if postgres_enabled && mssql_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    for (idx, instance) in instances.iter_mut().enumerate() {
+                        instance.#pk_ident = v
+                            .get(idx)
+                            .expect("Failed getting the returned IDs for a multi insert")
+                            .get::<&str, #pk_type>(#pk);
+                    }
+
+                    Ok(())
+                }
+                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                    for (idx, instance) in instances.iter_mut().enumerate() {
+                        instance.#pk_ident = v
+                            .get(idx)
+                            .expect("Failed getting the returned IDs for a multi insert")
+                            .get::<#pk_type, &str>(#pk)
+                            .expect("SQL Server primary key type failed to be set as value");
+                    }
+
+                    Ok(())
+                }
+            }
+        } else if postgres_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                    for (idx, instance) in instances.iter_mut().enumerate() {
+                        instance.#pk_ident = v
+                            .get(idx)
+                            .expect("Failed getting the returned IDs for a multi insert")
+                            .get::<&str, #pk_type>(#pk);
+                    }
+
+                    Ok(())
+                }
+            }
+        } else if mssql_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                    for (idx, instance) in instances.iter_mut().enumerate() {
+                        instance.#pk_ident = v
+                            .get(idx)
+                            .expect("Failed getting the returned IDs for a multi insert")
+                            .get::<#pk_type, &str>(#pk)
+                            .expect("SQL Server primary key type failed to be set as value");
+                    }
+
+                    Ok(())
+                }
+            }
+        } else {
+            quote! {
+                panic!(
+                    "Reached a branch in the implementation of the Row Mapper macro that should never be reached.\
+                    This is a severe bug of Canyon-SQL. Please, open us an issue at \
+                    https://github.com/zerodaycode/Canyon-SQL/issues and let us know about that failure."
+                )
+            }
+        };
+
         quote! {
             mapped_fields = #column_names
                 .split(", ")
@@ -290,41 +385,15 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            let multi_insert_result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name
-            ).await;
+            ).await?;
 
-            match result {
-                Ok(res) => {
-                    match res.get_active_ds() {
-                        canyon_sql::crud::DatabaseType::PostgreSql => {
-                            for (idx, instance) in instances.iter_mut().enumerate() {
-                                instance.#pk_ident = res
-                                    .postgres
-                                    .get(idx)
-                                    .expect("Failed getting the returned IDs for a multi insert")
-                                    .get::<&str, #pk_type>(#pk);
-                            }
-
-                            Ok(())
-                        },
-                        canyon_sql::crud::DatabaseType::SqlServer => {
-                            for (idx, instance) in instances.iter_mut().enumerate() {
-                                instance.#pk_ident = res
-                                    .sqlserver
-                                    .get(idx)
-                                    .expect("Failed getting the returned IDs for a multi insert")
-                                    .get::<#pk_type, &str>(#pk)
-                                    .expect("SQL Server primary key type failed to be set as value");
-                            }
-
-                            Ok(())
-                        }
-                    }
-                },
-                Err(e) => Err(e)
+            match multi_insert_result {
+                #match_multi_insert_rows
+                _ => panic!() // TODO remove when the generics will be refactored
             }
         }
     } else {
@@ -382,16 +451,13 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            let result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name
-            ).await;
+            ).await?;
 
-            match result {
-                Ok(res) => Ok(()),
-                Err(e) => Err(e)
-            }
+            Ok(())
         }
     };
 

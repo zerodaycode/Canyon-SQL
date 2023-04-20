@@ -1,3 +1,5 @@
+extern crate canyon_sql;
+
 use std::error::Error;
 
 ///! Integration tests for the heart of a Canyon-SQL application, the CRUD operations.

@@ -1,5 +1,6 @@
 pub const NUMERIC_PK_DATATYPE: [&str; 6] = ["i16", "u16", "i32", "u32", "i64", "u64"];
 
+#[cfg(feature = "postgres")]
 pub mod postgresql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "CREATE TABLE IF NOT EXISTS canyon_memory (
             id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
@@ -35,6 +36,7 @@ pub mod postgresql_queries {
             table_schema = 'public';";
 }
 
+#[cfg(feature = "mssql")]
 pub mod mssql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "IF OBJECT_ID(N'[dbo].[canyon_memory]', N'U') IS NULL
         BEGIN
@@ -142,7 +144,7 @@ pub mod rust_type {
     pub const OPT_NAIVE_DATE_TIME: &str = "Option<NaiveDateTime>";
 }
 
-/// TODO
+#[cfg(feature = "postgres")]
 pub mod postgresql_type {
     pub const INT_8: &str = "int8";
     pub const SMALL_INT: &str = "smallint";
@@ -155,6 +157,7 @@ pub mod postgresql_type {
     pub const DATETIME: &str = "timestamp without time zone";
 }
 
+#[cfg(feature = "mssql")]
 pub mod sqlserver_type {
     pub const TINY_INT: &str = "TINY INT";
     pub const SMALL_INT: &str = "SMALL INT";

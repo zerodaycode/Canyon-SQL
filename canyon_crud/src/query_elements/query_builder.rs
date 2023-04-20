@@ -26,7 +26,7 @@ pub mod ops {
     /// hierarchy.
     ///
     /// For example, the [`super::QueryBuilder`] type holds the data
-    /// necessary for track the SQL sentece while it's being generated
+    /// necessary for track the SQL sentence while it's being generated
     /// thought the fluent builder, and provides the behaviour of
     /// the common elements defined in this trait.
     ///
@@ -44,7 +44,7 @@ pub mod ops {
     /// just one type.
     pub trait QueryBuilder<'a, T>
     where
-        T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>,
+        T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
     {
         /// Returns a read-only reference to the underlying SQL sentence,
         /// with the same lifetime as self
@@ -174,7 +174,7 @@ where
             self.datasource_name,
         )
         .await?
-        .get_entities::<T>())
+        .into_results::<T>())
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {
@@ -324,7 +324,7 @@ where
     }
 
     /// Adds a *LEFT JOIN* SQL statement to the underlying
-    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// [`Query`] held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -340,7 +340,7 @@ where
     }
 
     /// Adds a *RIGHT JOIN* SQL statement to the underlying
-    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// [`Query`] held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -356,7 +356,7 @@ where
     }
 
     /// Adds a *RIGHT JOIN* SQL statement to the underlying
-    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// [`Query`] held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -372,7 +372,7 @@ where
     }
 
     /// Adds a *FULL JOIN* SQL statement to the underlying
-    /// [`Query`] holded by the [`QueryBuilder`], where:
+    /// [`Query`] held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -429,18 +429,18 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
-        self._inner.or(column, op);
-        self
-    }
-
-    #[inline]
     fn or_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(and, values);
+        self
+    }
+
+    #[inline]
+    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.or(column, op);
         self
     }
 
@@ -566,18 +566,18 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
-        self._inner.or(column, op);
-        self
-    }
-
-    #[inline]
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(or, values);
+        self
+    }
+
+    #[inline]
+    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.or(column, op);
         self
     }
 
@@ -666,18 +666,18 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
-        self._inner.or(column, op);
-        self
-    }
-
-    #[inline]
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(or, values);
+        self
+    }
+
+    #[inline]
+    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+        self._inner.or(column, op);
         self
     }
 

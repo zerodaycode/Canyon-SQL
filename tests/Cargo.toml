@@ -1,12 +1,16 @@
 [package]
 name = "tests"
-version = "0.2.0"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
 publish = false
 
 [dev-dependencies]
-canyon_sql = { path = "../canyon_sql" }
+canyon_sql = { path = ".." }
 
 [[test]]
 name = "canyon_integration_tests"
 path = "canyon_integration_tests.rs"
+
+[features]
+postgres = ["canyon_sql/postgres"]
+mssql = ["canyon_sql/mssql"]

@@ -53,8 +53,12 @@ jobs:
 
       - name: Run only UNIT tests for Windows
         if: ${{ matrix.os == 'windows-latest' }}
-        run: cargo test --verbose --workspace --target=x86_64-pc-windows-msvc --exclude tests --all-features --no-fail-fast -- --show-output
+        run: |
+          cargo test --verbose --workspace --lib --target=x86_64-pc-windows-msvc --all-features --no-fail-fast -- --show-output
+          cargo test --verbose --workspace --doc --target=x86_64-pc-windows-msvc --all-features --no-fail-fast -- --show-output
 
       - name: Run only UNIT tests for MacOS
         if: ${{ matrix.os == 'MacOS-latest' }}
-        run: cargo test --verbose --workspace --exclude tests --all-features --no-fail-fast -- --show-output
+        run: |
+          cargo test --verbose --workspace --lib --all-features --no-fail-fast -- --show-output
+          cargo test --verbose --workspace --doc --all-features --no-fail-fast -- --show-output

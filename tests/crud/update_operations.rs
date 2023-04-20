@@ -2,6 +2,7 @@
 ///! generates and executes *UPDATE* statements
 use canyon_sql::crud::CrudOperations;
 
+#[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 
@@ -15,6 +16,7 @@ use crate::tests_models::league::*;
 ///
 /// Attempt of usage the `t.update(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_update_method_operation() {
     // We first retrieve some entity from the database. Note that we must make
@@ -55,6 +57,7 @@ fn test_crud_update_method_operation() {
 }
 
 /// Same as the above test, but with the specified datasource.
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_update_datasource_method_operation() {
     // We first retrieve some entity from the database. Note that we must make

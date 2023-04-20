@@ -1,28 +1,34 @@
-use async_std::net::TcpStream;
-
 use serde::Deserialize;
+
+#[cfg(feature = "mssql")]
+use async_std::net::TcpStream;
+#[cfg(feature = "mssql")]
 use tiberius::{AuthMethod, Config};
+#[cfg(feature = "postgres")]
 use tokio_postgres::{Client, NoTls};
 
 use crate::datasources::DatasourceConfig;
 
 /// Represents the current supported databases by Canyon
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {
-    #[default]
     #[serde(alias = "postgres", alias = "postgresql")]
+    #[cfg(feature = "postgres")]
     PostgreSql,
     #[serde(alias = "sqlserver", alias = "mssql")]
+    #[cfg(feature = "mssql")]
     SqlServer,
 }
 
 /// A connection with a `PostgreSQL` database
+#[cfg(feature = "postgres")]
 pub struct PostgreSqlConnection {
     pub client: Client,
     // pub connection: Connection<Socket, NoTlsStream>, // TODO Hold it, or not to hold it... that's the question!
 }
 
 /// A connection with a `SqlServer` database
+#[cfg(feature = "mssql")]
 pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
 }
@@ -32,7 +38,9 @@ pub struct SqlServerConnection {
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
 pub enum DatabaseConnection {
+    #[cfg(feature = "postgres")]
     Postgres(PostgreSqlConnection),
+    #[cfg(feature = "mssql")]
     SqlServer(SqlServerConnection),
 }
 
@@ -44,6 +52,7 @@ impl DatabaseConnection {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match datasource.get_db_type() {
+            #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => {
                 let (username, password) = match &datasource.auth {
                     crate::datasources::Auth::Postgres(postgres_auth) => match postgres_auth {
@@ -51,6 +60,7 @@ impl DatabaseConnection {
                             (username.as_str(), password.as_str())
                         }
                     },
+                    #[cfg(feature = "mssql")]
                     crate::datasources::Auth::SqlServer(_) => {
                         panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
                     }
@@ -79,6 +89,7 @@ impl DatabaseConnection {
                     // connection: new_connection,
                 }))
             }
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => {
                 let mut config = Config::new();
 
@@ -88,6 +99,7 @@ impl DatabaseConnection {
 
                 // Using SQL Server authentication.
                 config.authentication(match &datasource.auth {
+                    #[cfg(feature = "postgres")]
                     crate::datasources::Auth::Postgres(_) => {
                         panic!("Found PostgreSQL auth configuration for a SqlServer database")
                     }
@@ -95,7 +107,6 @@ impl DatabaseConnection {
                         crate::datasources::SqlServerAuth::Basic { username, password } => {
                             AuthMethod::sql_server(username, password)
                         }
-                        #[cfg(feature = "mssql-integrated-auth")]
                         crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
                     },
                 });
@@ -128,19 +139,21 @@ impl DatabaseConnection {
         }
     }
 
-    pub fn postgres_connection(&self) -> Option<&PostgreSqlConnection> {
-        if let DatabaseConnection::Postgres(conn) = self {
-            Some(conn)
-        } else {
-            None
+    #[cfg(feature = "postgres")]
+    pub fn postgres_connection(&self) -> &PostgreSqlConnection {
+        match self {
+            DatabaseConnection::Postgres(conn) => conn,
+            #[cfg(all(feature = "postgres", feature = "mssql"))]
+            _ => panic!(),
         }
     }
 
-    pub fn sqlserver_connection(&mut self) -> Option<&mut SqlServerConnection> {
-        if let DatabaseConnection::SqlServer(conn) = self {
-            Some(conn)
-        } else {
-            None
+    #[cfg(feature = "mssql")]
+    pub fn sqlserver_connection(&mut self) -> &mut SqlServerConnection {
+        match self {
+            DatabaseConnection::SqlServer(conn) => conn,
+            #[cfg(all(feature = "postgres", feature = "mssql"))]
+            _ => panic!(),
         }
     }
 }
@@ -150,27 +163,60 @@ mod database_connection_handler {
     use super::*;
     use crate::CanyonSqlConfig;
 
-    const CONFIG_FILE_MOCK_ALT: &str = r#"
-        [canyon_sql]
-        datasources = [
-            {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-            {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
-        ]
-    "#;
-
     /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
     #[test]
     fn check_from_datasource() {
-        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
-            .expect("A failure happened retrieving the [canyon_sql] section");
+        #[cfg(all(feature = "postgres", feature = "mssql"))]
+        {
+            const CONFIG_FILE_MOCK_ALT_ALL: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_ALL)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::PostgreSql
+            );
+            assert_eq!(
+                config.canyon_sql.datasources[1].get_db_type(),
+                DatabaseType::SqlServer
+            );
+        }
 
-        assert_eq!(
-            config.canyon_sql.datasources[0].get_db_type(),
-            DatabaseType::PostgreSql
-        );
-        assert_eq!(
-            config.canyon_sql.datasources[1].get_db_type(),
-            DatabaseType::SqlServer
-        );
+        #[cfg(feature = "postgres")]
+        {
+            const CONFIG_FILE_MOCK_ALT_PG: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_PG)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::PostgreSql
+            );
+        }
+
+        #[cfg(feature = "mssql")]
+        {
+            const CONFIG_FILE_MOCK_ALT_MSSQL: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MSSQL)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::SqlServer
+            );
+        }
     }
 }

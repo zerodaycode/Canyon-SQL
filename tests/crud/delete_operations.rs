@@ -2,7 +2,10 @@
 ///! generates and executes *INSERT* statements
 use canyon_sql::crud::CrudOperations;
 
-use crate::constants::{PSQL_DS, SQL_SERVER_DS};
+#[cfg(feature = "postgres")]
+use crate::constants::PSQL_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 
 /// Deletes a row from the database that is mapped into some instance of a `T` entity.
@@ -14,6 +17,7 @@ use crate::tests_models::league::*;
 ///
 /// Attempt of usage the `t.delete(&self)` method on an entity without `#[primary_key]`
 /// will raise a runtime error.
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
@@ -58,6 +62,7 @@ fn test_crud_delete_method_operation() {
 }
 
 /// Same as the delete test, but performing the operations with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_datasource_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,

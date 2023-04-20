@@ -2,6 +2,7 @@
 ///! generates and executes *INSERT* statements
 use canyon_sql::crud::CrudOperations;
 
+#[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 
@@ -25,7 +26,8 @@ use crate::tests_models::league::*;
 ///
 /// If the type hasn't a `#[primary_key]` annotation, or the annotation contains
 /// an argument specifying not autoincremental behaviour, all the fields will be
-/// inserted on the database and no returning value will be placed in any field.   
+/// inserted on the database and no returning value will be placed in any field.
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_insert_operation() {
     let mut new_league: League = League {
@@ -54,6 +56,7 @@ fn test_crud_insert_operation() {
 
 /// Same as the insert operation above, but targeting the database defined in
 /// the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_insert_datasource_operation() {
     let mut new_league: League = League {
@@ -93,6 +96,7 @@ fn test_crud_insert_datasource_operation() {
 ///
 /// The instances without `#[primary_key]` inserts all the values on the instaqce fields
 /// on the database.
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_multi_insert_operation() {
     let mut new_league_mi: League = League {
@@ -154,6 +158,7 @@ fn test_crud_multi_insert_operation() {
 }
 
 /// Same as the multi insert above, but with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_multi_insert_datasource_operation() {
     let mut new_league_mi: League = League {

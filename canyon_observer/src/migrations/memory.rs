@@ -1,5 +1,5 @@
 use crate::constants;
-use canyon_crud::{bounds::RowOperations, crud::Transaction, DatabaseType, DatasourceConfig};
+use canyon_crud::{crud::Transaction, DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
@@ -70,21 +70,47 @@ impl CanyonMemory {
         let res = Self::query("SELECT * FROM canyon_memory", [], &datasource.name)
             .await
             .expect("Error querying Canyon Memory");
-        let mem_results = res.as_canyon_rows();
 
         // Manually maps the results
         let mut db_rows = Vec::new();
-        for row in mem_results.iter() {
-            let db_row = CanyonMemoryRow {
-                id: row.get::<i32>("id"),
-                filepath: row.get::<&str>("filepath"),
-                struct_name: row.get::<&str>("struct_name"),
-                declared_table_name: row.get::<&str>("declared_table_name"),
-            };
-            db_rows.push(db_row);
+        #[cfg(feature = "postgres")]
+        {
+            let mem_results: &Vec<tokio_postgres::Row> = res.get_postgres_rows();
+            for row in mem_results {
+                let db_row = CanyonMemoryRow {
+                    id: row.get::<&str, i32>("id"),
+                    filepath: row.get::<&str, String>("filepath"),
+                    struct_name: row.get::<&str, String>("struct_name").to_owned(),
+                    declared_table_name: row.get::<&str, String>("declared_table_name").to_owned(),
+                };
+                db_rows.push(db_row);
+            }
+        }
+        #[cfg(feature = "mssql")]
+        {
+            let mem_results: &Vec<tiberius::Row> = res.get_tiberius_rows();
+            for row in mem_results {
+                let db_row = CanyonMemoryRow {
+                    id: row.get::<i32, &str>("id").unwrap(),
+                    filepath: row.get::<&str, &str>("filepath").unwrap().to_string(),
+                    struct_name: row.get::<&str, &str>("struct_name").unwrap().to_string(),
+                    declared_table_name: row
+                        .get::<&str, &str>("declared_table_name")
+                        .unwrap()
+                        .to_string(),
+                };
+                db_rows.push(db_row);
+            }
         }
 
-        // Parses the source code files looking for the #[canyon_entity] annotated classes
+        Self::populate_memory(datasource, canyon_entities, db_rows).await
+    }
+
+    async fn populate_memory(
+        datasource: &DatasourceConfig,
+        canyon_entities: &[CanyonRegisterEntity<'_>],
+        db_rows: Vec<CanyonMemoryRow>,
+    ) -> CanyonMemory {
         let mut mem = Self {
             memory: Vec::new(),
             renamed_entities: HashMap::new(),
@@ -106,7 +132,7 @@ impl CanyonMemory {
                     && old.struct_name == _struct.struct_name
                     && old.declared_table_name == _struct.declared_table_name)
                 {
-                    updates.push(old.struct_name);
+                    updates.push(&old.struct_name);
                     let stmt = format!(
                         "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}', declared_table_name = '{}' \
                                 WHERE id = {}",
@@ -137,12 +163,12 @@ impl CanyonMemory {
         }
 
         // Deletes the records from canyon_memory, because they stopped to be tracked by Canyon
-        for db_row in db_rows.into_iter() {
+        for db_row in db_rows.iter() {
             if !mem
                 .memory
                 .iter()
                 .any(|entity| entity.struct_name == db_row.struct_name)
-                && !updates.contains(&db_row.struct_name)
+                && !updates.contains(&&(db_row.struct_name))
             {
                 save_canyon_memory_query(
                     format!(
@@ -216,12 +242,12 @@ impl CanyonMemory {
     }
 
     /// Generates, if not exists the `canyon_memory` table
-    #[cfg(not(cargo_check))]
     async fn create_memory(datasource_name: &str, database_type: &DatabaseType) {
-        let query = if database_type == &DatabaseType::PostgreSql {
-            constants::postgresql_queries::CANYON_MEMORY_TABLE
-        } else {
-            constants::mssql_queries::CANYON_MEMORY_TABLE
+        let query = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE,
         };
 
         Self::query(query, [], datasource_name)
@@ -250,11 +276,11 @@ fn save_canyon_memory_query(stmt: String, ds_name: &str) {
 
 /// Represents a single row from the `canyon_memory` table
 #[derive(Debug)]
-struct CanyonMemoryRow<'a> {
+struct CanyonMemoryRow {
     id: i32,
-    filepath: &'a str,
-    struct_name: &'a str,
-    declared_table_name: &'a str,
+    filepath: String,
+    struct_name: String,
+    declared_table_name: String,
 }
 
 /// Represents the data that will be serialized in the `canyon_memory` table

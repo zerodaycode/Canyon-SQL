@@ -16,7 +16,7 @@ pub fn generate_find_all_unchecked_tokens(
     let stmt = format!("SELECT * FROM {table_schema_data}");
 
     quote! {
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
@@ -27,7 +27,7 @@ pub fn generate_find_all_unchecked_tokens(
                 ""
             ).await
             .unwrap()
-            .get_entities::<#ty>()
+            .into_results::<#ty>()
         }
 
         /// Performs a `SELECT * FROM table_name`, where `table_name` it's
@@ -45,7 +45,7 @@ pub fn generate_find_all_unchecked_tokens(
                 datasource_name
             ).await
             .unwrap()
-            .get_entities::<#ty>()
+            .into_results::<#ty>()
         }
     }
 }
@@ -60,7 +60,7 @@ pub fn generate_find_all_tokens(
     let stmt = format!("SELECT * FROM {table_schema_data}");
 
     quote! {
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
@@ -73,11 +73,11 @@ pub fn generate_find_all_tokens(
                     &[],
                     ""
                 ).await?
-                .get_entities::<#ty>()
+                .into_results::<#ty>()
             )
         }
 
-        /// Performns a `SELECT * FROM table_name`, where `table_name` it's
+        /// Performs a `SELECT * FROM table_name`, where `table_name` it's
         /// the name of your entity but converted to the corresponding
         /// database convention. P.ej. PostgreSQL prefers table names declared
         /// with snake_case identifiers.
@@ -98,7 +98,7 @@ pub fn generate_find_all_tokens(
                     &[],
                     datasource_name
                 ).await?
-                .get_entities::<#ty>()
+                .into_results::<#ty>()
             )
         }
     }
@@ -150,25 +150,46 @@ pub fn generate_count_tokens(
     let ty_str = &ty.to_string();
     let stmt = format!("SELECT COUNT (*) FROM {table_schema_data}");
 
-    let result_handling = quote! {
-        match count.get_active_ds() {
-            canyon_sql::crud::DatabaseType::PostgreSql => {
-                Ok(
-                    count.postgres.get(0)
-                        .expect(&format!("Count operation failed for {:?}", #ty_str))
-                        .get::<&str, i64>("count")
-                        .to_owned()
-                )
-            },
-            canyon_sql::crud::DatabaseType::SqlServer => {
-                Ok(
-                    count.sqlserver.get(0)
-                        .expect(&format!("Count operation failed for {:?}", #ty_str))
-                        .get::<i32, usize>(0)
-                        .expect(&format!("SQL Server failed to return the count values for {:?}", #ty_str))
-                        .into()
-                )
-            }
+    let postgres_enabled = cfg!(feature = "postgres");
+    let mssql_enabled = cfg!(feature = "mssql");
+
+    let result_handling = if postgres_enabled && mssql_enabled {
+        quote! {
+            canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
+                v.remove(0).get::<&str, i64>("count")
+            ),
+            canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
+                v.remove(0)
+                    .get::<i32, usize>(0)
+                    .map(|c| c as i64)
+                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
+                    .into(),
+            _ => panic!() // TODO remove when the generics will be refactored
+        }
+    } else if postgres_enabled {
+        quote! {
+            canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
+                v.remove(0).get::<&str, i64>("count")
+            ),
+            _ => panic!() // TODO remove when the generics will be refactored
+        }
+    } else if mssql_enabled {
+        quote! {
+            canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
+                v.remove(0)
+                    .get::<i32, usize>(0)
+                    .map(|c| c as i64)
+                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
+                    .into(),
+            _ => panic!() // TODO remove when the generics will be refactored
+        }
+    } else {
+        quote! {
+            panic!(
+                "Reached a branch in the implementation of the Row Mapper macro that should never be reached.\
+                This is a severe bug of Canyon-SQL. Please, open us an issue at \
+                https://github.com/zerodaycode/Canyon-SQL/issues and let us know about that failure."
+            )
         }
     };
 
@@ -182,7 +203,9 @@ pub fn generate_count_tokens(
                 ""
             ).await?;
 
-            #result_handling
+            match count {
+                #result_handling
+            }
         }
 
         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
@@ -194,7 +217,9 @@ pub fn generate_count_tokens(
                 datasource_name
             ).await?;
 
-            #result_handling
+            match count {
+                #result_handling
+            }
         }
     }
 }
@@ -242,9 +267,9 @@ pub fn generate_find_by_pk_tokens(
 
     let result_handling = quote! {
         match result {
-            n if n.number_of_results() == 0 => Ok(None),
+            n if n.len() == 0 => Ok(None),
             _ => Ok(
-                Some(result.get_entities::<#ty>().remove(0))
+                Some(result.into_results::<#ty>().remove(0))
             )
         }
     };
@@ -347,9 +372,9 @@ pub fn generate_find_by_foreign_key_tokens(
             );
             let result_handler = quote! {
                 match result {
-                    n if n.number_of_results() == 0 => Ok(None),
+                    n if n.len() == 0 => Ok(None),
                     _ => Ok(Some(
-                        result.get_entities::<#fk_ty>().remove(0)
+                        result.into_results::<#fk_ty>().remove(0)
                     ))
                 }
             };
@@ -434,8 +459,8 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                     #quoted_method_signature
                     {
                         let lookage_value = value.get_fk_column(#column)
-                        .expect(format!(
-                            "Column: {:?} not found in type: {:?}", #column, #table
+                            .expect(format!(
+                                "Column: {:?} not found in type: {:?}", #column, #table
                             ).as_str());
 
                         let stmt = format!(
@@ -448,8 +473,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             stmt,
                             &[lookage_value],
                             ""
-                        ).await?
-                        .get_entities::<#ty>())
+                        ).await?.into_results::<#ty>())
                     }
                 },
             ));
@@ -477,8 +501,7 @@ pub fn generate_find_by_reverse_foreign_key_tokens(
                             stmt,
                             &[lookage_value],
                             datasource_name
-                        ).await?
-                        .get_entities::<#ty>())
+                        ).await?.into_results::<#ty>())
                     }
                 },
             ));
