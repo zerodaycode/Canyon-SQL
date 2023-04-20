@@ -487,82 +487,82 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     });
 
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
-            let ident_name = ident.to_string();
+        let ident_name = ident.to_string();
 
-            if get_field_type_as_string(ty) == "String" {
-                quote! {
+        if get_field_type_as_string(ty) == "String" {
+            quote! {
                 #ident: row.get::<&str, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
                     .to_string()
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
+            quote! {
                 #ident: row.get::<i64, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
+            quote! {
                 #ident: row.get::<i32, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
+            quote! {
                 #ident: row.get::<i16, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
+            quote! {
                 #ident: row.get::<f32, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
+            quote! {
                 #ident: row.get::<f64, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
+            quote! {
                 #ident: row.get::<&str, &str>(#ident_name)
                     .map( |x| x.to_owned() )
             }
-            } else if get_field_type_as_string(ty) == "NaiveDate" {
-                quote! {
+        } else if get_field_type_as_string(ty) == "NaiveDate" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty) == "NaiveTime" {
-                quote! {
+        } else if get_field_type_as_string(ty) == "NaiveTime" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty) == "NaiveDateTime" {
-                quote! {
+        } else if get_field_type_as_string(ty) == "NaiveDateTime" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
             }
-            } else if get_field_type_as_string(ty) == "DateTime" {
-                quote! {
+        } else if get_field_type_as_string(ty) == "DateTime" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
-                quote! {
+        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
+            quote! {
                 #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
             }
-            } else {
-                quote! {
+        } else {
+            quote! {
                 #ident: row.get::<#ty, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-            }
-        });
+        }
+    });
 
     // The type of the Struct
     let ty = ast.ident;

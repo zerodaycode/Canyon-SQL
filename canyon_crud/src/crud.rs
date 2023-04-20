@@ -224,11 +224,7 @@ mod sqlserver_query_launcher {
             .for_each(|param| mssql_query.bind(*param));
 
         let _results = mssql_query
-            .query(
-                db_conn
-                    .sqlserver_connection()
-                    .client,
-            )
+            .query(db_conn.sqlserver_connection().client)
             .await?
             .into_results()
             .await?;

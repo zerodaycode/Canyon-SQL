@@ -539,7 +539,7 @@ impl<'a> QueryParameter<'a> for Option<&String> {
         }
     }
 }
-impl<'a> QueryParameter<'_> for &'_ str {
+impl<'a> QueryParameter<'a> for &'_ str {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -562,7 +562,7 @@ impl<'a> QueryParameter<'a> for Option<&'_ str> {
         }
     }
 }
-impl<'a> QueryParameter<'_> for NaiveDate {
+impl<'a> QueryParameter<'a> for NaiveDate {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -582,7 +582,7 @@ impl<'a> QueryParameter<'a> for Option<NaiveDate> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameter<'_> for NaiveTime {
+impl<'a> QueryParameter<'a> for NaiveTime {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -602,7 +602,7 @@ impl<'a> QueryParameter<'a> for Option<NaiveTime> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameter<'_> for NaiveDateTime {
+impl<'a> QueryParameter<'a> for NaiveDateTime {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -622,7 +622,7 @@ impl<'a> QueryParameter<'a> for Option<NaiveDateTime> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameter<'_> for DateTime<FixedOffset> {
+impl<'a> QueryParameter<'a> for DateTime<FixedOffset> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -642,7 +642,7 @@ impl<'a> QueryParameter<'a> for Option<DateTime<FixedOffset>> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameter<'_> for DateTime<Utc> {
+impl<'a> QueryParameter<'a> for DateTime<Utc> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -652,7 +652,7 @@ impl<'a> QueryParameter<'_> for DateTime<Utc> {
         self.into_sql()
     }
 }
-impl<'a> QueryParameter<'_> for Option<DateTime<Utc>> {
+impl<'a> QueryParameter<'a> for Option<DateTime<Utc>> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self

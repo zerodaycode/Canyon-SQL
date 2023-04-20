@@ -42,7 +42,7 @@ impl<T> CanyonRows<T> {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.iter().map(|row| Z::deserialize_postgresql(row)).collect(),
             #[cfg(feature = "mssql")]
-            Self::Tiberius(v) => v.iter().map(|row| Z::deserialize_sqlserver(&row)).collect(),
+            Self::Tiberius(v) => v.iter().map(|row| Z::deserialize_sqlserver(row)).collect(),
             _ => panic!("This branch will never ever should be reachable"),
         }
     }
@@ -57,45 +57,15 @@ impl<T> CanyonRows<T> {
             _ => panic!("This branch will never ever should be reachable"),
         }
     }
-}
 
-// #[cfg(feature = "postgres")]
-// impl<T> IntoIterator for CanyonRows<T> {
-//     type Item = tokio_postgres::Row;
-//     type IntoIter = std::vec::IntoIter<Self::Item>;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         match self {
-//             Self::Postgres(v) => v.into_iter(),
-//             _ => panic!()
-//         }
-//     }
-// }
-//
-// #[cfg(feature = "mssql")]
-// impl<T> IntoIterator for CanyonRows<T> {
-//     type Item = tiberius::Row;
-//     type IntoIter = std::vec::IntoIter<Self::Item>;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         match self {
-//             Self::Tiberius(v) => v.into_iter(),
-//             _ => panic!()
-//         }
-//     }
-// }
-//
-// #[cfg(all(feature = "tokio-postgres", feature = "tiberius"))]
-// impl<T> IntoIterator for CanyonRows<T> {
-//     if cfg!(feature = "tokio-postgres") {
-//     type Item = tokio_postgres::Row;
-//     } else { type Item = tiberius::Row; }
-//     type IntoIter = std::vec::IntoIter<Self::Item>;
-//
-//     fn into_iter(self) -> Self::IntoIter {
-//         match self {
-//             Self::Tiberius(v) => v.into_iter(),
-//             _ => panic!()
-//         }
-//     }
-// }
+    /// Returns true whenever the wrapped collection of Rows does not contains any elements
+    pub fn is_empty(&self) -> bool {
+        match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgres(v) => v.is_empty(),
+            #[cfg(feature = "mssql")]
+            Self::Tiberius(v) => v.is_empty(),
+            _ => panic!("This branch will never ever should be reachable"),
+        }
+    }
+}

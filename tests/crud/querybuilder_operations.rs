@@ -9,10 +9,12 @@ use canyon_sql::{
     query::{operators::Comp, ops::QueryBuilder},
 };
 
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
+#[cfg(feature = "mssql")]
+use crate::tests_models::player::*;
 use crate::tests_models::tournament::*;
-#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
-#[cfg(feature = "mssql")] use crate::tests_models::player::*;
 
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>

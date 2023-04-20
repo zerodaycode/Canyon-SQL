@@ -2,7 +2,8 @@
 ///! generates and executes *INSERT* statements
 use canyon_sql::crud::CrudOperations;
 
-#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 
 /// Inserts a new record on the database, given an entity that is

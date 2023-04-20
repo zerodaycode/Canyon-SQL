@@ -2,8 +2,10 @@
 ///! generates and executes *INSERT* statements
 use canyon_sql::crud::CrudOperations;
 
-#[cfg(feature = "postgres")] use crate::constants::PSQL_DS;
-#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "postgres")]
+use crate::constants::PSQL_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 
 /// Deletes a row from the database that is mapped into some instance of a `T` entity.

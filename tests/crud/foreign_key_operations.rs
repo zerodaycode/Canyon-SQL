@@ -10,7 +10,8 @@
 ///! For more info: TODO -> Link to the docs of the foreign key chapter
 use canyon_sql::crud::CrudOperations;
 
-#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::tournament::*;
 

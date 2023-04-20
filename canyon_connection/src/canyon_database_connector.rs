@@ -143,7 +143,8 @@ impl DatabaseConnection {
     pub fn postgres_connection(&self) -> &PostgreSqlConnection {
         match self {
             DatabaseConnection::Postgres(conn) => conn,
-            #[cfg(all(feature = "postgres", feature = "mssql"))] _ => panic!(),
+            #[cfg(all(feature = "postgres", feature = "mssql"))]
+            _ => panic!(),
         }
     }
 
@@ -151,7 +152,8 @@ impl DatabaseConnection {
     pub fn sqlserver_connection(&mut self) -> &mut SqlServerConnection {
         match self {
             DatabaseConnection::SqlServer(conn) => conn,
-            #[cfg(all(feature = "postgres", feature = "mssql"))] _ => panic!(),
+            #[cfg(all(feature = "postgres", feature = "mssql"))]
+            _ => panic!(),
         }
     }
 }
@@ -164,7 +166,8 @@ mod database_connection_handler {
     /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
     #[test]
     fn check_from_datasource() {
-        #[cfg(all(feature = "postgres", feature = "mssql"))] {
+        #[cfg(all(feature = "postgres", feature = "mssql"))]
+        {
             const CONFIG_FILE_MOCK_ALT_ALL: &str = r#"
                 [canyon_sql]
                 datasources = [
@@ -184,7 +187,8 @@ mod database_connection_handler {
             );
         }
 
-        #[cfg(feature = "postgres")] {
+        #[cfg(feature = "postgres")]
+        {
             const CONFIG_FILE_MOCK_ALT_PG: &str = r#"
                 [canyon_sql]
                 datasources = [
@@ -199,7 +203,8 @@ mod database_connection_handler {
             );
         }
 
-        #[cfg(feature = "mssql")] {
+        #[cfg(feature = "mssql")]
+        {
             const CONFIG_FILE_MOCK_ALT_MSSQL: &str = r#"
                 [canyon_sql]
                 datasources = [

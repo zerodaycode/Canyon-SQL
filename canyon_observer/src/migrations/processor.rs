@@ -318,7 +318,8 @@ impl MigrationsProcessor {
             if attr.starts_with("Annotation: PrimaryKey") {
                 Self::add_primary_key(self, entity_name, canyon_register_entity_field.clone());
 
-                #[cfg(feature = "postgres")] {
+                #[cfg(feature = "postgres")]
+                {
                     if canyon_register_entity_field.is_autoincremental() {
                         Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
                     }
@@ -393,7 +394,8 @@ impl MigrationsProcessor {
         if field_is_primary_key && current_column_metadata.primary_key_info.is_none() {
             Self::add_primary_key(self, entity_name, canyon_register_entity_field.clone());
 
-            #[cfg(feature = "postgres")] {
+            #[cfg(feature = "postgres")]
+            {
                 if canyon_register_entity_field.is_autoincremental() {
                     Self::add_identity(self, entity_name, canyon_register_entity_field.clone());
                 }
@@ -401,7 +403,8 @@ impl MigrationsProcessor {
         }
         // Case when the field contains a primary key annotation, and it's already on the database
         else if field_is_primary_key && current_column_metadata.primary_key_info.is_some() {
-            #[cfg(feature = "postgres")] {
+            #[cfg(feature = "postgres")]
+            {
                 let is_autoincr_rust = canyon_register_entity_field.is_autoincremental();
                 let is_autoincr_in_db = current_column_metadata.is_identity;
                 if !is_autoincr_rust && is_autoincr_in_db {
@@ -423,7 +426,8 @@ impl MigrationsProcessor {
                     .to_string(),
             );
 
-            #[cfg(feature = "postgres")] {
+            #[cfg(feature = "postgres")]
+            {
                 if current_column_metadata.is_identity {
                     Self::drop_identity(self, entity_name, canyon_register_entity_field.clone());
                 }
@@ -674,7 +678,7 @@ impl MigrationsHelper {
             }
         }
 
-        return false;
+        false
     }
 
     fn extract_foreign_key_annotation(field_annotations: &[String]) -> (String, String) {
@@ -896,7 +900,8 @@ enum ColumnOperation {
     AlterColumnDropNotNull(String, CanyonRegisterEntityField),
     AlterColumnSetNotNull(String, CanyonRegisterEntityField),
 
-    #[cfg(feature = "mssql")] // SQL server specific operation - SQL server can't drop a NOT NULL column
+    #[cfg(feature = "mssql")]
+    // SQL server specific operation - SQL server can't drop a NOT NULL column
     DropNotNullBeforeDropColumn(String, String, String),
     #[cfg(feature = "postgres")]
     AlterColumnAddIdentity(String, CanyonRegisterEntityField),

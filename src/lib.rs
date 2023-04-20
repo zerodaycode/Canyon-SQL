@@ -39,8 +39,8 @@ pub mod crud {
     pub use canyon_crud::bounds;
     pub use canyon_crud::crud::*;
     pub use canyon_crud::mapper::*;
-    pub use canyon_crud::DatabaseType;
     pub use canyon_crud::rows::CanyonRows;
+    pub use canyon_crud::DatabaseType;
 }
 
 /// Re-exports the query elements from the `crud`crate
@@ -51,10 +51,10 @@ pub mod query {
 
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
-    #[cfg(feature = "postgres")]
-    pub use canyon_connection::tokio_postgres;
     #[cfg(feature = "mssql")]
     pub use canyon_connection::tiberius;
+    #[cfg(feature = "postgres")]
+    pub use canyon_connection::tokio_postgres;
 }
 
 /// Reexport the needed runtime dependencies

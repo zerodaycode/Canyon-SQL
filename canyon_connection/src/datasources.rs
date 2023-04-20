@@ -5,7 +5,8 @@ use crate::canyon_database_connector::DatabaseType;
 /// ```
 #[test]
 fn load_ds_config_from_array() {
-    #[cfg(feature = "postgres")] {
+    #[cfg(feature = "postgres")]
+    {
         const CONFIG_FILE_MOCK_ALT_PG: &str = r#"
         [canyon_sql]
         datasources = [
@@ -32,7 +33,8 @@ fn load_ds_config_from_array() {
         assert_eq!(ds_0.properties.migrations, Some(Migrations::Enabled));
     }
 
-    #[cfg(feature = "mssql")] {
+    #[cfg(feature = "mssql")]
+    {
         const CONFIG_FILE_MOCK_ALT_MSSQL: &str = r#"
         [canyon_sql]
         datasources = [
@@ -45,7 +47,6 @@ fn load_ds_config_from_array() {
 
         let ds_1 = &config.canyon_sql.datasources[0];
         let ds_2 = &config.canyon_sql.datasources[1];
-
 
         assert_eq!(ds_1.name, "SqlServerDS");
         assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);

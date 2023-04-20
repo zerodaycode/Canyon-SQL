@@ -1,6 +1,7 @@
 #![allow(clippy::nonminimal_bool)]
 
-#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *SELECT* statements
 use crate::Error;

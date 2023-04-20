@@ -22,6 +22,8 @@ lazy_static = { workspace = true }
 toml = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 async-std = { workspace = true, optional = true }
+walkdir = { workspace = true }
+
 
 [features]
 postgres = ["tokio-postgres"]

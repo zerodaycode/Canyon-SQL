@@ -2,7 +2,8 @@
 ///! generates and executes *UPDATE* statements
 use canyon_sql::crud::CrudOperations;
 
-#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 
 /// Update operation is a *CRUD* method defined for some entity `T`, that works by appliying
