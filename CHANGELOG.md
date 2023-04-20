@@ -11,6 +11,15 @@ Year format is defined as: `YYYY-m-d`
 
 ## [0.2.0] - 2023 - 04 - 13
 
+### Feature
+
+- Enabled conditional compilation for the database dependencies of the project.
+This caused a major rework in the codebase, but none of the client APIs has been affected.
+Now, Canyon-SQL comes with two features, ["postgres", "mssql"].
+There's no default features enabled for the project.
+
+## [0.2.0] - 2023 - 04 - 13
+
 ### Feature [BREAKING CHANGES]
 
 - The configuration file has been reworked, by providing a whole category dedicated

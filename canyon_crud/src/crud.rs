@@ -14,30 +14,13 @@ use crate::rows::CanyonRows;
 /// This traits defines and implements a query against a database given
 /// an statement `stmt` and the params to pass the to the client.
 ///
-/// It returns a [`DatabaseResult`], which is the core Canyon type to wrap
-/// the result of the query and, if the user desires,
-/// automatically map it to an struct.
+/// Returns [`std::result::Result`] of [`CanyonRows`], which is the core Canyon type to wrap
+/// the result of the query provide automatic mappings and deserialization
 #[async_trait]
 pub trait Transaction<T> {
-    // /// Performs a query against the targeted database by the selected or
-    // /// the defaulted datasource, returning a collection of instances of *T*
-    // async fn query<'a, S, Z>(
-    //     stmt: S,
-    //     params: Z,
-    //     datasource_name: &'a str,
-    // ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-    //     where
-    //         S: AsRef<str> + Display + Sync + Send + 'a,
-    //         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-    // {
-    //     Self::query_for_rows(stmt, params, datasource_name)
-    //         .await
-    //         .map(|res| res.into_results())
-    // }
-
     /// Performs a query against the targeted database by the selected or
     /// the defaulted datasource, wrapping the resultant collection of entities
-    /// in [`super::rows::Rows`]
+    /// in [`super::rows::CanyonRows`]
     async fn query<'a, S, Z>(
         stmt: S,
         params: Z,

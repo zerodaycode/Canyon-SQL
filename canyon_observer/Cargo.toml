@@ -17,13 +17,12 @@ tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 async-trait = { workspace = true }
 
-# transform to opts with migrations feature
-regex = "1.5" # opt
+regex = { workspace = true }
 walkdir = { workspace = true }
-proc-macro2 = "1.0.27"
-syn = { version = "1.0.86", features = ["full", "parsing"] }
-quote = "1.0.9"
 partialdebug = "0.2.0"
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+syn = { version = "1.0.86", features = ["full", "parsing"] } # TODO Pending to refactor and upgrade
 
 [features]
 postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres"]

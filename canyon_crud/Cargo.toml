@@ -12,10 +12,10 @@ description.workspace = true
 [dependencies]
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
-chrono = { workspace = true, features = ["serde"] }
+chrono = { workspace = true }
 async-trait = { workspace = true }
 
-canyon_connection = { workspace = true, path = "../canyon_connection" }
+canyon_connection = { workspace = true }
 
 [features]
 postgres = ["tokio-postgres", "canyon_connection/postgres"]
