@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "canyon_sql/mssql")]
-
 use crate::constants::SQL_SERVER_CREATE_TABLES;
 use crate::constants::SQL_SERVER_DS;
 use crate::constants::SQL_SERVER_FILL_TABLE_VALUES;

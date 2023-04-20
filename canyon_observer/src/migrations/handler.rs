@@ -92,7 +92,7 @@ impl Migrations {
         let query = match db_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
         };
 
@@ -112,7 +112,7 @@ impl Migrations {
         match db_results {
             #[cfg(feature = "postgres")]
             CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             CanyonRows::Tiberius(v) => Self::process_tib_rows(v, db_type),
             _ => panic!(),
         }
@@ -235,7 +235,7 @@ impl Migrations {
         schema_info
     }
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn process_tib_rows(
         db_results: Vec<tiberius::Row>,
         db_type: DatabaseType,
@@ -273,7 +273,7 @@ impl Migrations {
 fn get_table_name_from_tp_row(res_row: &tokio_postgres::Row) -> String {
     res_row.get::<&str, String>("table_name")
 }
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 fn get_table_name_from_tib_row(res_row: &tiberius::Row) -> String {
     res_row
         .get::<&str, &str>("table_name")
@@ -289,7 +289,7 @@ fn check_for_table_name(
     match db_type {
         #[cfg(feature = "postgres")]
         DatabaseType::PostgreSql => table.table_name == res_row.get_postgres::<&str>("table_name"),
-        #[cfg(feature = "tiberius")]
+        #[cfg(feature = "mssql")]
         DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),
     }
 }

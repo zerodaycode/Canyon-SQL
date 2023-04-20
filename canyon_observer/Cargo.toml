@@ -27,6 +27,5 @@ partialdebug = "0.2.0"
 
 [features]
 default = ["postgres"]
-postgres = ["tokio-postgres"]
-mssql = ["tiberius"]
-#mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]
+postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres"]
+mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql"]

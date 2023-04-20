@@ -1,8 +1,9 @@
 ///! Constant values to share across the integration tests
-pub const PSQL_DS: &str = "postgres_docker";
-pub const SQL_SERVER_DS: &str = "sqlserver_docker";
 
-pub static FETCH_PUBLIC_SCHEMA: &str =
+#[cfg(feature = "postgres")] pub const PSQL_DS: &str = "postgres_docker";
+#[cfg(feature = "mssql")] pub const SQL_SERVER_DS: &str = "sqlserver_docker";
+
+#[cfg(feature = "postgres")] pub static FETCH_PUBLIC_SCHEMA: &str =
 "SELECT
     gi.table_name,
     gi.column_name,
@@ -33,7 +34,7 @@ LEFT JOIN pg_catalog.pg_constraint AS con on
 WHERE
     table_schema = 'public';";
 
-pub const SQL_SERVER_CREATE_TABLES: &str = "
+#[cfg(feature = "mssql")] pub const SQL_SERVER_CREATE_TABLES: &str = "
 IF OBJECT_ID(N'[dbo].[league]', N'U') IS NULL
 BEGIN
     CREATE TABLE dbo.league (
@@ -87,6 +88,7 @@ BEGIN
 END;
 ";
 
+#[cfg(feature = "mssql")]
 pub const SQL_SERVER_FILL_TABLE_VALUES: &str = "
 -- Values for league table
 -- Values for league table

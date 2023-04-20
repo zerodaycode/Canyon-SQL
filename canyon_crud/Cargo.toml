@@ -17,12 +17,11 @@ description.workspace = true
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 chrono = { version = "0.4", features = ["serde"] }
-async-trait = { version = "0.1.50" }
+async-trait = { workspace = true }
 
 canyon_connection = { workspace = true, path = "../canyon_connection" }
 
 [features]
 default = ["postgres"]
-postgres = ["tokio-postgres"]
-mssql = ["tiberius"]
-#mssql-integrated-auth = ["mssql", "tiberius/integrated-auth-gssapi"]
+postgres = ["tokio-postgres", "canyon_connection/postgres"]
+mssql = ["tiberius", "canyon_connection/mssql"]

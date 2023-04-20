@@ -15,17 +15,19 @@ members = [
 
 [dependencies]
 # Project crates
-canyon_connection = { version = "0.2.0", path = "canyon_connection", optional = true }
-canyon_crud = { version = "0.2.0", path = "canyon_crud" }
-canyon_observer = { version = "0.2.0", path = "canyon_observer" }
-canyon_macros = { version = "0.2.0", path = "canyon_macros" }
-async-trait = "0.1.68"
+canyon_connection = { workspace = true, path = "canyon_connection" }
+canyon_crud = { workspace = true, path = "canyon_crud" }
+canyon_observer = { workspace = true, path = "canyon_observer" }
+canyon_macros = { woorkspace = true, path = "canyon_macros" }
+
+# To be marked as opt deps
+tokio-postgres = { workspace = true, optional = true }
+tiberius = { workspace = true, optional = true }
 
 [workspace.dependencies]
 canyon_crud = { version = "0.2.0", path = "canyon_crud" }
 canyon_connection = { version = "0.2.0", path = "canyon_connection" }
 canyon_observer = { version = "0.2.0", path = "canyon_observer" }
-canyon_macros = { version = "0.2.0", path = "canyon_macros" }
 
 tokio = { version = "1.27.0", features = ["full"]  }
 tokio-util = { version = "0.7.4", features = ["compat"]  }
@@ -53,5 +55,5 @@ description = "A Rust ORM and QueryBuilder"
 
 [features]
 default = ["postgres"]
-postgres = ["canyon_connection/postgres", "canyon_connection/tokio-postgres"]
-mssql = ["canyon_connection/tiberius", "canyon_crud/tiberius", "canyon_observer/tiberius"]
+postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_connection/postgres", "canyon_observer/postgres", "canyon_macros/postgres"]
+mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql", "canyon_observer/mssql", "canyon_macros/mssql"]

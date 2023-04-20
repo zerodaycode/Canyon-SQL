@@ -162,29 +162,57 @@ mod database_connection_handler {
     use super::*;
     use crate::CanyonSqlConfig;
 
-    const CONFIG_FILE_MOCK_ALT: &str = r#"
-        [canyon_sql]
-        datasources = [
-            {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-            {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
-        ]
-    "#;
-
     /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
     #[test]
     fn check_from_datasource() {
-        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT)
-            .expect("A failure happened retrieving the [canyon_sql_root] section");
+        #[cfg(all(feature = "postgres", feature = "mssql"))] {
+            const CONFIG_FILE_MOCK_ALT_ALL: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_ALL)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::PostgreSql
+            );
+            assert_eq!(
+                config.canyon_sql.datasources[1].get_db_type(),
+                DatabaseType::SqlServer
+            );
+        }
 
-        #[cfg(feature = "postgres")]
-        assert_eq!(
-            config.canyon_sql.datasources[0].get_db_type(),
-            DatabaseType::PostgreSql
-        );
-        #[cfg(feature = "mssql")]
-        assert_eq!(
-            config.canyon_sql.datasources[1].get_db_type(),
-            DatabaseType::SqlServer
-        );
+        #[cfg(feature = "postgres")] {
+            const CONFIG_FILE_MOCK_ALT_PG: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_PG)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::PostgreSql
+            );
+        }
+
+        #[cfg(feature = "mssql")] {
+            const CONFIG_FILE_MOCK_ALT_MSSQL: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MSSQL)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::SqlServer
+            );
+        }
     }
 }

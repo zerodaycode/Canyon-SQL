@@ -1,4 +1,4 @@
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 use canyon_connection::tiberius::ColumnType as TIB_TY;
 #[cfg(feature = "postgres")]
 use canyon_connection::tokio_postgres::types::Type as TP_TYP;
@@ -54,7 +54,7 @@ impl ColumnMetadataTypeValue {
                     _ => Self::NoneValue, // TODO watchout this one
                 }
             }
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             ColumnType::SqlServer(v) => match v {
                 TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => {
                     Self::StringValue(

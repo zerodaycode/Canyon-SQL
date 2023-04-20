@@ -86,7 +86,7 @@ impl CanyonMemory {
                 db_rows.push(db_row);
             }
         }
-        #[cfg(feature = "tiberius")]
+        #[cfg(feature = "mssql")]
         {
             let mem_results: &Vec<tiberius::Row> = res.get_tiberius_rows();
             for row in mem_results {
@@ -246,7 +246,7 @@ impl CanyonMemory {
         let query = match database_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE,
         };
 

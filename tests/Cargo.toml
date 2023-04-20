@@ -5,7 +5,7 @@ edition.workspace = true
 publish = false
 
 [dev-dependencies]
-canyon_sql = { path = ".." }
+canyon_sql = { path = "..", default-features = false, features = ["mssql"] }
 
 [[test]]
 name = "canyon_integration_tests"
@@ -13,5 +13,5 @@ path = "canyon_integration_tests.rs"
 
 [features]
 default = ["postgres"]
-postgres = ["canyon_sql/postgres"]
+postgres = []
 mssql = []

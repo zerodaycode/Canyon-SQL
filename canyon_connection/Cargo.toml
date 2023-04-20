@@ -12,16 +12,18 @@ description.workspace = true
 [dependencies]
 tokio = { workspace = true }
 tokio-util = { workspace = true }
+
 tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"], optional = true }
 tiberius = { version = "0.12.1", features = ["tds73", "chrono", "integrated-auth-gssapi"], optional = true }
+
 futures = { workspace = true }
 indexmap = { workspace = true }
-async-std = { workspace = true }
 lazy_static = { workspace = true }
-serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+async-std = { workspace = true, optional = true }
 
 [features]
 default = ["postgres"]
 postgres = ["tokio-postgres"]
-mssql = ["tiberius"]
+mssql = ["tiberius", "async-std"]

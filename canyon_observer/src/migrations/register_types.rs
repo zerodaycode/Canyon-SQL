@@ -2,7 +2,7 @@ use regex::Regex;
 
 #[cfg(feature = "postgres")]
 use crate::constants::postgresql_type;
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 use crate::constants::sqlserver_type;
 use crate::constants::{regex_patterns, rust_type, NUMERIC_PK_DATATYPE};
 
@@ -77,7 +77,7 @@ impl CanyonRegisterEntityField {
 
     /// Return the postgres datatype and parameters to create a column for a given rust type
     /// for Microsoft SQL Server
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     pub fn to_sqlserver_syntax(&self) -> String {
         let rust_type_clean = self.field_type.replace(' ', "");
 
@@ -167,7 +167,7 @@ impl CanyonRegisterEntityField {
         }
     }
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     pub fn to_sqlserver_alter_syntax(&self) -> String {
         let mut rust_type_clean = self.field_type.replace(' ', "");
         let rs_type_is_optional = self.field_type.to_uppercase().starts_with("OPTION");

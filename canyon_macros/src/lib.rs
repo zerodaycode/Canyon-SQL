@@ -486,102 +486,132 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
-    // TODO rework this ugly piece of code in the upcoming versions
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
-        let ident_name = ident.to_string();
+            let ident_name = ident.to_string();
 
-        if get_field_type_as_string(ty) == "String" {
-            quote! {
+            if get_field_type_as_string(ty) == "String" {
+                quote! {
                 #ident: row.get::<&str, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
                     .to_string()
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
+                quote! {
                 #ident: row.get::<i64, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
+                quote! {
                 #ident: row.get::<i32, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
+                quote! {
                 #ident: row.get::<i16, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
+                quote! {
                 #ident: row.get::<f32, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
+                quote! {
                 #ident: row.get::<f64, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
+                quote! {
                 #ident: row.get::<&str, &str>(#ident_name)
                     .map( |x| x.to_owned() )
             }
-        } else if get_field_type_as_string(ty) == "NaiveDate" {
-            quote! {
+            } else if get_field_type_as_string(ty) == "NaiveDate" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty) == "NaiveTime" {
-            quote! {
+            } else if get_field_type_as_string(ty) == "NaiveTime" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty) == "NaiveDateTime" {
-            quote! {
+            } else if get_field_type_as_string(ty) == "NaiveDateTime" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
             }
-        } else if get_field_type_as_string(ty) == "DateTime" {
-            quote! {
+            } else if get_field_type_as_string(ty) == "DateTime" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
-            quote! {
+            } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
+                quote! {
                 #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
             }
-        } else {
-            quote! {
+            } else {
+                quote! {
                 #ident: row.get::<#ty, &str>(#ident_name)
                     .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
             }
-        }
-    });
+            }
+        });
 
     // The type of the Struct
     let ty = ast.ident;
 
-    let tokens = quote! {
-        impl canyon_sql::crud::RowMapper<Self> for #ty
-        {
-            fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
-                Self {
-                    #(#init_field_values),*
-                }
-            }
+    let postgres_enabled = cfg!(feature = "postgres");
+    let mssql_enabled = cfg!(feature = "mssql");
 
-            fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
-                Self {
-                    #(#init_field_values_sqlserver),*
+    let tokens = if postgres_enabled && mssql_enabled {
+        quote! {
+            impl canyon_sql::crud::RowMapper<Self> for #ty {
+                fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
+                    Self {
+                        #(#init_field_values),*
+                    }
+                }
+                fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
+                    Self {
+                        #(#init_field_values_sqlserver),*
+                    }
                 }
             }
+        }
+    } else if postgres_enabled {
+        quote! {
+            impl canyon_sql::crud::RowMapper<Self> for #ty {
+                fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
+                    Self {
+                        #(#init_field_values),*
+                    }
+                }
+            }
+        }
+    } else if mssql_enabled {
+        quote! {
+            impl canyon_sql::crud::RowMapper<Self> for #ty {
+                fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
+                    Self {
+                        #(#init_field_values_sqlserver),*
+                    }
+                }
+            }
+        }
+    } else {
+        quote! {
+            panic!(
+                "Reached a branch in the implementation of the Row Mapper macro that should never be reached.\
+                This is a severe bug of Canyon-SQL. Please, open us an issue at \
+                https://github.com/zerodaycode/Canyon-SQL/issues and let us know about that failure."
+            )
         }
     };
 

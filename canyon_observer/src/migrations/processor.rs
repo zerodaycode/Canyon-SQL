@@ -188,7 +188,7 @@ impl MigrationsProcessor {
             .collect();
 
         for column_metadata in columns_name_to_delete {
-            #[cfg(feature = "tiberius")]
+            #[cfg(feature = "mssql")]
             {
                 if _db_type == DatabaseType::SqlServer && !column_metadata.is_nullable {
                     self.drop_column_not_null(
@@ -246,7 +246,7 @@ impl MigrationsProcessor {
         )));
     }
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn drop_column_not_null(
         &mut self,
         table_name: &str,
@@ -623,7 +623,7 @@ impl MigrationsHelper {
         }
     }
 
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     fn get_datatype_from_column_metadata(current_column_metadata: &ColumnMetadata) -> String {
         // TODO Add all SQL Server text datatypes
         if vec!["nvarchar", "varchar"]
@@ -654,7 +654,7 @@ impl MigrationsHelper {
                     == current_column_metadata.datatype;
             }
         }
-        #[cfg(feature = "tiberius")]
+        #[cfg(feature = "mssql")]
         {
             if db_type == DatabaseType::SqlServer {
                 // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
@@ -779,7 +779,7 @@ impl DatabaseOperation for TableOperation {
                                 .join(", ")
                         )
                     }
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer => {
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer => {
                         format!(
                             "CREATE TABLE {:?} ({:?});",
                             table_name,
@@ -802,7 +802,7 @@ impl DatabaseOperation for TableOperation {
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         /*
                             Notes: Brackets around `old_table_name`, p.e.
                                 exec sp_rename ['league'], 'leagues'  // NOT VALID!
@@ -834,7 +834,7 @@ impl DatabaseOperation for TableOperation {
                             "ALTER TABLE {table_name} ADD CONSTRAINT {foreign_key_name} \
                             FOREIGN KEY ({column_foreign_key}) REFERENCES {table_to_reference} ({column_to_reference});"
                         ),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
@@ -845,7 +845,7 @@ impl DatabaseOperation for TableOperation {
                         format!(
                             "ALTER TABLE {table_with_foreign_key} DROP CONSTRAINT {constraint_name};",
                         ),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
@@ -857,7 +857,7 @@ impl DatabaseOperation for TableOperation {
                             "ALTER TABLE \"{table_name}\" ADD PRIMARY KEY (\"{}\");",
                             entity_field.field_name
                         ),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }
@@ -866,7 +866,7 @@ impl DatabaseOperation for TableOperation {
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
                 }
             }
@@ -886,7 +886,7 @@ enum ColumnOperation {
     AlterColumnType(String, CanyonRegisterEntityField),
     AlterColumnDropNotNull(String, CanyonRegisterEntityField),
     // SQL server specific operation - SQL server can't drop a NOT NULL column
-    #[cfg(feature = "tiberius")]
+    #[cfg(feature = "mssql")]
     DropNotNullBeforeDropColumn(String, String, String),
     #[cfg(feature = "postgres")]
     AlterColumnSetNotNull(String, CanyonRegisterEntityField),
@@ -914,7 +914,7 @@ impl DatabaseOperation for ColumnOperation {
                             entity_field.field_name,
                             entity_field.to_postgres_syntax()
                         ),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         format!(
                             "ALTER TABLE {} ADD \"{}\" {};",
                             table_name,
@@ -933,20 +933,20 @@ impl DatabaseOperation for ColumnOperation {
                             "ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" TYPE {};",
                             entity_field.field_name, entity_field.to_postgres_alter_syntax()
                         ),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
                 match db_type {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE \"{table_name}\" ALTER COLUMN \"{}\" DROP NOT NULL;", entity_field.field_name),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         format!(
                             "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
                             entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
                         )
                 }
-            #[cfg(feature = "tiberius")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
+            #[cfg(feature = "mssql")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
                 format!(
                 "ALTER TABLE {table_name} ALTER COLUMN {column_name} {column_datatype} NULL; DECLARE @tableName VARCHAR(MAX) = '{table_name}'
                 DECLARE @columnName VARCHAR(MAX) = '{column_name}'
@@ -1000,7 +1000,7 @@ impl DatabaseOperation for SequenceOperation {
                             "SELECT setval(pg_get_serial_sequence('\"{table_name}\"', '{}'), max(\"{}\")) from \"{table_name}\";",
                             entity_field.field_name, entity_field.field_name
                         ),
-                    #[cfg(feature = "tiberius")] DatabaseType::SqlServer =>
+                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
             }

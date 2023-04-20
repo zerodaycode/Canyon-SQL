@@ -9,10 +9,10 @@ use canyon_sql::{
     query::{operators::Comp, ops::QueryBuilder},
 };
 
-use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
-use crate::tests_models::player::*;
 use crate::tests_models::tournament::*;
+#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "mssql")] use crate::tests_models::player::*;
 
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
@@ -38,6 +38,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
 
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
@@ -57,6 +58,7 @@ fn test_crud_find_with_querybuilder() {
 }
 
 /// Same than the above but with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_datasource() {
     // Find all the players where its ID column value is greater that 50
@@ -70,6 +72,7 @@ fn test_crud_find_with_querybuilder_datasource() {
 
 /// Updates the values of the range on entries defined by the constraint parameters
 /// in the database entity
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
@@ -82,7 +85,7 @@ fn test_crud_update_with_querybuilder() {
     .r#where(LeagueFieldValue::id(&1), Comp::Gt)
     .and(LeagueFieldValue::id(&8), Comp::Lt);
 
-    /*  Family of QueryBuilders are clone, useful in case of need to read the generated SQL
+    /*  NOTE: Family of QueryBuilders are clone, useful in case of need to read the generated SQL
         let qpr = q.clone();
         println!("PSQL: {:?}", qpr.read_sql());
     */
@@ -105,6 +108,7 @@ fn test_crud_update_with_querybuilder() {
 }
 
 /// Same as above, but with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_update_with_querybuilder_datasource() {
     // Find all the leagues with ID less or equals that 7
@@ -139,6 +143,7 @@ fn test_crud_update_with_querybuilder_datasource() {
 /// Note if the database is persisted (not created and destroyed on every docker or
 /// GitHub Action wake up), it won't delete things that already have been deleted,
 /// but this isn't an error. They just don't exists.
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder() {
     Tournament::delete_query()
@@ -152,6 +157,7 @@ fn test_crud_delete_with_querybuilder() {
 }
 
 /// Same as the above delete, but with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_datasource() {
     Player::delete_query_datasource(SQL_SERVER_DS)

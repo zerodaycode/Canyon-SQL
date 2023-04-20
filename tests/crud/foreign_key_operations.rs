@@ -10,13 +10,14 @@
 ///! For more info: TODO -> Link to the docs of the foreign key chapter
 use canyon_sql::crud::CrudOperations;
 
-use crate::constants::SQL_SERVER_DS;
+#[cfg(feature = "mssql")] use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::tournament::*;
 
 /// Given an entity `T` which has some field declaring a foreign key relation
-/// with some another entity `U`, for example, performns a search to find
+/// with some another entity `U`, for example, performs a search to find
 /// what is the parent type `U` of `T`
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_by_foreign_key() {
     let some_tournament: Tournament = Tournament::find_by_pk(&1)
@@ -38,6 +39,7 @@ fn test_crud_search_by_foreign_key() {
 }
 
 /// Same as the search by foreign key, but with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_by_foreign_key_datasource() {
     let some_tournament: Tournament = Tournament::find_by_pk_datasource(&10, SQL_SERVER_DS)
@@ -67,6 +69,7 @@ fn test_crud_search_by_foreign_key_datasource() {
 /// to `U`.
 ///
 /// For this to work, `U`, the parent, must have derived the `ForeignKeyable` proc macro
+#[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key() {
     let some_league: League = League::find_by_pk(&1)
@@ -87,6 +90,7 @@ fn test_crud_search_reverse_side_foreign_key() {
 
 /// Same as the search by the reverse side of a foreign key relation
 /// but with the specified datasource
+#[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key_datasource() {
     let some_league: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)

@@ -36,7 +36,7 @@ pub mod postgresql_queries {
             table_schema = 'public';";
 }
 
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 pub mod mssql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "IF OBJECT_ID(N'[dbo].[canyon_memory]', N'U') IS NULL
         BEGIN
@@ -157,7 +157,7 @@ pub mod postgresql_type {
     pub const DATETIME: &str = "timestamp without time zone";
 }
 
-#[cfg(feature = "tiberius")]
+#[cfg(feature = "mssql")]
 pub mod sqlserver_type {
     pub const TINY_INT: &str = "TINY INT";
     pub const SMALL_INT: &str = "SMALL INT";

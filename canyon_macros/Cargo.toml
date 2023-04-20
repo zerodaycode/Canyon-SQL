@@ -22,3 +22,8 @@ tokio = { version = "1.9.0", features = ["full"] }
 canyon_observer = { workspace = true, path = "../canyon_observer" }
 canyon_crud = { workspace = true, path = "../canyon_crud" }
 canyon_connection = { workspace = true, path = "../canyon_connection" }
+
+[features]
+default = ["postgres"]
+postgres = ["canyon_connection/postgres", "canyon_crud/postgres", "canyon_observer/postgres"]
+mssql = ["canyon_connection/mssql", "canyon_crud/mssql", "canyon_observer/mssql"]
