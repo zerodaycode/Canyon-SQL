@@ -28,6 +28,7 @@ jobs:
         with:
           registry-token: ${{ secrets.CRATES_IO_TOKEN }}
           publish-delay: 15000
+          args: --all-features
 
   release-publisher:
     needs: 'publish'
