@@ -1,16 +1,17 @@
 extern crate proc_macro;
 
-mod canyon_entity_macro;
-mod canyon_macro;
-mod query_operations;
 mod utils;
+mod query_operations;
+mod canyon_entity_macro;
+#[cfg(feature = "migrations")] mod canyon_macro;
 
-use canyon_connection::CANYON_TOKIO_RUNTIME;
 use canyon_entity_macro::parse_canyon_entity_proc_macro_attr;
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{DeriveInput, Fields, Type, Visibility};
+
+#[cfg(feature = "migrations")] use canyon_macro::main_with_queries;
 
 use query_operations::{
     delete::{generate_delete_query_tokens, generate_delete_tokens},
@@ -22,24 +23,17 @@ use query_operations::{
     },
     update::{generate_update_query_tokens, generate_update_tokens},
 };
-
-use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use canyon_migrations::{
-    manager::{
-        entity::CanyonEntity,
-        manager_builder::{
-            generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
-        },
+use canyon_entities::{
+    CANYON_REGISTER_ENTITIES,
+    entity::CanyonEntity,
+    manager_builder::{
+        generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
     },
-    migrations::handler::Migrations,
+    register_types::{CanyonRegisterEntity, CanyonRegisterEntityField}
 };
 
-use canyon_migrations::{
-    migrations::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
-    CANYON_REGISTER_ENTITIES,
-};
 
 /// Macro for handling the entry point to the program.
 ///
@@ -51,15 +45,6 @@ use canyon_migrations::{
 /// the necessary operations for the migrations
 #[proc_macro_attribute]
 pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
-
-    // Parses the attributes declared in the arguments of this proc macro
-    let attrs_parse_result = parse_canyon_macro_attributes(&attrs);
-    if attrs_parse_result.error.is_some() {
-        return attrs_parse_result.error.unwrap();
-    }
-
-    // Parses the function items that this attribute is attached to
     let func_res = syn::parse::<FunctionParser>(input);
     if func_res.is_err() {
         return quote! { fn main() {} }.into();
@@ -70,46 +55,26 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
     let sign = func.sig;
     let body = func.block.stmts;
 
-    if attrs_parse_result.allowed_migrations {
-        CANYON_TOKIO_RUNTIME.block_on(async {
-            canyon_connection::init_connections_cache().await;
-            Migrations::migrate().await;
-        });
+    #[allow(unused_mut, unused_assignments)]
+    let mut migrations_tokens = quote! {};
+    #[cfg(feature = "migrations")] {
+        migrations_tokens = main_with_queries();
+    }
 
-        // The queries to execute at runtime in the managed state
-        let mut queries_tokens: Vec<TokenStream> = Vec::new();
-        wire_queries_to_execute(&mut queries_tokens);
-
-        // The final code wired in main()
-        quote! {
-            #sign {
-                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
-                    .handle()
-                    .block_on( async {
-                        canyon_sql::runtime::init_connections_cache().await;
-                        {
-                            #(#queries_tokens)*
-                        }
-                        #(#body)*
-                    }
-                )
-            }
-        }
-        .into()
-    } else {
-        quote! {
-            #sign {
-                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+    // The final code wired in main()
+    quote! {
+        #sign {
+            canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                 .handle()
                 .block_on( async {
-                        canyon_sql::runtime::init_connections_cache().await;
-                        #(#body)*
-                    }
-                )
-            }
+                    canyon_sql::runtime::init_connections_cache().await;
+                    #migrations_tokens
+                    #(#body)*
+                }
+            )
         }
-        .into()
     }
+    .into()
 }
 
 #[proc_macro_attribute]

@@ -1,5 +1,3 @@
-pub const NUMERIC_PK_DATATYPE: [&str; 6] = ["i16", "u16", "i32", "u32", "i64", "u64"];
-
 #[cfg(feature = "postgres")]
 pub mod postgresql_queries {
     pub static CANYON_MEMORY_TABLE: &str = "CREATE TABLE IF NOT EXISTS canyon_memory (

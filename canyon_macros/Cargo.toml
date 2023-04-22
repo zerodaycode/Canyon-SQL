@@ -19,9 +19,10 @@ proc-macro2 = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
 
-canyon_migrations = { workspace = true, optional = true }
-canyon_crud = { workspace = true }
 canyon_connection = { workspace = true }
+canyon_crud = { workspace = true }
+canyon_entities = { workspace = true }
+canyon_migrations = { workspace = true, optional = true }
 
 [features]
 postgres = ["canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres"]

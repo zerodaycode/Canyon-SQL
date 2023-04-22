@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::fs;
 use walkdir::WalkDir;
 
-use super::register_types::CanyonRegisterEntity;
+use canyon_entities::register_types::CanyonRegisterEntity;
 
 /// Convenient struct that contains the necessary data and operations to implement
 /// the `Canyon Memory`.

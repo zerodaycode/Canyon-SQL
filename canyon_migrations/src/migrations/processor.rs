@@ -13,7 +13,9 @@ use crate::save_migrations_query_to_execute;
 
 use super::information_schema::{ColumnMetadata, TableMetadata};
 use super::memory::CanyonMemory;
-use super::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
+use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
+#[cfg(feature = "postgres")] use crate::migrations::{to_postgres_alter_syntax, to_postgres_syntax};
+#[cfg(feature = "mssql")] use crate::migrations::{to_sqlserver_alter_syntax, to_sqlserver_syntax};
 
 /// Responsible of generating the queries to sync the database status with the
 /// Rust source code managed by Canyon, for successfully make the migrations
@@ -661,8 +663,8 @@ impl MigrationsHelper {
         #[cfg(feature = "postgres")]
         {
             if db_type == DatabaseType::PostgreSql {
-                return canyon_register_entity_field
-                    .to_postgres_alter_syntax()
+                return
+                    to_postgres_alter_syntax(canyon_register_entity_field)
                     .to_lowercase()
                     == current_column_metadata.datatype;
             }
@@ -671,8 +673,8 @@ impl MigrationsHelper {
         {
             if db_type == DatabaseType::SqlServer {
                 // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
-                return canyon_register_entity_field
-                    .to_sqlserver_alter_syntax()
+                return
+                    to_sqlserver_alter_syntax(canyon_register_entity_field)
                     .to_lowercase()
                     == current_column_metadata.datatype;
             }
@@ -786,7 +788,7 @@ impl DatabaseOperation for TableOperation {
                                 .map(|entity_field| format!(
                                     "\"{}\" {}",
                                     entity_field.field_name,
-                                    entity_field.to_postgres_syntax()
+                                    to_postgres_syntax(entity_field)
                                 ))
                                 .collect::<Vec<String>>()
                                 .join(", ")
@@ -801,7 +803,7 @@ impl DatabaseOperation for TableOperation {
                                 .map(|entity_field| format!(
                                     "{} {}",
                                     entity_field.field_name,
-                                    entity_field.to_sqlserver_syntax()
+                                    to_sqlserver_syntax(entity_field)
                                 ))
                                 .collect::<Vec<String>>()
                                 .join(", ")
@@ -924,14 +926,14 @@ impl DatabaseOperation for ColumnOperation {
                             "ALTER TABLE \"{}\" ADD COLUMN \"{}\" {};",
                             table_name,
                             entity_field.field_name,
-                            entity_field.to_postgres_syntax()
+                            to_postgres_syntax(entity_field)
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         format!(
                             "ALTER TABLE {} ADD \"{}\" {};",
                             table_name,
                             entity_field.field_name,
-                            entity_field.to_sqlserver_syntax()
+                            to_sqlserver_syntax(entity_field)
                         )
                 }
             ColumnOperation::DeleteColumn(table_name, column_name) => {
@@ -943,7 +945,7 @@ impl DatabaseOperation for ColumnOperation {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!(
                             "ALTER TABLE \"{_table_name}\" ALTER COLUMN \"{}\" TYPE {};",
-                            _entity_field.field_name, _entity_field.to_postgres_alter_syntax()
+                            _entity_field.field_name, to_postgres_alter_syntax(_entity_field)
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
@@ -955,7 +957,7 @@ impl DatabaseOperation for ColumnOperation {
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         format!(
                             "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
-                            entity_field.field_name, entity_field.to_sqlserver_alter_syntax()
+                            entity_field.field_name, to_sqlserver_alter_syntax(entity_field)
                         )
                 }
             #[cfg(feature = "mssql")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
@@ -981,7 +983,7 @@ impl DatabaseOperation for ColumnOperation {
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer => format!(
                         "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NOT NULL",
                         entity_field.field_name,
-                        entity_field.to_sqlserver_alter_syntax()
+                        to_sqlserver_alter_syntax(entity_field)
                     )
                 }
             }
