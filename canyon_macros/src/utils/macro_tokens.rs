@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use canyon_observer::manager::field_annotation::EntityFieldAnnotation;
+use canyon_migrations::manager::field_annotation::EntityFieldAnnotation;
 use proc_macro2::Ident;
 use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
 

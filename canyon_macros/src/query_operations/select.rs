@@ -1,4 +1,4 @@
-use canyon_observer::manager::field_annotation::EntityFieldAnnotation;
+use canyon_migrations::manager::field_annotation::EntityFieldAnnotation;
 
 use proc_macro2::TokenStream;
 use quote::quote;

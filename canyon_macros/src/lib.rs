@@ -26,7 +26,7 @@ use query_operations::{
 use canyon_macro::{parse_canyon_macro_attributes, wire_queries_to_execute};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use canyon_observer::{
+use canyon_migrations::{
     manager::{
         entity::CanyonEntity,
         manager_builder::{
@@ -36,7 +36,7 @@ use canyon_observer::{
     migrations::handler::Migrations,
 };
 
-use canyon_observer::{
+use canyon_migrations::{
     migrations::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
     CANYON_REGISTER_ENTITIES,
 };

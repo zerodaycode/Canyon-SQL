@@ -5,7 +5,7 @@ use proc_macro2::{Ident, TokenStream};
 
 use quote::quote;
 
-use canyon_observer::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
+use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
 use syn::{Lit, NestedMeta};
 
 #[derive(Debug)]

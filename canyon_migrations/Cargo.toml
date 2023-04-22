@@ -1,5 +1,5 @@
 [package]
-name = "canyon_observer"
+name = "canyon_migrations"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
