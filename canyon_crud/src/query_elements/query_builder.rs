@@ -182,9 +182,7 @@ where
 
         let where_ = String::from(" WHERE ")
             + column_name
-            + op.as_str()
-            + "$"
-            + &(self.query.params.len() + 1).to_string();
+            + &op.as_str(self.query.params.len() + 1);
 
         self.query.sql.push_str(&where_);
         self.query.params.push(value);
@@ -195,10 +193,7 @@ where
 
         let and_ = String::from(" AND ")
             + column_name
-            + op.as_str()
-            + "$"
-            + &(self.query.params.len() + 1).to_string()
-            + " ";
+            + &op.as_str(self.query.params.len() + 1);
 
         self.query.sql.push_str(&and_);
         self.query.params.push(value);
@@ -209,10 +204,7 @@ where
 
         let and_ = String::from(" OR ")
             + column_name
-            + op.as_str()
-            + "$"
-            + &(self.query.params.len() + 1).to_string()
-            + " ";
+            + &op.as_str(self.query.params.len() + 1);
 
         self.query.sql.push_str(&and_);
         self.query.params.push(value);
@@ -246,7 +238,7 @@ where
             self.query.params.push(qp)
         });
 
-        self.query.sql.push_str(") ");
+        self.query.sql.push_str(")");
     }
 
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
@@ -277,7 +269,7 @@ where
             self.query.params.push(qp)
         });
 
-        self.query.sql.push_str(") ");
+        self.query.sql.push_str(")");
     }
 
     #[inline]

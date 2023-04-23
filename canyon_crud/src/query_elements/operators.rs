@@ -1,5 +1,5 @@
 pub trait Operator {
-    fn as_str(&self) -> &'static str;
+    fn as_str(&self, placeholder_counter: usize) -> String;
 }
 
 /// Enumerated type for represent the comparison operations
@@ -16,17 +16,38 @@ pub enum Comp {
     /// Operator "<" less than value
     Lt,
     /// Operator "=<" less or equals than value
-    LtEq,
+    LtEq
 }
+
 impl Operator for Comp {
-    fn as_str(&self) -> &'static str {
+    fn as_str(&self, placeholder_counter: usize) -> String {
         match *self {
-            Self::Eq => " = ",
-            Self::Neq => " <> ",
-            Self::Gt => " > ",
-            Self::GtEq => " >= ",
-            Self::Lt => " < ",
-            Self::LtEq => " <= ",
+            Self::Eq => format!(" = ${placeholder_counter}"),
+            Self::Neq => format!(" <> ${placeholder_counter}"),
+            Self::Gt => format!(" > ${placeholder_counter}"),
+            Self::GtEq => format!(" >= ${placeholder_counter}"),
+            Self::Lt => format!(" < ${placeholder_counter}"),
+            Self::LtEq => format!(" <= ${placeholder_counter}")
+        }
+    }
+}
+
+pub enum Like {
+    /// Operator "LIKE"  as '%pattern%'
+    Full,
+    /// Operator "LIKE"  as '%pattern'
+    Left,
+    /// Operator "LIKE"  as 'pattern%'
+    Right
+}
+
+
+impl Operator for Like {
+    fn as_str(&self, placeholder_counter: usize) -> String {
+        match *self {
+            Like::Full => format!(" LIKE CONCAT('%', ${placeholder_counter} ,'%') "),
+            Like::Left => format!(" LIKE CONCAT('%', ${placeholder_counter}) "),
+            Like::Right => format!(" LIKE CONCAT(${placeholder_counter} ,'%') "),
         }
     }
 }

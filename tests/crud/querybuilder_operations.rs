@@ -34,7 +34,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
     // generated SQL by the SelectQueryBuilder<T> is the spected
     assert_eq!(
         select_with_joins.read_sql(),
-        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2  AND name IN ($2, $3) "
+        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
     )
 }
 
@@ -239,7 +239,7 @@ fn test_or_clause_with_in_constraint() {
 
     assert_eq!(
         l.read_sql(),
-        "SELECT * FROM league WHERE name = $1 OR id IN ($1, $2, $3) "
+        "SELECT * FROM league WHERE name = $1 OR id IN ($1, $2, $3)"
     )
 }
 
