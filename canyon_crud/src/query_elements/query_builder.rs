@@ -233,7 +233,7 @@ where
             self.query.params.push(qp)
         });
 
-        self.query.sql.push_str(")");
+        self.query.sql.push(')')
     }
 
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
@@ -264,7 +264,7 @@ where
             self.query.params.push(qp)
         });
 
-        self.query.sql.push_str(")");
+        self.query.sql.push(')')
     }
 
     #[inline]
