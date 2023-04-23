@@ -14,8 +14,8 @@ use crate::save_migrations_query_to_execute;
 use super::information_schema::{ColumnMetadata, TableMetadata};
 use super::memory::CanyonMemory;
 use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
-#[cfg(feature = "postgres")] use crate::migrations::{to_postgres_alter_syntax, to_postgres_syntax};
-#[cfg(feature = "mssql")] use crate::migrations::{to_sqlserver_alter_syntax, to_sqlserver_syntax};
+#[cfg(feature = "postgres")] use crate::migrations::transforms::{to_postgres_alter_syntax, to_postgres_syntax};
+#[cfg(feature = "mssql")] use crate::migrations::transforms::{to_sqlserver_alter_syntax, to_sqlserver_syntax};
 
 /// Responsible of generating the queries to sync the database status with the
 /// Rust source code managed by Canyon, for successfully make the migrations

@@ -11,14 +11,14 @@ host = 'localhost'
 port = 5438
 db_name = 'postgres'
 
-#
-#[[canyon_sql.datasources]]
-#name = 'sqlserver_docker'
-#
-#[canyon_sql.datasources.auth]
-#sqlserver = { basic = { username = 'sa', password = 'SqlServer-10' } }
-#
-#[canyon_sql.datasources.properties]
-#host = 'localhost'
-#port = 1434
-#db_name = 'master'
+
+[[canyon_sql.datasources]]
+name = 'sqlserver_docker'
+
+[canyon_sql.datasources.auth]
+sqlserver = { basic = { username = 'sa', password = 'SqlServer-10' } }
+
+[canyon_sql.datasources.properties]
+host = 'localhost'
+port = 1434
+db_name = 'master'
