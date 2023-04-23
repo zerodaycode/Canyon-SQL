@@ -6,7 +6,7 @@
 ///
 use canyon_sql::{
     crud::CrudOperations,
-    query::{operators::Comp, ops::QueryBuilder},
+    query::{operators::Comp, operators::Like, ops::QueryBuilder},
 };
 
 #[cfg(feature = "mssql")]
@@ -57,6 +57,96 @@ fn test_crud_find_with_querybuilder() {
     let league_idx_0 = filtered_leagues.get(0).unwrap();
     assert_eq!(league_idx_0.id, 34);
     assert_eq!(league_idx_0.region, "KOREA");
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_fulllike() {
+    // Find all the leagues with "LC" in their name
+    let mut filtered_leagues_result = League::select_query();
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
+    )
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_fulllike_datasource() {
+    // Find all the leagues with "LC" in their name
+    let mut filtered_leagues_result = League::select_query_datasource(SQL_SERVER_DS);
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
+    )
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_leftlike() {
+    // Find all the leagues whose name ends with "CK"
+    let mut filtered_leagues_result = League::select_query();
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR))"
+    )
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_leftlike_datasource() {
+    // Find all the leagues whose name ends with "CK"
+    let mut filtered_leagues_result = League::select_query();
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR))"
+    )
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_rightlike() {
+    // Find all the leagues whose name starts with "LC"
+    let mut filtered_leagues_result = League::select_query();
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT(CAST($1 AS VARCHAR) ,'%')"
+    )
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_rightlike_datasource() {
+    // Find all the leagues whose name starts with "LC"
+    let mut filtered_leagues_result = League::select_query_datasource(SQL_SERVER_DS);
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT(CAST($1 AS VARCHAR) ,'%')"
+    )
 }
 
 /// Same than the above but with the specified datasource

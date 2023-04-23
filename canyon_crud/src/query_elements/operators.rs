@@ -16,7 +16,7 @@ pub enum Comp {
     /// Operator "<" less than value
     Lt,
     /// Operator "=<" less or equals than value
-    LtEq
+    LtEq,
 }
 
 impl Operator for Comp {
@@ -27,7 +27,7 @@ impl Operator for Comp {
             Self::Gt => format!(" > ${placeholder_counter}"),
             Self::GtEq => format!(" >= ${placeholder_counter}"),
             Self::Lt => format!(" < ${placeholder_counter}"),
-            Self::LtEq => format!(" <= ${placeholder_counter}")
+            Self::LtEq => format!(" <= ${placeholder_counter}"),
         }
     }
 }
@@ -38,16 +38,17 @@ pub enum Like {
     /// Operator "LIKE"  as '%pattern'
     Left,
     /// Operator "LIKE"  as 'pattern%'
-    Right
+    Right,
 }
-
 
 impl Operator for Like {
     fn as_str(&self, placeholder_counter: usize) -> String {
         match *self {
-            Like::Full => format!(" LIKE CONCAT('%', ${placeholder_counter} ,'%') "),
-            Like::Left => format!(" LIKE CONCAT('%', ${placeholder_counter}) "),
-            Like::Right => format!(" LIKE CONCAT(${placeholder_counter} ,'%') "),
+            Like::Full => {
+                format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS VARCHAR) ,'%')")
+            }
+            Like::Left => format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS VARCHAR))"),
+            Like::Right => format!(" LIKE CONCAT(CAST(${placeholder_counter} AS VARCHAR) ,'%')"),
         }
     }
 }
