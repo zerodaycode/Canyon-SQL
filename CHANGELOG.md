@@ -9,7 +9,18 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
-## [0.2.0] - 2023 - 04 - 13
+## [0.4.0] - 2023 - 04 - 23
+
+### Feature
+
+- Added the migrations cfg feature. Removed the arguments of the Canyon main macro for enabling 
+migrations. Now, the way to enable them is this new cfg feature.
+
+## [0.3.1] - 2023 - 04 - 20
+
+- No changes
+
+## [0.3.0] - 2023 - 04 - 20
 
 ### Feature
 
