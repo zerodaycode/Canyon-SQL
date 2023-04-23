@@ -180,11 +180,8 @@ where
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {
         let (column_name, value) = r#where.value();
 
-        let where_ = String::from(" WHERE ")
-            + column_name
-            + op.as_str()
-            + "$"
-            + &(self.query.params.len() + 1).to_string();
+        let where_ =
+            String::from(" WHERE ") + column_name + &op.as_str(self.query.params.len() + 1);
 
         self.query.sql.push_str(&where_);
         self.query.params.push(value);
@@ -193,12 +190,7 @@ where
     pub fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, r#and: Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
-        let and_ = String::from(" AND ")
-            + column_name
-            + op.as_str()
-            + "$"
-            + &(self.query.params.len() + 1).to_string()
-            + " ";
+        let and_ = String::from(" AND ") + column_name + &op.as_str(self.query.params.len() + 1);
 
         self.query.sql.push_str(&and_);
         self.query.params.push(value);
@@ -207,12 +199,7 @@ where
     pub fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, r#and: Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
-        let and_ = String::from(" OR ")
-            + column_name
-            + op.as_str()
-            + "$"
-            + &(self.query.params.len() + 1).to_string()
-            + " ";
+        let and_ = String::from(" OR ") + column_name + &op.as_str(self.query.params.len() + 1);
 
         self.query.sql.push_str(&and_);
         self.query.params.push(value);
@@ -246,7 +233,7 @@ where
             self.query.params.push(qp)
         });
 
-        self.query.sql.push_str(") ");
+        self.query.sql.push_str(")");
     }
 
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
@@ -277,7 +264,7 @@ where
             self.query.params.push(qp)
         });
 
-        self.query.sql.push_str(") ");
+        self.query.sql.push_str(")");
     }
 
     #[inline]
