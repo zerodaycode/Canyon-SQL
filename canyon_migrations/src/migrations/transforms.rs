@@ -1,7 +1,8 @@
-#[cfg(feature = "postgres")] use crate::constants::postgresql_type;
-#[cfg(feature = "mssql")] use crate::constants::sqlserver_type;
+#[cfg(feature = "postgres")]
+use crate::constants::postgresql_type;
+#[cfg(feature = "mssql")]
+use crate::constants::sqlserver_type;
 use crate::constants::{regex_patterns, rust_type};
-
 
 use canyon_entities::register_types::CanyonRegisterEntityField;
 use regex::Regex;
@@ -59,9 +60,7 @@ pub fn to_sqlserver_syntax(field: &CanyonRegisterEntityField) -> String {
     let rust_type_clean = field.field_type.replace(' ', "");
 
     match rust_type_clean.as_str() {
-        rust_type::I8 | rust_type::U8 => {
-            String::from(&format!("{} NOT NULL", sqlserver_type::INT))
-        }
+        rust_type::I8 | rust_type::U8 => String::from(&format!("{} NOT NULL", sqlserver_type::INT)),
         rust_type::OPT_I8 | rust_type::OPT_U8 => String::from(sqlserver_type::INT),
 
         rust_type::I16 | rust_type::U16 => {
@@ -131,12 +130,8 @@ pub fn to_postgres_alter_syntax(field: &CanyonRegisterEntityField) -> String {
         }
         rust_type::STRING | rust_type::OPT_STRING => String::from(postgresql_type::TEXT),
         rust_type::BOOL | rust_type::OPT_BOOL => String::from(postgresql_type::BOOLEAN),
-        rust_type::NAIVE_DATE | rust_type::OPT_NAIVE_DATE => {
-            String::from(postgresql_type::DATE)
-        }
-        rust_type::NAIVE_TIME | rust_type::OPT_NAIVE_TIME => {
-            String::from(postgresql_type::TIME)
-        }
+        rust_type::NAIVE_DATE | rust_type::OPT_NAIVE_DATE => String::from(postgresql_type::DATE),
+        rust_type::NAIVE_TIME | rust_type::OPT_NAIVE_TIME => String::from(postgresql_type::TIME),
         rust_type::NAIVE_DATE_TIME | rust_type::OPT_NAIVE_DATE_TIME => {
             String::from(postgresql_type::DATETIME)
         }

@@ -20,7 +20,6 @@ mod constants;
 use canyon_connection::lazy_static::lazy_static;
 use std::{collections::HashMap, sync::Mutex};
 
-
 lazy_static! {
     pub static ref QUERIES_TO_EXECUTE: Mutex<HashMap<String, Vec<String>>> =
         Mutex::new(HashMap::new());

@@ -1,9 +1,10 @@
 extern crate proc_macro;
 
-mod utils;
-mod query_operations;
 mod canyon_entity_macro;
-#[cfg(feature = "migrations")] mod canyon_macro;
+#[cfg(feature = "migrations")]
+mod canyon_macro;
+mod query_operations;
+mod utils;
 
 use canyon_entity_macro::parse_canyon_entity_proc_macro_attr;
 use proc_macro::TokenStream as CompilerTokenStream;
@@ -11,7 +12,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{DeriveInput, Fields, Type, Visibility};
 
-#[cfg(feature = "migrations")] use canyon_macro::main_with_queries;
+#[cfg(feature = "migrations")]
+use canyon_macro::main_with_queries;
 
 use query_operations::{
     delete::{generate_delete_query_tokens, generate_delete_tokens},
@@ -26,14 +28,13 @@ use query_operations::{
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
 use canyon_entities::{
-    CANYON_REGISTER_ENTITIES,
     entity::CanyonEntity,
     manager_builder::{
         generate_enum_with_fields, generate_enum_with_fields_values, generate_user_struct,
     },
-    register_types::{CanyonRegisterEntity, CanyonRegisterEntityField}
+    register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
+    CANYON_REGISTER_ENTITIES,
 };
-
 
 /// Macro for handling the entry point to the program.
 ///
@@ -57,7 +58,8 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
 
     #[allow(unused_mut, unused_assignments)]
     let mut migrations_tokens = quote! {};
-    #[cfg(feature = "migrations")] {
+    #[cfg(feature = "migrations")]
+    {
         migrations_tokens = main_with_queries();
     }
 

@@ -13,9 +13,11 @@ use crate::save_migrations_query_to_execute;
 
 use super::information_schema::{ColumnMetadata, TableMetadata};
 use super::memory::CanyonMemory;
+#[cfg(feature = "postgres")]
+use crate::migrations::transforms::{to_postgres_alter_syntax, to_postgres_syntax};
+#[cfg(feature = "mssql")]
+use crate::migrations::transforms::{to_sqlserver_alter_syntax, to_sqlserver_syntax};
 use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
-#[cfg(feature = "postgres")] use crate::migrations::transforms::{to_postgres_alter_syntax, to_postgres_syntax};
-#[cfg(feature = "mssql")] use crate::migrations::transforms::{to_sqlserver_alter_syntax, to_sqlserver_syntax};
 
 /// Responsible of generating the queries to sync the database status with the
 /// Rust source code managed by Canyon, for successfully make the migrations
@@ -663,9 +665,7 @@ impl MigrationsHelper {
         #[cfg(feature = "postgres")]
         {
             if db_type == DatabaseType::PostgreSql {
-                return
-                    to_postgres_alter_syntax(canyon_register_entity_field)
-                    .to_lowercase()
+                return to_postgres_alter_syntax(canyon_register_entity_field).to_lowercase()
                     == current_column_metadata.datatype;
             }
         }
@@ -673,9 +673,7 @@ impl MigrationsHelper {
         {
             if db_type == DatabaseType::SqlServer {
                 // TODO Search a better way to get the datatype without useless info (like "VARCHAR(MAX)")
-                return
-                    to_sqlserver_alter_syntax(canyon_register_entity_field)
-                    .to_lowercase()
+                return to_sqlserver_alter_syntax(canyon_register_entity_field).to_lowercase()
                     == current_column_metadata.datatype;
             }
         }

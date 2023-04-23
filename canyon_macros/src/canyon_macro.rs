@@ -1,10 +1,10 @@
 //! Provides helpers to build the `#[canyon_macros::canyon]` procedural like attribute macro
 
+use canyon_connection::CANYON_TOKIO_RUNTIME;
+use canyon_migrations::migrations::handler::Migrations;
+use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
 use proc_macro2::TokenStream;
 use quote::quote;
-use canyon_connection::CANYON_TOKIO_RUNTIME;
-use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
-use canyon_migrations::migrations::handler::Migrations;
 
 #[cfg(feature = "migrations")]
 pub fn main_with_queries() -> TokenStream {
