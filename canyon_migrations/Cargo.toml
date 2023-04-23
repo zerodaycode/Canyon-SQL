@@ -1,5 +1,5 @@
 [package]
-name = "canyon_observer"
+name = "canyon_migrations"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -12,14 +12,17 @@ description.workspace = true
 [dependencies]
 canyon_crud = { workspace = true }
 canyon_connection = { workspace = true }
+canyon_entities = { workspace = true }
+
 tokio = { workspace = true }
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
+
 async-trait = { workspace = true }
 
 regex = { workspace = true }
+partialdebug = { workspace = true }
 walkdir = { workspace = true }
-partialdebug = "0.2.0"
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 syn = { version = "1.0.86", features = ["full", "parsing"] } # TODO Pending to refactor and upgrade

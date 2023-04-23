@@ -6,11 +6,11 @@
 extern crate canyon_connection;
 extern crate canyon_crud;
 extern crate canyon_macros;
-extern crate canyon_observer;
+extern crate canyon_migrations;
 
 /// Reexported elements to the root of the public API
 pub mod migrations {
-    pub use canyon_observer::migrations::{handler, processor};
+    pub use canyon_migrations::migrations::{handler, processor};
 }
 
 /// The top level reexport. Here we define the path to some really important

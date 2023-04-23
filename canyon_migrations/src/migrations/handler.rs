@@ -1,5 +1,6 @@
 use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
 use canyon_crud::rows::CanyonRows;
+use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
 
 use crate::{
@@ -14,7 +15,6 @@ use crate::{
         memory::CanyonMemory,
         processor::MigrationsProcessor,
     },
-    CANYON_REGISTER_ENTITIES,
 };
 
 #[derive(PartialDebug)]

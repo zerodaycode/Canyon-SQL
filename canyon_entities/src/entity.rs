@@ -10,7 +10,7 @@ use syn::{
 use super::entity_fields::EntityField;
 
 /// Provides a convenient way of handling the data on any
-/// `CanyonEntity` struct anntotaded with the macro `#[canyon_entity]`
+/// `CanyonEntity` struct annotated with the macro `#[canyon_entity]`
 #[derive(PartialDebug, Clone)]
 pub struct CanyonEntity {
     pub struct_name: Ident,

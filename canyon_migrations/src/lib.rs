@@ -13,16 +13,13 @@ pub mod migrations;
 
 extern crate canyon_connection;
 extern crate canyon_crud;
+extern crate canyon_entities;
 
 mod constants;
-pub mod manager;
 
-use crate::migrations::register_types::CanyonRegisterEntity;
 use canyon_connection::lazy_static::lazy_static;
 use std::{collections::HashMap, sync::Mutex};
 
-pub static CANYON_REGISTER_ENTITIES: Mutex<Vec<CanyonRegisterEntity<'static>>> =
-    Mutex::new(Vec::new());
 lazy_static! {
     pub static ref QUERIES_TO_EXECUTE: Mutex<HashMap<String, Vec<String>>> =
         Mutex::new(HashMap::new());
