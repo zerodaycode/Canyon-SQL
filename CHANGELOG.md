@@ -9,6 +9,21 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
+## [0.4.1 - 2023 - 04 - 23
+
+### Feature
+
+-The "Like" operator has been added with 3 options:
+
+    Full: allows a search filtering by the field provided and the value contains the String provided.
+    Left: allows you to perform a filtered search by the field provided and the value ends with the String provided.
+    Right: allows a search filtering by the provided field and the value starts with the provided String.
+
+The logic of the operators has been changed a bit.
+
+The corresponding tests have been added to validate that the queries with "Like" are generated correctly.
+
+
 ## [0.4.0] - 2023 - 04 - 23
 
 ### Feature
