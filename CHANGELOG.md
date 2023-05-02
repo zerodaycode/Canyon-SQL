@@ -9,7 +9,13 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
-## [0.4.1 - 2023 - 04 - 23
+## [0.4.2 - 2023 - 05 - 02]
+
+### Bugfix
+
+Fixed a bug related to migrations that prevented compiling if features were not specified.
+
+## [0.4.1 - 2023 - 04 - 23]
 
 ### Feature
 
