@@ -6,8 +6,8 @@
 extern crate canyon_connection;
 extern crate canyon_crud;
 extern crate canyon_macros;
-#[cfg(feature = "migrations")] extern crate canyon_migrations;
-
+#[cfg(feature = "migrations")]
+extern crate canyon_migrations;
 
 /// Reexported elements to the root of the public API
 #[cfg(feature = "migrations")]
