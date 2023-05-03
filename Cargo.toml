@@ -33,11 +33,11 @@ tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 
 [workspace.dependencies]
-canyon_crud = { version = "0.4.1", path = "canyon_crud" }
-canyon_connection = { version = "0.4.1", path = "canyon_connection" }
-canyon_entities = { version = "0.4.1", path = "canyon_entities" }
-canyon_migrations = { version = "0.4.1", path = "canyon_migrations"}
-canyon_macros = { version = "0.4.1", path = "canyon_macros" }
+canyon_crud = { version = "0.4.2", path = "canyon_crud" }
+canyon_connection = { version = "0.4.2", path = "canyon_connection" }
+canyon_entities = { version = "0.4.2", path = "canyon_entities" }
+canyon_migrations = { version = "0.4.2", path = "canyon_migrations"}
+canyon_macros = { version = "0.4.2", path = "canyon_macros" }
 
 tokio = { version = "1.27.0", features = ["full"]  }
 tokio-util = { version = "0.7.4", features = ["compat"]  }
@@ -61,7 +61,7 @@ quote = "1.0.9"
 proc-macro2 = "1.0.27"
 
 [workspace.package]
-version = "0.4.1"
+version = "0.4.2"
 edition = "2021"
 authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto Musi<gonzalo.busto@gmail.com>"]
 documentation = "https://zerodaycode.github.io/canyon-book/"

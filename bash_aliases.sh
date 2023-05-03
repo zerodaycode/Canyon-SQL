@@ -7,7 +7,7 @@
 # In order to run the script, simply type `$ . ./bash_aliases.sh` from the root of the project.
 # (refreshing the current terminal session could be required)
 
-# Executes the docker compose script to wake up the postgres container
+# Executes the docker compose script to wake up the containers
 alias DockerUp='docker-compose -f ./docker/docker-compose.yml up'
 # Shutdown the postgres container
 alias DockerDown='docker-compose -f ./docker/docker-compose.yml down'
