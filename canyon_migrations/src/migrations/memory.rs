@@ -248,6 +248,8 @@ impl CanyonMemory {
             DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
             #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE,
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => todo!("Memory table in mysql not implemented"),
         };
 
         Self::query(query, [], datasource_name)

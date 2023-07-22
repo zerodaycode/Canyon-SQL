@@ -807,7 +807,9 @@ impl DatabaseOperation for TableOperation {
                                 .join(", ")
                         )
                             .replace('"', "")
-                    }
+                    },
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
 
@@ -830,7 +832,9 @@ impl DatabaseOperation for TableOperation {
                             be an allowed behaviour for now, only with the table_name parameter on the
                             CanyonEntity annotation.
                         */
-                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';")
+                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';"),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
 
@@ -848,7 +852,9 @@ impl DatabaseOperation for TableOperation {
                             FOREIGN KEY ({_column_foreign_key}) REFERENCES {_table_to_reference} ({_column_to_reference});"
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
 
@@ -859,7 +865,9 @@ impl DatabaseOperation for TableOperation {
                             "ALTER TABLE {_table_with_foreign_key} DROP CONSTRAINT {_constraint_name};",
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
 
@@ -871,7 +879,9 @@ impl DatabaseOperation for TableOperation {
                             _entity_field.field_name
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
 
@@ -880,7 +890,9 @@ impl DatabaseOperation for TableOperation {
                     #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
                         format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
+                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
         };
@@ -932,7 +944,9 @@ impl DatabaseOperation for ColumnOperation {
                             table_name,
                             entity_field.field_name,
                             to_sqlserver_syntax(entity_field)
-                        )
+                        ),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is different
@@ -946,7 +960,10 @@ impl DatabaseOperation for ColumnOperation {
                             _entity_field.field_name, to_postgres_alter_syntax(_entity_field)
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
+                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
+
                 }
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
                 match db_type {
@@ -956,7 +973,9 @@ impl DatabaseOperation for ColumnOperation {
                         format!(
                             "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
                             entity_field.field_name, to_sqlserver_alter_syntax(entity_field)
-                        )
+                        ),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             #[cfg(feature = "mssql")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
                 format!(
@@ -982,7 +1001,9 @@ impl DatabaseOperation for ColumnOperation {
                         "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NOT NULL",
                         entity_field.field_name,
                         to_sqlserver_alter_syntax(entity_field)
-                    )
+                    ),
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
+
                 }
             }
 

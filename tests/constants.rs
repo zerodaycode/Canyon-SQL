@@ -4,6 +4,8 @@
 pub const PSQL_DS: &str = "postgres_docker";
 #[cfg(feature = "mssql")]
 pub const SQL_SERVER_DS: &str = "sqlserver_docker";
+#[cfg(feature = "mysql")]
+pub const MYSQL_DS: &str = "mysql_docker";
 
 #[cfg(all(feature = "postgres", feature = "migrations"))]
 pub static FETCH_PUBLIC_SCHEMA: &str =

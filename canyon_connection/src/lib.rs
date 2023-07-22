@@ -2,6 +2,8 @@
 pub extern crate async_std;
 pub extern crate futures;
 pub extern crate lazy_static;
+#[cfg(feature = "mysql")]
+pub extern crate mysql_async;
 #[cfg(feature = "mssql")]
 pub extern crate tiberius;
 pub extern crate tokio;

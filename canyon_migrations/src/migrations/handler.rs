@@ -94,6 +94,8 @@ impl Migrations {
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
             #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => todo!("Not implemented fetch database in mysql"),
         };
 
         Self::query(query, [], datasource_name)
@@ -291,5 +293,7 @@ fn check_for_table_name(
         DatabaseType::PostgreSql => table.table_name == res_row.get_postgres::<&str>("table_name"),
         #[cfg(feature = "mssql")]
         DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),
+        #[cfg(feature = "mysql")]
+        DatabaseType::MySQL => todo!(),
     }
 }

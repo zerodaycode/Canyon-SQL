@@ -27,4 +27,6 @@ canyon_migrations = { workspace = true, optional = true }
 [features]
 postgres = ["canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres"]
 mssql = ["canyon_connection/mssql", "canyon_crud/mssql", "canyon_migrations/mssql"]
+mysql = ["canyon_connection/mysql", "canyon_crud/mysql", "canyon_migrations/mysql"]
+
 migrations = ["canyon_migrations"]

@@ -52,6 +52,10 @@ pub trait Transaction<T> {
                 )
                 .await
             }
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::MySQL(_) => {
+                todo!("Pending to implement")
+            }
         }
     }
 }
