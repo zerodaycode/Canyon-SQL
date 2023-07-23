@@ -186,8 +186,8 @@ impl DatabaseConnection {
                     datasource.properties.port.unwrap_or_default(),
                     datasource.properties.db_name
                 );
-
                 let mysql_connection = Conn::from_url(url).await?;
+
                 Ok(DatabaseConnection::MySQL(MysqlConnection {
                     client: { mysql_connection },
                 }))

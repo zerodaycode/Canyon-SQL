@@ -16,6 +16,8 @@ tokio-util = { workspace = true }
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
+mysql_common = { workspace = true, optional = true }
+
 
 futures = { workspace = true }
 indexmap = { workspace = true }
@@ -29,5 +31,6 @@ walkdir = { workspace = true }
 [features]
 postgres = ["tokio-postgres"]
 mssql = ["tiberius", "async-std"]
-mysql = ["mysql_async"]
+mysql = ["mysql_async","mysql_common"]
+
 

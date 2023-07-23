@@ -18,6 +18,8 @@ tokio = { workspace = true }
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
+mysql_common = { workspace = true, optional = true }
+
 
 async-trait = { workspace = true }
 
@@ -31,5 +33,5 @@ syn = { version = "1.0.86", features = ["full", "parsing"] } # TODO Pending to r
 [features]
 postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres"]
 mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql"]
-mysql = ["mysql_async", "canyon_connection/mysql", "canyon_crud/mysql"]
+mysql = ["mysql_async","mysql_common", "canyon_connection/mysql", "canyon_crud/mysql"]
 
