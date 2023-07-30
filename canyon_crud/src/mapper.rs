@@ -1,3 +1,5 @@
+#[cfg(feature = "mysql")]
+use canyon_connection::mysql_async;
 #[cfg(feature = "mssql")]
 use canyon_connection::tiberius;
 #[cfg(feature = "postgres")]
@@ -13,4 +15,6 @@ pub trait RowMapper<T: Transaction<T>>: Sized {
     fn deserialize_postgresql(row: &tokio_postgres::Row) -> T;
     #[cfg(feature = "mssql")]
     fn deserialize_sqlserver(row: &tiberius::Row) -> T;
+    #[cfg(feature = "mysql_async")]
+    fn deserialize_mysql(row: &mysql_async::Row) -> T;
 }

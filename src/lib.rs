@@ -53,6 +53,8 @@ pub mod query {
 
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
+    #[cfg(feature = "mysql")]
+    pub use canyon_connection::mysql_async;
     #[cfg(feature = "mssql")]
     pub use canyon_connection::tiberius;
     #[cfg(feature = "postgres")]

@@ -3,7 +3,7 @@ use serde::Deserialize;
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 #[cfg(feature = "mysql")]
-use mysql_async::Conn;
+use mysql_async::Pool;
 #[cfg(feature = "mssql")]
 use tiberius::{AuthMethod, Config};
 #[cfg(feature = "postgres")]
@@ -41,7 +41,7 @@ pub struct SqlServerConnection {
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
 pub struct MysqlConnection {
-    pub client: Conn, //TODO this is Connection with server but it could be interesting to use Pool
+    pub client: Pool, //TODO this is Connection with server but it could be interesting to use Pool
 }
 
 /// The Canyon database connection handler. When the client's program
@@ -186,7 +186,7 @@ impl DatabaseConnection {
                     datasource.properties.port.unwrap_or_default(),
                     datasource.properties.db_name
                 );
-                let mysql_connection = Conn::from_url(url).await?;
+                let mysql_connection = Pool::from_url(url)?;
 
                 Ok(DatabaseConnection::MySQL(MysqlConnection {
                     client: { mysql_connection },
@@ -214,7 +214,7 @@ impl DatabaseConnection {
     }
 
     #[cfg(feature = "mysql")]
-    pub fn mysql_connection(&mut self) -> &mut MysqlConnection {
+    pub fn mysql_connection(&self) -> &MysqlConnection {
         match self {
             DatabaseConnection::MySQL(conn) => conn,
             #[cfg(all(feature = "postgres", feature = "mssql", feature = "mysql"))]

@@ -4,13 +4,14 @@ use crate::{
 };
 
 #[cfg(feature = "mysql")]
-use canyon_connection::mysql_async::{self, prelude::ToValue, Value};
+use canyon_connection::mysql_async::{self, prelude::ToValue};
+
 #[cfg(feature = "mssql")]
 use canyon_connection::tiberius::{self, ColumnData, IntoSql};
 #[cfg(feature = "postgres")]
 use canyon_connection::tokio_postgres::{self, types::ToSql};
 
-use chrono::{DateTime, Datelike, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Timelike, Utc};
+use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 use std::{any::Any, borrow::Cow};
 

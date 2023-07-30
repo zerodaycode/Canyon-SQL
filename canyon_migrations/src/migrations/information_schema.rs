@@ -67,6 +67,8 @@ impl ColumnMetadataTypeValue {
                 }
                 _ => Self::NoneValue,
             },
+            #[cfg(feature = "mysql")]
+            ColumnType::MySQL(_) => todo!(),
         }
     }
 }

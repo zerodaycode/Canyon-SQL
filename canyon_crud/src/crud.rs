@@ -54,7 +54,7 @@ pub trait Transaction<T> {
             }
             #[cfg(feature = "mssql")]
             DatabaseConnection::MySQL(_) => {
-                todo!("Pending to implement")
+                mysql_query_launcher::launch(database_conn, stmt.to_string(), params.as_ref()).await
             }
         }
     }
@@ -219,5 +219,42 @@ mod sqlserver_query_launcher {
         Ok(CanyonRows::Tiberius(
             _results.into_iter().flatten().collect(),
         ))
+    }
+}
+
+#[cfg(feature = "mysql")]
+mod mysql_query_launcher {
+    use canyon_connection::canyon_database_connector::DatabaseConnection;
+    use mysql_async::from_value;
+    use mysql_async::prelude::Query;
+    use mysql_async::QueryWithParams;
+    use mysql_async::Value;
+
+    use crate::bounds::QueryParameter;
+    use crate::rows::CanyonRows;
+
+    pub async fn launch<'a, T>(
+        db_conn: &DatabaseConnection,
+        stmt: String,
+        params: &'a [&'_ dyn QueryParameter<'_>],
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
+
+        let query_string = stmt.clone();
+
+        let mut params_query: Vec<Value> = Vec::new();
+
+        for param in params {
+            params_query.push(from_value(param.as_mysql_param().to_value()));
+        }
+
+        let query_with_params = QueryWithParams {
+            query: query_string,
+            params: params_query,
+        };
+
+        //let result = mysql_connection.get_conn().await?.exec(query_string, params_query);
+        let result: Vec<mysql_common::Row> = query_with_params.fetch(mysql_connection).await?;
+        Ok(CanyonRows::MySQL(result))
     }
 }
