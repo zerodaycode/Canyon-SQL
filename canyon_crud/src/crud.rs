@@ -253,7 +253,6 @@ mod mysql_query_launcher {
             params: params_query,
         };
 
-        //let result = mysql_connection.get_conn().await?.exec(query_string, params_query);
         let result: Vec<mysql_common::Row> = query_with_params.fetch(mysql_connection).await?;
         Ok(CanyonRows::MySQL(result))
     }

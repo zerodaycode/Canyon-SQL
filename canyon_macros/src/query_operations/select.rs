@@ -148,12 +148,13 @@ pub fn generate_count_tokens(
 ) -> TokenStream {
     let ty = macro_data.ty;
     let ty_str = &ty.to_string();
-    let stmt = format!("SELECT COUNT (*) FROM {table_schema_data}");
+    let stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
 
     let postgres_enabled = cfg!(feature = "postgres");
     let mssql_enabled = cfg!(feature = "mssql");
+    let mysql_enabled = cfg!(feature = "mysql");
 
-    let result_handling = if postgres_enabled && mssql_enabled {
+    let result_handling = if postgres_enabled && mssql_enabled && mysql_enabled {
         quote! {
             canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
                 v.remove(0).get::<&str, i64>("count")
@@ -164,6 +165,9 @@ pub fn generate_count_tokens(
                     .map(|c| c as i64)
                     .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
                     .into(),
+            canyon_sql::crud::CanyonRows::MySQL(mut v) => v.remove(0)
+                .get::<i64, usize>(0)
+                .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
             _ => panic!() // TODO remove when the generics will be refactored
         }
     } else if postgres_enabled {
@@ -182,6 +186,13 @@ pub fn generate_count_tokens(
                     .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
                     .into(),
             _ => panic!() // TODO remove when the generics will be refactored
+        }
+    } else if mysql_enabled {
+        quote! {
+            canyon_sql::crud::CanyonRows::MySQL(mut v) => v.remove(0)
+            .get::<i64, usize>(0)
+                .ok_or(format!("Failure result empty in the COUNT query for MYSQL for: {}", #ty_str).into()),
+            _ => panic!()
         }
     } else {
         quote! {

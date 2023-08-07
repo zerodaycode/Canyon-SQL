@@ -32,5 +32,5 @@ mysql = { basic = { username = 'root', password = 'root' } }
 
 [canyon_sql.datasources.properties]
 host = 'localhost'
-port = 1434
+port = 3307
 db_name = 'public'

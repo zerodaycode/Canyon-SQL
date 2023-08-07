@@ -33,6 +33,9 @@ pub mod connection {
 
     #[cfg(feature = "mssql")]
     pub use canyon_connection::canyon_database_connector::DatabaseConnection::SqlServer;
+
+    #[cfg(feature = "mysql")]
+    pub use canyon_connection::canyon_database_connector::DatabaseConnection::MySQL;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
