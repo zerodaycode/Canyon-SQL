@@ -239,8 +239,8 @@ mod mysql_query_launcher {
         params: &'a [&'_ dyn QueryParameter<'_>],
     ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
-
-        let query_string = stmt.clone();
+        //TODO implement expresion pattern to replace
+        let query_string = stmt.to_owned().replace('$', "?");
 
         let mut params_query: Vec<Value> = Vec::new();
 
