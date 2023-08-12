@@ -3,6 +3,7 @@ extern crate proc_macro;
 mod canyon_entity_macro;
 #[cfg(feature = "migrations")]
 use canyon_macro::main_with_queries;
+
 mod canyon_macro;
 mod query_operations;
 mod utils;
@@ -13,7 +14,6 @@ use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{DeriveInput, Fields, Type, Visibility};
 
-#[cfg(feature = "migrations")]
 use query_operations::{
     delete::{generate_delete_query_tokens, generate_delete_tokens},
     insert::{generate_insert_tokens, generate_multiple_insert_tokens},
@@ -530,7 +530,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
-    //TODO
     let init_field_values_mysql = fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
         quote! {

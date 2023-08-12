@@ -1,6 +1,6 @@
 #![allow(clippy::nonminimal_bool)]
 
-#[cfg(feature = "mssql")]
+#[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
 
 #[cfg(feature = "mssql")]
@@ -167,7 +167,7 @@ fn test_crud_count_datasource_operation_mssql() {
 
 /// Counts how many rows contains an entity on the target database using
 /// the specified datasource mysql
-#[cfg(feature = "mssql")]
+#[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_count_datasource_operation_mysql() {
     assert_eq!(

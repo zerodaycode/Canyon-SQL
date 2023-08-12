@@ -2,7 +2,9 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseConnection;
+use canyon_connection::lazy_static::lazy_static;
 use canyon_connection::{get_database_connection, CACHED_DATABASE_CONN};
+use regex::Regex;
 
 use crate::bounds::QueryParameter;
 use crate::mapper::RowMapper;
@@ -11,6 +13,10 @@ use crate::query_elements::query_builder::{
 };
 use crate::rows::CanyonRows;
 
+lazy_static! {
+    static ref REGEX_DETECT_PARAMS: Regex =
+        Regex::new(r"\$([\d])+").expect("Error building regex pattern to detect params");
+}
 /// This traits defines and implements a query against a database given
 /// an statement `stmt` and the params to pass the to the client.
 ///
@@ -54,7 +60,7 @@ pub trait Transaction<T> {
             }
             #[cfg(feature = "mssql")]
             DatabaseConnection::MySQL(_) => {
-                mysql_query_launcher::launch(database_conn, stmt.to_string(), params.as_ref()).await
+                mysql_query_launcher::launch(database_conn, stmt.to_string(), params).await
             }
         }
     }
@@ -233,27 +239,58 @@ mod mysql_query_launcher {
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
 
-    pub async fn launch<'a, T>(
+    use super::REGEX_DETECT_PARAMS;
+
+    pub async fn launch<'a, T, Z>(
         db_conn: &DatabaseConnection,
         stmt: String,
-        params: &'a [&'_ dyn QueryParameter<'_>],
-    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        params: Z,
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+    where
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+    {
         let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
-        //TODO implement expresion pattern to replace
-        let query_string = stmt.to_owned().replace('$', "?");
+
+        let query_string = REGEX_DETECT_PARAMS.replace_all(&stmt, "?");
 
         let mut params_query: Vec<Value> = Vec::new();
 
-        for param in params {
+        for param in reorder_params_to_mysql(&stmt, params) {
             params_query.push(from_value(param.as_mysql_param().to_value()));
         }
 
         let query_with_params = QueryWithParams {
-            query: query_string,
+            query: query_string.into_owned(),
             params: params_query,
         };
 
         let result: Vec<mysql_common::Row> = query_with_params.fetch(mysql_connection).await?;
         Ok(CanyonRows::MySQL(result))
+    }
+
+    pub fn reorder_params_to_mysql<'a, 'b, Z>(
+        stmt: &'b str,
+        params: Z,
+    ) -> Vec<&'a dyn QueryParameter<'a>>
+    where
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+    {
+        let mut ordered_params = vec![];
+
+        for positional_param in REGEX_DETECT_PARAMS.find_iter(stmt) {
+            let pp = positional_param.as_str();
+            let pp_index = pp[1..]
+                .parse::<usize>()
+                .expect("error parse mapped parameter to usized.")
+                - 1;
+
+            let element = *params
+                .as_ref()
+                .get(pp_index)
+                .expect("error obtaining the element of the mapping against parameters.");
+            ordered_params.push(element);
+        }
+
+        ordered_params
     }
 }

@@ -15,11 +15,12 @@ tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
 mysql_common = { workspace = true, optional = true }
 
-
 chrono = { workspace = true }
 async-trait = { workspace = true }
 
 canyon_connection = { workspace = true }
+
+regex = { workspace = true }
 
 [features]
 postgres = ["tokio-postgres", "canyon_connection/postgres"]
