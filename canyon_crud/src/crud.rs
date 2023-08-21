@@ -255,14 +255,13 @@ mod mysql_query_launcher {
         let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
 
         let stmt_with_escape_characters = regex::escape(&stmt);
-        let query_string = REGEX_DETECT_PARAMS
-            .replace_all(&stmt_with_escape_characters, "?")
-            .to_string(); //TODO Temporal option, can produce error to save strings with quotes
-        println!("{:#?}", query_string);
+        let query_string = REGEX_DETECT_PARAMS.replace_all(&stmt_with_escape_characters, "?");
+
         let query_string = REGEX_DETECT_QUOTE
             .replace_all(&query_string, "")
             .to_string();
-        println!("{:#?}", query_string);
+
+        println!("{query_string}");
 
         let params_query: Vec<Value> =
             reorder_params(&stmt, params, |f| f.as_mysql_param().to_value());

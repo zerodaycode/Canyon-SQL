@@ -52,3 +52,26 @@ impl Operator for Like {
         }
     }
 }
+
+#[cfg(feature = "mysql")]
+pub enum LikeMysql {
+    /// Operator "LIKE"  as '%pattern%'
+    Full,
+    /// Operator "LIKE"  as '%pattern'
+    Left,
+    /// Operator "LIKE"  as 'pattern%'
+    Right,
+}
+
+#[cfg(feature = "mysql")]
+impl Operator for LikeMysql {
+    fn as_str(&self, placeholder_counter: usize) -> String {
+        match *self {
+            LikeMysql::Full => {
+                format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS CHAR) ,'%')")
+            }
+            LikeMysql::Left => format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS CHAR))"),
+            LikeMysql::Right => format!(" LIKE CONCAT(CAST(${placeholder_counter} AS CHAR) ,'%')"),
+        }
+    }
+}

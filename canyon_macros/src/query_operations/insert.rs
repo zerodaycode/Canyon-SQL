@@ -40,8 +40,9 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
         let postgres_enabled = cfg!(feature = "postgres");
         let mssql_enabled = cfg!(feature = "mssql");
+        let mysql_enabled = cfg!(feature = "mysql");
 
-        let match_rows = if postgres_enabled && mssql_enabled {
+        let match_rows = if postgres_enabled && mssql_enabled && mysql_enabled {
             quote! {
                 canyon_sql::crud::CanyonRows::Postgres(mut v) => {
                     self.#pk_ident = v
@@ -56,6 +57,14 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                         .ok_or("Failed getting the returned IDs for a multi insert")?
                         .get::<#pk_type, &str>(#primary_key)
                         .ok_or("SQL Server primary key type failed to be set as value")?;
+                    Ok(())
+                }
+                canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .ok_or("Failed getting the returned IDs for a multi insert")?
+                        .get::<#pk_type, &str>(#primary_key)
+                        .ok_or("MYSQL primary key type failed to be set as value")?;
                     Ok(())
                 }
             }
@@ -77,6 +86,17 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                         .ok_or("Failed getting the returned IDs for a multi insert")?
                         .get::<#pk_type, &str>(#primary_key)
                         .ok_or("SQL Server primary key type failed to be set as value")?;
+                    Ok(())
+                }
+            }
+        } else if mysql_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    self.#pk_ident = v
+                        .get(0)
+                        .ok_or("Failed getting the returned IDs for a multi insert")?
+                        .get::<#pk_type, &str>(#primary_key)
+                        .ok_or("MYSQL primary key type failed to be set as value")?;
                     Ok(())
                 }
             }
@@ -261,8 +281,9 @@ pub fn generate_multiple_insert_tokens(
 
         let postgres_enabled = cfg!(feature = "postgres");
         let mssql_enabled = cfg!(feature = "mssql");
+        let mysql_enabled = cfg!(feature = "mysql");
 
-        let match_multi_insert_rows = if postgres_enabled && mssql_enabled {
+        let match_multi_insert_rows = if postgres_enabled && mssql_enabled && mysql_enabled {
             quote! {
                 canyon_sql::crud::CanyonRows::Postgres(mut v) => {
                     for (idx, instance) in instances.iter_mut().enumerate() {
@@ -283,6 +304,16 @@ pub fn generate_multiple_insert_tokens(
                             .expect("SQL Server primary key type failed to be set as value");
                     }
 
+                    Ok(())
+                }
+                canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    for (idx, instance) in instances.iter_mut().enumerate() {
+                        instance.#pk_ident = v
+                            .get(idx)
+                            .expect("Failed getting the returned IDs for a multi insert")
+                            .get::<#pk_type, &str>(#pk)
+                            .expect("MYSQL primary key type failed to be set as value");
+                    }
                     Ok(())
                 }
             }
@@ -310,6 +341,19 @@ pub fn generate_multiple_insert_tokens(
                             .expect("SQL Server primary key type failed to be set as value");
                     }
 
+                    Ok(())
+                }
+            }
+        } else if mysql_enabled {
+            quote! {
+                canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    for (idx, instance) in instances.iter_mut().enumerate() {
+                        instance.#pk_ident = v
+                            .get(idx)
+                            .expect("Failed getting the returned IDs for a multi insert")
+                            .get::<#pk_type, &str>(#pk)
+                            .expect("MYSQL primary key type failed to be set as value");
+                    }
                     Ok(())
                 }
             }
