@@ -16,6 +16,8 @@ use crate::rows::CanyonRows;
 lazy_static! {
     static ref REGEX_DETECT_PARAMS: Regex =
         Regex::new(r"\$([\d])+").expect("Error building regex pattern to detect params");
+    static ref REGEX_DETECT_QUOTE: Regex = //Temporal solution escape quotes
+        Regex::new(r#"\"|\\"#).expect("Error building regex pattern to detect quotes");
 }
 /// This traits defines and implements a query against a database given
 /// an statement `stmt` and the params to pass the to the client.
@@ -60,7 +62,8 @@ pub trait Transaction<T> {
             }
             #[cfg(feature = "mssql")]
             DatabaseConnection::MySQL(_) => {
-                mysql_query_launcher::launch(database_conn, stmt.to_string(), params).await
+                mysql_query_launcher::launch::<T>(database_conn, stmt.to_string(), params.as_ref())
+                    .await
             }
         }
     }
@@ -230,67 +233,70 @@ mod sqlserver_query_launcher {
 
 #[cfg(feature = "mysql")]
 mod mysql_query_launcher {
+
     use canyon_connection::canyon_database_connector::DatabaseConnection;
-    use mysql_async::from_value;
+
     use mysql_async::prelude::Query;
     use mysql_async::QueryWithParams;
     use mysql_async::Value;
 
     use crate::bounds::QueryParameter;
+    use crate::crud::REGEX_DETECT_QUOTE;
     use crate::rows::CanyonRows;
 
+    use super::reorder_params;
     use super::REGEX_DETECT_PARAMS;
 
-    pub async fn launch<'a, T, Z>(
+    pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
         stmt: String,
-        params: Z,
-    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-    where
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-    {
+        params: &'a [&'_ dyn QueryParameter<'_>],
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
 
-        let query_string = REGEX_DETECT_PARAMS.replace_all(&stmt, "?");
+        let stmt_with_escape_characters = regex::escape(&stmt);
+        let query_string = REGEX_DETECT_PARAMS
+            .replace_all(&stmt_with_escape_characters, "?")
+            .to_string(); //TODO Temporal option, can produce error to save strings with quotes
+        println!("{:#?}", query_string);
+        let query_string = REGEX_DETECT_QUOTE
+            .replace_all(&query_string, "")
+            .to_string();
+        println!("{:#?}", query_string);
 
-        let mut params_query: Vec<Value> = Vec::new();
-
-        for param in reorder_params_to_mysql(&stmt, params) {
-            params_query.push(from_value(param.as_mysql_param().to_value()));
-        }
+        let params_query: Vec<Value> =
+            reorder_params(&stmt, params, |f| f.as_mysql_param().to_value());
 
         let query_with_params = QueryWithParams {
-            query: query_string.into_owned(),
+            query: query_string,
             params: params_query,
         };
 
         let result: Vec<mysql_common::Row> = query_with_params.fetch(mysql_connection).await?;
         Ok(CanyonRows::MySQL(result))
     }
+}
 
-    pub fn reorder_params_to_mysql<'a, 'b, Z>(
-        stmt: &'b str,
-        params: Z,
-    ) -> Vec<&'a dyn QueryParameter<'a>>
-    where
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-    {
-        let mut ordered_params = vec![];
+fn reorder_params<T>(
+    stmt: &str,
+    params: &[&'_ dyn QueryParameter<'_>],
+    r#fn_parser: impl Fn(&dyn QueryParameter<'_>) -> T,
+) -> Vec<T> {
+    let mut ordered_params = vec![];
 
-        for positional_param in REGEX_DETECT_PARAMS.find_iter(stmt) {
-            let pp = positional_param.as_str();
-            let pp_index = pp[1..]
-                .parse::<usize>()
-                .expect("error parse mapped parameter to usized.")
-                - 1;
+    for positional_param in REGEX_DETECT_PARAMS.find_iter(stmt) {
+        let pp: &str = positional_param.as_str();
+        let pp_index = pp[1..]
+            .parse::<usize>()
+            .expect("error parse mapped parameter to usized.")
+            - 1;
 
-            let element = *params
-                .as_ref()
-                .get(pp_index)
-                .expect("error obtaining the element of the mapping against parameters.");
-            ordered_params.push(element);
-        }
-
-        ordered_params
+        let element = *params
+            .as_ref()
+            .get(pp_index)
+            .expect("error obtaining the element of the mapping against parameters.");
+        ordered_params.push(r#fn_parser(element));
     }
+
+    ordered_params
 }
