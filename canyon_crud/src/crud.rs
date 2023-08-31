@@ -257,11 +257,14 @@ mod mysql_query_launcher {
         let stmt_with_escape_characters = regex::escape(&stmt);
         let query_string = REGEX_DETECT_PARAMS.replace_all(&stmt_with_escape_characters, "?");
 
-        let query_string = REGEX_DETECT_QUOTE
+        let mut query_string = REGEX_DETECT_QUOTE
             .replace_all(&query_string, "")
             .to_string();
 
-        println!("{query_string}");
+        //In mysql isn`t support RETURNING clause in insert operation
+        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
+            query_string.truncate(index_start_clausule_returning);
+        }
 
         let params_query: Vec<Value> =
             reorder_params(&stmt, params, |f| f.as_mysql_param().to_value());
@@ -271,7 +274,16 @@ mod mysql_query_launcher {
             params: params_query,
         };
 
-        let result: Vec<mysql_common::Row> = query_with_params.fetch(mysql_connection).await?;
+        let mut query_result = query_with_params
+            .run(mysql_connection)
+            .await
+            .expect("Error executing query in mysql");
+
+        let result = query_result
+            .collect()
+            .await
+            .expect("Error resolved trait FromRow in mysql");
+
         Ok(CanyonRows::MySQL(result))
     }
 }

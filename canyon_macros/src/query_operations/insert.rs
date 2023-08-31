@@ -60,11 +60,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     Ok(())
                 }
                 canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    /*
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for a multi insert")?
                         .get::<#pk_type, &str>(#primary_key)
                         .ok_or("MYSQL primary key type failed to be set as value")?;
+                    */
                     Ok(())
                 }
             }
@@ -92,11 +94,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         } else if mysql_enabled {
             quote! {
                 canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    /*
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for a multi insert")?
                         .get::<#pk_type, &str>(#primary_key)
                         .ok_or("MYSQL primary key type failed to be set as value")?;
+                     */
                     Ok(())
                 }
             }
@@ -307,6 +311,7 @@ pub fn generate_multiple_insert_tokens(
                     Ok(())
                 }
                 canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    /*
                     for (idx, instance) in instances.iter_mut().enumerate() {
                         instance.#pk_ident = v
                             .get(idx)
@@ -314,6 +319,7 @@ pub fn generate_multiple_insert_tokens(
                             .get::<#pk_type, &str>(#pk)
                             .expect("MYSQL primary key type failed to be set as value");
                     }
+                     */
                     Ok(())
                 }
             }
@@ -347,13 +353,15 @@ pub fn generate_multiple_insert_tokens(
         } else if mysql_enabled {
             quote! {
                 canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                    /*
                     for (idx, instance) in instances.iter_mut().enumerate() {
                         instance.#pk_ident = v
-                            .get(idx)
+                            .get(idx).or_else(vec![])
                             .expect("Failed getting the returned IDs for a multi insert")
                             .get::<#pk_type, &str>(#pk)
                             .expect("MYSQL primary key type failed to be set as value");
                     }
+                    */
                     Ok(())
                 }
             }
