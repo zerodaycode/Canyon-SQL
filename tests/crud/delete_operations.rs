@@ -2,8 +2,6 @@
 ///! generates and executes *INSERT* statements
 use canyon_sql::crud::CrudOperations;
 
-use canyon_connection::{get_database_connection, CACHED_DATABASE_CONN};
-
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "postgres")]
@@ -117,8 +115,6 @@ fn test_crud_delete_datasource_mssql_method_operation() {
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_datasource_mysql_method_operation() {
-    use crate::canyon_sql::db_clients::mysql_async::prelude::Query;
-    use crate::canyon_sql::db_clients::mysql_async::Row;
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
 
