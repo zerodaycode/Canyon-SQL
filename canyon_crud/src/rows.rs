@@ -14,7 +14,7 @@ pub enum CanyonRows<T> {
     #[cfg(feature = "mssql")]
     Tiberius(Vec<tiberius::Row>),
     #[cfg(feature = "mysql")]
-    MySQL(Vec<mysql_async::Row>),
+    MySQL(Vec<mysql::CanyonRowMysql>),
 
     UnusableTypeMarker(PhantomData<T>),
 }
@@ -37,7 +37,7 @@ impl<T> CanyonRows<T> {
     }
 
     #[cfg(feature = "mysql")]
-    pub fn get_mysql_rows(&self) -> &Vec<mysql_async::Row> {
+    pub fn get_mysql_rows(&self) -> &Vec<mysql::CanyonRowMysql> {
         match self {
             Self::MySQL(v) => v,
             _ => panic!("This branch will never ever should be reachable"),
@@ -83,6 +83,83 @@ impl<T> CanyonRows<T> {
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.is_empty(),
             _ => panic!("This branch will never ever should be reachable"),
+        }
+    }
+}
+
+#[cfg(feature = "mysql")]
+pub mod mysql {
+    use mysql_async::{from_value, Column, Value};
+    use mysql_common::{prelude::FromValue, row::ColumnIndex, Row};
+    use std::{ops::Index, sync::Arc};
+
+    #[derive(Debug)]
+    pub struct CanyonRowMysql {
+        values: Vec<Option<Value>>,
+        columns: Arc<[Column]>,
+    }
+
+    impl CanyonRowMysql {
+        pub fn new(values: Vec<Option<Value>>, columns: Arc<[Column]>) -> Self {
+            Self { values, columns }
+        }
+
+        pub fn get<T, I>(&self, index: I) -> Option<T>
+        where
+            T: FromValue,
+            I: ColumnIndex,
+        {
+            index.idx(&self.columns).and_then(|idx| {
+                self.values
+                    .get(idx)
+                    .and_then(|x| x.as_ref())
+                    .map(|x| from_value::<T>(x.clone()))
+            })
+        }
+        pub fn get_by_index<T>(&self, index: usize) -> Option<T>
+        where
+            T: FromValue,
+            //I: ColumnIndex,
+        {
+            //TODO
+            self.values
+                .get(index)
+                .and_then(|x| x.as_ref())
+                .map(|v| from_value::<T>(v.clone()))
+        }
+    }
+
+    impl From<Row> for CanyonRowMysql {
+        fn from(value: Row) -> Self {
+            Self {
+                values: value
+                    .columns()
+                    .iter()
+                    .map(|c| value.get(c.name_str().as_ref())) //TODO
+                    .collect(),
+                columns: value.columns(),
+            }
+        }
+    }
+
+    impl Index<usize> for CanyonRowMysql {
+        type Output = Value;
+
+        fn index(&self, index: usize) -> &Value {
+            self.values[index].as_ref().unwrap()
+        }
+    }
+
+    impl<'a> Index<&'a str> for CanyonRowMysql {
+        type Output = Value;
+
+        fn index<'r>(&'r self, index: &'a str) -> &'r Value {
+            for (i, column) in self.columns.iter().enumerate() {
+                if column.name_ref() == index.as_bytes() {
+                    return self.values[i].as_ref().unwrap();
+                }
+            }
+            panic!("No such column: `{}` in row {:?}", index, self);
         }
     }
 }

@@ -1,8 +1,9 @@
+#[cfg(feature = "mysql")]
+use crate::rows::mysql::CanyonRowMysql;
 use crate::{
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
 };
-
 #[cfg(feature = "mysql")]
 use canyon_connection::mysql_async::{self, prelude::ToValue};
 
@@ -104,7 +105,7 @@ impl Row for tiberius::Row {
 }
 
 #[cfg(feature = "mysql")]
-impl Row for mysql_async::Row {
+impl Row for CanyonRowMysql {
     fn as_any(&self) -> &dyn Any {
         self
     }

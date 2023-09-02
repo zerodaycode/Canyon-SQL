@@ -558,7 +558,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                         #(#init_field_values_sqlserver),*
                     }
                 }
-                fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
+                fn deserialize_mysql(row: &canyon_crud::rows::mysql::CanyonRowMysql) -> #ty {
                     Self {
                         #(#init_field_values_mysql),*
                     }
@@ -588,7 +588,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     } else if mysql_enabled {
         quote! {
             impl canyon_sql::crud::RowMapper<Self> for #ty {
-                fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
+                fn deserialize_mysql(row: &canyon_crud::rows::mysql::CanyonRowMysql) -> #ty {
                     Self {
                         #(#init_field_values_mysql),*
                     }

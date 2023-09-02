@@ -234,6 +234,8 @@ mod sqlserver_query_launcher {
 #[cfg(feature = "mysql")]
 mod mysql_query_launcher {
 
+    use std::sync::Arc;
+
     use canyon_connection::canyon_database_connector::DatabaseConnection;
 
     use mysql_async::prelude::Query;
@@ -242,6 +244,7 @@ mod mysql_query_launcher {
 
     use crate::bounds::QueryParameter;
     use crate::crud::REGEX_DETECT_QUOTE;
+    use crate::rows::mysql::CanyonRowMysql;
     use crate::rows::CanyonRows;
 
     use super::reorder_params;
@@ -261,9 +264,11 @@ mod mysql_query_launcher {
             .replace_all(&query_string, "")
             .to_string();
 
+        let mut is_insert = false;
         //In mysql isn`t support RETURNING clause in insert operation
         if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
             query_string.truncate(index_start_clausule_returning);
+            is_insert = true;
         }
 
         let params_query: Vec<Value> =
@@ -279,19 +284,24 @@ mod mysql_query_launcher {
             .await
             .expect("Error executing query in mysql");
 
-        let result = query_result
-            .collect()
-            .await
-            .expect("Error resolved trait FromRow in mysql");
+        let result_rows = if is_insert {
+            let last_insert = query_result.last_insert_id().map(Value::UInt);
+            vec![CanyonRowMysql::new(vec![last_insert], Arc::new([]))]
+        } else {
+            query_result
+                .map(CanyonRowMysql::from)
+                .await
+                .expect("Error resolved trait FromRow in mysql")
+        };
 
-        Ok(CanyonRows::MySQL(result))
+        Ok(CanyonRows::MySQL(result_rows))
     }
 }
 
 fn reorder_params<T>(
     stmt: &str,
     params: &[&'_ dyn QueryParameter<'_>],
-    r#fn_parser: impl Fn(&dyn QueryParameter<'_>) -> T,
+    fn_parser: impl Fn(&dyn QueryParameter<'_>) -> T,
 ) -> Vec<T> {
     let mut ordered_params = vec![];
 
@@ -306,7 +316,7 @@ fn reorder_params<T>(
             .as_ref()
             .get(pp_index)
             .expect("error obtaining the element of the mapping against parameters.");
-        ordered_params.push(r#fn_parser(element));
+        ordered_params.push(fn_parser(element));
     }
 
     ordered_params
