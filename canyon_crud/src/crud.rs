@@ -60,7 +60,7 @@ pub trait Transaction<T> {
                 )
                 .await
             }
-            #[cfg(feature = "mssql")]
+            #[cfg(feature = "mysql")]
             DatabaseConnection::MySQL(_) => {
                 mysql_query_launcher::launch::<T>(database_conn, stmt.to_string(), params.as_ref())
                     .await

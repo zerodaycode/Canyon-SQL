@@ -142,7 +142,7 @@ fn test_crud_search_reverse_side_foreign_key_datasource_mssql() {
 
 /// Same as the search by the reverse side of a foreign key relation
 /// but with the specified datasource
-#[cfg(feature = "mssql")]
+#[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key_datasource_mysql() {
     let some_league: League = League::find_by_pk_datasource(&1, MYSQL_DS)

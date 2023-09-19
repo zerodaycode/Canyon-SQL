@@ -1,11 +1,10 @@
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *UPDATE* statements
 use canyon_sql::crud::CrudOperations;
+use crate::tests_models::league::*;
 
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
-use crate::tests_models::league::*;
-
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
 

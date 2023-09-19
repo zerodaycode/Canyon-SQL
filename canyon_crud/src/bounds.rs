@@ -1,12 +1,11 @@
-#[cfg(feature = "mysql")]
-use crate::rows::mysql::CanyonRowMysql;
 use crate::{
     crud::{CrudOperations, Transaction},
     mapper::RowMapper,
 };
 #[cfg(feature = "mysql")]
 use canyon_connection::mysql_async::{self, prelude::ToValue};
-
+#[cfg(feature = "mysql")]
+use crate::rows::mysql::CanyonRowMysql;
 #[cfg(feature = "mssql")]
 use canyon_connection::tiberius::{self, ColumnData, IntoSql};
 #[cfg(feature = "postgres")]

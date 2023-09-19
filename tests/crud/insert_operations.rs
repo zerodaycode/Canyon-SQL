@@ -6,6 +6,7 @@ use canyon_sql::crud::CrudOperations;
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
+
 use crate::tests_models::league::*;
 
 /// Inserts a new record on the database, given an entity that is
