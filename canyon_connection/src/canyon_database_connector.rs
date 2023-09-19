@@ -41,7 +41,7 @@ pub struct SqlServerConnection {
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
 pub struct MysqlConnection {
-    pub client: Pool, //TODO this is Connection with server but it could be interesting to use Pool
+    pub client: Pool,
 }
 
 /// The Canyon database connection handler. When the client's program
