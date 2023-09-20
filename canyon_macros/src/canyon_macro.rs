@@ -1,5 +1,5 @@
 //! Provides helpers to build the `#[canyon_macros::canyon]` procedural like attribute macro
-#[cfg(feature = "migrations")]
+
 use canyon_connection::CANYON_TOKIO_RUNTIME;
 use canyon_migrations::migrations::handler::Migrations;
 use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
