@@ -244,6 +244,7 @@ mod mysql_query_launcher {
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
     use mysql_async::Row;
+    use mysql_common::constants::ColumnType;
     use mysql_common::row;
 
     use regex::Regex;
@@ -286,16 +287,15 @@ mod mysql_query_launcher {
             .expect("Error executing query in mysql");
 
 
-
         let result_rows = if is_insert {
             let last_insert = query_result.last_insert_id().map(Value::UInt).expect("Error getting pk id in insert");
-            vec![row::new_row(vec![last_insert],Arc::new([]))]
+
+            vec![row::new_row(vec![last_insert], Arc::new([mysql_async::Column::new(ColumnType::MYSQL_TYPE_UNKNOWN)]))]
         } else {
             query_result.collect::<Row>()
                 .await
                 .expect("Error resolved trait FromRow in mysql")
         };
-
 
         Ok(CanyonRows::MySQL(result_rows))
     }

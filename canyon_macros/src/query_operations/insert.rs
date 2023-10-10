@@ -63,7 +63,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for a multi insert")?
-                        .get::<#pk_type,&str>(#primary_key)
+                        .get::<#pk_type,usize>(0)
                         .ok_or("MYSQL primary key type failed to be set as value")?;
                     Ok(())
                 }
@@ -95,7 +95,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for a multi insert")?
-                        .get::<#pk_type,&str>(#primary_key)
+                        .get::<#pk_type,usize>(0)
                         .ok_or("MYSQL primary key type failed to be set as value")?;
                     Ok(())
                 }
@@ -311,7 +311,7 @@ pub fn generate_multiple_insert_tokens(
                         instance.#pk_ident = v
                             .get(idx)
                             .expect("Failed getting the returned IDs for a multi insert")
-                            .get::<#pk_type,&str>(#pk)
+                            .get::<#pk_type,usize>(0)
                             .expect("MYSQL primary key type failed to be set as value");
                     }
                     Ok(())
@@ -351,7 +351,7 @@ pub fn generate_multiple_insert_tokens(
                         instance.#pk_ident = v
                             .get(idx)
                             .expect("Failed getting the returned IDs for a multi insert")
-                            .get::<#pk_type,&str>(#pk)
+                            .get::<#pk_type,usize>(0)
                             .expect("MYSQL primary key type failed to be set as value");
                     }
                     Ok(())
