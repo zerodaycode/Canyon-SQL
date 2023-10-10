@@ -4,8 +4,6 @@ use crate::{
 };
 #[cfg(feature = "mysql")]
 use canyon_connection::mysql_async::{self, prelude::ToValue};
-#[cfg(feature = "mysql")]
-use crate::rows::mysql::CanyonRowMysql;
 #[cfg(feature = "mssql")]
 use canyon_connection::tiberius::{self, ColumnData, IntoSql};
 #[cfg(feature = "postgres")]
@@ -104,7 +102,7 @@ impl Row for tiberius::Row {
 }
 
 #[cfg(feature = "mysql")]
-impl Row for CanyonRowMysql {
+impl Row for mysql_async::Row {
     fn as_any(&self) -> &dyn Any {
         self
     }

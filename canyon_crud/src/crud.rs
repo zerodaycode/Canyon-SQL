@@ -243,7 +243,8 @@ mod mysql_query_launcher {
 
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
-    use crate::rows::mysql::CanyonRowMysql;
+    use mysql_async::Row;
+    use mysql_common::row;
 
     use regex::Regex;
     use crate::crud::{DETECT_PARAMS_IN_QUERY, DETECT_QUOTE_IN_QUERY};
@@ -284,21 +285,24 @@ mod mysql_query_launcher {
             .await
             .expect("Error executing query in mysql");
 
+
+
         let result_rows = if is_insert {
-            let last_insert = query_result.last_insert_id().map(Value::UInt);
-            vec![CanyonRowMysql::new(vec![last_insert], Arc::new([]))]
+            let last_insert = query_result.last_insert_id().map(Value::UInt).expect("Error getting pk id in insert");
+            vec![row::new_row(vec![last_insert],Arc::new([]))]
         } else {
-            query_result
-                .map(CanyonRowMysql::from)
+            query_result.collect::<Row>()
                 .await
                 .expect("Error resolved trait FromRow in mysql")
         };
+
 
         Ok(CanyonRows::MySQL(result_rows))
     }
 }
 
 //TODO can move
+#[cfg(feature = "mysql")]
 fn reorder_params<T>(
     stmt: &str,
     params: &[&'_ dyn QueryParameter<'_>],

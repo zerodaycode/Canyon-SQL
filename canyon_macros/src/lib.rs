@@ -8,6 +8,7 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
+
 use canyon_entity_macro::parse_canyon_entity_proc_macro_attr;
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
@@ -558,7 +559,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                         #(#init_field_values_sqlserver),*
                     }
                 }
-                fn deserialize_mysql(row: &canyon_crud::rows::mysql::CanyonRowMysql) -> #ty {
+                fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
                     Self {
                         #(#init_field_values_mysql),*
                     }
@@ -588,7 +589,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     } else if mysql_enabled {
         quote! {
             impl canyon_sql::crud::RowMapper<Self> for #ty {
-                fn deserialize_mysql(row: &canyon_crud::rows::mysql::CanyonRowMysql) -> #ty {
+                fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
                     Self {
                         #(#init_field_values_mysql),*
                     }
