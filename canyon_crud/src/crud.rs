@@ -266,7 +266,6 @@ mod mysql_query_launcher {
             .to_string();
 
         let mut is_insert = false;
-        //In mysql isn`t support RETURNING clause in insert operation
         if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
             query_string.truncate(index_start_clausule_returning);
             is_insert = true;
@@ -275,7 +274,6 @@ mod mysql_query_launcher {
         let params_query: Vec<Value> =
             reorder_params(&stmt, params, |f| f.as_mysql_param().to_value());
 
-        //TODO
         let query_with_params = QueryWithParams {
             query: query_string,
             params: params_query,
@@ -301,7 +299,7 @@ mod mysql_query_launcher {
     }
 }
 
-//TODO can move
+
 #[cfg(feature = "mysql")]
 fn reorder_params<T>(
     stmt: &str,
