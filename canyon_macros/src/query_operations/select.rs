@@ -150,58 +150,23 @@ pub fn generate_count_tokens(
     let ty_str = &ty.to_string();
     let stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
 
-    let postgres_enabled = cfg!(feature = "postgres");
-    let mssql_enabled = cfg!(feature = "mssql");
-    let mysql_enabled = cfg!(feature = "mysql");
-
-    let result_handling = if postgres_enabled && mssql_enabled && mysql_enabled {
-        quote! {
-            canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
+    let result_handling = quote! {
+        #[cfg(feature="postgres")]
+        canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
                 v.remove(0).get::<&str, i64>("count")
             ),
-            canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
+        #[cfg(feature="mssql")]
+        canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
                 v.remove(0)
                     .get::<i32, usize>(0)
                     .map(|c| c as i64)
                     .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
                     .into(),
-            canyon_sql::crud::CanyonRows::MySQL(mut v) => v.remove(0)
+        #[cfg(feature="mysql")]
+        canyon_sql::crud::CanyonRows::MySQL(mut v) => v.remove(0)
                 .get::<i64, usize>(0)
                 .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
             _ => panic!() // TODO remove when the generics will be refactored
-        }
-    } else if postgres_enabled {
-        quote! {
-            canyon_sql::crud::CanyonRows::Postgres(mut v) => Ok(
-                v.remove(0).get::<&str, i64>("count")
-            ),
-            _ => panic!() // TODO remove when the generics will be refactored
-        }
-    } else if mssql_enabled {
-        quote! {
-            canyon_sql::crud::CanyonRows::Tiberius(mut v) =>
-                v.remove(0)
-                    .get::<i32, usize>(0)
-                    .map(|c| c as i64)
-                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
-                    .into(),
-            _ => panic!() // TODO remove when the generics will be refactored
-        }
-    } else if mysql_enabled {
-        quote! {
-            canyon_sql::crud::CanyonRows::MySQL(mut v) => v.remove(0)
-            .get::<i64, usize>(0)
-                .ok_or(format!("Failure result empty in the COUNT query for MYSQL for: {}", #ty_str).into()),
-            _ => panic!()
-        }
-    } else {
-        quote! {
-            panic!(
-                "Reached a branch in the implementation of the Row Mapper macro that should never be reached.\
-                This is a severe bug of Canyon-SQL. Please, open us an issue at \
-                https://github.com/zerodaycode/Canyon-SQL/issues and let us know about that failure."
-            )
-        }
     };
 
     quote! {
@@ -391,7 +356,7 @@ pub fn generate_find_by_foreign_key_tokens(
             };
 
             fk_quotes.push((
-                quote!{ #quoted_method_signature; },
+                quote! { #quoted_method_signature; },
                 quote! {
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {

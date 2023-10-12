@@ -11,8 +11,9 @@ use crate::query_elements::query_builder::{
 };
 use crate::rows::CanyonRows;
 
-//TODO This regex require move to constants but i cant because it if cycle dependency
+#[cfg(feature = "mysql")]
 pub const DETECT_PARAMS_IN_QUERY: &str = r"\$([\d])+";
+#[cfg(feature = "mysql")]
 pub const DETECT_QUOTE_IN_QUERY: &str = r#"\"|\\"#;
 
 /// This traits defines and implements a query against a database given
