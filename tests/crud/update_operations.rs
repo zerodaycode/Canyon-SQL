@@ -1,12 +1,12 @@
+use crate::tests_models::league::*;
 ///! Integration tests for the CRUD operations available in `Canyon` that
 ///! generates and executes *UPDATE* statements
 use canyon_sql::crud::CrudOperations;
-use crate::tests_models::league::*;
 
-#[cfg(feature = "mssql")]
-use crate::constants::SQL_SERVER_DS;
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
 
 /// Update operation is a *CRUD* method defined for some entity `T`, that works by appliying
 /// some change to a Rust's entity instance, and persisting them into the database.

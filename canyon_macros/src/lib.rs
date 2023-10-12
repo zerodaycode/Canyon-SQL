@@ -8,7 +8,6 @@ mod canyon_macro;
 mod query_operations;
 mod utils;
 
-
 use canyon_entity_macro::parse_canyon_entity_proc_macro_attr;
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
@@ -542,67 +541,26 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     // The type of the Struct
     let ty = ast.ident;
 
-    let postgres_enabled = cfg!(feature = "postgres");
-    let mssql_enabled = cfg!(feature = "mssql");
-    let mysql_enabled = cfg!(feature = "mysql");
-
-    let tokens = if postgres_enabled && mssql_enabled && mysql_enabled {
-        quote! {
-            impl canyon_sql::crud::RowMapper<Self> for #ty {
-                fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
-                    Self {
-                        #(#init_field_values),*
-                    }
-                }
-                fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
-                    Self {
-                        #(#init_field_values_sqlserver),*
-                    }
-                }
-                fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
-                    Self {
-                        #(#init_field_values_mysql),*
-                    }
+    let tokens = quote! {
+        impl canyon_sql::crud::RowMapper<Self> for #ty {
+            #[cfg(feature="postgres")]
+            fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
+                Self {
+                    #(#init_field_values),*
                 }
             }
-        }
-    } else if postgres_enabled {
-        quote! {
-            impl canyon_sql::crud::RowMapper<Self> for #ty {
-                fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
-                    Self {
-                        #(#init_field_values),*
-                    }
+            #[cfg(feature="mssql")]
+            fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
+                Self {
+                    #(#init_field_values_sqlserver),*
                 }
             }
-        }
-    } else if mssql_enabled {
-        quote! {
-            impl canyon_sql::crud::RowMapper<Self> for #ty {
-                fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
-                    Self {
-                        #(#init_field_values_sqlserver),*
-                    }
+            #[cfg(feature="mysql")]
+            fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
+                Self {
+                    #(#init_field_values_mysql),*
                 }
             }
-        }
-    } else if mysql_enabled {
-        quote! {
-            impl canyon_sql::crud::RowMapper<Self> for #ty {
-                fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
-                    Self {
-                        #(#init_field_values_mysql),*
-                    }
-                }
-            }
-        }
-    } else {
-        quote! {
-            panic!(
-                "Reached a branch in the implementation of the Row Mapper macro that should never be reached.\
-                This is a severe bug of Canyon-SQL. Please, open us an issue at \
-                https://github.com/zerodaycode/Canyon-SQL/issues and let us know about that failure."
-            )
         }
     };
 
