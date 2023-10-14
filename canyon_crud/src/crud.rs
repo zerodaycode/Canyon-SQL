@@ -312,11 +312,10 @@ fn reorder_params<T>(
 ) -> Vec<T> {
     let mut ordered_params = vec![];
     let rg = regex::Regex::new(DETECT_PARAMS_IN_QUERY).expect(
-        format!(
+        &format!(
             "Error create regex with detect params pattern expression: {:?} ",
             DETECT_PARAMS_IN_QUERY
-        )
-        .as_str(),
+        ),
     );
 
     for positional_param in rg.find_iter(stmt) {
