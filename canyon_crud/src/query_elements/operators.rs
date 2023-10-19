@@ -1,5 +1,7 @@
+use canyon_connection::canyon_database_connector::DatabaseType;
+
 pub trait Operator {
-    fn as_str(&self, placeholder_counter: usize) -> String;
+    fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String;
 }
 
 /// Enumerated type for represent the comparison operations
@@ -20,7 +22,7 @@ pub enum Comp {
 }
 
 impl Operator for Comp {
-    fn as_str(&self, placeholder_counter: usize) -> String {
+    fn as_str(&self, placeholder_counter: usize, _datasource_type: &DatabaseType) -> String {
         match *self {
             Self::Eq => format!(" = ${placeholder_counter}"),
             Self::Neq => format!(" <> ${placeholder_counter}"),
@@ -42,36 +44,26 @@ pub enum Like {
 }
 
 impl Operator for Like {
-    fn as_str(&self, placeholder_counter: usize) -> String {
+    fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String {
+        let type_data_to_cast_str = match datasource_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => "VARCHAR",
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => "VARCHAR",
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => "CHAR",
+        };
+
         match *self {
             Like::Full => {
-                format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS VARCHAR) ,'%')")
+                format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')")
             }
-            Like::Left => format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS VARCHAR))"),
-            Like::Right => format!(" LIKE CONCAT(CAST(${placeholder_counter} AS VARCHAR) ,'%')"),
-        }
-    }
-}
-
-#[cfg(feature = "mysql")]
-pub enum LikeMysql {
-    /// Operator "LIKE"  as '%pattern%'
-    Full,
-    /// Operator "LIKE"  as '%pattern'
-    Left,
-    /// Operator "LIKE"  as 'pattern%'
-    Right,
-}
-
-#[cfg(feature = "mysql")]
-impl Operator for LikeMysql {
-    fn as_str(&self, placeholder_counter: usize) -> String {
-        match *self {
-            LikeMysql::Full => {
-                format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS CHAR) ,'%')")
-            }
-            LikeMysql::Left => format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS CHAR))"),
-            LikeMysql::Right => format!(" LIKE CONCAT(CAST(${placeholder_counter} AS CHAR) ,'%')"),
+            Like::Left => format!(
+                " LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}))"
+            ),
+            Like::Right => format!(
+                " LIKE CONCAT(CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')"
+            ),
         }
     }
 }

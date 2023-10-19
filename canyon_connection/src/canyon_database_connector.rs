@@ -9,7 +9,7 @@ use tiberius::{AuthMethod, Config};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{Client, NoTls};
 
-use crate::datasources::DatasourceConfig;
+use crate::datasources::{Auth, DatasourceConfig};
 
 /// Represents the current supported databases by Canyon
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -23,6 +23,16 @@ pub enum DatabaseType {
     #[serde(alias = "mysql")]
     #[cfg(feature = "mysql")]
     MySQL,
+}
+
+impl From<&Auth> for DatabaseType {
+    fn from(value: &Auth) -> Self {
+        match value {
+            crate::datasources::Auth::Postgres(_) => DatabaseType::PostgreSql,
+            crate::datasources::Auth::SqlServer(_) => DatabaseType::SqlServer,
+            crate::datasources::Auth::MySQL(_) => DatabaseType::MySQL,
+        }
+    }
 }
 
 /// A connection with a `PostgreSQL` database

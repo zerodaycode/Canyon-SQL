@@ -3,7 +3,6 @@ use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
 
-use canyon_sql::query::operators::LikeMysql;
 ///! Tests for the QueryBuilder available operations within Canyon.
 ///
 ///! QueryBuilder are the way of obtain more flexibility that with
@@ -98,8 +97,8 @@ fn test_crud_find_with_querybuilder_and_fulllike_datasource_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike_datasource_mysql() {
     // Find all the leagues with "LC" in their name
-    let mut filtered_leagues_result = League::select_query_datasource(SQL_SERVER_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), LikeMysql::Full);
+    let mut filtered_leagues_result = League::select_query_datasource(MYSQL_DS);
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Full);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -143,8 +142,8 @@ fn test_crud_find_with_querybuilder_and_leftlike_datasource_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike_datasource_mysql() {
     // Find all the leagues whose name ends with "CK"
-    let mut filtered_leagues_result = League::select_query();
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), LikeMysql::Left);
+    let mut filtered_leagues_result = League::select_query_datasource(MYSQL_DS);
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), Like::Left);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -187,8 +186,8 @@ fn test_crud_find_with_querybuilder_and_rightlike_datasource_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike_datasource_mysql() {
     // Find all the leagues whose name starts with "LC"
-    let mut filtered_leagues_result = League::select_query_datasource(SQL_SERVER_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), LikeMysql::Right);
+    let mut filtered_leagues_result = League::select_query_datasource(MYSQL_DS);
+    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Right);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -214,7 +213,7 @@ fn test_crud_find_with_querybuilder_datasource_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_datasource_mysql() {
     // Find all the players where its ID column value is greater that 50
-    let filtered_find_players = Player::select_query_datasource(SQL_SERVER_DS)
+    let filtered_find_players = Player::select_query_datasource(MYSQL_DS)
         .r#where(PlayerFieldValue::id(&50), Comp::Gt)
         .query()
         .await;
