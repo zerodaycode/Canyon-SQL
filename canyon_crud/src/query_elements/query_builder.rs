@@ -163,11 +163,9 @@ where
         Self {
             query,
             datasource_name,
-            datasource_type: if datasource_name.is_empty() {
-                DatabaseType::PostgreSql
-            } else {
-                DatabaseType::from(&get_database_config(datasource_name, &DATASOURCES).auth)
-            },
+            datasource_type: DatabaseType::from(
+                &get_database_config(datasource_name, &DATASOURCES).auth,
+            ),
         }
     }
 

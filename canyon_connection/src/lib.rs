@@ -111,8 +111,14 @@ pub fn get_database_config<'a>(
     datasource_name: &str,
     datasources_config: &'a [DatasourceConfig],
 ) -> &'a DatasourceConfig {
-    datasources_config
-        .iter()
-        .find(|dc| dc.name == datasource_name)
-        .unwrap_or_else(|| panic!("Not found datasource expected {datasource_name}"))
+    if datasource_name.is_empty() {
+        datasources_config
+            .get(0)
+            .unwrap_or_else(|| panic!("Not exist datasource"))
+    } else {
+        datasources_config
+            .iter()
+            .find(|dc| dc.name == datasource_name)
+            .unwrap_or_else(|| panic!("Not found datasource expected {datasource_name}"))
+    }
 }
