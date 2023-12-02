@@ -117,7 +117,7 @@ impl DatasourceConfig {
             Auth::Postgres(_) => DatabaseType::PostgreSql,
             #[cfg(feature = "mssql")]
             Auth::SqlServer(_) => DatabaseType::SqlServer,
-            #[cfg(feature = "postgres")]
+            #[cfg(feature = "mysql")]
             Auth::MySQL(_) => DatabaseType::MySQL,
         }
     }
@@ -125,7 +125,7 @@ impl DatasourceConfig {
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Auth {
-    #[serde(alias = "PostgreSQL", alias = "postgresql", alias = "postgres")]
+    #[serde(alias = "PostgresSQL", alias = "postgresql", alias = "postgres")]
     #[cfg(feature = "postgres")]
     Postgres(PostgresAuth),
     #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
