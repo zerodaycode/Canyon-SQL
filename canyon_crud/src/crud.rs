@@ -311,7 +311,8 @@ fn reorder_params<T>(
     fn_parser: impl Fn(&&dyn QueryParameter<'_>) -> T,
 ) -> Vec<T> {
     let mut ordered_params = vec![];
-    let rg = regex::Regex::new(DETECT_PARAMS_IN_QUERY).expect("Error create regex with detect params pattern expression");
+    let rg = regex::Regex::new(DETECT_PARAMS_IN_QUERY)
+        .expect("Error create regex with detect params pattern expression");
 
     for positional_param in rg.find_iter(stmt) {
         let pp: &str = positional_param.as_str();
