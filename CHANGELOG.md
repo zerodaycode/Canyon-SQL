@@ -9,6 +9,12 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
+## [0.5.0 - 2023 - 12 - 10]
+
+### Feature
+
+- Introduced support to work with MySQL Databases
+
 ## [0.4.2 - 2023 - 05 - 02]
 
 ### Bugfix
