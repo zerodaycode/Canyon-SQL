@@ -1,5 +1,8 @@
 #![allow(clippy::nonminimal_bool)]
 
+#[cfg(feature = "mysql")]
+use crate::constants::MYSQL_DS;
+
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
 ///! Integration tests for the CRUD operations available in `Canyon` that
@@ -42,9 +45,19 @@ fn test_crud_find_all_unchecked() {
 /// and using the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_all_datasource() {
+fn test_crud_find_all_datasource_mssql() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
         League::find_all_datasource(SQL_SERVER_DS).await;
+    // Connection doesn't return an error
+    assert!(!find_all_result.is_err());
+    assert!(!find_all_result.unwrap().is_empty());
+}
+
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_all_datasource_mysql() {
+    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
+        League::find_all_datasource(MYSQL_DS).await;
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());
@@ -85,13 +98,35 @@ fn test_crud_find_by_pk() {
 /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
 /// defined with the #[primary_key] attribute over some field of the type.
 ///
-/// Uses the *specified datasource* in the second parameter of the function call.
-#[cfg(feature = "postgres")]
+/// Uses the *specified datasource mssql* in the second parameter of the function call.
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_by_pk_datasource() {
+fn test_crud_find_by_pk_datasource_mssql() {
     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
         League::find_by_pk_datasource(&27, SQL_SERVER_DS).await;
+    assert!(find_by_pk_result.as_ref().unwrap().is_some());
+
+    let some_league = find_by_pk_result.unwrap().unwrap();
+    assert_eq!(some_league.id, 27);
+    assert_eq!(some_league.ext_id, 107898214974993351_i64);
+    assert_eq!(some_league.slug, "college_championship");
+    assert_eq!(some_league.name, "College Championship");
+    assert_eq!(some_league.region, "NORTH AMERICA");
+    assert_eq!(
+        some_league.image_url,
+        "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
+    );
+}
+
+/// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
+/// defined with the #[primary_key] attribute over some field of the type.
+///
+/// Uses the *specified datasource mysql* in the second parameter of the function call.
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_by_pk_datasource_mysql() {
+    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+        League::find_by_pk_datasource(&27, MYSQL_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
     let some_league = find_by_pk_result.unwrap().unwrap();
@@ -117,15 +152,26 @@ fn test_crud_count_operation() {
 }
 
 /// Counts how many rows contains an entity on the target database using
-/// the specified datasource
+/// the specified datasource mssql
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_count_datasource_operation() {
+fn test_crud_count_datasource_operation_mssql() {
     assert_eq!(
         League::find_all_datasource(SQL_SERVER_DS)
             .await
             .unwrap()
             .len() as i64,
         League::count_datasource(SQL_SERVER_DS).await.unwrap()
+    );
+}
+
+/// Counts how many rows contains an entity on the target database using
+/// the specified datasource mysql
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_count_datasource_operation_mysql() {
+    assert_eq!(
+        League::find_all_datasource(MYSQL_DS).await.unwrap().len() as i64,
+        League::count_datasource(MYSQL_DS).await.unwrap()
     );
 }

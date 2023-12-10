@@ -13,6 +13,9 @@ pub enum CanyonRows<T> {
     Postgres(Vec<tokio_postgres::Row>),
     #[cfg(feature = "mssql")]
     Tiberius(Vec<tiberius::Row>),
+    #[cfg(feature = "mysql")]
+    MySQL(Vec<mysql_async::Row>),
+
     UnusableTypeMarker(PhantomData<T>),
 }
 
@@ -33,6 +36,14 @@ impl<T> CanyonRows<T> {
         }
     }
 
+    #[cfg(feature = "mysql")]
+    pub fn get_mysql_rows(&self) -> &Vec<mysql_async::Row> {
+        match self {
+            Self::MySQL(v) => v,
+            _ => panic!("This branch will never ever should be reachable"),
+        }
+    }
+
     /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of T
     pub fn into_results<Z: RowMapper<T>>(self) -> Vec<T>
     where
@@ -43,6 +54,8 @@ impl<T> CanyonRows<T> {
             Self::Postgres(v) => v.iter().map(|row| Z::deserialize_postgresql(row)).collect(),
             #[cfg(feature = "mssql")]
             Self::Tiberius(v) => v.iter().map(|row| Z::deserialize_sqlserver(row)).collect(),
+            #[cfg(feature = "mysql")]
+            Self::MySQL(v) => v.iter().map(|row| Z::deserialize_mysql(row)).collect(),
             _ => panic!("This branch will never ever should be reachable"),
         }
     }
@@ -54,6 +67,8 @@ impl<T> CanyonRows<T> {
             Self::Postgres(v) => v.len(),
             #[cfg(feature = "mssql")]
             Self::Tiberius(v) => v.len(),
+            #[cfg(feature = "mysql")]
+            Self::MySQL(v) => v.len(),
             _ => panic!("This branch will never ever should be reachable"),
         }
     }
@@ -65,6 +80,8 @@ impl<T> CanyonRows<T> {
             Self::Postgres(v) => v.is_empty(),
             #[cfg(feature = "mssql")]
             Self::Tiberius(v) => v.is_empty(),
+            #[cfg(feature = "mysql")]
+            Self::MySQL(v) => v.is_empty(),
             _ => panic!("This branch will never ever should be reachable"),
         }
     }

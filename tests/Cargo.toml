@@ -14,3 +14,4 @@ path = "canyon_integration_tests.rs"
 [features]
 postgres = ["canyon_sql/postgres"]
 mssql = ["canyon_sql/mssql"]
+mysql = ["canyon_sql/mysql"]

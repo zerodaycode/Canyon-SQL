@@ -2,12 +2,14 @@ use serde::Deserialize;
 
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
+#[cfg(feature = "mysql")]
+use mysql_async::Pool;
 #[cfg(feature = "mssql")]
 use tiberius::{AuthMethod, Config};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{Client, NoTls};
 
-use crate::datasources::DatasourceConfig;
+use crate::datasources::{Auth, DatasourceConfig};
 
 /// Represents the current supported databases by Canyon
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -18,6 +20,19 @@ pub enum DatabaseType {
     #[serde(alias = "sqlserver", alias = "mssql")]
     #[cfg(feature = "mssql")]
     SqlServer,
+    #[serde(alias = "mysql")]
+    #[cfg(feature = "mysql")]
+    MySQL,
+}
+
+impl From<&Auth> for DatabaseType {
+    fn from(value: &Auth) -> Self {
+        match value {
+            crate::datasources::Auth::Postgres(_) => DatabaseType::PostgreSql,
+            crate::datasources::Auth::SqlServer(_) => DatabaseType::SqlServer,
+            crate::datasources::Auth::MySQL(_) => DatabaseType::MySQL,
+        }
+    }
 }
 
 /// A connection with a `PostgreSQL` database
@@ -33,6 +48,12 @@ pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
 }
 
+/// A connection with a `Mysql` database
+#[cfg(feature = "mysql")]
+pub struct MysqlConnection {
+    pub client: Pool,
+}
+
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
 /// process them and generates a pool of 1 to 1 database connection for
@@ -42,6 +63,8 @@ pub enum DatabaseConnection {
     Postgres(PostgreSqlConnection),
     #[cfg(feature = "mssql")]
     SqlServer(SqlServerConnection),
+    #[cfg(feature = "mysql")]
+    MySQL(MysqlConnection),
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -63,6 +86,10 @@ impl DatabaseConnection {
                     #[cfg(feature = "mssql")]
                     crate::datasources::Auth::SqlServer(_) => {
                         panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
+                    }
+                    #[cfg(feature = "mysql")]
+                    crate::datasources::Auth::MySQL(_) => {
+                        panic!("Found MySql auth configuration for a PostgreSQL datasource")
                     }
                 };
                 let (new_client, new_connection) = tokio_postgres::connect(
@@ -109,6 +136,10 @@ impl DatabaseConnection {
                         }
                         crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
                     },
+                    #[cfg(feature = "mysql")]
+                    crate::datasources::Auth::MySQL(_) => {
+                        panic!("Found PostgreSQL auth configuration for a SqlServer database")
+                    }
                 });
 
                 // on production, it is not a good idea to do this. We should upgrade
@@ -136,6 +167,41 @@ impl DatabaseConnection {
                     )),
                 }))
             }
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                let (user, password) = match &datasource.auth {
+                    #[cfg(feature = "mssql")]
+                    crate::datasources::Auth::SqlServer(_) => {
+                        panic!("Found SqlServer auth configuration for a PostgreSQL datasource")
+                    }
+                    #[cfg(feature = "postgres")]
+                    crate::datasources::Auth::Postgres(_) => {
+                        panic!("Found MySql auth configuration for a PostgreSQL datasource")
+                    }
+                    #[cfg(feature = "mysql")]
+                    crate::datasources::Auth::MySQL(mysql_auth) => match mysql_auth {
+                        crate::datasources::MySQLAuth::Basic { username, password } => {
+                            (username, password)
+                        }
+                    },
+                };
+
+                //TODO add options to optionals params in url
+
+                let url = format!(
+                    "mysql://{}:{}@{}:{}/{}",
+                    user,
+                    password,
+                    datasource.properties.host,
+                    datasource.properties.port.unwrap_or_default(),
+                    datasource.properties.db_name
+                );
+                let mysql_connection = Pool::from_url(url)?;
+
+                Ok(DatabaseConnection::MySQL(MysqlConnection {
+                    client: { mysql_connection },
+                }))
+            }
         }
     }
 
@@ -143,7 +209,7 @@ impl DatabaseConnection {
     pub fn postgres_connection(&self) -> &PostgreSqlConnection {
         match self {
             DatabaseConnection::Postgres(conn) => conn,
-            #[cfg(all(feature = "postgres", feature = "mssql"))]
+            #[cfg(all(feature = "postgres", feature = "mssql", feature = "mysql"))]
             _ => panic!(),
         }
     }
@@ -152,7 +218,16 @@ impl DatabaseConnection {
     pub fn sqlserver_connection(&mut self) -> &mut SqlServerConnection {
         match self {
             DatabaseConnection::SqlServer(conn) => conn,
-            #[cfg(all(feature = "postgres", feature = "mssql"))]
+            #[cfg(all(feature = "postgres", feature = "mssql", feature = "mysql"))]
+            _ => panic!(),
+        }
+    }
+
+    #[cfg(feature = "mysql")]
+    pub fn mysql_connection(&self) -> &MysqlConnection {
+        match self {
+            DatabaseConnection::MySQL(conn) => conn,
+            #[cfg(all(feature = "postgres", feature = "mssql", feature = "mysql"))]
             _ => panic!(),
         }
     }
@@ -166,13 +241,14 @@ mod database_connection_handler {
     /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
     #[test]
     fn check_from_datasource() {
-        #[cfg(all(feature = "postgres", feature = "mssql"))]
+        #[cfg(all(feature = "postgres", feature = "mssql", feature = "mysql"))]
         {
             const CONFIG_FILE_MOCK_ALT_ALL: &str = r#"
                 [canyon_sql]
                 datasources = [
                     {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },
+                    {name = 'MysqlDS', auth = { mysql = { basic = { username = "root", password = "root" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
                 ]
             "#;
             let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_ALL)
@@ -184,6 +260,10 @@ mod database_connection_handler {
             assert_eq!(
                 config.canyon_sql.datasources[1].get_db_type(),
                 DatabaseType::SqlServer
+            );
+            assert_eq!(
+                config.canyon_sql.datasources[2].get_db_type(),
+                DatabaseType::MySQL
             );
         }
 
@@ -216,6 +296,23 @@ mod database_connection_handler {
             assert_eq!(
                 config.canyon_sql.datasources[0].get_db_type(),
                 DatabaseType::SqlServer
+            );
+        }
+
+        #[cfg(feature = "mysql")]
+        {
+            const CONFIG_FILE_MOCK_ALT_MYSQL: &str = r#"
+                [canyon_sql]
+                datasources = [
+                    {name = 'MysqlDS', auth = { mysql = { basic = { username = "root", password = "root" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+                ]
+            "#;
+
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MYSQL)
+                .expect("A failure happened retrieving the [canyon_sql] section");
+            assert_eq!(
+                config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::MySQL
             );
         }
     }

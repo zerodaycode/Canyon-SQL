@@ -11,7 +11,10 @@
 use canyon_sql::crud::CrudOperations;
 
 #[cfg(feature = "mssql")]
+use crate::constants::MYSQL_DS;
+#[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
+
 use crate::tests_models::league::*;
 use crate::tests_models::tournament::*;
 
@@ -42,7 +45,7 @@ fn test_crud_search_by_foreign_key() {
 /// Same as the search by foreign key, but with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_search_by_foreign_key_datasource() {
+fn test_crud_search_by_foreign_key_datasource_mssql() {
     let some_tournament: Tournament = Tournament::find_by_pk_datasource(&10, SQL_SERVER_DS)
         .await
         .expect("Result variant of the query is err")
@@ -51,6 +54,32 @@ fn test_crud_search_by_foreign_key_datasource() {
     // We can get the parent entity for the retrieved child instance
     let parent_entity: Option<League> = some_tournament
         .search_league_datasource(SQL_SERVER_DS)
+        .await
+        .expect("Result variant of the query is err");
+
+    // These are tests, and we could unwrap the result contained in the option, because
+    // it always should exist that search for the data inserted when the docker starts.
+    // But, just for change the style a little bit and offer more options about how to
+    // handle things done with Canyon
+    if let Some(league) = parent_entity {
+        assert_eq!(some_tournament.league, league.id)
+    } else {
+        assert_eq!(parent_entity, None)
+    }
+}
+
+/// Same as the search by foreign key, but with the specified datasource
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_search_by_foreign_key_datasource_mysql() {
+    let some_tournament: Tournament = Tournament::find_by_pk_datasource(&10, MYSQL_DS)
+        .await
+        .expect("Result variant of the query is err")
+        .expect("No result found for the given parameter");
+
+    // We can get the parent entity for the retrieved child instance
+    let parent_entity: Option<League> = some_tournament
+        .search_league_datasource(MYSQL_DS)
         .await
         .expect("Result variant of the query is err");
 
@@ -93,7 +122,7 @@ fn test_crud_search_reverse_side_foreign_key() {
 /// but with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_search_reverse_side_foreign_key_datasource() {
+fn test_crud_search_reverse_side_foreign_key_datasource_mssql() {
     let some_league: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)
         .await
         .expect("Result variant of the query is err")
@@ -102,6 +131,28 @@ fn test_crud_search_reverse_side_foreign_key_datasource() {
     // Computes how many tournaments are pointing to the retrieved league
     let child_tournaments: Vec<Tournament> =
         Tournament::search_league_childrens_datasource(&some_league, SQL_SERVER_DS)
+            .await
+            .expect("Result variant of the query is err");
+
+    assert!(!child_tournaments.is_empty());
+    child_tournaments
+        .iter()
+        .for_each(|t| assert_eq!(t.league, some_league.id));
+}
+
+/// Same as the search by the reverse side of a foreign key relation
+/// but with the specified datasource
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_search_reverse_side_foreign_key_datasource_mysql() {
+    let some_league: League = League::find_by_pk_datasource(&1, MYSQL_DS)
+        .await
+        .expect("Result variant of the query is err")
+        .expect("No result found for the given parameter");
+
+    // Computes how many tournaments are pointing to the retrieved league
+    let child_tournaments: Vec<Tournament> =
+        Tournament::search_league_childrens_datasource(&some_league, MYSQL_DS)
             .await
             .expect("Result variant of the query is err");
 

@@ -1,5 +1,9 @@
 use std::fmt::Debug;
 
+use canyon_connection::{
+    canyon_database_connector::DatabaseType, get_database_config, DATASOURCES,
+};
+
 use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameter},
     crud::{CrudOperations, Transaction},
@@ -138,6 +142,7 @@ where
 {
     query: Query<'a, T>,
     datasource_name: &'a str,
+    datasource_type: DatabaseType,
 }
 
 unsafe impl<'a, T> Send for QueryBuilder<'a, T> where
@@ -158,6 +163,9 @@ where
         Self {
             query,
             datasource_name,
+            datasource_type: DatabaseType::from(
+                &get_database_config(datasource_name, &DATASOURCES).auth,
+            ),
         }
     }
 
@@ -180,8 +188,9 @@ where
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {
         let (column_name, value) = r#where.value();
 
-        let where_ =
-            String::from(" WHERE ") + column_name + &op.as_str(self.query.params.len() + 1);
+        let where_ = String::from(" WHERE ")
+            + column_name
+            + &op.as_str(self.query.params.len() + 1, &self.datasource_type);
 
         self.query.sql.push_str(&where_);
         self.query.params.push(value);
@@ -190,7 +199,9 @@ where
     pub fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, r#and: Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
-        let and_ = String::from(" AND ") + column_name + &op.as_str(self.query.params.len() + 1);
+        let and_ = String::from(" AND ")
+            + column_name
+            + &op.as_str(self.query.params.len() + 1, &self.datasource_type);
 
         self.query.sql.push_str(&and_);
         self.query.params.push(value);
@@ -199,7 +210,9 @@ where
     pub fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, r#and: Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
-        let and_ = String::from(" OR ") + column_name + &op.as_str(self.query.params.len() + 1);
+        let and_ = String::from(" OR ")
+            + column_name
+            + &op.as_str(self.query.params.len() + 1, &self.datasource_type);
 
         self.query.sql.push_str(&and_);
         self.query.params.push(value);

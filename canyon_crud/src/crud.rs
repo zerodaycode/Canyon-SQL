@@ -1,6 +1,6 @@
+use async_trait::async_trait;
 use std::fmt::Display;
 
-use async_trait::async_trait;
 use canyon_connection::canyon_database_connector::DatabaseConnection;
 use canyon_connection::{get_database_connection, CACHED_DATABASE_CONN};
 
@@ -10,6 +10,11 @@ use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
 use crate::rows::CanyonRows;
+
+#[cfg(feature = "mysql")]
+pub const DETECT_PARAMS_IN_QUERY: &str = r"\$([\d])+";
+#[cfg(feature = "mysql")]
+pub const DETECT_QUOTE_IN_QUERY: &str = r#"\"|\\"#;
 
 /// This traits defines and implements a query against a database given
 /// an statement `stmt` and the params to pass the to the client.
@@ -51,6 +56,11 @@ pub trait Transaction<T> {
                     params,
                 )
                 .await
+            }
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(_) => {
+                mysql_query_launcher::launch::<T>(database_conn, stmt.to_string(), params.as_ref())
+                    .await
             }
         }
     }
@@ -146,9 +156,10 @@ where
 
 #[cfg(feature = "postgres")]
 mod postgres_query_launcher {
+    use canyon_connection::canyon_database_connector::DatabaseConnection;
+
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
-    use canyon_connection::canyon_database_connector::DatabaseConnection;
 
     pub async fn launch<'a, T>(
         db_conn: &DatabaseConnection,
@@ -216,4 +227,105 @@ mod sqlserver_query_launcher {
             _results.into_iter().flatten().collect(),
         ))
     }
+}
+
+#[cfg(feature = "mysql")]
+mod mysql_query_launcher {
+    use std::sync::Arc;
+
+    use mysql_async::prelude::Query;
+    use mysql_async::QueryWithParams;
+    use mysql_async::Value;
+
+    use canyon_connection::canyon_database_connector::DatabaseConnection;
+
+    use crate::bounds::QueryParameter;
+    use crate::rows::CanyonRows;
+    use mysql_async::Row;
+    use mysql_common::constants::ColumnType;
+    use mysql_common::row;
+
+    use super::reorder_params;
+    use crate::crud::{DETECT_PARAMS_IN_QUERY, DETECT_QUOTE_IN_QUERY};
+    use regex::Regex;
+
+    pub async fn launch<'a, T>(
+        db_conn: &DatabaseConnection,
+        stmt: String,
+        params: &'a [&'_ dyn QueryParameter<'_>],
+    ) -> Result<CanyonRows<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
+
+        let stmt_with_escape_characters = regex::escape(&stmt);
+        let query_string =
+            Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
+
+        let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
+            .replace_all(&query_string, "")
+            .to_string();
+
+        let mut is_insert = false;
+        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
+            query_string.truncate(index_start_clausule_returning);
+            is_insert = true;
+        }
+
+        let params_query: Vec<Value> =
+            reorder_params(&stmt, params, |f| f.as_mysql_param().to_value());
+
+        let query_with_params = QueryWithParams {
+            query: query_string,
+            params: params_query,
+        };
+
+        let mut query_result = query_with_params
+            .run(mysql_connection)
+            .await
+            .expect("Error executing query in mysql");
+
+        let result_rows = if is_insert {
+            let last_insert = query_result
+                .last_insert_id()
+                .map(Value::UInt)
+                .expect("Error getting pk id in insert");
+
+            vec![row::new_row(
+                vec![last_insert],
+                Arc::new([mysql_async::Column::new(ColumnType::MYSQL_TYPE_UNKNOWN)]),
+            )]
+        } else {
+            query_result
+                .collect::<Row>()
+                .await
+                .expect("Error resolved trait FromRow in mysql")
+        };
+
+        Ok(CanyonRows::MySQL(result_rows))
+    }
+}
+
+#[cfg(feature = "mysql")]
+fn reorder_params<T>(
+    stmt: &str,
+    params: &[&'_ dyn QueryParameter<'_>],
+    fn_parser: impl Fn(&&dyn QueryParameter<'_>) -> T,
+) -> Vec<T> {
+    let mut ordered_params = vec![];
+    let rg = regex::Regex::new(DETECT_PARAMS_IN_QUERY)
+        .expect("Error create regex with detect params pattern expression");
+
+    for positional_param in rg.find_iter(stmt) {
+        let pp: &str = positional_param.as_str();
+        let pp_index = pp[1..] // param $1 -> get 1
+            .parse::<usize>()
+            .expect("Error parse mapped parameter to usized.")
+            - 1;
+
+        let element = params
+            .get(pp_index)
+            .expect("Error obtaining the element of the mapping against parameters.");
+        ordered_params.push(fn_parser(element));
+    }
+
+    ordered_params
 }

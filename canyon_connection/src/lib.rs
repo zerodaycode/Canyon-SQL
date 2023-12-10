@@ -2,6 +2,8 @@
 pub extern crate async_std;
 pub extern crate futures;
 pub extern crate lazy_static;
+#[cfg(feature = "mysql")]
+pub extern crate mysql_async;
 #[cfg(feature = "mssql")]
 pub extern crate tiberius;
 pub extern crate tokio;
@@ -102,5 +104,21 @@ pub fn get_database_connection<'a>(
             .unwrap_or_else(||
                 panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}")
             )
+    }
+}
+
+pub fn get_database_config<'a>(
+    datasource_name: &str,
+    datasources_config: &'a [DatasourceConfig],
+) -> &'a DatasourceConfig {
+    if datasource_name.is_empty() {
+        datasources_config
+            .get(0)
+            .unwrap_or_else(|| panic!("Not exist datasource"))
+    } else {
+        datasources_config
+            .iter()
+            .find(|dc| dc.name == datasource_name)
+            .unwrap_or_else(|| panic!("Not found datasource expected {datasource_name}"))
     }
 }

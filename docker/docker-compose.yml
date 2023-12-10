@@ -27,3 +27,14 @@ services:
     environment:
       MSSQL_SA_PASSWORD: "SqlServer-10"
       ACCEPT_EULA: "Y"
+  mysql:
+      image: mysql:latest
+      container_name: mysql
+      environment:
+        MYSQL_ROOT_PASSWORD: root
+      ports:
+        - '3307:3306'
+      volumes:
+        - ./mysql-data:/var/lib/mysql
+        - ./mysql/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+        - ./mysql/fill_tables.sql:/docker-entrypoint-initdb.d/fill_tables.sql

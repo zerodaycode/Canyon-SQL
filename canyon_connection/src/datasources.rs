@@ -11,7 +11,7 @@ fn load_ds_config_from_array() {
         [canyon_sql]
         datasources = [
             {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-       ]
+        ]
         "#;
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_PG)
             .expect("A failure happened retrieving the [canyon_sql] section");
@@ -64,6 +64,33 @@ fn load_ds_config_from_array() {
 
         assert_eq!(ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated));
     }
+    #[cfg(feature = "mysql")]
+    {
+        const CONFIG_FILE_MOCK_ALT_MYSQL: &str = r#"
+        [canyon_sql]
+        datasources = [
+            {name = 'MysqlDS', auth = { mysql = { basic = { username = "root", password = "root" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
+        ]
+        "#;
+        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MYSQL)
+            .expect("A failure happened retrieving the [canyon_sql] section");
+
+        let ds_1 = &config.canyon_sql.datasources[0];
+
+        assert_eq!(ds_1.name, "MysqlDS");
+        assert_eq!(ds_1.get_db_type(), DatabaseType::MySQL);
+        assert_eq!(
+            ds_1.auth,
+            Auth::MySQL(MySQLAuth::Basic {
+                username: "root".to_string(),
+                password: "root".to_string()
+            })
+        );
+        assert_eq!(ds_1.properties.host, "192.168.0.250.1");
+        assert_eq!(ds_1.properties.port, Some(3340));
+        assert_eq!(ds_1.properties.db_name, "triforce2");
+        assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
+    }
 }
 ///
 #[derive(Deserialize, Debug, Clone)]
@@ -90,18 +117,23 @@ impl DatasourceConfig {
             Auth::Postgres(_) => DatabaseType::PostgreSql,
             #[cfg(feature = "mssql")]
             Auth::SqlServer(_) => DatabaseType::SqlServer,
+            #[cfg(feature = "mysql")]
+            Auth::MySQL(_) => DatabaseType::MySQL,
         }
     }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Auth {
-    #[serde(alias = "PostgreSQL", alias = "postgresql", alias = "postgres")]
+    #[serde(alias = "PostgresSQL", alias = "postgresql", alias = "postgres")]
     #[cfg(feature = "postgres")]
     Postgres(PostgresAuth),
     #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
     #[cfg(feature = "mssql")]
     SqlServer(SqlServerAuth),
+    #[serde(alias = "MYSQL", alias = "mysql", alias = "MySQL")]
+    #[cfg(feature = "mysql")]
+    MySQL(MySQLAuth),
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -118,6 +150,13 @@ pub enum SqlServerAuth {
     Basic { username: String, password: String },
     #[serde(alias = "Integrated", alias = "integrated")]
     Integrated,
+}
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[cfg(feature = "mysql")]
+pub enum MySQLAuth {
+    #[serde(alias = "Basic", alias = "basic")]
+    Basic { username: String, password: String },
 }
 
 #[derive(Deserialize, Debug, Clone)]

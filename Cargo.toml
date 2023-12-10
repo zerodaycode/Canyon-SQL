@@ -16,7 +16,6 @@ members = [
     "canyon_entities",
     "canyon_migrations",
     "canyon_macros",
-
     "tests"
 ]
 
@@ -31,6 +30,9 @@ canyon_macros = { workspace = true, path = "canyon_macros" }
 # To be marked as opt deps
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
+mysql_async = { workspace = true, optional = true }
+mysql_common = { workspace = true, optional = true }
+
 
 [workspace.dependencies]
 canyon_crud = { version = "0.4.2", path = "canyon_crud" }
@@ -43,6 +45,8 @@ tokio = { version = "1.27.0", features = ["full"]  }
 tokio-util = { version = "0.7.4", features = ["compat"]  }
 tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
 tiberius = { version = "0.12.1", features = ["tds73", "chrono", "integrated-auth-gssapi"] }
+mysql_async = { version = "0.32.2" }
+mysql_common = { version = "0.30.6", features = [ "chrono" ]}
 
 chrono = { version = "0.4", features = ["serde"] }  # Just from TP better?
 serde = { version = "1.0.138", features = ["derive"] }
@@ -54,11 +58,13 @@ lazy_static = "1.4.0"
 toml = "0.7.3"
 async-trait = "0.1.68"
 walkdir = "2.3.3"
-regex = "1.5"
+regex = "1.9.3"
 partialdebug = "0.2.0"
 
 quote = "1.0.9"
 proc-macro2 = "1.0.27"
+
+
 
 [workspace.package]
 version = "0.4.2"
@@ -73,4 +79,5 @@ description = "A Rust ORM and QueryBuilder"
 [features]
 postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres", "canyon_macros/postgres"]
 mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql", "canyon_migrations/mssql", "canyon_macros/mssql"]
+mysql = ["mysql_async", "mysql_common", "canyon_connection/mysql", "canyon_crud/mysql", "canyon_migrations/mysql", "canyon_macros/mysql"]
 migrations = ["canyon_migrations", "canyon_macros/migrations"]
