@@ -1,4 +1,4 @@
-///! Constant values to share across the integration tests
+//! Constant values to share across the integration tests
 
 #[cfg(feature = "postgres")]
 pub const PSQL_DS: &str = "postgres_docker";

@@ -164,7 +164,7 @@ pub fn database_table_name_to_struct_ident(name: &str) -> Ident {
             first_iteration = false;
         } else {
             match char {
-                n if n == '_' => {
+                '_' => {
                     previous_was_underscore = true;
                 }
                 char if char.is_ascii_lowercase() => {

@@ -1,4 +1,4 @@
-///! The root crate of the `Canyon-SQL` project.
+//! The root crate of the `Canyon-SQL` project.
 ///
 /// Here it's where all the available functionalities and features
 /// reaches the top most level, grouping them and making them visible

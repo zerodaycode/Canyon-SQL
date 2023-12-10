@@ -1,5 +1,5 @@
-///! File that contains all the datatypes and logic to perform the migrations
-///! over a target database
+//! File that contains all the datatypes and logic to perform the migrations
+//! over a target database
 use async_trait::async_trait;
 use canyon_crud::DatabaseType;
 use regex::Regex;
@@ -95,6 +95,7 @@ impl MigrationsProcessor {
                 }
 
                 // Case when we need to compare the entity with the database contain
+                #[allow(clippy::unnecessary_unwrap)]
                 if current_table_metadata.is_some() && current_column_metadata.is_some() {
                     self.add_modify_or_remove_constraints(
                         entity_name,
@@ -643,7 +644,7 @@ impl MigrationsHelper {
     #[cfg(feature = "mssql")]
     fn get_datatype_from_column_metadata(current_column_metadata: &ColumnMetadata) -> String {
         // TODO Add all SQL Server text datatypes
-        if vec!["nvarchar", "varchar"]
+        if ["nvarchar", "varchar"]
             .contains(&current_column_metadata.datatype.to_lowercase().as_str())
         {
             let varchar_len = match &current_column_metadata.character_maximum_length {

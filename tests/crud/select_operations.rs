@@ -5,8 +5,8 @@ use crate::constants::MYSQL_DS;
 
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
-///! Integration tests for the CRUD operations available in `Canyon` that
-///! generates and executes *SELECT* statements
+// Integration tests for the CRUD operations available in `Canyon` that
+/// generates and executes *SELECT* statements
 use crate::Error;
 use canyon_sql::crud::CrudOperations;
 

@@ -3,11 +3,11 @@ use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
 
-///! Tests for the QueryBuilder available operations within Canyon.
+// Tests for the QueryBuilder available operations within Canyon.
 ///
-///! QueryBuilder are the way of obtain more flexibility that with
-///! the default generated queries, essentially for build the queries
-///! with the SQL filters
+// QueryBuilder are the way of obtain more flexibility that with
+// the default generated queries, essentially for build the queries
+// with the SQL filters
 ///
 use canyon_sql::{
     crud::CrudOperations,
