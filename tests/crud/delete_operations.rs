@@ -1,5 +1,5 @@
-///! Integration tests for the CRUD operations available in `Canyon` that
-///! generates and executes *INSERT* statements
+//! Integration tests for the CRUD operations available in `Canyon` that
+//! generates and executes *INSERT* statements
 use canyon_sql::crud::CrudOperations;
 
 #[cfg(feature = "mysql")]
