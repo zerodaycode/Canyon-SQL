@@ -1,35 +1,41 @@
-# CANYON-SQL
+<div align="center">
+<h1>CANYON-SQL</h1>
+  <p align="center">
+    <h3><strong>A full written in `Rust` ORM for multiple databases</strong></h3>
+    <h4>`Canyon-SQL` is a high level abstraction for working with multiple databases concurrently. Is build on top of the `async` language features
+to provide a high speed, high performant library to handling data access for consumers.</h4>
+    <br />
+    <br />
+</div>
+<div align="center">
 
-**A full written in `Rust` ORM for multiple databases.**
+![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)
 
-- ![crates.io](https://img.shields.io/crates/v/canyon_sql.svg)
-- [![Continuous Integration](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml)
-- [![Code Quality](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-quality.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-quality.yml)
-- [![Code Coverage Measure](https://zerodaycode.github.io/Canyon-SQL/badges/flat.svg)](https://zerodaycode.github.io/Canyon-SQL)
-- [![Code Coverage Status](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
+![crates.io](https://img.shields.io/crates/v/canyon_sql?style=for-the-badge)
 
-`Canyon-SQL` is a high level abstraction for working with multiple databases concurrently. Is build on top of the `async` language features
-to provide a high speed, high performant library to handling data access for consumers.
+[![Continuous Integration](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml)
+[![Code Quality](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-quality.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-quality.yml)
+[![Code Coverage Measure](https://zerodaycode.github.io/Canyon-SQL/badges/flat.svg)](https://zerodaycode.github.io/Canyon-SQL)
+[![Code Coverage Status](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
+</div>
 
 ## Early stage disclaimer
 
-The library it's still on a `early stage` state.
+The library it's still on an `early stage` state.
 Any contrib via `fork` + `PR` it's really appreciated. Currently we are involved in a really active development on the project.
 
-## Full documentation resources
+## :memo: Full documentation resources
 
 There is a `work-in-progress` web page, build with `mdBook` containing the official documentation.
 Here is where you will find all the technical documentation for `Canyon-SQL`.
 You can read it [by clicking this link](https://zerodaycode.github.io/canyon-book/)
 
-## Most important features
+## :pushpin: Most important features
 
 - **Async** by default. Almost every functionality provided is ready to be consumed concurrently.
-- Use of multiple datasources. You can query multiple databases at the same time, even different ones!. This means that you will be able to query concurrently
-a `PostgreSQL` database and an `SqlServer` one in the same project.
+- Use of multiple datasources. You can query multiple databases at the same time, even different ones! This means that you will be able to query concurrently a `PostgreSQL` database and a `SqlServer` one in the same project.
 - Is macro based. With a few annotations and a configuration file, you are ready to write your data access.
-- Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints...
-Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programmatically approach with `Canyon`!
+- Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints... Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programmatically approach with `Canyon`!
 
 ## Supported databases
 
@@ -40,7 +46,7 @@ Also, in the future, we have plans to allow you to manipulate the whole server, 
 
 Every crate listed above is an `async` based crate, in line with the guidelines of the `Canyon-SQL` design.
 
-There are plans for include more databases engines.
+There are plans to include more databases engines.
 
 ## Better by example
 
@@ -57,7 +63,7 @@ assert!(find_all_result.is_ok());
 assert!(!find_all_result.unwrap().is_empty());
 ```
 
-### Performing a search over the primary key column
+### :mag_right: Performing a search over the primary key column
 
 ```rust
 let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> = League::find_by_pk(&1).await;
@@ -78,10 +84,10 @@ assert_eq!(
 
 Note the leading reference on the `find_by_pk(...)` parameter. This associated function receives an `&dyn QueryParameter<'_>` as argument, not a value.
 
-### Building more complex queries
+### :wrench: Building more complex queries
 
-For exemplify the capabilities of `Canyon`, we will use `SelectQueryBuilder<T>`, which implements the `QueryBuilder<T>` trait
-for build a more complex where, filteing data and joining tables.
+To exemplify the capabilities of `Canyon`, we will use `SelectQueryBuilder<T>`, which implements the `QueryBuilder<T>` trait
+to build a more complex where, filtering data and joining tables.
 
 ```rust
 let mut select_with_joins = LeagueTournament::select_query();
@@ -100,15 +106,16 @@ let mut select_with_joins = LeagueTournament::select_query();
     )
 ```
 
-> Note: For now, when you use joins, you will need to create a new model with the columns in both tables (in case that you desire the data in such columns), but just follows the habitual process with the CanyonMapper.
-It will try to retrieve the data for every field declared. If you don't declare a field that is in the open clause, in this case (*), that field won't be retrieved. No problem. But if you have fields that aren't map
-able with some column in the database, the program will panic.
+> [!NOTE]
+>
+> For now, when you use joins, you will need to create a new model with the columns in both tables (in case that you desire the data in such columns), but just follows the usual process with the CanyonMapper.
+It will try to retrieve the data for every field declared. If you don't declare a field that is in the open clause, in this case (*), that field won't be retrieved. No problem. But if you have fields that aren't mapable with some column in the database, the program will panic.
 
 ## More examples
 
-If you want to see more examples, you can take a look into the `tests` folder, at the root of this repository. Every available database operation is tested there, so you can use it to find the usage of the described operations in the documentation mentioned above
+If you want to see more examples, you can take a look into the `tests` folder, at the root of this repository. Every available database operation is tested there, so you can use it to find the usage of the described operations in the documentation mentioned above.
 
-## Contributing to CANYON-SQL
+## :octocat: Contributing to CANYON-SQL
 
 First of all, thanks for take in consideration help us with the project.
 You can take a look to our [templated guide]((./CONTRIBUTING.md)).
@@ -121,7 +128,7 @@ But, to summarize:
 - After complete your changes, open a `PR` to the default branch. Fill the template provided in the best way you're able to do it
 - Wait for the approval. In most of cases, a test over the feature will be required before approve your changes
 
-## What about the tests?
+## :question: What about the tests?
 
 Typically in `Canyon`, isolated unit tests are written as doc-tests, and the integration ones are under the folder `./tests`
 
