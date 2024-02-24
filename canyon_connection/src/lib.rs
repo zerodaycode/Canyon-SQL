@@ -94,7 +94,7 @@ pub fn get_database_connection<'a>(
         guarded_cache
             .get_mut(
                 DATASOURCES
-                    .get(0)
+                    .first()
                     .expect("We didn't found any valid datasource configuration. Check your `canyon.toml` file")
                     .name
                     .as_str()
@@ -113,7 +113,7 @@ pub fn get_database_config<'a>(
 ) -> &'a DatasourceConfig {
     if datasource_name.is_empty() {
         datasources_config
-            .get(0)
+            .first()
             .unwrap_or_else(|| panic!("Not exist datasource"))
     } else {
         datasources_config

@@ -701,7 +701,7 @@ impl MigrationsHelper {
                 .collect::<Vec<String>>();
 
             let table_to_reference = annotation_data
-                .get(0)
+                .first()
                 .expect("Error extracting table ref from FK annotation")
                 .to_string();
             let column_to_reference = annotation_data
