@@ -117,24 +117,24 @@ If you want to see more examples, you can take a look into the `tests` folder, a
 
 ## :octocat: Contributing to CANYON-SQL
 
-First of all, thanks for take in consideration help us with the project.
-You can take a look to our [templated guide]((./CONTRIBUTING.md)).
+First of all, thanks for taking in consideration helping us with the project.
+You can take a look to our [templated guide](./CONTRIBUTING.md).
 
 But, to summarize:
 
-- Take a look at the already opened issues, to see if already exists of it's someone already taking care about solving it. Even tho, you can enter to participate and explain your point of view, or even help to accomplish the task
+- Take a look at the already opened issues, to verify if it already exists or if someone is already taking care about solving it. Even though, you can enter to participate and explain your point of view, or even help to accomplish the task.
 - Make a fork of `Canyon-SQL`
-- If you opened an issue, create a branch from the base branch of the repo (that's the default), and point it to your fork
-- After complete your changes, open a `PR` to the default branch. Fill the template provided in the best way you're able to do it
-- Wait for the approval. In most of cases, a test over the feature will be required before approve your changes
+- If you opened an issue, create a branch from the base branch of the repo (that's the default), and point it to your fork.
+- After completing your changes, open a `PR` to the default branch. Fill the template provided in the best way possible.
+- Wait for the approval. In most of cases, a test over the feature will be required before approving your changes.
 
 ## :question: What about the tests?
 
 Typically in `Canyon`, isolated unit tests are written as doc-tests, and the integration ones are under the folder `./tests`
 
-If you want to run the tests (because this is the first thing that you want to do after fork the repo), a couple of things have to be considered before.
+If you want to run the tests (because this is the first thing that you want to do after fork the repo), before moving forward, there are a couple of things that have to be considered.
 
-- You will need Docker installed in the target machine
+- You will need Docker installed in the target machine.
 - If you have Docker, and `Canyon-SQL` cloned of forked, you can run our docker-compose file `(docker/docker-compose.yml)`, which will initialize a `PostgreSQL` database and will put content on it to make the tests able to work.
-- Finally, some tests runs against `MSSQL`. We didn't found a nice way of inserting data directly when the Docker wakes up, but instead, we run a very special test located at `tests/crud/mod.rs`, that is named `initialize_sql_server_docker_instance`. When you run this one, initial data will be inserted into the tables that are created when this test run.
-(If you know a better way of doing this, please, open a issue to let us know it, and improve this process!)
+- Finally, some tests run against `MSSQL`. We didn't found a nice way of inserting data directly when the Docker wakes up, but instead, we run a very special test located at `tests/crud/mod.rs`, that is named `initialize_sql_server_docker_instance`. When you run this one, initial data will be inserted into the tables that are created when this test run.
+(If you know a better way of doing this, please, open an issue to let us know, and improve this process!)
