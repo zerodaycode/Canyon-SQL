@@ -14,16 +14,16 @@ fn test_migrations_postgresql_status_query() {
 
     let res = results.unwrap();
     let public_schema_info = res.get_postgres_rows();
-    let first_result = public_schema_info.get(0).unwrap();
+    let first_result = public_schema_info.first().unwrap();
 
-    assert_eq!(first_result.columns().get(0).unwrap().name(), "table_name");
+    assert_eq!(first_result.columns().first().unwrap().name(), "table_name");
     assert_eq!(
-        first_result.columns().get(0).unwrap().type_().name(),
+        first_result.columns().first().unwrap().type_().name(),
         "name"
     );
-    assert_eq!(first_result.columns().get(0).unwrap().type_().oid(), 19);
+    assert_eq!(first_result.columns().first().unwrap().type_().oid(), 19);
     assert_eq!(
-        first_result.columns().get(0).unwrap().type_().schema(),
+        first_result.columns().first().unwrap().type_().schema(),
         "pg_catalog"
     );
 }

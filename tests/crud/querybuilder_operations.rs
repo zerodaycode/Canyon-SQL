@@ -56,7 +56,7 @@ fn test_crud_find_with_querybuilder() {
     let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
     assert!(!filtered_leagues.is_empty());
 
-    let league_idx_0 = filtered_leagues.get(0).unwrap();
+    let league_idx_0 = filtered_leagues.first().unwrap();
     assert_eq!(league_idx_0.id, 34);
     assert_eq!(league_idx_0.region, "KOREA");
 }
