@@ -33,7 +33,7 @@ You can read it [by clicking this link](https://zerodaycode.github.io/canyon-boo
 ## :pushpin: Most important features
 
 - **Async** by default. Almost every functionality provided is ready to be consumed concurrently.
-- Use of multiple datasources. You can query multiple databases at the same time, even different ones! This means that you will be able to query concurrently a `PostgreSQL` database and a `SqlServer` one in the same project.
+- Use of multiple datasources. You can query multiple databases at the same time, even different ones! This means that you will be able to query concurrently a `PostgreSQL` database and a `SqlServer` or `MySql` one in the same project.
 - Is macro based. With a few annotations and a configuration file, you are ready to write your data access.
 - Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints... Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programmatically approach with `Canyon`!
 
@@ -43,6 +43,7 @@ You can read it [by clicking this link](https://zerodaycode.github.io/canyon-boo
 
 - PostgreSQL (via `tokio-postgres` crate)
 - SqlServer (via `tiberius` crate)
+- MySql (via `mysql-async` crate)
 
 Every crate listed above is an `async` based crate, in line with the guidelines of the `Canyon-SQL` design.
 
@@ -135,6 +136,6 @@ Typically in `Canyon`, isolated unit tests are written as doc-tests, and the int
 If you want to run the tests (because this is the first thing that you want to do after fork the repo), before moving forward, there are a couple of things that have to be considered.
 
 - You will need Docker installed in the target machine.
-- If you have Docker, and `Canyon-SQL` cloned of forked, you can run our docker-compose file `(docker/docker-compose.yml)`, which will initialize a `PostgreSQL` database and will put content on it to make the tests able to work.
+- If you have Docker, and `Canyon-SQL` cloned of forked, you can run our docker-compose file `(docker/docker-compose.yml)`, which will initialize a `PostgreSQL` and `MySql` database and will put content on it to make the tests able to work.
 - Finally, some tests run against `MSSQL`. We didn't found a nice way of inserting data directly when the Docker wakes up, but instead, we run a very special test located at `tests/crud/mod.rs`, that is named `initialize_sql_server_docker_instance`. When you run this one, initial data will be inserted into the tables that are created when this test run.
 (If you know a better way of doing this, please, open an issue to let us know, and improve this process!)
