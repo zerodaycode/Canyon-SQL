@@ -29,6 +29,7 @@ Any contrib via `fork` + `PR` it's really appreciated. Currently we are involved
 There is a `work-in-progress` web page, build with `mdBook` containing the official documentation.
 Here is where you will find all the technical documentation for `Canyon-SQL`.
 You can read it [by clicking this link](https://zerodaycode.github.io/canyon-book/)
+If you want to contribute in some section of the documentation [canyon-book repository](https://github.com/zerodaycode/canyon-book):
 
 ## :pushpin: Most important features
 
