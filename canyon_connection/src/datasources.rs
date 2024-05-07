@@ -92,7 +92,8 @@ fn load_ds_config_from_array() {
         assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
     }
 }
-///
+
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig {
     pub canyon_sql: Datasources,
