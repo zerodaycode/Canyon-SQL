@@ -93,7 +93,6 @@ fn load_ds_config_from_array() {
     }
 }
 
-
 #[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig {
     pub canyon_sql: Datasources,
