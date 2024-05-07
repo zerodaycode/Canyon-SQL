@@ -34,7 +34,6 @@ impl From<&Auth> for DatabaseType {
             crate::datasources::Auth::SqlServer(_) => DatabaseType::SqlServer,
             #[cfg(feature = "mysql")]
             crate::datasources::Auth::MySQL(_) => DatabaseType::MySQL,
-            _ => panic!("Error not features selected"),
         }
     }
 }
