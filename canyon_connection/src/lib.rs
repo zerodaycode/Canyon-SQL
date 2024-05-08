@@ -85,7 +85,6 @@ pub async fn init_connections_cache() {
     }
 }
 
-///
 pub fn get_database_connection<'a>(
     datasource_name: &str,
     guarded_cache: &'a mut MutexGuard<IndexMap<&str, DatabaseConnection>>,

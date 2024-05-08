@@ -28,8 +28,11 @@ pub enum DatabaseType {
 impl From<&Auth> for DatabaseType {
     fn from(value: &Auth) -> Self {
         match value {
+            #[cfg(feature = "postgres")]
             crate::datasources::Auth::Postgres(_) => DatabaseType::PostgreSql,
+            #[cfg(feature = "mssql")]
             crate::datasources::Auth::SqlServer(_) => DatabaseType::SqlServer,
+            #[cfg(feature = "mysql")]
             crate::datasources::Auth::MySQL(_) => DatabaseType::MySQL,
         }
     }
