@@ -1,6 +1,5 @@
 /// This file contains `Rust` types that represents an entry on the `CanyonRegister`
 /// where `Canyon` tracks the user types that has to manage
-
 pub const NUMERIC_PK_DATATYPE: [&str; 6] = ["i16", "u16", "i32", "u32", "i64", "u64"];
 
 /// Gets the necessary identifiers of a CanyonEntity to make it the comparative

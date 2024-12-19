@@ -27,7 +27,8 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           components: clippy
-      - run: cargo clippy --workspace --all-targets --verbose --all-features
+      - run: cargo clippy --workspace --all-targets --all-features
+
   rustfmt:
     name: Verify code formatting
     runs-on: ubuntu-latest
