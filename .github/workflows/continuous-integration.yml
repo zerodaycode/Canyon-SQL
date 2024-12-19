@@ -23,11 +23,11 @@ jobs:
         - { rust: stable,            os: windows-latest }
 
     steps:
-      - name: Make the USER own the working directory. Installing `gssapi` headers
+      - name: Make the USER own the working directory. Installing required build dependencies
         if: ${{ matrix.os == 'ubuntu-latest' }}
         run: |
           sudo chown -R $USER:$USER ${{ github.workspace }}
-          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
+          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit docker-compose
       
       - uses: actions/checkout@v3
 

@@ -442,7 +442,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
-
     // TODO: refactor the code below after the current bugfixes, to conditinally generate
     // the required methods and populate the CanyonMapper trait dependencing on the cfg flags
     // enabled with a more elegant solution (a fn for feature, for ex)
@@ -456,7 +455,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
                 .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
         }
     });
-
 
     #[cfg(feature = "mssql")]
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
