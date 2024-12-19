@@ -57,7 +57,6 @@ impl Transaction<Self> for CanyonMemory {}
 impl CanyonMemory {
     /// Queries the database to retrieve internal data about the structures
     /// tracked by `CanyonSQL`
-    #[cfg(not(cargo_check))]
     #[allow(clippy::nonminimal_bool)]
     pub async fn remember(
         datasource: &DatasourceConfig,
@@ -184,7 +183,6 @@ impl CanyonMemory {
 
     /// Parses the Rust source code files to find the one who contains Canyon entities
     /// ie -> annotated with `#[canyon_entity]`
-    #[cfg(not(cargo_check))]
     async fn find_canyon_entity_annotated_structs(
         &mut self,
         canyon_entities: &[CanyonRegisterEntity<'_>],

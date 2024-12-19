@@ -21,11 +21,11 @@ members = [
 
 [dependencies]
 # Project crates
-canyon_connection = { workspace = true, path = "canyon_connection" }
-canyon_crud = { workspace = true, path = "canyon_crud" }
-canyon_entities = { workspace = true, path = "canyon_entities" }
-canyon_migrations = { workspace = true, path = "canyon_migrations", optional = true  }
-canyon_macros = { workspace = true, path = "canyon_macros" }
+canyon_connection = { workspace = true }
+canyon_crud = { workspace = true }
+canyon_entities = { workspace = true }
+canyon_migrations = { workspace = true, optional = true  }
+canyon_macros = { workspace = true }
 
 # To be marked as opt deps
 tokio-postgres = { workspace = true, optional = true }
@@ -35,11 +35,11 @@ mysql_common = { workspace = true, optional = true }
 
 
 [workspace.dependencies]
-canyon_crud = { version = "0.5.0", path = "canyon_crud" }
-canyon_connection = { version = "0.5.0", path = "canyon_connection" }
-canyon_entities = { version = "0.5.0", path = "canyon_entities" }
-canyon_migrations = { version = "0.5.0", path = "canyon_migrations"}
-canyon_macros = { version = "0.5.0", path = "canyon_macros" }
+canyon_crud = { version = "0.5.1", path = "canyon_crud" }
+canyon_connection = { version = "0.5.1", path = "canyon_connection" }
+canyon_entities = { version = "0.5.1", path = "canyon_entities" }
+canyon_migrations = { version = "0.5.1", path = "canyon_migrations"}
+canyon_macros = { version = "0.5.1", path = "canyon_macros" }
 
 tokio = { version = "1.27.0", features = ["full"]  }
 tokio-util = { version = "0.7.4", features = ["compat"]  }
@@ -64,10 +64,8 @@ partialdebug = "0.2.0"
 quote = "1.0.9"
 proc-macro2 = "1.0.27"
 
-
-
 [workspace.package]
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto Musi<gonzalo.busto@gmail.com>"]
 documentation = "https://zerodaycode.github.io/canyon-book/"
@@ -77,7 +75,7 @@ license = "MIT"
 description = "A Rust ORM and QueryBuilder"
 
 [features]
-postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres", "canyon_macros/postgres"]
-mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql", "canyon_migrations/mssql", "canyon_macros/mssql"]
-mysql = ["mysql_async", "mysql_common", "canyon_connection/mysql", "canyon_crud/mysql", "canyon_migrations/mysql", "canyon_macros/mysql"]
+postgres =   ["tokio-postgres",    "canyon_connection/postgres", "canyon_crud/postgres",    "canyon_migrations/postgres", "canyon_macros/postgres"]
+mssql =      ["tiberius",          "canyon_connection/mssql",    "canyon_crud/mssql",       "canyon_migrations/mssql",    "canyon_macros/mssql"]
+mysql =      ["mysql_async",       "mysql_common",               "canyon_connection/mysql", "canyon_crud/mysql",          "canyon_migrations/mysql", "canyon_macros/mysql"]
 migrations = ["canyon_migrations", "canyon_macros/migrations"]

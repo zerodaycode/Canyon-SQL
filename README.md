@@ -140,3 +140,40 @@ If you want to run the tests (because this is the first thing that you want to d
 - If you have Docker, and `Canyon-SQL` cloned of forked, you can run our docker-compose file `(docker/docker-compose.yml)`, which will initialize a `PostgreSQL` and `MySql` database and will put content on it to make the tests able to work.
 - Finally, some tests run against `MSSQL`. We didn't found a nice way of inserting data directly when the Docker wakes up, but instead, we run a very special test located at `tests/crud/mod.rs`, that is named `initialize_sql_server_docker_instance`. When you run this one, initial data will be inserted into the tables that are created when this test run.
 (If you know a better way of doing this, please, open an issue to let us know, and improve this process!)
+
+## Known issues
+
+### Missing dependency: OpenSSL
+
+There's a certain set of common issues while building `Canyon-SQL` in development or in client code. Those building issues
+are related with missing packages or dependencies that `Cargo` doesn't resolves automatically depending on the underlying OS.
+
+```
+openssl-sys@0.9.104: Could not find directory of OpenSSL installation, and this `-sys` crate cannot proceed without this knowledge.
+If OpenSSL is installed and this crate had trouble finding it,  you can set the `OPENSSL_DIR` environment variable for the compilation process.
+See stderr section below for further information.
+```
+
+This means that the `OpenSSL` package isn't installed on your system or not in *PATH*.
+
+In a Debian based system, you can just `sudo apt install libssl-dev`. For others, just use your package manager
+to solve it by install it.
+
+### Missing dependency: pkg-config
+
+```
+Could not find openssl via pkg-config:
+  Could not run `PKG_CONFIG_ALLOW_SYSTEM_CFLAGS=1 pkg-config --libs --cflags openssl`
+  The pkg-config command could not be found.
+```
+`Cargo` may try to discover the `OpenSSL` package via `pkg-config`. If you find this error, you can
+`sudo apt install pkg-config` on *apt* based systems. For other systems, you must read your package manager
+docs and install it.
+
+### failed to run custom build command for `libgssapi-sys vX.X.X`
+
+The problem is missing a *C* header `gssapi.h`.
+
+- Alpine: `apk --update add krb5-pkinit krb5-dev krb5`
+- Ubuntu: `apt-get -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit`
+

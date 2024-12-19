@@ -127,7 +127,8 @@ fn test_entity_database_name_defaulter() {
         "MajorLeague".to_owned()
     );
 }
-///
+
+/// Autogenerates a default table name for an entity given their struct name
 pub fn default_database_table_name_from_entity_name(ty: &str) -> String {
     let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();

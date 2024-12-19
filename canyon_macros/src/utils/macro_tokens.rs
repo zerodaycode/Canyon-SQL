@@ -6,6 +6,7 @@ use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
+#[allow(dead_code)]
 pub struct MacroTokens<'a> {
     pub vis: &'a Visibility,
     pub ty: &'a Ident,
@@ -114,7 +115,7 @@ impl<'a> MacroTokens<'a> {
         column_names_as_chars.as_str().to_owned()
     }
 
-    ///
+    /// Retrieves the value of the index of an annotated field with #[primary_key]
     pub fn get_pk_index(&self) -> Option<usize> {
         let mut pk_index = None;
         for (idx, field) in self.fields.iter().enumerate() {

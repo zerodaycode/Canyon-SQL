@@ -66,9 +66,9 @@ pub mod ops {
         /// Generates a `WHERE` SQL clause for constraint the query.
         ///
         /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-        /// column name and the value for the filter
+        ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
-        /// or equality binary operator
+        ///     or equality binary operator
         fn r#where<Z: FieldValueIdentifier<'a, T>>(
             &mut self,
             column: Z,
@@ -80,9 +80,9 @@ pub mod ops {
         /// Generates an `AND` SQL clause for constraint the query.
         ///
         /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-        /// column name and the value for the filter
+        ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
-        /// or equality binary operator
+        ///     or equality binary operator
         fn and<Z: FieldValueIdentifier<'a, T>>(
             &mut self,
             column: Z,
@@ -93,10 +93,10 @@ pub mod ops {
         /// the filter in conjunction with an `IN` operator that will ac
         ///
         /// * `column` - A [`FieldIdentifier`] that will provide the target
-        /// column name for the filter, based on the variant that represents
-        /// the field name that maps the targeted column name
+        ///     column name for the filter, based on the variant that represents
+        ///     the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameter`] with the values to filter
-        /// inside the `IN` operator
+        ///     inside the `IN` operator
         fn and_values_in<Z, Q>(&mut self, column: Z, values: &'a [Q]) -> &mut Self
         where
             Z: FieldIdentifier<T>,
@@ -106,10 +106,10 @@ pub mod ops {
         /// the filter in conjunction with an `IN` operator that will ac
         ///
         /// * `column` - A [`FieldIdentifier`] that will provide the target
-        /// column name for the filter, based on the variant that represents
-        /// the field name that maps the targeted column name
+        ///     column name for the filter, based on the variant that represents
+        ///     the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameter`] with the values to filter
-        /// inside the `IN` operator
+        ///     inside the `IN` operator
         fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
         where
             Z: FieldIdentifier<T>,
@@ -118,18 +118,16 @@ pub mod ops {
         /// Generates an `OR` SQL clause for constraint the query.
         ///
         /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-        /// column name and the value for the filter
+        ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
-        /// or equality binary operator
+        ///     or equality binary operator
         fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator)
             -> &mut Self;
 
         /// Generates a `ORDER BY` SQL clause for constraint the query.
         ///
-        /// * `order_by` - A [`FieldIdentifier`] that will provide the target
-        /// column name
-        /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be
-        /// in ascending or descending order
+        /// * `order_by` - A [`FieldIdentifier`] that will provide the target  column name
+        /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be in ascending or descending order
         fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self;
     }
 }
@@ -452,9 +450,9 @@ where
 }
 
 /// Contains the specific database operations of the *UPDATE* SQL statements.
-///  
+///
 /// * `set` - To construct a new `SET` clause to determine the columns to
-/// update with the provided values
+///     update with the provided values
 #[derive(Debug, Clone)]
 pub struct UpdateQueryBuilder<'a, T>
 where
@@ -590,9 +588,9 @@ where
 
 /// Contains the specific database operations associated with the
 /// *DELETE* SQL statements.
-///  
+///
 /// * `set` - To construct a new `SET` clause to determine the columns to
-/// update with the provided values
+///     update with the provided values
 #[derive(Debug, Clone)]
 pub struct DeleteQueryBuilder<'a, T>
 where

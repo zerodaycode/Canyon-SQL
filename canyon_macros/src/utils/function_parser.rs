@@ -5,6 +5,7 @@ use syn::{
 
 /// Implementation of syn::Parse for the `#[canyon]` proc-macro
 #[derive(Clone)]
+#[allow(dead_code)]
 pub struct FunctionParser {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
