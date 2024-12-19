@@ -1,4 +1,5 @@
 //! Provides helpers to build the `#[canyon_macros::canyon]` procedural like attribute macro
+#![cfg(feature = "migrations")]
 
 use canyon_connection::CANYON_TOKIO_RUNTIME;
 use canyon_migrations::migrations::handler::Migrations;
@@ -6,7 +7,6 @@ use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
 use proc_macro2::TokenStream;
 use quote::quote;
 
-#[cfg(feature = "migrations")]
 pub fn main_with_queries() -> TokenStream {
     CANYON_TOKIO_RUNTIME.block_on(async {
         canyon_connection::init_connections_cache().await;
@@ -25,7 +25,6 @@ pub fn main_with_queries() -> TokenStream {
 
 /// Creates a TokenScream that is used to load the data generated at compile-time
 /// by the `CanyonManaged` macros again on the queries register
-#[cfg(feature = "migrations")]
 fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
     let cm_data = CM_QUERIES_TO_EXECUTE.lock().unwrap();
     let data = QUERIES_TO_EXECUTE.lock().unwrap();

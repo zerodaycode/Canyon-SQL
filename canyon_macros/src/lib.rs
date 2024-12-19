@@ -11,7 +11,7 @@ mod utils;
 use canyon_entity_macro::parse_canyon_entity_proc_macro_attr;
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::quote;
 use syn::{DeriveInput, Fields, Type, Visibility};
 
 use query_operations::{
@@ -442,6 +442,11 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
+
+    // TODO: refactor the code below after the current bugfixes, to conditinally generate
+    // the required methods and populate the CanyonMapper trait dependencing on the cfg flags
+    // enabled with a more elegant solution (a fn for feature, for ex)
+    #[cfg(feature = "postgres")]
     // Here it's where the incoming values of the DatabaseResult are wired into a new
     // instance, mapping the fields of the type against the columns
     let init_field_values = fields.iter().map(|(_vis, ident, _ty)| {
@@ -452,6 +457,8 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
+
+    #[cfg(feature = "mssql")]
     let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
 
@@ -530,6 +537,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
+    #[cfg(feature = "mysql")]
     let init_field_values_mysql = fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
         quote! {
@@ -541,26 +549,39 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     // The type of the Struct
     let ty = ast.ident;
 
+    let mut impl_methods = quote! {}; // Collect methods conditionally
+
+    #[cfg(feature = "postgres")]
+    impl_methods.extend(quote! {
+        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
+            Self {
+                #(#init_field_values),*
+            }
+        }
+    });
+
+    #[cfg(feature = "mssql")]
+    impl_methods.extend(quote! {
+        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
+            Self {
+                #(#init_field_values_sqlserver),*
+            }
+        }
+    });
+
+    #[cfg(feature = "mysql")]
+    impl_methods.extend(quote! {
+        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
+            Self {
+                #(#init_field_values_mysql),*
+            }
+        }
+    });
+
+    // Wrap everything in the shared `impl` block
     let tokens = quote! {
         impl canyon_sql::crud::RowMapper<Self> for #ty {
-            #[cfg(feature="postgres")]
-            fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
-                Self {
-                    #(#init_field_values),*
-                }
-            }
-            #[cfg(feature="mssql")]
-            fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
-                Self {
-                    #(#init_field_values_sqlserver),*
-                }
-            }
-            #[cfg(feature="mysql")]
-            fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
-                Self {
-                    #(#init_field_values_mysql),*
-                }
-            }
+            #impl_methods
         }
     };
 
@@ -588,6 +609,9 @@ fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
         .collect::<Vec<_>>()
 }
 
+#[cfg(feature = "mssql")]
+use quote::ToTokens;
+#[cfg(feature = "mssql")]
 fn get_field_type_as_string(typ: &Type) -> String {
     match typ {
         Type::Array(type_) => type_.to_token_stream().to_string(),
