@@ -57,6 +57,47 @@ pub struct MysqlConnection {
     pub client: Pool,
 }
 
+/*
+ * NOTE: initial ideas for making a better codebase as well as we improve our public API in
+ * order to make the Canyon-SQL DAO code much more unit-testable for our end users
+ *
+ * 1- Type above are not *Connection, they are *Client. They also may be converted to unit structs.
+ * 2- DatabaseConnection is not again a Connection. Is an aggregate of Clients.
+ * 3- impl DatabaseClient (when renamed) should be refactored, since it's really bloated
+ * 4- Find a better way to handle the _()=> wildcard patterns on the matching ops
+ *
+ * 5- make public the function that retrieves the datasource from the global container, so
+ *    users and macros can now fetch datasources, and macros fn params can be no ds => same
+ *    behaviour, but calling the public api from the macro, avoiding to make public the global
+ *    constant, only the function (that's really nice! :) ) and the *_datasource and *_ds functions
+ *    can be now _conn or similar. Even we can decide to remove the default one and make always
+ *    explicit the pass in of the connection
+ *
+ *  5.1- Make a new trait (this really can be a DatabaseConnection) that makes the execution of
+ *  the queries a mockable entity by a third party library (ex: mockall). That would be an option
+ *  over having *Connection
+ *
+ *  6- remove trait bounds that doesn't make sense. RowMapper shouldn't be :Transaction<T>,
+ *  QueryBuilder shouldn't be CrudOperations. There's for sure more
+ *
+ *  7- Consider if we need a new ` canyon_mapper` module to decouple the mapping data ideas from
+ *  the CRUD idea
+ *
+ *  8- Review how the querybuilder fetches the connection, as we may acomplish the same goal as
+ *  the one defined in 5, using datasources (or clients)
+ *
+ *  9- Abort the compilation process earlier if there's no datasource defined. Also, do the same
+ *  for when there's no cfg feature selected (Canyon can't work without a database) and we may not
+ *  write code that assumes a default NEVER
+ *
+ *  10- An idea for refactoring the global context of the datasources would be... to not to have
+ *  it! That will force the user to manage the connection everytime, but produces less painful code
+ *  without global contexts, but maybe we're able to find a better intermediate solution
+ *
+ *  11- Can we make the query executors being part of another different thing instead of CRUD? Can
+ *  we made them into a better idea and execution of the same?
+ */
+
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
 /// process them and generates a pool of 1 to 1 database connection for
@@ -167,6 +208,7 @@ impl DatabaseConnection {
                 Ok(DatabaseConnection::SqlServer(SqlServerConnection {
                     client: Box::leak(Box::new(
                         client.expect("A failure happened connecting to the database"),
+                        // TODO: with details of the failure and the datasource that triggered them
                     )),
                 }))
             }

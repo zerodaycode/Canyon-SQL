@@ -47,7 +47,8 @@ fn find_canyon_config_file() -> PathBuf {
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        let filename = e.file_name().to_str().unwrap();
+        let filename = e.file_name().to_str().unwrap(); // TODO: remove the .unwrap(). Use
+                                                        // lowercase to allow Canyon.toml
         if e.metadata().unwrap().is_file()
             && filename.starts_with("canyon")
             && filename.ends_with(".toml")

@@ -337,7 +337,7 @@ where
         self
     }
 
-    /// Adds a *RIGHT JOIN* SQL statement to the underlying
+    /// Adds a *INNER JOIN* SQL statement to the underlying
     /// [`Query`] held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
@@ -494,7 +494,7 @@ where
             return self;
         }
         if self._inner.query.sql.contains("SET") {
-            panic!(
+            panic!( // TODO: this should return an Err and not panic!
                 "\n{}",
                 String::from("\t[PANIC!] - Don't use chained calls of the .set(...) method. ")
                     + "\n\tPass all the values in a unique call within the 'columns' "
