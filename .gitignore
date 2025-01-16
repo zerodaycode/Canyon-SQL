@@ -4,6 +4,5 @@ Cargo.lock
 /tester_canyon_sql/
 canyon_tester/
 macro_utils.rs
-.vscode/
 postgres-data/
 mysql-data/
