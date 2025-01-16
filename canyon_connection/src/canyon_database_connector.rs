@@ -102,16 +102,9 @@ mod connection_helpers {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
-        let (client, connection) = tokio_postgres::connect(
-            &format!(
-                "postgres://{user}:{password}@{host}:{port}/{db}",
-                host = datasource.properties.host,
-                port = datasource.properties.port.unwrap_or_default(),
-                db = datasource.properties.db_name
-            ),
-            NoTls,
-        )
-        .await?;
+        let url = connection_string(user, password, datasource);
+
+        let (client, connection) = tokio_postgres::connect(&url, NoTls).await?;
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -155,20 +148,30 @@ mod connection_helpers {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
-        let url = format!(
-            "mysql://{user}:{password}@{}:{}/{}",
-            datasource.properties.host,
-            datasource.properties.port.unwrap_or_default(), // TODO: impl default for the port
-                                                            // config regarding the different kind
-                                                            // of db conn
-            datasource.properties.db_name
-        );
-
+        let url = connection_string(user, password, datasource);
         let mysql_connection = Pool::from_url(url)?;
 
         Ok(DatabaseConnection::MySQL(MysqlConnection {
             client: mysql_connection,
         }))
+    }
+
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
+    fn connection_string(user: &str, pswd: &str, datasource: &DatasourceConfig) -> String {
+        let server = match datasource.get_db_type() {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => "postgres",
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => "mysql",
+            DatabaseType::SqlServer => todo!("Connection string for MSSQL should never be reached"),
+        };
+        format!(
+            "{server}://{user}:{pswd}@{host}:{port}/{db}",
+            host = datasource.properties.host,
+            port = datasource.properties.port.unwrap_or_default(),
+            db = datasource.properties.db_name
+        )
     }
 }
 
@@ -188,9 +191,7 @@ mod auth {
     ) -> Result<(&'a str, &'a str), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match auth {
             Auth::Postgres(pg_auth) => match pg_auth {
-                PostgresAuth::Basic { username, password } => {
-                    Ok((username, password))
-                }
+                PostgresAuth::Basic { username, password } => Ok((username, password)),
             },
             #[cfg(any(feature = "mssql", feature = "mysql"))]
             _ => Err("Invalid auth configuration for a Postgres datasource.".into()),
@@ -203,12 +204,10 @@ mod auth {
     ) -> Result<tiberius::AuthMethod, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match auth {
             Auth::SqlServer(sql_server_auth) => match sql_server_auth {
-                SqlServerAuth::Basic { username, password } => Ok(
-                    tiberius::AuthMethod::sql_server(username, password),
-                ),
-                SqlServerAuth::Integrated => {
-                    Ok(tiberius::AuthMethod::Integrated)
+                SqlServerAuth::Basic { username, password } => {
+                    Ok(tiberius::AuthMethod::sql_server(username, password))
                 }
+                SqlServerAuth::Integrated => Ok(tiberius::AuthMethod::Integrated),
             },
             #[cfg(any(feature = "postgres", feature = "mysql"))]
             _ => Err("Invalid auth configuration for a SqlServer datasource.".into()),
@@ -221,9 +220,7 @@ mod auth {
     ) -> Result<(&'a str, &'a str), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
         match auth {
             Auth::MySQL(mysql_auth) => match mysql_auth {
-                MySQLAuth::Basic { username, password } => {
-                    Ok((username, password))
-                }
+                MySQLAuth::Basic { username, password } => Ok((username, password)),
             },
             #[cfg(any(feature = "postgres", feature = "mssql"))]
             _ => Err("Invalid auth configuration for a MySQL datasource.".into()),
