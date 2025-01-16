@@ -11,16 +11,18 @@ description.workspace = true
 
 [workspace]
 members = [
+    "canyon_core",
     "canyon_connection",
     "canyon_crud",
     "canyon_entities",
     "canyon_migrations",
     "canyon_macros",
-    "tests"
+    "tests",
 ]
 
 [dependencies]
 # Project crates
+canyon_core = { workspace = true }
 canyon_connection = { workspace = true }
 canyon_crud = { workspace = true }
 canyon_entities = { workspace = true }
@@ -35,6 +37,7 @@ mysql_common = { workspace = true, optional = true }
 
 
 [workspace.dependencies]
+canyon_core = { version = "0.5.1", path = "canyon_core" }
 canyon_crud = { version = "0.5.1", path = "canyon_crud" }
 canyon_connection = { version = "0.5.1", path = "canyon_connection" }
 canyon_entities = { version = "0.5.1", path = "canyon_entities" }

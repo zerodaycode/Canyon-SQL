@@ -10,14 +10,16 @@ license.workspace = true
 description.workspace = true
 
 [dependencies]
+canyon_core = { workspace = true }
+
 tokio = { workspace = true }
 tokio-util = { workspace = true }
 
 tokio-postgres = { workspace = true, optional = true }
+
 tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
 mysql_common = { workspace = true, optional = true }
-
 
 futures = { workspace = true }
 indexmap = { workspace = true }
@@ -26,7 +28,6 @@ toml = { workspace = true }
 serde = { workspace = true }
 async-std = { workspace = true, optional = true }
 walkdir = { workspace = true }
-
 
 [features]
 postgres = ["tokio-postgres"]
