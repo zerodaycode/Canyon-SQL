@@ -14,16 +14,16 @@ pub extern crate lazy_static;
 pub extern crate tokio;
 pub extern crate tokio_util;
 
-pub mod canyon_database_connector;
+pub mod db_connector;
+pub mod transaction;
 pub mod database_type;
-
 pub mod datasources;
 
 use std::fs;
 use std::path::PathBuf;
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
-use canyon_database_connector::DatabaseConnection;
+use db_connector::DatabaseConnection;
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
 use tokio::sync::{Mutex, MutexGuard};

@@ -234,7 +234,7 @@ mod auth {
 // mod connection_tests {
 //     use tokio;
 //     use super::connection_helpers::*;
-//     use crate::{canyon_database_connector::DatabaseConnection, datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth}};
+//     use crate::{db_connector::DatabaseConnection, datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth}};
 
 //     #[tokio::test]
 //     #[cfg(feature = "postgres")]

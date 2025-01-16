@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use std::fmt::Display;
 
-use canyon_connection::canyon_database_connector::DatabaseConnection;
+use canyon_connection::db_connector::DatabaseConnection;
 use canyon_connection::{get_database_connection, CACHED_DATABASE_CONN};
 
 use crate::bounds::QueryParameter;
@@ -156,7 +156,7 @@ where
 
 #[cfg(feature = "postgres")]
 mod postgres_query_launcher {
-    use canyon_connection::canyon_database_connector::DatabaseConnection;
+    use canyon_connection::db_connector::DatabaseConnection;
 
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
@@ -186,7 +186,7 @@ mod sqlserver_query_launcher {
     use crate::rows::CanyonRows;
     use crate::{
         bounds::QueryParameter,
-        canyon_connection::{canyon_database_connector::DatabaseConnection, tiberius::Query},
+        canyon_connection::{db_connector::DatabaseConnection, tiberius::Query},
     };
 
     pub async fn launch<'a, T, Z>(
@@ -238,7 +238,7 @@ mod mysql_query_launcher {
     use mysql_async::QueryWithParams;
     use mysql_async::Value;
 
-    use canyon_connection::canyon_database_connector::DatabaseConnection;
+    use canyon_connection::db_connector::DatabaseConnection;
 
     use crate::bounds::QueryParameter;
     use crate::rows::CanyonRows;
