@@ -1,17 +1,22 @@
-#[cfg(feature = "mssql")]
-pub extern crate async_std;
-pub extern crate futures;
-pub extern crate lazy_static;
-#[cfg(feature = "mysql")]
-pub extern crate mysql_async;
-#[cfg(feature = "mssql")]
-pub extern crate tiberius;
-pub extern crate tokio;
 #[cfg(feature = "postgres")]
 pub extern crate tokio_postgres;
+
+#[cfg(feature = "mssql")]
+pub extern crate async_std;
+#[cfg(feature = "mssql")]
+pub extern crate tiberius;
+
+#[cfg(feature = "mysql")]
+pub extern crate mysql_async;
+
+pub extern crate futures;
+pub extern crate lazy_static;
+pub extern crate tokio;
 pub extern crate tokio_util;
 
 pub mod canyon_database_connector;
+pub mod database_type;
+
 pub mod datasources;
 
 use std::fs;
@@ -57,7 +62,7 @@ fn find_canyon_config_file() -> PathBuf {
         }
     }
 
-    panic!()
+    panic!() // TODO: get rid out of this panic and return Err instead
 }
 
 /// Convenient free function to initialize a kind of connection pool based on the datasources present defined
