@@ -113,7 +113,7 @@ pub mod connection_helpers {
                 let PostgresAuth::Basic { username, password } = postgres_auth;
                 (username.as_str(), password.as_str())
             }
-            _ => panic!("Invalid auth configuration for a PostgreSQL datasource"),
+            _ => return Err("Invalid auth configuration for a PostgreSQL datasource".into()),
         };
 
         let (new_client, new_connection) = tokio_postgres::connect(
@@ -146,6 +146,8 @@ pub mod connection_helpers {
     pub async fn create_sqlserver_connection(
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        use crate::datasources::{Auth, SqlServerAuth};
+
         let mut config = Config::new();
 
         config.host(&datasource.properties.host);
@@ -153,16 +155,16 @@ pub mod connection_helpers {
         config.database(&datasource.properties.db_name);
 
         config.authentication(match &datasource.auth {
-            crate::datasources::Auth::SqlServer(sql_server_auth) => match sql_server_auth {
-                crate::datasources::SqlServerAuth::Basic { username, password } => {
+            Auth::SqlServer(sql_server_auth) => match sql_server_auth {
+                SqlServerAuth::Basic { username, password } => {
                     AuthMethod::sql_server(username, password)
                 }
-                crate::datasources::SqlServerAuth::Integrated => AuthMethod::Integrated,
+                SqlServerAuth::Integrated => AuthMethod::Integrated,
             },
-            _ => panic!("Invalid auth configuration for a SqlServer datasource"),
+            _ => return Err("Invalid auth configuration for a SqlServer datasource".into()),
         });
 
-        config.trust_cert();
+        config.trust_cert(); // TODO: this should be specificaly set via user input
 
         let tcp = TcpStream::connect(config.get_addr())
             .await
@@ -182,12 +184,14 @@ pub mod connection_helpers {
     pub async fn create_mysql_connection(
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        use crate::datasources::{Auth, MySQLAuth};
+
         let (user, password) = match &datasource.auth {
-            crate::datasources::Auth::MySQL(crate::datasources::MySQLAuth::Basic {
+            Auth::MySQL(MySQLAuth::Basic {
                 username,
                 password,
             }) => (username, password),
-            _ => panic!("Invalid auth configuration for a MySQL datasource"),
+            _ => return Err("Invalid auth configuration for a MySQL datasource".into()),
         };
 
         let url = format!(
@@ -207,7 +211,7 @@ pub mod connection_helpers {
     }
 }
 
-// NOTE: tests defined below should be integration tests, unfortunately, since they require a new connection to be made
+// TODO: && NOTE: tests defined below should be integration tests, unfortunately, since they require a new connection to be made
 // Or just to split them further, and just unit test the url string generation from the actual connection instantion
 // #[cfg(test)]
 // mod connection_tests {
