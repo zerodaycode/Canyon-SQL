@@ -1,4 +1,3 @@
-use crate::crud::Transaction;
 use crate::mapper::RowMapper;
 use std::marker::PhantomData;
 
@@ -45,10 +44,7 @@ impl<T> CanyonRows<T> {
     }
 
     /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of T
-    pub fn into_results<Z: RowMapper<T>>(self) -> Vec<T>
-    where
-        T: Transaction<T>,
-    {
+    pub fn into_results<Z: RowMapper<Z>>(self) -> Vec<Z> {
         match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.iter().map(|row| Z::deserialize_postgresql(row)).collect(),

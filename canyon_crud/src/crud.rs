@@ -84,7 +84,7 @@ pub trait Transaction<T> {
 #[async_trait]
 pub trait CrudOperations<T>: Transaction<T>
 where
-    T: CrudOperations<T> + RowMapper<T>,
+    T: CrudOperations<T> + RowMapper<T>, // TODO: do we need here the RowMapper bound?
 {
     async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 
@@ -198,6 +198,7 @@ mod sqlserver_query_launcher {
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
+        // TODO: redo this branch into the generated queries, before the MACROS
         if stmt.contains("RETURNING") {
             let c = stmt.clone();
             let temp = c.split_once("RETURNING").unwrap();

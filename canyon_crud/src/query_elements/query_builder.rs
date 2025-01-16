@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use canyon_connection::{
-    canyon_database_connector::DatabaseType, get_database_config, DATASOURCES,
+    database_type::DatabaseType, get_database_config, DATASOURCES,
 };
 
 use crate::{
