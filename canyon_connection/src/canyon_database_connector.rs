@@ -94,7 +94,7 @@ impl DatabaseConnection {
     }
 }
 
-pub mod connection_helpers {
+mod connection_helpers {
     use super::*;
 
     #[cfg(feature = "postgres")]
@@ -172,7 +172,7 @@ pub mod connection_helpers {
     }
 }
 
-pub mod auth {
+mod auth {
     use crate::datasources::Auth;
 
     #[cfg(feature = "mysql")]
