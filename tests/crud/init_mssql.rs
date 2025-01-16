@@ -22,7 +22,7 @@ use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
 #[canyon_sql::macros::canyon_tokio_test]
 #[ignore]
 fn initialize_sql_server_docker_instance() {
-    static CONN_STR: &str =
+    static CONN_STR: &str = // TODO: change this for the DS when will be in the public API
         "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true";
 
     canyon_sql::runtime::futures::executor::block_on(async {
