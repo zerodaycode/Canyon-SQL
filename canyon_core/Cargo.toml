@@ -10,3 +10,17 @@ license.workspace = true
 description.workspace = true
 
 [dependencies]
+tokio-postgres = { workspace = true, optional = true }
+tiberius = { workspace = true, optional = true }
+mysql_async = { workspace = true, optional = true }
+mysql_common = { workspace = true, optional = true }
+
+chrono = { workspace = true }
+async-std = { workspace = true, optional = true }
+async-trait = { workspace = true }
+regex = { workspace = true }
+
+[features]
+postgres = ["tokio-postgres"]
+mssql = ["tiberius", "async-std"]
+mysql = ["mysql_async","mysql_common"]

@@ -1,5 +1,7 @@
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
+use canyon_core::query_parameters::QueryParameter;
+use canyon_core::rows::CanyonRows;
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 #[cfg(feature = "mssql")]
@@ -9,6 +11,9 @@ use tokio_postgres::{Client, NoTls};
 
 use crate::database_type::DatabaseType;
 use crate::datasources::DatasourceConfig;
+use canyon_core::query::{DbConnection, Transaction};
+
+use async_trait::async_trait;
 
 /// A connection with a `PostgreSQL` database
 #[cfg(feature = "postgres")]
@@ -45,6 +50,45 @@ pub enum DatabaseConnection {
 
 unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
+
+#[async_trait]
+impl Transaction<Self> for DatabaseConnection {
+    async fn query<'a, S, Z>(
+        stmt: S,
+        params: Z,
+        database_connection: impl DbConnection
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>
+        where
+            S: AsRef<str> + std::fmt::Display + Sync + Send + 'a,
+            Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    {
+        match database_connection {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(_) => {
+                postgres_query_launcher::launch(
+                    self,
+                    stmt.to_string(),
+                    params.as_ref(),
+                )
+                .await
+            }
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(_) => {
+                sqlserver_query_launcher::launch::<Z>(
+                    self,
+                    &mut stmt.to_string(),
+                    params,
+                )
+                .await
+            }
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(_) => {
+                mysql_query_launcher::launch(self, stmt.to_string(), params.as_ref())
+                    .await
+            }  
+        }     
+    }
+}
 
 impl DatabaseConnection {
     pub async fn new(
@@ -156,14 +200,14 @@ mod connection_helpers {
         }))
     }
 
-    #[cfg(any(feature = "postgres", feature = "mysql"))]
+    // #[cfg(any(feature = "postgres", feature = "mysql"))]
     fn connection_string(user: &str, pswd: &str, datasource: &DatasourceConfig) -> String {
         let server = match datasource.get_db_type() {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => "postgres",
-
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => "mysql",
+            #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => todo!("Connection string for MSSQL should never be reached"),
         };
         format!(
@@ -368,3 +412,184 @@ mod auth {
 //         // }
 //     }
 // }
+
+#[cfg(feature = "postgres")]
+mod postgres_query_launcher {
+    use canyon_core::{query_parameters::QueryParameter, rows::CanyonRows};
+
+    use super::DatabaseConnection;
+
+
+    pub async fn launch<'a>(
+        db_conn: &DatabaseConnection,
+        stmt: String,
+        params: &'a [&'_ dyn QueryParameter<'_>],
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let mut m_params = Vec::new();
+        for param in params {
+            m_params.push((*param).as_postgres_param());
+        }
+
+        let r = db_conn
+            .postgres_connection()
+            .client
+            .query(&stmt, m_params.as_slice())
+            .await?;
+
+        Ok(CanyonRows::Postgres(r))
+    }
+}
+
+#[cfg(feature = "mssql")]
+mod sqlserver_query_launcher {
+    use canyon_core::{query_parameters::QueryParameter, rows::CanyonRows};
+    use tiberius::Query;
+
+    use super::DatabaseConnection;
+
+
+    pub async fn launch<'a, Z>(
+        db_conn: & DatabaseConnection,
+        stmt: &mut String,
+        params: Z,
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>>
+    where
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+    {
+        // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
+        // TODO: redo this branch into the generated queries, before the MACROS
+        if stmt.contains("RETURNING") {
+            let c = stmt.clone();
+            let temp = c.split_once("RETURNING").unwrap();
+            let temp2 = temp.0.split_once("VALUES").unwrap();
+
+            *stmt = format!(
+                "{} OUTPUT inserted.{} VALUES {}",
+                temp2.0.trim(),
+                temp.1.trim(),
+                temp2.1.trim()
+            );
+        }
+
+        let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
+        params
+            .as_ref()
+            .iter()
+            .for_each(|param| mssql_query.bind(*param));
+
+        #[allow(mutable_transmutes)]
+        let sqlservconn = unsafe { std::mem::transmute::<&DatabaseConnection, &mut DatabaseConnection>(db_conn) };
+        let _results = mssql_query
+            .query(sqlservconn.sqlserver_connection().client)
+            .await?
+            .into_results()
+            .await?;
+
+        Ok(CanyonRows::Tiberius(
+            _results.into_iter().flatten().collect(),
+        ))
+    }
+}
+
+#[cfg(feature = "mysql")]
+mod mysql_query_launcher {
+    #[cfg(feature = "mysql")]
+    pub const DETECT_PARAMS_IN_QUERY: &str = r"\$([\d])+";
+    #[cfg(feature = "mysql")]
+    pub const DETECT_QUOTE_IN_QUERY: &str = r#"\"|\\"#;
+
+    use std::sync::Arc;
+
+    use mysql_async::prelude::Query;
+    use mysql_async::QueryWithParams;
+    use mysql_async::Value;
+
+    use super::DatabaseConnection;
+
+    use canyon_core::query_parameters::QueryParameter;
+    use canyon_core::rows::CanyonRows;
+    use mysql_async::Row;
+    use mysql_common::constants::ColumnType;
+    use mysql_common::row;
+    use regex::Regex;
+
+    pub async fn launch<'a>(
+        db_conn: &DatabaseConnection,
+        stmt: String,
+        params: &'a [&'_ dyn QueryParameter<'_>],
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
+        let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
+
+        let stmt_with_escape_characters = regex::escape(&stmt);
+        let query_string =
+            Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
+
+        let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
+            .replace_all(&query_string, "")
+            .to_string();
+
+        let mut is_insert = false;
+        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
+            query_string.truncate(index_start_clausule_returning);
+            is_insert = true;
+        }
+
+        let params_query: Vec<Value> =
+            reorder_params(&stmt, params, |f| (*f).as_mysql_param().to_value());
+
+        let query_with_params = QueryWithParams {
+            query: query_string,
+            params: params_query,
+        };
+
+        let mut query_result = query_with_params
+            .run(mysql_connection)
+            .await
+            .expect("Error executing query in mysql");
+
+        let result_rows = if is_insert {
+            let last_insert = query_result
+                .last_insert_id()
+                .map(Value::UInt)
+                .expect("Error getting pk id in insert");
+
+            vec![row::new_row(
+                vec![last_insert],
+                Arc::new([mysql_async::Column::new(ColumnType::MYSQL_TYPE_UNKNOWN)]),
+            )]
+        } else {
+            query_result
+                .collect::<Row>()
+                .await
+                .expect("Error resolved trait FromRow in mysql")
+        };
+let a = CanyonRows::MySQL(result_rows);
+        Ok(a)
+    }
+
+    #[cfg(feature = "mysql")]
+    fn reorder_params<T>(
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter<'_>],
+        fn_parser: impl Fn(&&dyn QueryParameter<'_>) -> T,
+    ) -> Vec<T> {
+        let mut ordered_params = vec![];
+        let rg = regex::Regex::new(DETECT_PARAMS_IN_QUERY)
+            .expect("Error create regex with detect params pattern expression");
+
+        for positional_param in rg.find_iter(stmt) {
+            let pp: &str = positional_param.as_str();
+            let pp_index = pp[1..] // param $1 -> get 1
+                .parse::<usize>()
+                .expect("Error parse mapped parameter to usized.")
+                - 1;
+
+            let element = params
+                .get(pp_index)
+                .expect("Error obtaining the element of the mapping against parameters.");
+            ordered_params.push(fn_parser(element));
+        }
+
+        ordered_params
+    }
+}

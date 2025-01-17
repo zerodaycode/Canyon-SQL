@@ -1,14 +1,10 @@
 use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
-use canyon_crud::rows::CanyonRows;
+use canyon_core::{query::Transaction, rows::CanyonRows};
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
 
 use crate::{
-    canyon_crud::{
-        bounds::{Column, Row, RowOperations},
-        crud::Transaction,
-        DatabaseType,
-    },
+    canyon_crud::DatabaseType,
     constants,
     migrations::{
         information_schema::{ColumnMetadata, ColumnMetadataTypeValue, TableMetadata},

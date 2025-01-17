@@ -15,7 +15,6 @@ pub extern crate tokio;
 pub extern crate tokio_util;
 
 pub mod db_connector;
-pub mod transaction;
 pub mod database_type;
 pub mod datasources;
 

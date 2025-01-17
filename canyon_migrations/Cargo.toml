@@ -10,6 +10,7 @@ license.workspace = true
 description.workspace = true
 
 [dependencies]
+canyon_core = { workspace = true }
 canyon_crud = { workspace = true }
 canyon_connection = { workspace = true }
 canyon_entities = { workspace = true }

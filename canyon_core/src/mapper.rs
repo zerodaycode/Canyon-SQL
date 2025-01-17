@@ -1,11 +1,3 @@
-#[cfg(feature = "mysql")]
-use canyon_connection::mysql_async;
-#[cfg(feature = "mssql")]
-use canyon_connection::tiberius;
-#[cfg(feature = "postgres")]
-use canyon_connection::tokio_postgres;
-
-
 /// Declares functions that takes care to deserialize data incoming
 /// from some supported database in Canyon-SQL into a user's defined
 /// type `T`

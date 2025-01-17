@@ -3,6 +3,7 @@
 /// Here it's where all the available functionalities and features
 /// reaches the top most level, grouping them and making them visible
 /// through this crate, building the *public API* of the library
+extern crate canyon_core;
 extern crate canyon_connection;
 extern crate canyon_crud;
 extern crate canyon_macros;
@@ -38,13 +39,16 @@ pub mod connection {
     pub use canyon_connection::db_connector::DatabaseConnection::MySQL;
 }
 
+pub mod core {
+    pub use canyon_core::rows::CanyonRows;
+}
+
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
 /// exposing them through the public API
 pub mod crud {
     pub use canyon_crud::bounds;
     pub use canyon_crud::crud::*;
     pub use canyon_crud::mapper::*;
-    pub use canyon_crud::rows::CanyonRows;
     pub use canyon_crud::DatabaseType;
 }
 

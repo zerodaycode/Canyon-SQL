@@ -3,18 +3,19 @@ use std::fmt::Debug;
 use canyon_connection::{
     database_type::DatabaseType, get_database_config, DATASOURCES,
 };
+use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
 
 use crate::{
-    bounds::{FieldIdentifier, FieldValueIdentifier, QueryParameter},
-    crud::{CrudOperations, Transaction},
-    mapper::RowMapper,
-    query_elements::query::Query,
-    Operator,
+    bounds::{FieldIdentifier, FieldValueIdentifier}, crud::CrudOperations, query_elements::query::Query, Operator
 };
 
 /// Contains the elements that makes part of the formal declaration
 /// of the behaviour of the Canyon-SQL QueryBuilder
 pub mod ops {
+    use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
+
+    use crate::crud::CrudOperations;
+
     pub use super::*;
 
     /// The [`QueryBuilder`] trait is the root of a kind of hierarchy
@@ -174,13 +175,15 @@ where
     ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
         self.query.sql.push(';');
 
-        Ok(T::query(
-            self.query.sql.clone(),
-            self.query.params.to_vec(),
-            self.datasource_name,
-        )
-        .await?
-        .into_results::<T>())
+        // Ok(T::query(
+        //     self,
+        //     self.query.sql.clone(),
+        //     self.query.params.to_vec(),
+        //     // self.datasource_name,
+        // )
+        // .await?
+        // .into_results::<T>())
+        todo!()
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {

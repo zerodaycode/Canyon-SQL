@@ -1,5 +1,4 @@
 use crate::mapper::RowMapper;
-use std::marker::PhantomData;
 
 /// Lightweight wrapper over the collection of results of the different crates
 /// supported by Canyon-SQL.
@@ -7,18 +6,16 @@ use std::marker::PhantomData;
 /// Even tho the wrapping seems meaningless, this allows us to provide internal
 /// operations that are too difficult or to ugly to implement in the macros that
 /// will call the query method of Crud.
-pub enum CanyonRows<T> {
+pub enum CanyonRows {
     #[cfg(feature = "postgres")]
     Postgres(Vec<tokio_postgres::Row>),
     #[cfg(feature = "mssql")]
     Tiberius(Vec<tiberius::Row>),
     #[cfg(feature = "mysql")]
-    MySQL(Vec<mysql_async::Row>),
-
-    UnusableTypeMarker(PhantomData<T>),
+    MySQL(Vec<mysql_async::Row>)
 }
 
-impl<T> CanyonRows<T> {
+impl CanyonRows {
     #[cfg(feature = "postgres")]
     pub fn get_postgres_rows(&self) -> &Vec<tokio_postgres::Row> {
         match self {
@@ -52,7 +49,6 @@ impl<T> CanyonRows<T> {
             Self::Tiberius(v) => v.iter().map(|row| Z::deserialize_sqlserver(row)).collect(),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.iter().map(|row| Z::deserialize_mysql(row)).collect(),
-            _ => panic!("This branch will never ever should be reachable"),
         }
     }
 
@@ -65,7 +61,7 @@ impl<T> CanyonRows<T> {
             Self::Tiberius(v) => v.len(),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.len(),
-            _ => panic!("This branch will never ever should be reachable"),
+            _ => panic!("This branch will never ever should be reachable")
         }
     }
 
@@ -78,7 +74,7 @@ impl<T> CanyonRows<T> {
             Self::Tiberius(v) => v.is_empty(),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.is_empty(),
-            _ => panic!("This branch will never ever should be reachable"),
+            _ => panic!("This branch will never ever should be reachable")
         }
     }
 }
