@@ -256,10 +256,10 @@ mod postgres_query_launcher {
     use super::*;
     #[async_trait]
     impl DbConnection for PostgreSqlConnection {
-        async fn launch(
+        async fn launch<'a>(
             &self,
             stmt: &str,
-            params: &[&dyn QueryParameter<'_>],
+            params: &[&'a dyn QueryParameter<'a>],
         ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
             let mut m_params = Vec::new();
             for param in params {
@@ -282,10 +282,10 @@ mod sqlserver_query_launcher {
 
     #[async_trait]
     impl DbConnection for SqlServerConnection {
-        async fn launch(
+        async fn launch<'a>(
             &self,
             stmt: &str,
-            params: &[&dyn QueryParameter<'_>],
+            params: &[&'a dyn QueryParameter<'a>],
         ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
             // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
             // TODO: redo this branch into the generated queries, before the MACROS
@@ -306,14 +306,10 @@ mod sqlserver_query_launcher {
             // replace below. We may use our own type Query to address this concerns when the query
             // is generated
             let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-            // params
-            //     .into_iter()
-            //     .for_each(|param| mssql_query.bind(*param));
+            params
+                .iter()
+                .for_each(|param| mssql_query.bind(*param));
 
-            for param in params.clone() {
-                let p = param.clone();
-                mssql_query.bind(p)
-            }
             #[allow(mutable_transmutes)]
             let sqlservconn = unsafe {
                 std::mem::transmute::<&SqlServerConnection, &mut SqlServerConnection>(self)
@@ -357,14 +353,14 @@ mod mysql_query_launcher {
 
     #[async_trait]
     impl DbConnection for MysqlConnection {
-        async fn launch(
+        async fn launch<'a>(
             &self,
             stmt: &str,
-            params: &[&dyn QueryParameter<'_>],
+            params: &[&'a dyn QueryParameter<'a>],
         ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
         let mysql_connection = self.client.get_conn().await?;
 
-        let stmt_with_escape_characters = regex::escape(&stmt);
+        let stmt_with_escape_characters = regex::escape(stmt);
         let query_string =
             Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
 
@@ -373,13 +369,15 @@ mod mysql_query_launcher {
             .to_string();
 
         let mut is_insert = false;
+        // TODO: take care of this ugly replace for the concrete client syntax by using canyon
+        // Query
         if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
             query_string.truncate(index_start_clausule_returning);
             is_insert = true;
         }
 
         let params_query: Vec<Value> =
-            reorder_params(&stmt, params, |f| (*f).as_mysql_param().to_value());
+            reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value());
 
         let query_with_params = QueryWithParams {
             query: query_string,

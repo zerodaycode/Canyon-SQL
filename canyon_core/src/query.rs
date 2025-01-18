@@ -6,10 +6,10 @@ use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 
 #[async_trait]
 pub trait DbConnection {
-    async fn launch(
+    async fn launch<'a>(
         &self,
         stmt: &str,
-            params: &[&dyn QueryParameter<'_>],
+        params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>;
 }
 
