@@ -1,5 +1,6 @@
 use crate::constants;
-use canyon_crud::{crud::Transaction, DatabaseType, DatasourceConfig};
+use canyon_core::query::Transaction;
+use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;

@@ -1,5 +1,5 @@
 use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
-use canyon_core::{query::Transaction, rows::CanyonRows};
+use canyon_core::{column::Column, query::Transaction, row::Row, rows::CanyonRows};
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
 
@@ -84,7 +84,7 @@ impl Migrations {
     async fn fetch_database(
         datasource_name: &str,
         db_type: DatabaseType,
-    ) -> CanyonRows<Migrations> {
+    ) -> CanyonRows {
         let query = match db_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::FETCH_PUBLIC_SCHEMA,
@@ -106,7 +106,7 @@ impl Migrations {
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
-    fn map_rows(db_results: CanyonRows<Migrations>, db_type: DatabaseType) -> Vec<TableMetadata> {
+    fn map_rows(db_results: CanyonRows, db_type: DatabaseType) -> Vec<TableMetadata> {
         match db_results {
             #[cfg(feature = "postgres")]
             CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),

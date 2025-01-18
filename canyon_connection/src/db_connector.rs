@@ -1,7 +1,7 @@
+use std::fmt::Display;
+
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
-use canyon_core::query_parameters::QueryParameter;
-use canyon_core::rows::CanyonRows;
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 #[cfg(feature = "mssql")]
@@ -12,6 +12,8 @@ use tokio_postgres::{Client, NoTls};
 use crate::database_type::DatabaseType;
 use crate::datasources::DatasourceConfig;
 use canyon_core::query::{DbConnection, Transaction};
+use canyon_core::query_parameters::QueryParameter;
+use canyon_core::rows::CanyonRows;
 
 use async_trait::async_trait;
 
@@ -53,40 +55,17 @@ unsafe impl Sync for DatabaseConnection {}
 
 #[async_trait]
 impl Transaction<Self> for DatabaseConnection {
-    async fn query<'a, S, Z>(
+    async fn query<'a, C, S, Z>(
         stmt: S,
         params: Z,
-        database_connection: impl DbConnection
+        db_conn: &C,
     ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-        where
-            S: AsRef<str> + std::fmt::Display + Sync + Send + 'a,
-            Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    where
+        S: AsRef<str> + std::fmt::Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
+        C: DbConnection + Display + Sync + Send + 'a,
     {
-        match database_connection {
-            #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(_) => {
-                postgres_query_launcher::launch(
-                    self,
-                    stmt.to_string(),
-                    params.as_ref(),
-                )
-                .await
-            }
-            #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(_) => {
-                sqlserver_query_launcher::launch::<Z>(
-                    self,
-                    &mut stmt.to_string(),
-                    params,
-                )
-                .await
-            }
-            #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(_) => {
-                mysql_query_launcher::launch(self, stmt.to_string(), params.as_ref())
-                    .await
-            }  
-        }     
+        db_conn.launch(stmt.as_ref(), params.as_ref()).await
     }
 }
 
@@ -272,222 +251,83 @@ mod auth {
     }
 }
 
-// TODO: && NOTE: tests defined below should be integration tests, unfortunately, since they require a new connection to be made
-// Or just to split them further, and just unit test the url string generation from the actual connection instantion
-// #[cfg(test)]
-// mod connection_tests {
-//     use tokio;
-//     use super::connection_helpers::*;
-//     use crate::{db_connector::DatabaseConnection, datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth}};
-
-//     #[tokio::test]
-//     #[cfg(feature = "postgres")]
-//     async fn test_create_postgres_connection() {
-//         use crate::datasources::PostgresAuth;
-
-//         let config = DatasourceConfig {
-//             name: "PostgresDs".to_string(),
-//             auth: Auth::Postgres(PostgresAuth::Basic {
-//                 username: "test_user".to_string(),
-//                 password: "test_password".to_string(),
-//             }),
-//             properties: DatasourceProperties {
-//                 host: "localhost".to_string(),
-//                 port: Some(5432),
-//                 db_name: "test_db".to_string(),
-//                 migrations: None
-//             },
-//         };
-
-//         let result = create_postgres_connection(&config).await;
-//         assert!(result.is_ok());
-//     }
-
-//     #[tokio::test]
-//     #[cfg(feature = "mssql")]
-//     async fn test_create_sqlserver_connection() {
-//         use crate::datasources::SqlServerAuth;
-
-//         let config = DatasourceConfig {
-//             name: "SqlServerDs".to_string(),
-//             auth: Auth::SqlServer(SqlServerAuth::Basic {
-//                 username: "test_user".to_string(),
-//                 password: "test_password".to_string(),
-//             }),
-//             properties: DatasourceProperties {
-//                 host: "localhost".to_string(),
-//                 port: Some(1433),
-//                 db_name: "test_db".to_string(),
-//                 migrations: None
-//             },
-//         };
-
-//         let result = create_sqlserver_connection(&config).await;
-//         assert!(result.is_ok());
-//     }
-
-//     #[tokio::test]
-//     #[cfg(feature = "mysql")]
-//     async fn test_create_mysql_connection() {
-//         use crate::datasources::MySQLAuth;
-
-//         let config = DatasourceConfig {
-//             name: "MySQLDs".to_string(),
-//             auth: Auth::MySQL(MySQLAuth::Basic {
-//                 username: "test_user".to_string(),
-//                 password: "test_password".to_string(),
-//             }),
-//             properties: DatasourceProperties {
-//                 host: "localhost".to_string(),
-//                 port: Some(3306),
-//                 db_name: "test_db".to_string(),
-//                 migrations: None,
-//             },
-//         };
-
-//         let result = create_mysql_connection(&config).await;
-//         assert!(result.is_ok());
-//     }
-
-//     #[tokio::test]
-//     async fn test_database_connection_new() {
-//         #[cfg(feature = "postgres")]
-//         {
-//             use crate::datasources::PostgresAuth;
-
-//             let config = DatasourceConfig {
-//                 name: "PostgresDs".to_string(),
-//                 auth: Auth::Postgres(PostgresAuth::Basic {
-//                     username: "test_user".to_string(),
-//                     password: "test_password".to_string(),
-//                 }),
-//                 properties: DatasourceProperties {
-//                     host: "localhost".to_string(),
-//                     port: Some(5432),
-//                     db_name: "test_db".to_string(),
-//                     migrations: None
-//                 },
-//             };
-
-//             let result = DatabaseConnection::new(&config).await;
-//             assert!(result.is_ok());
-//         }
-
-//         // #[cfg(feature = "mssql")]
-//         // {
-//         //     let config = DatasourceConfig {
-//         //         db_type: DatabaseType::SqlServer,
-//         //         auth: Auth::SqlServer(SqlServerAuth::Basic {
-//         //             username: "test_user".to_string(),
-//         //             password: "test_password".to_string(),
-//         //         }),
-//         //         properties: crate::datasources::Properties {
-//         //             host: "localhost".to_string(),
-//         //             port: Some(1433),
-//         //             db_name: "test_db".to_string(),
-//         //         },
-//         //     };
-
-//         //     let result = DatabaseConnection::new(&config).await;
-//         //     assert!(result.is_ok());
-//         // }
-
-//         // #[cfg(feature = "mysql")]
-//         // {
-//         //     let config = DatasourceConfig {
-//         //         db_type: DatabaseType::MySQL,
-//         //         auth: Auth::MySQL(MySQLAuth::Basic {
-//         //             username: "test_user".to_string(),
-//         //             password: "test_password".to_string(),
-//         //         }),
-//         //         properties: crate::datasources::Properties {
-//         //             host: "localhost".to_string(),
-//         //             port: Some(3306),
-//         //             db_name: "test_db".to_string(),
-//         //         },
-//         //     };
-
-//         //     let result = DatabaseConnection::new(&config).await;
-//         //     assert!(result.is_ok());
-//         // }
-//     }
-// }
-
 #[cfg(feature = "postgres")]
 mod postgres_query_launcher {
-    use canyon_core::{query_parameters::QueryParameter, rows::CanyonRows};
+    use super::*;
+    #[async_trait]
+    impl DbConnection for PostgreSqlConnection {
+        async fn launch(
+            &self,
+            stmt: &str,
+            params: &[&dyn QueryParameter<'_>],
+        ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+            let mut m_params = Vec::new();
+            for param in params {
+                m_params.push((*param).as_postgres_param());
+            }
 
-    use super::DatabaseConnection;
+            let r = self.client.query(stmt, m_params.as_slice()).await?;
 
-
-    pub async fn launch<'a>(
-        db_conn: &DatabaseConnection,
-        stmt: String,
-        params: &'a [&'_ dyn QueryParameter<'_>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let mut m_params = Vec::new();
-        for param in params {
-            m_params.push((*param).as_postgres_param());
+            Ok(CanyonRows::Postgres(r))
         }
-
-        let r = db_conn
-            .postgres_connection()
-            .client
-            .query(&stmt, m_params.as_slice())
-            .await?;
-
-        Ok(CanyonRows::Postgres(r))
     }
 }
 
 #[cfg(feature = "mssql")]
 mod sqlserver_query_launcher {
-    use canyon_core::{query_parameters::QueryParameter, rows::CanyonRows};
+    use super::SqlServerConnection;
+    use async_trait::async_trait;
+    use canyon_core::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
     use tiberius::Query;
 
-    use super::DatabaseConnection;
+    #[async_trait]
+    impl DbConnection for SqlServerConnection {
+        async fn launch(
+            &self,
+            stmt: &str,
+            params: &[&dyn QueryParameter<'_>],
+        ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+            // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
+            // TODO: redo this branch into the generated queries, before the MACROS
+            // if stmt.contains("RETURNING") {
+            //     let c = stmt.clone();
+            //     let temp = c.split_once("RETURNING").unwrap();
+            //     let temp2 = temp.0.split_once("VALUES").unwrap();
+            //
+            //     *stmt = format!(
+            //         "{} OUTPUT inserted.{} VALUES {}",
+            //         temp2.0.trim(),
+            //         temp.1.trim(),
+            //         temp2.1.trim()
+            //     );
+            // }
 
+            // TODO: We must address the query generation. Look at the returning example, or the
+            // replace below. We may use our own type Query to address this concerns when the query
+            // is generated
+            let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
+            // params
+            //     .into_iter()
+            //     .for_each(|param| mssql_query.bind(*param));
 
-    pub async fn launch<'a, Z>(
-        db_conn: & DatabaseConnection,
-        stmt: &mut String,
-        params: Z,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-    where
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-    {
-        // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
-        // TODO: redo this branch into the generated queries, before the MACROS
-        if stmt.contains("RETURNING") {
-            let c = stmt.clone();
-            let temp = c.split_once("RETURNING").unwrap();
-            let temp2 = temp.0.split_once("VALUES").unwrap();
+            for param in params.clone() {
+                let p = param.clone();
+                mssql_query.bind(p)
+            }
+            #[allow(mutable_transmutes)]
+            let sqlservconn = unsafe {
+                std::mem::transmute::<&SqlServerConnection, &mut SqlServerConnection>(self)
+            };
+            let _results = mssql_query
+                .query(sqlservconn.client)
+                .await?
+                .into_results()
+                .await?;
 
-            *stmt = format!(
-                "{} OUTPUT inserted.{} VALUES {}",
-                temp2.0.trim(),
-                temp.1.trim(),
-                temp2.1.trim()
-            );
+            Ok(CanyonRows::Tiberius(
+                _results.into_iter().flatten().collect(),
+            ))
         }
-
-        let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-        params
-            .as_ref()
-            .iter()
-            .for_each(|param| mssql_query.bind(*param));
-
-        #[allow(mutable_transmutes)]
-        let sqlservconn = unsafe { std::mem::transmute::<&DatabaseConnection, &mut DatabaseConnection>(db_conn) };
-        let _results = mssql_query
-            .query(sqlservconn.sqlserver_connection().client)
-            .await?
-            .into_results()
-            .await?;
-
-        Ok(CanyonRows::Tiberius(
-            _results.into_iter().flatten().collect(),
-        ))
     }
 }
 
@@ -500,11 +340,13 @@ mod mysql_query_launcher {
 
     use std::sync::Arc;
 
+    use async_trait::async_trait;
+    use canyon_core::query::DbConnection;
     use mysql_async::prelude::Query;
     use mysql_async::QueryWithParams;
     use mysql_async::Value;
 
-    use super::DatabaseConnection;
+    use super::MysqlConnection;
 
     use canyon_core::query_parameters::QueryParameter;
     use canyon_core::rows::CanyonRows;
@@ -513,12 +355,14 @@ mod mysql_query_launcher {
     use mysql_common::row;
     use regex::Regex;
 
-    pub async fn launch<'a>(
-        db_conn: &DatabaseConnection,
-        stmt: String,
-        params: &'a [&'_ dyn QueryParameter<'_>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-        let mysql_connection = db_conn.mysql_connection().client.get_conn().await?;
+    #[async_trait]
+    impl DbConnection for MysqlConnection {
+        async fn launch(
+            &self,
+            stmt: &str,
+            params: &[&dyn QueryParameter<'_>],
+        ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+        let mysql_connection = self.client.get_conn().await?;
 
         let stmt_with_escape_characters = regex::escape(&stmt);
         let query_string =
@@ -563,9 +407,9 @@ mod mysql_query_launcher {
                 .await
                 .expect("Error resolved trait FromRow in mysql")
         };
-let a = CanyonRows::MySQL(result_rows);
+        let a = CanyonRows::MySQL(result_rows);
         Ok(a)
-    }
+        }    }
 
     #[cfg(feature = "mysql")]
     fn reorder_params<T>(

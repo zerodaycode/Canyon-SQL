@@ -1,3 +1,10 @@
+#[cfg(feature = "postgres")]
+use tokio_postgres::{self};
+#[cfg(feature = "mysql")]
+use mysql_async::{self};
+#[cfg(feature = "mssql")]
+use tiberius::{self};
+
 use crate::mapper::RowMapper;
 
 /// Lightweight wrapper over the collection of results of the different crates

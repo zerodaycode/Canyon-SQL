@@ -23,6 +23,6 @@ async-trait = { workspace = true }
 regex = { workspace = true }
 
 [features]
-postgres = ["tokio-postgres", "canyon_connection/postgres"]
-mssql = ["tiberius", "canyon_connection/mssql"]
-mysql = ["mysql_async","mysql_common", "canyon_connection/mysql"]
+postgres = ["tokio-postgres", "canyon_core/postgres", "canyon_connection/postgres"]
+mssql = ["tiberius", "canyon_core/mssql", "canyon_connection/mssql"]
+mysql = ["mysql_async","mysql_common", "canyon_core/mysql", "canyon_connection/mysql"]

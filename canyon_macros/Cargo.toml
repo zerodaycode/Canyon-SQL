@@ -19,14 +19,15 @@ proc-macro2 = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
 
+canyon_core = { workspace = true }
 canyon_connection = { workspace = true }
 canyon_crud = { workspace = true }
 canyon_entities = { workspace = true }
 canyon_migrations = { workspace = true, optional = true }
 
 [features]
-postgres = ["canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres"]
-mssql = ["canyon_connection/mssql", "canyon_crud/mssql", "canyon_migrations/mssql"]
-mysql = ["canyon_connection/mysql", "canyon_crud/mysql", "canyon_migrations/mysql"]
+postgres = ["canyon_core/postgres", "canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres"]
+mssql = ["canyon_core/mssql", "canyon_connection/mssql", "canyon_crud/mssql", "canyon_migrations/mssql"]
+mysql = ["canyon_core/mysql", "canyon_connection/mysql", "canyon_crud/mysql", "canyon_migrations/mysql"]
 
 migrations = ["canyon_migrations"]

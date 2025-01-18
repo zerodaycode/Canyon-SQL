@@ -32,8 +32,8 @@ walkdir = { workspace = true }
 regex = { workspace = true }
 
 [features]
-postgres = ["tokio-postgres"]
-mssql = ["tiberius", "async-std"]
-mysql = ["mysql_async","mysql_common"]
+postgres = ["tokio-postgres", "canyon_core/postgres"]
+mssql = ["tiberius", "async-std", "canyon_core/mssql"]
+mysql = ["mysql_async","mysql_common", "canyon_core/mysql"]
 
 
