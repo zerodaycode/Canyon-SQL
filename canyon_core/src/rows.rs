@@ -1,9 +1,9 @@
-#[cfg(feature = "postgres")]
-use tokio_postgres::{self};
 #[cfg(feature = "mysql")]
 use mysql_async::{self};
 #[cfg(feature = "mssql")]
 use tiberius::{self};
+#[cfg(feature = "postgres")]
+use tokio_postgres::{self};
 
 use crate::mapper::RowMapper;
 
@@ -19,7 +19,7 @@ pub enum CanyonRows {
     #[cfg(feature = "mssql")]
     Tiberius(Vec<tiberius::Row>),
     #[cfg(feature = "mysql")]
-    MySQL(Vec<mysql_async::Row>)
+    MySQL(Vec<mysql_async::Row>),
 }
 
 impl CanyonRows {

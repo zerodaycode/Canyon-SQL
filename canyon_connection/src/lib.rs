@@ -14,14 +14,15 @@ pub extern crate lazy_static;
 pub extern crate tokio;
 pub extern crate tokio_util;
 
-pub mod db_connector;
+pub mod conn_errors;
 pub mod database_type;
 pub mod datasources;
-pub mod conn_errors;
+pub mod db_clients;
+pub mod db_connector;
 
 use std::fmt::Debug;
-use std::{error::Error, fs};
 use std::path::PathBuf;
+use std::{error::Error, fs};
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
 use conn_errors::DatasourceNotFound;
@@ -97,22 +98,25 @@ pub async fn init_connections_cache() {
 // user code determine whenever you can find a valid datasource via a concrete type instead of an string?
 
 // TODO: doc (main way for the user to obtain a db connection given a datasource identifier)
-pub async fn get_database_connection_by_ds<'a, T: AsRef<str> + Copy + Debug + Default + Send + Sync + 'static> (
+pub async fn get_database_connection_by_ds<
+    'a,
+    T: AsRef<str> + Copy + Debug + Default + Send + Sync + 'static,
+>(
     datasource_name: Option<T>,
-) ->  Result<db_connector::DatabaseConnection, Box<dyn Error + Send + Sync>> {
-
+) -> Result<db_connector::DatabaseConnection, Box<dyn Error + Send + Sync>> {
     let ds = find_datasource_by_name_or_try_default(datasource_name)?;
     DatabaseConnection::new(ds).await
 }
 
-fn find_datasource_by_name_or_try_default<'a, T: AsRef<str> + Copy + Debug + Default>(datasource_name: Option<T>) -> Result<&'a DatasourceConfig, DatasourceNotFound<T>> {
+fn find_datasource_by_name_or_try_default<'a, T: AsRef<str> + Copy + Debug + Default>(
+    datasource_name: Option<T>,
+) -> Result<&'a DatasourceConfig, DatasourceNotFound<T>> {
     datasource_name
         .map_or_else(
             || DATASOURCES.first(),
-            |ds_name| DATASOURCES
-                .iter()
-                .find(|ds| ds.name.eq(ds_name.as_ref()))
-        ).ok_or_else(|| DatasourceNotFound::from(datasource_name))
+            |ds_name| DATASOURCES.iter().find(|ds| ds.name.eq(ds_name.as_ref())),
+        )
+        .ok_or_else(|| DatasourceNotFound::from(datasource_name))
 }
 
 // TODO: create a new one that just receives a str and tries to find the ds config on the vec, so we can make a facade over the one above

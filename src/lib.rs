@@ -1,10 +1,10 @@
 //! The root crate of the `Canyon-SQL` project.
+extern crate canyon_connection;
 ///
 /// Here it's where all the available functionalities and features
 /// reaches the top most level, grouping them and making them visible
 /// through this crate, building the *public API* of the library
 extern crate canyon_core;
-extern crate canyon_connection;
 extern crate canyon_crud;
 extern crate canyon_macros;
 #[cfg(feature = "migrations")]
@@ -42,11 +42,11 @@ pub mod connection {
 }
 
 pub mod core {
-    pub use canyon_core::query::Transaction;
+    pub use canyon_core::mapper::*;
     pub use canyon_core::query::DbConnection;
+    pub use canyon_core::query::Transaction;
     pub use canyon_core::query_parameters::QueryParameter;
     pub use canyon_core::rows::CanyonRows;
-    pub use canyon_core::mapper::*;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,

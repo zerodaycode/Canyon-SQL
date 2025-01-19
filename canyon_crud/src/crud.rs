@@ -1,6 +1,6 @@
 use async_trait::async_trait;
-use canyon_core::{mapper::RowMapper, query::Transaction};
 use canyon_core::query_parameters::QueryParameter;
+use canyon_core::{mapper::RowMapper, query::Transaction};
 
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
@@ -24,7 +24,7 @@ use crate::query_elements::query_builder::{
 #[async_trait]
 pub trait CrudOperations<T>: Transaction<T>
 where
-    T: CrudOperations<T> + RowMapper<T>, // TODO: do we need here the RowMapper bound?
+    T: CrudOperations<T> + RowMapper<T>,
 {
     async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
 

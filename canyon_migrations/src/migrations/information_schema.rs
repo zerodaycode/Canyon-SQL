@@ -2,7 +2,10 @@
 use canyon_connection::tiberius::ColumnType as TIB_TY;
 #[cfg(feature = "postgres")]
 use canyon_connection::tokio_postgres::types::Type as TP_TYP;
-use canyon_core::{column::{Column, ColumnType}, row::{Row, RowOperations}};
+use canyon_core::{
+    column::{Column, ColumnType},
+    row::{Row, RowOperations},
+};
 
 /// Model that represents the database entities that belongs to the current schema.
 ///

@@ -368,7 +368,7 @@ pub fn generate_find_by_foreign_key_tokens(
 
                         #result_handler
                     }
-                }
+                },
             ));
 
             fk_quotes.push((
@@ -384,7 +384,7 @@ pub fn generate_find_by_foreign_key_tokens(
 
                         #result_handler
                     }
-                }
+                },
             ));
         }
     }

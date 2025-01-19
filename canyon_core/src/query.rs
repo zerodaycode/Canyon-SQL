@@ -6,6 +6,7 @@ use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 
 #[async_trait]
 pub trait DbConnection {
+    // TODO: guess that this is the trait that must remain sealed
     async fn launch<'a>(
         &self,
         stmt: &str,

@@ -9,7 +9,8 @@ use canyon_sql::migrations::handler::Migrations;
 #[cfg(all(feature = "postgres", feature = "migrations"))]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_migrations_postgresql_status_query() {
-    let conn_res = canyon_sql::connection::get_database_connection_by_ds(Some(constants::PSQL_DS)).await;
+    let conn_res =
+        canyon_sql::connection::get_database_connection_by_ds(Some(constants::PSQL_DS)).await;
     assert!(conn_res.is_ok());
 
     let db_conn = &mut conn_res.unwrap();

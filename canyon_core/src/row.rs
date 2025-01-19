@@ -35,7 +35,6 @@ impl Row for mysql_async::Row {
     }
 }
 
-
 pub trait RowOperations {
     #[cfg(feature = "postgres")]
     fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> Output

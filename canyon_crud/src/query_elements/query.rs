@@ -1,7 +1,7 @@
 use std::{fmt::Debug, marker::PhantomData};
 
-use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
 use crate::crud::CrudOperations;
+use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
 
 /// Holds a sql sentence details
 #[derive(Debug, Clone)]

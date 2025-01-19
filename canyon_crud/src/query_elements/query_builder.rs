@@ -1,12 +1,13 @@
 use std::fmt::Debug;
 
-use canyon_connection::{
-    database_type::DatabaseType, get_database_config, DATASOURCES,
-};
+use canyon_connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
 use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
 
 use crate::{
-    bounds::{FieldIdentifier, FieldValueIdentifier}, crud::CrudOperations, query_elements::query::Query, Operator
+    bounds::{FieldIdentifier, FieldValueIdentifier},
+    crud::CrudOperations,
+    query_elements::query::Query,
+    Operator,
 };
 
 /// Contains the elements that makes part of the formal declaration
@@ -497,7 +498,8 @@ where
             return self;
         }
         if self._inner.query.sql.contains("SET") {
-            panic!( // TODO: this should return an Err and not panic!
+            panic!(
+                // TODO: this should return an Err and not panic!
                 "\n{}",
                 String::from("\t[PANIC!] - Don't use chained calls of the .set(...) method. ")
                     + "\n\tPass all the values in a unique call within the 'columns' "

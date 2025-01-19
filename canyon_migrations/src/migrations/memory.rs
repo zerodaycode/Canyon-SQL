@@ -247,7 +247,11 @@ impl CanyonMemory {
     }
 
     /// Generates, if not exists the `canyon_memory` table
-    async fn create_memory(datasource_name: &str, db_conn: &mut DatabaseConnection, database_type: &DatabaseType) {
+    async fn create_memory(
+        datasource_name: &str,
+        db_conn: &mut DatabaseConnection,
+        database_type: &DatabaseType,
+    ) {
         let query = match database_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
