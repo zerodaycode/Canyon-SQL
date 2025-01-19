@@ -37,6 +37,8 @@ pub mod connection {
 
     #[cfg(feature = "mysql")]
     pub use canyon_connection::db_connector::DatabaseConnection::MySQL;
+
+    pub use canyon_connection::*;
 }
 
 pub mod core {

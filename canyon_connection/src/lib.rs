@@ -18,7 +18,7 @@ pub mod db_connector;
 pub mod database_type;
 pub mod datasources;
 
-use std::fs;
+use std::{error::Error, fs};
 use std::path::PathBuf;
 
 use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
@@ -89,7 +89,31 @@ pub async fn init_connections_cache() {
         );
     }
 }
+pub async fn get_database_connection_by_ds<'a, T: AsRef<str>> (
+    datasource_name: Option<T>,
+) ->  Result<db_connector::DatabaseConnection, Box<dyn Error + std::marker::Send + Sync>> {
+    
+    let datasource = if let Some(ds_name) = datasource_name {
+        let ds_identifier = ds_name.as_ref();
+        DATASOURCES
+            .iter()
+            .find(|ds| ds.name.eq(ds_identifier))
+    } else {
+            DATASOURCES
+                .first()
+    };
 
+    let conn = match datasource.ok_or_else(|| panic!("fix me later")) {
+        Ok(ds_cfg) => DatabaseConnection::new(ds_cfg),
+        Err(e) => todo!("{:?}", e),
+    };
+
+    conn.await
+}
+
+// TODO: get_cached_database_connection
+// the idea behind this is that we can have a #cfg feature that offers the end user to let Canyon to automagically manage the connections
+// to the db servers, instead of being the default behaviour
 pub fn get_database_connection<'a>(
     datasource_name: &str,
     guarded_cache: &'a mut MutexGuard<IndexMap<&str, DatabaseConnection>>,
