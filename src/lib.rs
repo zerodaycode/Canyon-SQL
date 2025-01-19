@@ -40,7 +40,11 @@ pub mod connection {
 }
 
 pub mod core {
+    pub use canyon_core::query::Transaction;
+    pub use canyon_core::query::DbConnection;
+    pub use canyon_core::query_parameters::QueryParameter;
     pub use canyon_core::rows::CanyonRows;
+    pub use canyon_core::mapper::*;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
@@ -48,7 +52,6 @@ pub mod core {
 pub mod crud {
     pub use canyon_crud::bounds;
     pub use canyon_crud::crud::*;
-    pub use canyon_crud::mapper::*;
     pub use canyon_crud::DatabaseType;
 }
 

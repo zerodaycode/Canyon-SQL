@@ -1,4 +1,5 @@
 use crate::constants;
+use canyon_connection::db_connector::DatabaseConnection;
 use canyon_core::query::Transaction;
 use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
@@ -63,11 +64,16 @@ impl CanyonMemory {
         datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
+        // TODO: can't we get the target DS while in the migrations at call site and avoid to
+        // duplicate calls to the pool?
+        let mut conn_cache = canyon_connection::CACHED_DATABASE_CONN.lock().await;
+        let db_conn = canyon_connection::get_database_connection(&datasource.name, &mut conn_cache);
+
         // Creates the memory table if not exists
-        Self::create_memory(&datasource.name, &datasource.get_db_type()).await;
+        Self::create_memory(&datasource.name, db_conn, &datasource.get_db_type()).await;
 
         // Retrieve the last status data from the `canyon_memory` table
-        let res = Self::query("SELECT * FROM canyon_memory", [], &datasource.name)
+        let res = Self::query("SELECT * FROM canyon_memory", [], db_conn)
             .await
             .expect("Error querying Canyon Memory");
 
@@ -241,7 +247,7 @@ impl CanyonMemory {
     }
 
     /// Generates, if not exists the `canyon_memory` table
-    async fn create_memory(datasource_name: &str, database_type: &DatabaseType) {
+    async fn create_memory(datasource_name: &str, db_conn: &mut DatabaseConnection, database_type: &DatabaseType) {
         let query = match database_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => constants::postgresql_queries::CANYON_MEMORY_TABLE,
@@ -251,9 +257,9 @@ impl CanyonMemory {
             DatabaseType::MySQL => todo!("Memory table in mysql not implemented"),
         };
 
-        Self::query(query, [], datasource_name)
+        Self::query(query, [], db_conn)
             .await
-            .expect("Error creating the 'canyon_memory' table");
+            .unwrap_or_else(|_| panic!("Error creating the 'canyon_memory' table while processing the datasource: {datasource_name}"));
     }
 }
 

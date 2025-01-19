@@ -26,6 +26,7 @@ use crate::crud::CrudOperations;
 /// `let struct_field_name_from_variant = StructField::some_field.field_name_as_str();`
 pub trait FieldIdentifier<T>
 where
+    // TODO: maybe just QueryParameter?
     T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
 {
     fn as_str(&self) -> &'static str;

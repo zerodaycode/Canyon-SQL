@@ -20,17 +20,15 @@ pub trait Transaction<T> {
     /// the defaulted datasource, wrapping the resultant collection of entities
     /// in [`super::rows::CanyonRows`]
     async fn query<'a, C, S, Z>(
-        // &self,
         stmt: S,
         params: Z,
-        db_conn: &C,
+        db_conn: &mut C,
     ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        C: DbConnection + Display + Sync + Send + 'a,
+        C: DbConnection + Sync + Send + 'a,
     {
-        // Ok(CanyonRows::Postgres(vec![]))
-        todo!()
+        db_conn.launch(stmt.as_ref(), params.as_ref()).await
     }
 }

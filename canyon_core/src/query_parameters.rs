@@ -36,7 +36,7 @@ impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
 
 //TODO Pending to review and see if it is necessary to apply something similar to the previous implementation.
 
-impl<'a> QueryParameter<'a> for bool {
+impl QueryParameter<'_> for bool {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -51,7 +51,7 @@ impl<'a> QueryParameter<'a> for bool {
     }
 }
 
-impl<'a> QueryParameter<'a> for i16 {
+impl QueryParameter<'_> for i16 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -66,7 +66,7 @@ impl<'a> QueryParameter<'a> for i16 {
     }
 }
 
-impl<'a> QueryParameter<'a> for &i16 {
+impl QueryParameter<'_> for &i16 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -81,7 +81,7 @@ impl<'a> QueryParameter<'a> for &i16 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<i16> {
+impl QueryParameter<'_> for Option<i16> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -96,7 +96,7 @@ impl<'a> QueryParameter<'a> for Option<i16> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&i16> {
+impl QueryParameter<'_> for Option<&i16> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -111,7 +111,7 @@ impl<'a> QueryParameter<'a> for Option<&i16> {
     }
 }
 
-impl<'a> QueryParameter<'a> for i32 {
+impl QueryParameter<'_> for i32 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -126,7 +126,7 @@ impl<'a> QueryParameter<'a> for i32 {
     }
 }
 
-impl<'a> QueryParameter<'a> for &i32 {
+impl QueryParameter<'_> for &i32 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -141,7 +141,7 @@ impl<'a> QueryParameter<'a> for &i32 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<i32> {
+impl QueryParameter<'_> for Option<i32> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -156,7 +156,7 @@ impl<'a> QueryParameter<'a> for Option<i32> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&i32> {
+impl QueryParameter<'_> for Option<&i32> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -171,7 +171,7 @@ impl<'a> QueryParameter<'a> for Option<&i32> {
     }
 }
 
-impl<'a> QueryParameter<'a> for f32 {
+impl QueryParameter<'_> for f32 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -186,7 +186,7 @@ impl<'a> QueryParameter<'a> for f32 {
     }
 }
 
-impl<'a> QueryParameter<'a> for &f32 {
+impl QueryParameter<'_> for &f32 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -201,7 +201,7 @@ impl<'a> QueryParameter<'a> for &f32 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<f32> {
+impl QueryParameter<'_> for Option<f32> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -216,7 +216,7 @@ impl<'a> QueryParameter<'a> for Option<f32> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&f32> {
+impl QueryParameter<'_> for Option<&f32> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -233,7 +233,7 @@ impl<'a> QueryParameter<'a> for Option<&f32> {
     }
 }
 
-impl<'a> QueryParameter<'a> for f64 {
+impl QueryParameter<'_> for f64 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -248,7 +248,7 @@ impl<'a> QueryParameter<'a> for f64 {
     }
 }
 
-impl<'a> QueryParameter<'a> for &f64 {
+impl QueryParameter<'_> for &f64 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -263,7 +263,7 @@ impl<'a> QueryParameter<'a> for &f64 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<f64> {
+impl QueryParameter<'_> for Option<f64> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -278,7 +278,7 @@ impl<'a> QueryParameter<'a> for Option<f64> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&f64> {
+impl QueryParameter<'_> for Option<&f64> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -295,7 +295,7 @@ impl<'a> QueryParameter<'a> for Option<&f64> {
     }
 }
 
-impl<'a> QueryParameter<'a> for i64 {
+impl QueryParameter<'_> for i64 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -310,7 +310,7 @@ impl<'a> QueryParameter<'a> for i64 {
     }
 }
 
-impl<'a> QueryParameter<'a> for &i64 {
+impl QueryParameter<'_> for &i64 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -325,7 +325,7 @@ impl<'a> QueryParameter<'a> for &i64 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<i64> {
+impl QueryParameter<'_> for Option<i64> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -340,7 +340,7 @@ impl<'a> QueryParameter<'a> for Option<i64> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&i64> {
+impl QueryParameter<'_> for Option<&i64> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -355,7 +355,7 @@ impl<'a> QueryParameter<'a> for Option<&i64> {
     }
 }
 
-impl<'a> QueryParameter<'a> for String {
+impl QueryParameter<'_> for String {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -370,7 +370,7 @@ impl<'a> QueryParameter<'a> for String {
     }
 }
 
-impl<'a> QueryParameter<'a> for &String {
+impl QueryParameter<'_> for &String {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -385,7 +385,7 @@ impl<'a> QueryParameter<'a> for &String {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<String> {
+impl QueryParameter<'_> for Option<String> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -403,7 +403,7 @@ impl<'a> QueryParameter<'a> for Option<String> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&String> {
+impl QueryParameter<'_> for Option<&String> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -421,7 +421,7 @@ impl<'a> QueryParameter<'a> for Option<&String> {
     }
 }
 
-impl<'a> QueryParameter<'a> for &'_ str {
+impl QueryParameter<'_> for &'_ str {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -436,7 +436,7 @@ impl<'a> QueryParameter<'a> for &'_ str {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&'_ str> {
+impl QueryParameter<'_> for Option<&'_ str> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -454,7 +454,7 @@ impl<'a> QueryParameter<'a> for Option<&'_ str> {
     }
 }
 
-impl<'a> QueryParameter<'a> for NaiveDate {
+impl QueryParameter<'_> for NaiveDate {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -469,7 +469,7 @@ impl<'a> QueryParameter<'a> for NaiveDate {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<NaiveDate> {
+impl QueryParameter<'_> for Option<NaiveDate> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -484,7 +484,7 @@ impl<'a> QueryParameter<'a> for Option<NaiveDate> {
     }
 }
 
-impl<'a> QueryParameter<'a> for NaiveTime {
+impl QueryParameter<'_> for NaiveTime {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -499,7 +499,7 @@ impl<'a> QueryParameter<'a> for NaiveTime {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<NaiveTime> {
+impl QueryParameter<'_> for Option<NaiveTime> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -514,7 +514,7 @@ impl<'a> QueryParameter<'a> for Option<NaiveTime> {
     }
 }
 
-impl<'a> QueryParameter<'a> for NaiveDateTime {
+impl QueryParameter<'_> for NaiveDateTime {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -529,7 +529,7 @@ impl<'a> QueryParameter<'a> for NaiveDateTime {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<NaiveDateTime> {
+impl QueryParameter<'_> for Option<NaiveDateTime> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -545,7 +545,7 @@ impl<'a> QueryParameter<'a> for Option<NaiveDateTime> {
 }
 
 //TODO pending
-impl<'a> QueryParameter<'a> for DateTime<FixedOffset> {
+impl QueryParameter<'_> for DateTime<FixedOffset> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -560,7 +560,7 @@ impl<'a> QueryParameter<'a> for DateTime<FixedOffset> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<DateTime<FixedOffset>> {
+impl QueryParameter<'_> for Option<DateTime<FixedOffset>> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -575,7 +575,7 @@ impl<'a> QueryParameter<'a> for Option<DateTime<FixedOffset>> {
     }
 }
 
-impl<'a> QueryParameter<'a> for DateTime<Utc> {
+impl QueryParameter<'_> for DateTime<Utc> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -590,7 +590,7 @@ impl<'a> QueryParameter<'a> for DateTime<Utc> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<DateTime<Utc>> {
+impl QueryParameter<'_> for Option<DateTime<Utc>> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self

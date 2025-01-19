@@ -68,7 +68,6 @@ impl CanyonRows {
             Self::Tiberius(v) => v.len(),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.len(),
-            _ => panic!("This branch will never ever should be reachable")
         }
     }
 
@@ -81,7 +80,6 @@ impl CanyonRows {
             Self::Tiberius(v) => v.is_empty(),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.is_empty(),
-            _ => panic!("This branch will never ever should be reachable")
         }
     }
 }

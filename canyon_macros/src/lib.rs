@@ -128,7 +128,7 @@ pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
     let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
     quote! {
-        use canyon_sql::crud::bounds::QueryParameter;
+        use canyon_sql::core::QueryParameter;
         #_generated_enum_type_for_fields
         #_generated_enum_type_for_fields_values
     }
@@ -335,7 +335,7 @@ fn impl_crud_operations_trait_for_struct(
                 #crud_operations_tokens
             }
 
-            impl canyon_sql::crud::Transaction<#ty> for #ty {}
+            impl canyon_sql::core::Transaction<#ty> for #ty {}
 
             /// Hidden trait for generate the foreign key operations available
             /// in Canyon without have to define them before hand in CrudOperations
@@ -352,7 +352,7 @@ fn impl_crud_operations_trait_for_struct(
                 where #ty:
                     std::fmt::Debug +
                     canyon_sql::crud::CrudOperations<#ty> +
-                    canyon_sql::crud::RowMapper<#ty>
+                    canyon_sql::core::RowMapper<#ty>
             {
                 #(#fk_method_implementations)*
                 #(#rev_fk_method_implementations)*
@@ -365,7 +365,7 @@ fn impl_crud_operations_trait_for_struct(
                 #crud_operations_tokens
             }
 
-            impl canyon_sql::crud::Transaction<#ty> for #ty {}
+            impl canyon_sql::core::Transaction<#ty> for #ty {}
         }
     };
 
@@ -398,7 +398,7 @@ pub fn implement_foreignkeyable_for_type(
     let field_idents = fields.iter().map(|(_vis, ident)| {
         let i = ident.to_string();
         quote! {
-            #i => Some(&self.#ident as &dyn canyon_sql::crud::bounds::QueryParameter<'_>)
+            #i => Some(&self.#ident as &dyn canyon_sql::core::QueryParameter<'_>)
         }
     });
     let field_idents_cloned = field_idents.clone();
@@ -407,7 +407,7 @@ pub fn implement_foreignkeyable_for_type(
         /// Implementation of the trait `ForeignKeyable` for the type
         /// calling this derive proc macro
         impl canyon_sql::crud::bounds::ForeignKeyable<Self> for #ty {
-            fn get_fk_column(&self, column: &str) -> Option<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> {
+            fn get_fk_column(&self, column: &str) -> Option<&dyn canyon_sql::core::QueryParameter<'_>> {
                 match column {
                     #(#field_idents),*,
                     _ => None
@@ -417,7 +417,7 @@ pub fn implement_foreignkeyable_for_type(
         /// Implementation of the trait `ForeignKeyable` for a reference of this type
         /// calling this derive proc macro
         impl canyon_sql::crud::bounds::ForeignKeyable<&Self> for &#ty {
-            fn get_fk_column<'a>(&self, column: &'a str) -> Option<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> {
+            fn get_fk_column<'a>(&self, column: &'a str) -> Option<&dyn canyon_sql::core::QueryParameter<'_>> {
                 match column {
                     #(#field_idents_cloned),*,
                     _ => None
@@ -578,7 +578,7 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
 
     // Wrap everything in the shared `impl` block
     let tokens = quote! {
-        impl canyon_sql::crud::RowMapper<Self> for #ty {
+        impl canyon_sql::core::RowMapper<Self> for #ty {
             #impl_methods
         }
     };

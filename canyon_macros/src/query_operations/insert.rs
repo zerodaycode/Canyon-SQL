@@ -49,7 +49,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            let rows = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            let rows = <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
@@ -57,7 +57,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
            match rows {
                 #[cfg(feature = "postgres")]
-                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                canyon_sql::core::CanyonRows::Postgres(mut v) => {
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for an insert")?
@@ -65,7 +65,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     Ok(())
                 },
                 #[cfg(feature = "mssql")]
-                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                canyon_sql::core::CanyonRows::Tiberius(mut v) => {
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for a multi insert")?
@@ -74,7 +74,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                     Ok(())
                 },
                 #[cfg(feature = "mysql")]
-                canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                canyon_sql::core::CanyonRows::MySQL(mut v) => {
                     self.#pk_ident = v
                         .get(0)
                         .ok_or("Failed getting the returned IDs for a multi insert")?
@@ -95,7 +95,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 #primary_key
             );
 
-            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 stmt,
                 values,
                 datasource_name
@@ -148,7 +148,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
             let datasource_name = "";
-            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> = vec![#(#insert_values),*];
+            let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
 
@@ -193,7 +193,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         {
-            let mut values: Vec<&dyn canyon_sql::crud::bounds::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
+            let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
 
@@ -294,7 +294,7 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            let multi_insert_result = <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            let multi_insert_result = <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name
@@ -302,7 +302,7 @@ pub fn generate_multiple_insert_tokens(
 
             match multi_insert_result {
                 #[cfg(feature="postgres")]
-                canyon_sql::crud::CanyonRows::Postgres(mut v) => {
+                canyon_sql::core::CanyonRows::Postgres(mut v) => {
                     for (idx, instance) in instances.iter_mut().enumerate() {
                         instance.#pk_ident = v
                             .get(idx)
@@ -313,7 +313,7 @@ pub fn generate_multiple_insert_tokens(
                     Ok(())
                 },
                 #[cfg(feature="mssql")]
-                canyon_sql::crud::CanyonRows::Tiberius(mut v) => {
+                canyon_sql::core::CanyonRows::Tiberius(mut v) => {
                     for (idx, instance) in instances.iter_mut().enumerate() {
                         instance.#pk_ident = v
                             .get(idx)
@@ -325,7 +325,7 @@ pub fn generate_multiple_insert_tokens(
                     Ok(())
                 },
                 #[cfg(feature="mysql")]
-                canyon_sql::crud::CanyonRows::MySQL(mut v) => {
+                canyon_sql::core::CanyonRows::MySQL(mut v) => {
                     for (idx, instance) in instances.iter_mut().enumerate() {
                         instance.#pk_ident = v
                             .get(idx)
@@ -393,7 +393,7 @@ pub fn generate_multiple_insert_tokens(
                 }
             }
 
-            <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+            <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 stmt,
                 v_arr,
                 datasource_name
@@ -440,7 +440,7 @@ pub fn generate_multiple_insert_tokens(
         async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use canyon_sql::crud::bounds::QueryParameter;
+            use canyon_sql::core::QueryParameter;
             let datasource_name = "";
 
             let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
@@ -497,7 +497,7 @@ pub fn generate_multiple_insert_tokens(
         async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         ) {
-            use canyon_sql::crud::bounds::QueryParameter;
+            use canyon_sql::core::QueryParameter;
 
             let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
             for instance in instances.iter() {

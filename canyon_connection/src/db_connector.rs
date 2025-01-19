@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 #[cfg(feature = "mysql")]
@@ -11,7 +9,7 @@ use tokio_postgres::{Client, NoTls};
 
 use crate::database_type::DatabaseType;
 use crate::datasources::DatasourceConfig;
-use canyon_core::query::{DbConnection, Transaction};
+use canyon_core::query::DbConnection;
 use canyon_core::query_parameters::QueryParameter;
 use canyon_core::rows::CanyonRows;
 
@@ -50,24 +48,34 @@ pub enum DatabaseConnection {
     MySQL(MysqlConnection),
 }
 
-unsafe impl Send for DatabaseConnection {}
-unsafe impl Sync for DatabaseConnection {}
-
 #[async_trait]
-impl Transaction<Self> for DatabaseConnection {
-    async fn query<'a, C, S, Z>(
-        stmt: S,
-        params: Z,
-        db_conn: &C,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>
-    where
-        S: AsRef<str> + std::fmt::Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        C: DbConnection + Display + Sync + Send + 'a,
-    {
-        db_conn.launch(stmt.as_ref(), params.as_ref()).await
+impl DbConnection for DatabaseConnection {
+    async fn launch<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+        match self {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => {
+                client.launch(stmt, params).await
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => {
+                client.launch(stmt, params).await
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => {
+                client.launch(stmt, params).await
+            }
+        }
     }
 }
+
+unsafe impl Send for DatabaseConnection {}
+unsafe impl Sync for DatabaseConnection {}
 
 impl DatabaseConnection {
     pub async fn new(
@@ -306,9 +314,7 @@ mod sqlserver_query_launcher {
             // replace below. We may use our own type Query to address this concerns when the query
             // is generated
             let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-            params
-                .iter()
-                .for_each(|param| mssql_query.bind(*param));
+            params.iter().for_each(|param| mssql_query.bind(*param));
 
             #[allow(mutable_transmutes)]
             let sqlservconn = unsafe {
@@ -358,56 +364,57 @@ mod mysql_query_launcher {
             stmt: &str,
             params: &[&'a dyn QueryParameter<'a>],
         ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
-        let mysql_connection = self.client.get_conn().await?;
+            let mysql_connection = self.client.get_conn().await?;
 
-        let stmt_with_escape_characters = regex::escape(stmt);
-        let query_string =
-            Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
+            let stmt_with_escape_characters = regex::escape(stmt);
+            let query_string =
+                Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
 
-        let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
-            .replace_all(&query_string, "")
-            .to_string();
+            let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
+                .replace_all(&query_string, "")
+                .to_string();
 
-        let mut is_insert = false;
-        // TODO: take care of this ugly replace for the concrete client syntax by using canyon
-        // Query
-        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
-            query_string.truncate(index_start_clausule_returning);
-            is_insert = true;
-        }
+            let mut is_insert = false;
+            // TODO: take care of this ugly replace for the concrete client syntax by using canyon
+            // Query
+            if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
+                query_string.truncate(index_start_clausule_returning);
+                is_insert = true;
+            }
 
-        let params_query: Vec<Value> =
-            reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value());
+            let params_query: Vec<Value> =
+                reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value());
 
-        let query_with_params = QueryWithParams {
-            query: query_string,
-            params: params_query,
-        };
+            let query_with_params = QueryWithParams {
+                query: query_string,
+                params: params_query,
+            };
 
-        let mut query_result = query_with_params
-            .run(mysql_connection)
-            .await
-            .expect("Error executing query in mysql");
-
-        let result_rows = if is_insert {
-            let last_insert = query_result
-                .last_insert_id()
-                .map(Value::UInt)
-                .expect("Error getting pk id in insert");
-
-            vec![row::new_row(
-                vec![last_insert],
-                Arc::new([mysql_async::Column::new(ColumnType::MYSQL_TYPE_UNKNOWN)]),
-            )]
-        } else {
-            query_result
-                .collect::<Row>()
+            let mut query_result = query_with_params
+                .run(mysql_connection)
                 .await
-                .expect("Error resolved trait FromRow in mysql")
-        };
-        let a = CanyonRows::MySQL(result_rows);
-        Ok(a)
-        }    }
+                .expect("Error executing query in mysql");
+
+            let result_rows = if is_insert {
+                let last_insert = query_result
+                    .last_insert_id()
+                    .map(Value::UInt)
+                    .expect("Error getting pk id in insert");
+
+                vec![row::new_row(
+                    vec![last_insert],
+                    Arc::new([mysql_async::Column::new(ColumnType::MYSQL_TYPE_UNKNOWN)]),
+                )]
+            } else {
+                query_result
+                    .collect::<Row>()
+                    .await
+                    .expect("Error resolved trait FromRow in mysql")
+            };
+            let a = CanyonRows::MySQL(result_rows);
+            Ok(a)
+        }
+    }
 
     #[cfg(feature = "mysql")]
     fn reorder_params<T>(

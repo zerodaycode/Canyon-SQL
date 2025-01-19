@@ -576,7 +576,13 @@ impl MigrationsProcessor {
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
             for query_to_execute in datasource.1 {
-                let res = Self::query(query_to_execute, [], datasource.0).await;
+                let datasource_name = datasource.0;
+
+                let mut conn_cache = canyon_connection::CACHED_DATABASE_CONN.lock().await;
+                let db_conn =
+                    canyon_connection::get_database_connection(datasource_name, &mut conn_cache);
+
+                let res = Self::query(query_to_execute, [], db_conn).await;
 
                 match res {
                     Ok(_) => println!(

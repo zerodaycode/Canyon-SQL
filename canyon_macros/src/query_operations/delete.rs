@@ -19,14 +19,14 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 "Something really bad happened finding the Ident for the pk field on the delete",
             );
         let pk_field_value =
-            quote! { &self.#pk_field as &dyn canyon_sql::crud::bounds::QueryParameter<'_> };
+            quote! { &self.#pk_field as &dyn canyon_sql::core::QueryParameter<'_> };
 
         quote! {
             /// Deletes from a database entity the row that matches
             /// the current instance of a T type, returning a result
             /// indicating a possible failure querying the database.
             async fn delete(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-                <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                <#ty as canyon_sql::core::Transaction<#ty>>::query(
                     format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key),
                     &[#pk_field_value],
                     ""
@@ -41,7 +41,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             async fn delete_datasource<'a>(&self, datasource_name: &'a str)
                 -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>
             {
-                <#ty as canyon_sql::crud::Transaction<#ty>>::query(
+                <#ty as canyon_sql::core::Transaction<#ty>>::query(
                     format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key),
                     &[#pk_field_value],
                     datasource_name

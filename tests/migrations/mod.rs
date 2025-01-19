@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 use crate::constants;
 /// Integration tests for the migrations feature of `Canyon-SQL`
-use canyon_sql::crud::Transaction;
+use canyon_sql::core::Transaction;
 #[cfg(feature = "migrations")]
 use canyon_sql::migrations::handler::Migrations;
 

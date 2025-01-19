@@ -1,5 +1,5 @@
-use canyon_connection::{datasources::Migrations as MigrationsStatus, DATASOURCES};
-use canyon_core::{column::Column, query::Transaction, row::Row, rows::CanyonRows};
+use canyon_connection::{datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES};
+use canyon_core::{column::Column, query::Transaction, row::{Row, RowOperations}, rows::CanyonRows};
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
 
@@ -42,13 +42,15 @@ impl Migrations {
             );
 
             let mut migrations_processor = MigrationsProcessor::default();
+            let mut conn_cache = canyon_connection::CACHED_DATABASE_CONN.lock().await;
+            let db_conn = canyon_connection::get_database_connection(&datasource.name, &mut conn_cache);
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;
 
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
-                Self::fetch_database(&datasource.name, datasource.get_db_type()).await;
+                Self::fetch_database(&datasource.name, db_conn, datasource.get_db_type()).await;
             let database_tables_schema_info =
                 Self::map_rows(schema_status, datasource.get_db_type());
 
@@ -82,7 +84,8 @@ impl Migrations {
     /// Fetches a concrete schema metadata by target the database
     /// chosen by it's datasource name property
     async fn fetch_database(
-        datasource_name: &str,
+        ds_name: &str,
+        db_conn: &mut DatabaseConnection,
         db_type: DatabaseType,
     ) -> CanyonRows {
         let query = match db_type {
@@ -94,11 +97,11 @@ impl Migrations {
             DatabaseType::MySQL => todo!("Not implemented fetch database in mysql"),
         };
 
-        Self::query(query, [], datasource_name)
+        Self::query(query, [], db_conn)
             .await
             .unwrap_or_else(|_| {
                 panic!(
-                    "Error querying the schema information for the datasource: {datasource_name}"
+                    "Error querying the schema information for the datasource: {ds_name}"
                 )
             })
     }
