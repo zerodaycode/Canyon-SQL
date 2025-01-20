@@ -16,8 +16,6 @@ pub trait DbConnection {
     ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>;
 }
 
-pub trait Datasource: DbConnection{}
-
 #[async_trait]
 pub trait Transaction<T> {
     // provisional name
