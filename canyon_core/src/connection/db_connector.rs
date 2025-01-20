@@ -1,11 +1,12 @@
-use crate::database_type::DatabaseType;
-use crate::datasources::DatasourceConfig;
-use crate::db_clients::mssql::SqlServerConnection;
-use crate::db_clients::mysql::MysqlConnection;
-use crate::db_clients::postgresql::PostgreSqlConnection;
-use canyon_core::query::DbConnection;
-use canyon_core::query_parameters::QueryParameter;
-use canyon_core::rows::CanyonRows;
+use crate::connection::database_type::DatabaseType;
+use crate::connection::datasources::DatasourceConfig;
+use crate::connection::db_clients::mssql::SqlServerConnection;
+use crate::connection::db_clients::mysql::MysqlConnection;
+use crate::connection::db_clients::postgresql::PostgreSqlConnection;
+
+use crate::query::DbConnection;
+use crate::query_parameters::QueryParameter;
+use crate::rows::CanyonRows;
 
 use async_trait::async_trait;
 
@@ -181,14 +182,14 @@ mod connection_helpers {
 }
 
 mod auth {
-    use crate::datasources::Auth;
+    use crate::connection::datasources::Auth;
 
     #[cfg(feature = "mysql")]
-    use crate::datasources::MySQLAuth;
+    use crate::connection::datasources::MySQLAuth;
     #[cfg(feature = "postgres")]
-    use crate::datasources::PostgresAuth;
+    use crate::connection::datasources::PostgresAuth;
     #[cfg(feature = "mssql")]
-    use crate::datasources::SqlServerAuth;
+    use crate::connection::datasources::SqlServerAuth;
 
     #[cfg(feature = "postgres")]
     pub fn extract_postgres_auth<'a>(

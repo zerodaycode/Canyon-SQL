@@ -12,7 +12,6 @@ description.workspace = true
 [workspace]
 members = [
     "canyon_core",
-    "canyon_connection",
     "canyon_crud",
     "canyon_entities",
     "canyon_migrations",
@@ -23,7 +22,6 @@ members = [
 [dependencies]
 # Project crates
 canyon_core = { workspace = true }
-canyon_connection = { workspace = true }
 canyon_crud = { workspace = true }
 canyon_entities = { workspace = true }
 canyon_migrations = { workspace = true, optional = true  }
@@ -39,7 +37,6 @@ mysql_common = { workspace = true, optional = true }
 [workspace.dependencies]
 canyon_core = { version = "0.5.1", path = "canyon_core" }
 canyon_crud = { version = "0.5.1", path = "canyon_crud" }
-canyon_connection = { version = "0.5.1", path = "canyon_connection" }
 canyon_entities = { version = "0.5.1", path = "canyon_entities" }
 canyon_migrations = { version = "0.5.1", path = "canyon_migrations"}
 canyon_macros = { version = "0.5.1", path = "canyon_macros" }
@@ -78,7 +75,7 @@ license = "MIT"
 description = "A Rust ORM and QueryBuilder"
 
 [features]
-postgres =   ["tokio-postgres",    "canyon_core/postgres",            "canyon_connection/postgres", "canyon_crud/postgres", "canyon_migrations/postgres", "canyon_macros/postgres"]
-mssql =      ["tiberius",          "canyon_core/mssql",            "canyon_connection/mssql",    "canyon_crud/mssql",    "canyon_migrations/mssql",    "canyon_macros/mssql"]
-mysql =      ["mysql_async", "mysql_common", "canyon_core/mysql",  "canyon_connection/mysql",    "canyon_crud/mysql",    "canyon_migrations/mysql",    "canyon_macros/mysql"]
+postgres =   ["tokio-postgres",                 "canyon_core/postgres",  "canyon_crud/postgres", "canyon_migrations/postgres", "canyon_macros/postgres"]
+mssql =      ["tiberius",                       "canyon_core/mssql",     "canyon_crud/mssql",    "canyon_migrations/mssql",    "canyon_macros/mssql"]
+mysql =      ["mysql_async", "mysql_common",    "canyon_core/mysql",     "canyon_crud/mysql",    "canyon_migrations/mysql",    "canyon_macros/mysql"]
 migrations = ["canyon_migrations", "canyon_macros/migrations"]

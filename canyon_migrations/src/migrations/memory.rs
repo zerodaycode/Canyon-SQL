@@ -1,5 +1,5 @@
 use crate::constants;
-use canyon_connection::db_connector::DatabaseConnection;
+use canyon_core::connection::db_connector::DatabaseConnection;
 use canyon_core::query::Transaction;
 use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
@@ -66,8 +66,8 @@ impl CanyonMemory {
     ) -> Self {
         // TODO: can't we get the target DS while in the migrations at call site and avoid to
         // duplicate calls to the pool?
-        let mut conn_cache = canyon_connection::CACHED_DATABASE_CONN.lock().await;
-        let db_conn = canyon_connection::get_database_connection(&datasource.name, &mut conn_cache);
+        let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
+        let db_conn = canyon_core::connection::get_database_connection(&datasource.name, &mut conn_cache);
 
         // Creates the memory table if not exists
         Self::create_memory(&datasource.name, db_conn, &datasource.get_db_type()).await;

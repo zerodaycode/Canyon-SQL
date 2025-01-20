@@ -1,5 +1,4 @@
 //! The root crate of the `Canyon-SQL` project.
-extern crate canyon_connection;
 ///
 /// Here it's where all the available functionalities and features
 /// reaches the top most level, grouping them and making them visible
@@ -30,15 +29,15 @@ pub mod macros {
 /// exposing them through the public API
 pub mod connection {
     #[cfg(feature = "postgres")]
-    pub use canyon_connection::db_connector::DatabaseConnection::Postgres;
+    pub use canyon_core::connection::db_connector::DatabaseConnection::Postgres;
 
     #[cfg(feature = "mssql")]
-    pub use canyon_connection::db_connector::DatabaseConnection::SqlServer;
+    pub use canyon_core::connection::db_connector::DatabaseConnection::SqlServer;
 
     #[cfg(feature = "mysql")]
-    pub use canyon_connection::db_connector::DatabaseConnection::MySQL;
+    pub use canyon_core::connection::db_connector::DatabaseConnection::MySQL;
 
-    pub use canyon_connection::*;
+    pub use canyon_core::connection::*;
 }
 
 pub mod core {
@@ -66,20 +65,20 @@ pub mod query {
 /// Reexport the available database clients within Canyon
 pub mod db_clients {
     #[cfg(feature = "mysql")]
-    pub use canyon_connection::mysql_async;
+    pub use canyon_core::connection::mysql_async;
     #[cfg(feature = "mssql")]
-    pub use canyon_connection::tiberius;
+    pub use canyon_core::connection::tiberius;
     #[cfg(feature = "postgres")]
-    pub use canyon_connection::tokio_postgres;
+    pub use canyon_core::connection::tokio_postgres;
 }
 
 /// Reexport the needed runtime dependencies
 pub mod runtime {
-    pub use canyon_connection::futures;
-    pub use canyon_connection::init_connections_cache;
-    pub use canyon_connection::tokio;
-    pub use canyon_connection::tokio_util;
-    pub use canyon_connection::CANYON_TOKIO_RUNTIME;
+    pub use canyon_core::connection::futures;
+    pub use canyon_core::connection::init_connections_cache;
+    pub use canyon_core::connection::tokio;
+    pub use canyon_core::connection::tokio_util;
+    pub use canyon_core::connection::CANYON_TOKIO_RUNTIME;
 }
 
 /// Module for reexport the `chrono` crate with the allowed public and available types in Canyon

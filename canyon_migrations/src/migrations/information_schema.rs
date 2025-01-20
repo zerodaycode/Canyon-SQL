@@ -1,7 +1,7 @@
 #[cfg(feature = "mssql")]
-use canyon_connection::tiberius::ColumnType as TIB_TY;
+use canyon_core::connection::tiberius::ColumnType as TIB_TY; // TODO: make them internal public reexports (only for Canyon)
 #[cfg(feature = "postgres")]
-use canyon_connection::tokio_postgres::types::Type as TP_TYP;
+use canyon_core::connection::tokio_postgres::types::Type as TP_TYP;
 use canyon_core::{
     column::{Column, ColumnType},
     row::{Row, RowOperations},

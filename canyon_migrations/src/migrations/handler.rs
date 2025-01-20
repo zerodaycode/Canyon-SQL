@@ -1,11 +1,11 @@
-use canyon_connection::{
-    datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
-};
 use canyon_core::{
     column::Column,
     query::Transaction,
     row::{Row, RowOperations},
     rows::CanyonRows,
+    connection::{
+        datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
+    }
 };
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
@@ -49,9 +49,9 @@ impl Migrations {
             );
 
             let mut migrations_processor = MigrationsProcessor::default();
-            let mut conn_cache = canyon_connection::CACHED_DATABASE_CONN.lock().await;
-            let db_conn =
-                canyon_connection::get_database_connection(&datasource.name, &mut conn_cache);
+            let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
+            let db_conn = // TODO: use the appropiated new way
+                canyon_core::connection::get_database_connection(&datasource.name, &mut conn_cache);
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;

@@ -1,5 +1,6 @@
 use async_trait::async_trait;
-use canyon_core::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
+
 #[cfg(feature = "postgres")]
 use tokio_postgres::Client;
 

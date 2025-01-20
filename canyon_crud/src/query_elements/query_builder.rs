@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use canyon_connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
+use canyon_core::connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
 use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
 
 use crate::{

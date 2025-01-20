@@ -1,6 +1,7 @@
 use serde::Deserialize;
 
-use crate::database_type::DatabaseType;
+use super::database_type::DatabaseType;
+
 
 /// ```
 #[test]
@@ -179,7 +180,6 @@ pub enum Migrations {
 #[cfg(test)]
 mod datasources_tests {
     use super::*;
-    use crate::CanyonSqlConfig;
 
     /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
     #[test]

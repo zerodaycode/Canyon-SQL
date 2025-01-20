@@ -2,7 +2,7 @@
 use async_std::net::TcpStream;
 
 use async_trait::async_trait;
-use canyon_core::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
 use tiberius::Query;
 
 /// A connection with a `SqlServer` database

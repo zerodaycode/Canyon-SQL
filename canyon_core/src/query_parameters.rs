@@ -19,7 +19,7 @@ pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
     fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue;
 }
 
-/// The implementation of the [`canyon_connection::tiberius`] [`IntoSql`] for the
+/// The implementation of the [`canyon_core::connection::tiberius`] [`IntoSql`] for the
 /// query parameters.
 ///
 /// This implementation is necessary because of the generic amplitude

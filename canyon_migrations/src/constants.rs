@@ -171,7 +171,7 @@ pub mod sqlserver_type {
 
 pub mod mocked_data {
     use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
-    use canyon_connection::lazy_static::lazy_static;
+    use canyon_core::lazy_static::lazy_static;
 
     lazy_static! {
         pub static ref TABLE_METADATA_LEAGUE_EX: TableMetadata = TableMetadata {

@@ -578,9 +578,9 @@ impl MigrationsProcessor {
             for query_to_execute in datasource.1 {
                 let datasource_name = datasource.0;
 
-                let mut conn_cache = canyon_connection::CACHED_DATABASE_CONN.lock().await;
+                let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
                 let db_conn =
-                    canyon_connection::get_database_connection(datasource_name, &mut conn_cache);
+                    canyon_core::connection::get_database_connection(datasource_name, &mut conn_cache);
 
                 let res = Self::query(query_to_execute, [], db_conn).await;
 

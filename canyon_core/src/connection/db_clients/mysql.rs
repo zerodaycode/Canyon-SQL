@@ -1,10 +1,8 @@
 use async_trait::async_trait;
-use canyon_core::query::DbConnection;
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 
-use canyon_core::query_parameters::QueryParameter;
-use canyon_core::rows::CanyonRows;
+use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
 use mysql_async::Row;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;

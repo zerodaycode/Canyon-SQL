@@ -11,13 +11,12 @@
 /// in order to perform the migrations
 pub mod migrations;
 
-extern crate canyon_connection;
 extern crate canyon_crud;
 extern crate canyon_entities;
 
 mod constants;
 
-use canyon_connection::lazy_static::lazy_static;
+use canyon_core::lazy_static::lazy_static;
 use std::{collections::HashMap, sync::Mutex};
 
 lazy_static! {
