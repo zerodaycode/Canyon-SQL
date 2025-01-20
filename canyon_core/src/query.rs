@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use async_trait::async_trait;
 
-use crate::{connection::get_database_connection_by_ds, query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{connection::{datasources::DatasourceConfig, db_connector::DatabaseConnection, get_database_connection_by_ds}, query_parameters::{self, QueryParameter}, rows::CanyonRows};
 
 // TODO: in order to avoid the tiberius transmute, we should define other method that takes the db_conn as a mut ref
 
@@ -36,25 +36,27 @@ pub trait Transaction<T> {
         I: Into<TransactionInput<'a, C>> + Sync + Send + 'a
     {
         let transaction_input= input.into();
+        let statement = stmt.as_ref();
+        let query_parameters = params.as_ref();
+
         match transaction_input {
             TransactionInput::DbConnection(conn) => {
-                conn.launch(stmt.as_ref(), params.as_ref()).await
+                conn.launch(statement, query_parameters).await
             }
             TransactionInput::DbConnectionRef(conn) => {
-                conn.launch(stmt.as_ref(), params.as_ref()).await
+                conn.launch(statement, query_parameters).await
             }
             TransactionInput::DbConnectionRefMut(/* TODO: mut*/ conn) => {
-                conn.launch(stmt.as_ref(), params.as_ref()).await
+                conn.launch(statement, query_parameters).await
             }
-            // TransactionInput::DatasourceConfig(ds) => {
-            //     let mut conn = DatabaseConnection::new(&ds).await?;
-            //     conn.launch(stmt.as_ref(), params).await
-            // }
+            TransactionInput::DatasourceConfig(ds) => { // TODO: add a new from_ds_config_mut for mssql
+                let conn = DatabaseConnection::new(&ds).await?;
+                conn.launch(statement, query_parameters).await
+            }
             TransactionInput::DatasourceName(ds_name) => {
                 let conn = get_database_connection_by_ds(Some(ds_name)).await?;
-                conn.launch(stmt.as_ref(), params.as_ref()).await
+                conn.launch(statement, query_parameters).await
             }
-            // _ => todo!()
         }
     }
 }
@@ -63,7 +65,7 @@ pub enum TransactionInput<'a, T: DbConnection> {
     DbConnection(T),
     DbConnectionRef(&'a T),
     DbConnectionRefMut(&'a mut T),
-    // DatasourceConfig(DatasourceConfig),
+    DatasourceConfig(&'a DatasourceConfig),
     DatasourceName(&'a str),
 }
 
@@ -85,17 +87,11 @@ impl<'a, T: DbConnection> From<&'a mut T> for TransactionInput<'a, T> {
     }
 }
 
-// impl<T: DbConnection> From<DatasourceConfig> for TransactionInput {
-//     fn from(ds: DatasourceConfig) -> Self {
-//         TransactionInput::DatasourceConfig(ds)
-//     }
-// }
-
-// impl<'a, T: DbConnection> From<String> for TransactionInput<'a, T> {
-//     fn from(ds_name: String) -> TransactionInput<'a, T> {
-//         TransactionInput::DatasourceName(ds_name.as_str())
-//     }
-// }
+impl<'a, T: DbConnection> From<&'a DatasourceConfig> for TransactionInput<'a, T> {
+    fn from(ds: &'a DatasourceConfig) -> Self {
+        TransactionInput::DatasourceConfig(ds)
+    }
+}
 
 impl<'a, T: DbConnection> From<&'a str> for TransactionInput<'a, T> {
     fn from(ds_name: &'a str) -> Self {
