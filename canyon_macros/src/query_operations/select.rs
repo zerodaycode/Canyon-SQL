@@ -26,8 +26,8 @@ pub fn generate_find_all_unchecked_tokens(
                 &[],
                 ""
             ).await
-            .unwrap()
             .into_results::<#ty>()
+            .unwrap()
         }
 
         /// Performs a `SELECT * FROM table_name`, where `table_name` it's

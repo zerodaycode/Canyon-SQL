@@ -9,3 +9,11 @@ pub trait RowMapper<T>: Sized {
     #[cfg(feature = "mysql")]
     fn deserialize_mysql(row: &mysql_async::Row) -> T;
 }
+
+pub type CanyonError = Box<(dyn std::error::Error + Send + Sync)>; // TODO: convert this into a
+                                                                   // real error
+pub trait IntoResults {
+    fn into_results<T>(self) -> Result<Vec<T>, CanyonError>
+    where
+        T: RowMapper<T>;
+}

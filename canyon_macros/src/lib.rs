@@ -336,6 +336,8 @@ fn impl_crud_operations_trait_for_struct(
     let a: Vec<TokenStream> = vec![];
     let tokens = if a.is_empty() {
         quote! {
+            use canyon_sql::core::IntoResults;
+
             #[canyon_sql::macros::async_trait]
             impl canyon_sql::crud::CrudOperations<#ty> for #ty {
                 #crud_operations_tokens
@@ -366,6 +368,8 @@ fn impl_crud_operations_trait_for_struct(
         }
     } else {
         quote! {
+            use canyon_sql::core::IntoResults;
+
             #[canyon_sql::macros::async_trait]
             impl canyon_sql::crud::CrudOperations<#ty> for #ty {
                 #crud_operations_tokens

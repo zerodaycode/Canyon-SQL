@@ -5,7 +5,7 @@ use tiberius::{self};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self};
 
-use crate::mapper::RowMapper;
+use crate::mapper::{CanyonError, IntoResults, RowMapper};
 
 /// Lightweight wrapper over the collection of results of the different crates
 /// supported by Canyon-SQL.
@@ -20,6 +20,15 @@ pub enum CanyonRows {
     Tiberius(Vec<tiberius::Row>),
     #[cfg(feature = "mysql")]
     MySQL(Vec<mysql_async::Row>),
+}
+
+impl IntoResults for Result<CanyonRows, CanyonError> {
+    fn into_results<T>(self) -> Result<Vec<T>, CanyonError>
+    where
+        T: RowMapper<T>
+    {
+        self.map(move |rows| rows.into_results::<T>())
+    }
 }
 
 impl CanyonRows {
