@@ -7,9 +7,9 @@ use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn main_with_queries() -> TokenStream {
+pub fn main_with_queries() -> TokenStream { // TODO: migrations on main instead of main_with_queries
     CANYON_TOKIO_RUNTIME.block_on(async {
-        canyon_connection::init_connections_cache().await;
+        canyon_connection::init_connections_cache().await; // TODO: isn't this cache always initialized anyway? try to remove it
         Migrations::migrate().await;
     });
 
