@@ -22,7 +22,7 @@ pub trait Transaction<T> {
     /// Performs a query against the targeted database by the selected or
     /// the defaulted datasource, wrapping the resultant collection of entities
     /// in [`super::rows::CanyonRows`]
-    async fn query<'a, C, S, Z, I>(
+    async fn query<'a, S, Z, I>(
         stmt: S,
         params: Z,
         input: I,
@@ -30,8 +30,7 @@ pub trait Transaction<T> {
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        C: DbConnection + Sync + Send + 'a,
-        I: Into<TransactionInput<'a, C>> + Sync + Send + 'a
+        I: Into<TransactionInput<'a>> + Sync + Send + 'a
     {
         let transaction_input= input.into();
         let statement = stmt.as_ref();
@@ -52,46 +51,47 @@ pub trait Transaction<T> {
                 conn.launch(statement, query_parameters).await
             }
             TransactionInput::DatasourceName(ds_name) => {
-                let conn = get_database_connection_by_ds(Some(ds_name)).await?;
+                let sane_ds_name = if !ds_name.is_empty() { Some(ds_name) } else { None };
+                let conn = get_database_connection_by_ds(sane_ds_name).await?;
                 conn.launch(statement, query_parameters).await
             }
         }
     }
 }
 
-pub enum TransactionInput<'a, T: DbConnection> {
-    DbConnection(T),
-    DbConnectionRef(&'a T),
-    DbConnectionRefMut(&'a mut T),
+pub enum TransactionInput<'a> {
+    DbConnection(DatabaseConnection),
+    DbConnectionRef(&'a DatabaseConnection),
+    DbConnectionRefMut(&'a mut DatabaseConnection),
     DatasourceConfig(&'a DatasourceConfig),
     DatasourceName(&'a str),
 }
 
-impl<'a, T: DbConnection> From<T> for TransactionInput<'a, T> {
-    fn from(conn: T) -> Self {
+impl<'a> From<DatabaseConnection> for TransactionInput<'a> {
+    fn from(conn: DatabaseConnection) -> Self {
         TransactionInput::DbConnection(conn)
     }
 }
 
-impl<'a, T: DbConnection> From<&'a T> for TransactionInput<'a, T> {
-    fn from(conn: &'a T) -> Self {
+impl<'a> From<&'a DatabaseConnection> for TransactionInput<'a> {
+    fn from(conn: &'a DatabaseConnection) -> Self {
         TransactionInput::DbConnectionRef(conn)
     }
 }
 
-impl<'a, T: DbConnection> From<&'a mut T> for TransactionInput<'a, T> {
-    fn from(conn: &'a mut T) -> Self {
+impl<'a> From<&'a mut DatabaseConnection> for TransactionInput<'a> {
+    fn from(conn: &'a mut DatabaseConnection) -> Self {
         TransactionInput::DbConnectionRefMut(conn)
     }
 }
 
-impl<'a, T: DbConnection> From<&'a DatasourceConfig> for TransactionInput<'a, T> {
+impl<'a> From<&'a DatasourceConfig> for TransactionInput<'a> {
     fn from(ds: &'a DatasourceConfig) -> Self {
         TransactionInput::DatasourceConfig(ds)
     }
 }
 
-impl<'a, T: DbConnection> From<&'a str> for TransactionInput<'a, T> {
+impl<'a> From<&'a str> for TransactionInput<'a> {
     fn from(ds_name: &'a str) -> Self {
         TransactionInput::DatasourceName(ds_name)
     }

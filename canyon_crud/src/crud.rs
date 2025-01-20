@@ -26,70 +26,70 @@ pub trait CrudOperations<T>: Transaction<T>
 where
     T: CrudOperations<T> + RowMapper<T>,
 {
-    async fn find_all<'a>() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    async fn find_all() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync)>>;
 
     async fn find_all_datasource<'a>(
         datasource_name: &'a str,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn find_all_unchecked<'a>() -> Vec<T>;
+    async fn find_all_unchecked() -> Vec<T>;
 
     async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
-    fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
+    // fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
 
-    fn select_query_datasource(datasource_name: &str) -> SelectQueryBuilder<'_, T>;
+    // fn select_query_datasource(datasource_name: &str) -> SelectQueryBuilder<'_, T>;
 
-    async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn count<'a>() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn count_datasource<'a>(
-        datasource_name: &'a str,
-    ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn count_datasource<'a>(
+    //     datasource_name: &'a str,
+    // ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn find_by_pk<'a>(
-        value: &'a dyn QueryParameter<'a>,
-    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn find_by_pk<'a>(
+    //     value: &'a dyn QueryParameter<'a>,
+    // ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn find_by_pk_datasource<'a>(
-        value: &'a dyn QueryParameter<'a>,
-        datasource_name: &'a str,
-    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn find_by_pk_datasource<'a>(
+    //     value: &'a dyn QueryParameter<'a>,
+    //     datasource_name: &'a str,
+    // ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn insert<'a>(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    // async fn insert<'a>(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>;
 
-    async fn insert_datasource<'a>(
-        &mut self,
-        datasource_name: &'a str,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    // async fn insert_datasource<'a>(
+    //     &mut self,
+    //     datasource_name: &'a str,
+    // ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>;
 
-    async fn multi_insert<'a>(
-        instances: &'a mut [&'a mut T],
-    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn multi_insert<'a>(
+    //     instances: &'a mut [&'a mut T],
+    // ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn multi_insert_datasource<'a>(
-        instances: &'a mut [&'a mut T],
-        datasource_name: &'a str,
-    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>;
+    // async fn multi_insert_datasource<'a>(
+    //     instances: &'a mut [&'a mut T],
+    //     datasource_name: &'a str,
+    // ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    // async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    async fn update_datasource<'a>(
-        &self,
-        datasource_name: &'a str,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    // async fn update_datasource<'a>(
+    //     &self,
+    //     datasource_name: &'a str,
+    // ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    fn update_query<'a>() -> UpdateQueryBuilder<'a, T>;
+    // fn update_query<'a>() -> UpdateQueryBuilder<'a, T>;
 
-    fn update_query_datasource(datasource_name: &str) -> UpdateQueryBuilder<'_, T>;
+    // fn update_query_datasource(datasource_name: &str) -> UpdateQueryBuilder<'_, T>;
 
-    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    // async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    async fn delete_datasource<'a>(
-        &self,
-        datasource_name: &'a str,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    // async fn delete_datasource<'a>(
+    //     &self,
+    //     datasource_name: &'a str,
+    // ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    fn delete_query<'a>() -> DeleteQueryBuilder<'a, T>;
+    // fn delete_query<'a>() -> DeleteQueryBuilder<'a, T>;
 
-    fn delete_query_datasource(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
+    // fn delete_query_datasource(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
 }

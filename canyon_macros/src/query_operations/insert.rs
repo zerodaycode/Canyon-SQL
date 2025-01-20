@@ -106,96 +106,96 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     };
 
     quote! {
-        /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
-        /// datasource by it's `datasouce name`, defined in the configuration file.
-        ///
-        /// This `insert` operation needs a `&mut` reference. That's because typically,
-        /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the
-        /// `pk` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
-        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
-        /// of the database row that represents.
-        ///
-        /// This operation returns a result type, indicating a possible failure querying the database.
-        ///
-        /// ## *Examples*
-        ///```
-        /// let mut lec: League = League {
-        ///     id: Default::default(),
-        ///     ext_id: 1,
-        ///     slug: "LEC".to_string(),
-        ///     name: "League Europe Champions".to_string(),
-        ///     region: "EU West".to_string(),
-        ///     image_url: "https://lec.eu".to_string(),
-        /// };
-        ///
-        /// println!("LEC before: {:?}", &lec);
-        ///
-        /// let ins_result = lec.insert_result().await;
-        ///
-        /// Now, we can handle the result returned, because it can contains a
-        /// critical error that may leads your program to panic
-        /// if let Ok(_) = ins_result {
-        ///     println!("LEC after: {:?}", &lec);
-        /// } else {
-        ///     eprintln!("{:?}", ins_result.err())
-        /// }
-        /// ```
-        ///
-        async fn insert<'a>(&mut self)
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-        {
-            let datasource_name = "";
-            let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values),*];
-            #insert_transaction
-        }
+        // / Inserts into a database entity the current data in `self`, generating a new
+        // / entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
+        // / datasource by it's `datasouce name`, defined in the configuration file.
+        // /
+        // / This `insert` operation needs a `&mut` reference. That's because typically,
+        // / an insert operation represents *new* data stored in the database, so, when
+        // / inserted, the database will generate a unique new value for the
+        // / `pk` field, having a unique identifier for every record, and it will
+        // / automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
+        // / operation, you instance will have the correct value that is the *PRIMARY KEY*
+        // / of the database row that represents.
+        // /
+        // / This operation returns a result type, indicating a possible failure querying the database.
+        // /
+        // / ## *Examples*
+        // /```
+        // / let mut lec: League = League {
+        // /     id: Default::default(),
+        // /     ext_id: 1,
+        // /     slug: "LEC".to_string(),
+        // /     name: "League Europe Champions".to_string(),
+        // /     region: "EU West".to_string(),
+        // /     image_url: "https://lec.eu".to_string(),
+        // / };
+        // /
+        // / println!("LEC before: {:?}", &lec);
+        // /
+        // / let ins_result = lec.insert_result().await;
+        // /
+        // / Now, we can handle the result returned, because it can contains a
+        // / critical error that may leads your program to panic
+        // / if let Ok(_) = ins_result {
+        // /     println!("LEC after: {:?}", &lec);
+        // / } else {
+        // /     eprintln!("{:?}", ins_result.err())
+        // / }
+        // / ```
+        // /
+        // async fn insert<'a>(&mut self)
+        //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+        // {
+        //     let datasource_name = "";
+        //     let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values),*];
+        //     #insert_transaction
+        // }
 
-        /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
-        /// datasource by it's `datasouce name`, defined in the configuration file.
-        ///
-        /// This `insert` operation needs a `&mut` reference. That's because typically,
-        /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the
-        /// `pk` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
-        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
-        /// of the database row that represents.
-        ///
-        /// This operation returns a result type, indicating a possible failure querying the database.
-        ///
-        /// ## *Examples*
-        ///```
-        /// let mut lec: League = League {
-        ///     id: Default::default(),
-        ///     ext_id: 1,
-        ///     slug: "LEC".to_string(),
-        ///     name: "League Europe Champions".to_string(),
-        ///     region: "EU West".to_string(),
-        ///     image_url: "https://lec.eu".to_string(),
-        /// };
-        ///
-        /// println!("LEC before: {:?}", &lec);
-        ///
-        /// let ins_result = lec.insert_result().await;
-        ///
-        /// Now, we can handle the result returned, because it can contains a
-        /// critical error that may leads your program to panic
-        /// if let Ok(_) = ins_result {
-        ///     println!("LEC after: {:?}", &lec);
-        /// } else {
-        ///     eprintln!("{:?}", ins_result.err())
-        /// }
-        /// ```
-        ///
-        async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-        {
-            let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
-            #insert_transaction
-        }
+        // / Inserts into a database entity the current data in `self`, generating a new
+        // / entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
+        // / datasource by it's `datasouce name`, defined in the configuration file.
+        // /
+        // / This `insert` operation needs a `&mut` reference. That's because typically,
+        // / an insert operation represents *new* data stored in the database, so, when
+        // / inserted, the database will generate a unique new value for the
+        // / `pk` field, having a unique identifier for every record, and it will
+        // / automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
+        // / operation, you instance will have the correct value that is the *PRIMARY KEY*
+        // / of the database row that represents.
+        // /
+        // / This operation returns a result type, indicating a possible failure querying the database.
+        // /
+        // / ## *Examples*
+        // /```
+        // / let mut lec: League = League {
+        // /     id: Default::default(),
+        // /     ext_id: 1,
+        // /     slug: "LEC".to_string(),
+        // /     name: "League Europe Champions".to_string(),
+        // /     region: "EU West".to_string(),
+        // /     image_url: "https://lec.eu".to_string(),
+        // / };
+        // /
+        // / println!("LEC before: {:?}", &lec);
+        // /
+        // / let ins_result = lec.insert_result().await;
+        // /
+        // / Now, we can handle the result returned, because it can contains a
+        // / critical error that may leads your program to panic
+        // / if let Ok(_) = ins_result {
+        // /     println!("LEC after: {:?}", &lec);
+        // / } else {
+        // /     eprintln!("{:?}", ins_result.err())
+        // / }
+        // / ```
+        // /
+        // async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
+        //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+        // {
+        //     let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
+        //     #insert_transaction
+        // }
 
     }
 }
@@ -404,116 +404,116 @@ pub fn generate_multiple_insert_tokens(
     };
 
     quote! {
-        /// Inserts multiple instances of some type `T` into its related table.
-        ///
-        /// ```
-        /// let mut new_league = League {
-        ///     id: Default::default(),
-        ///    ext_id: 392489032,
-        ///     slug: "League10".to_owned(),
-        ///     name: "League10also".to_owned(),
-        ///     region: "Turkey".to_owned(),
-        ///     image_url: "https://www.sdklafjsd.com".to_owned()
-        /// };
-        /// let mut new_league2 = League {
-        ///     id: Default::default(),
-        ///     ext_id: 392489032,
-        ///     slug: "League11".to_owned(),
-        ///     name: "League11also".to_owned(),
-        ///     region: "LDASKJF".to_owned(),
-        ///     image_url: "https://www.sdklafjsd.com".to_owned()
-        /// };
-        /// let mut new_league3 = League {
-        ///     id: Default::default(),
-        ///     ext_id: 9687392489032,
-        ///     slug: "League3".to_owned(),
-        ///     name: "3League".to_owned(),
-        ///     region: "EU".to_owned(),
-        ///     image_url: "https://www.lag.com".to_owned()
-        /// };
-        ///
-        /// League::insert_multiple(
-        ///     &mut [&mut new_league, &mut new_league2, &mut new_league3]
-        /// ).await
-        /// .ok();
-        /// ```
-        async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
-            Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-        ) {
-            use canyon_sql::core::QueryParameter;
-            let datasource_name = "";
+        // /// Inserts multiple instances of some type `T` into its related table.
+        // ///
+        // /// ```
+        // /// let mut new_league = League {
+        // ///     id: Default::default(),
+        // ///    ext_id: 392489032,
+        // ///     slug: "League10".to_owned(),
+        // ///     name: "League10also".to_owned(),
+        // ///     region: "Turkey".to_owned(),
+        // ///     image_url: "https://www.sdklafjsd.com".to_owned()
+        // /// };
+        // /// let mut new_league2 = League {
+        // ///     id: Default::default(),
+        // ///     ext_id: 392489032,
+        // ///     slug: "League11".to_owned(),
+        // ///     name: "League11also".to_owned(),
+        // ///     region: "LDASKJF".to_owned(),
+        // ///     image_url: "https://www.sdklafjsd.com".to_owned()
+        // /// };
+        // /// let mut new_league3 = League {
+        // ///     id: Default::default(),
+        // ///     ext_id: 9687392489032,
+        // ///     slug: "League3".to_owned(),
+        // ///     name: "3League".to_owned(),
+        // ///     region: "EU".to_owned(),
+        // ///     image_url: "https://www.lag.com".to_owned()
+        // /// };
+        // ///
+        // /// League::insert_multiple(
+        // ///     &mut [&mut new_league, &mut new_league2, &mut new_league3]
+        // /// ).await
+        // /// .ok();
+        // /// ```
+        // // async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
+        // //     Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+        // // ) {
+        // //     use canyon_sql::core::QueryParameter;
+        // //     let datasource_name = "";
 
-            let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
-            for instance in instances.iter() {
-                let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields),*];
+        // //     let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
+        // //     for instance in instances.iter() {
+        // //         let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields),*];
 
-                let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
-                for value in intermediate.into_iter() {
-                    longer_lived.push(*value)
-                }
+        // //         let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
+        // //         for value in intermediate.into_iter() {
+        // //             longer_lived.push(*value)
+        // //         }
 
-                final_values.push(longer_lived)
-            }
+        // //         final_values.push(longer_lived)
+        // //     }
 
-            let mut mapped_fields: String = String::new();
+        // //     let mut mapped_fields: String = String::new();
 
-            #multi_insert_transaction
-        }
+        // //     #multi_insert_transaction
+        // // }
 
-        /// Inserts multiple instances of some type `T` into its related table with the specified
-        /// datasource by it's `datasouce name`, defined in the configuration file.
-        ///
-        /// ```
-        /// let mut new_league = League {
-        ///     id: Default::default(),
-        ///    ext_id: 392489032,
-        ///     slug: "League10".to_owned(),
-        ///     name: "League10also".to_owned(),
-        ///     region: "Turkey".to_owned(),
-        ///     image_url: "https://www.sdklafjsd.com".to_owned()
-        /// };
-        /// let mut new_league2 = League {
-        ///     id: Default::default(),
-        ///     ext_id: 392489032,
-        ///     slug: "League11".to_owned(),
-        ///     name: "League11also".to_owned(),
-        ///     region: "LDASKJF".to_owned(),
-        ///     image_url: "https://www.sdklafjsd.com".to_owned()
-        /// };
-        /// let mut new_league3 = League {
-        ///     id: Default::default(),
-        ///     ext_id: 9687392489032,
-        ///     slug: "League3".to_owned(),
-        ///     name: "3League".to_owned(),
-        ///     region: "EU".to_owned(),
-        ///     image_url: "https://www.lag.com".to_owned()
-        /// };
-        ///
-        /// League::insert_multiple(
-        ///     &mut [&mut new_league, &mut new_league2, &mut new_league3]
-        /// ).await
-        /// .ok();
-        /// ```
-        async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
-            Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-        ) {
-            use canyon_sql::core::QueryParameter;
+        // /// Inserts multiple instances of some type `T` into its related table with the specified
+        // /// datasource by it's `datasouce name`, defined in the configuration file.
+        // ///
+        // /// ```
+        // /// let mut new_league = League {
+        // ///     id: Default::default(),
+        // ///    ext_id: 392489032,
+        // ///     slug: "League10".to_owned(),
+        // ///     name: "League10also".to_owned(),
+        // ///     region: "Turkey".to_owned(),
+        // ///     image_url: "https://www.sdklafjsd.com".to_owned()
+        // /// };
+        // /// let mut new_league2 = League {
+        // ///     id: Default::default(),
+        // ///     ext_id: 392489032,
+        // ///     slug: "League11".to_owned(),
+        // ///     name: "League11also".to_owned(),
+        // ///     region: "LDASKJF".to_owned(),
+        // ///     image_url: "https://www.sdklafjsd.com".to_owned()
+        // /// };
+        // /// let mut new_league3 = League {
+        // ///     id: Default::default(),
+        // ///     ext_id: 9687392489032,
+        // ///     slug: "League3".to_owned(),
+        // ///     name: "3League".to_owned(),
+        // ///     region: "EU".to_owned(),
+        // ///     image_url: "https://www.lag.com".to_owned()
+        // /// };
+        // ///
+        // /// League::insert_multiple(
+        // ///     &mut [&mut new_league, &mut new_league2, &mut new_league3]
+        // /// ).await
+        // /// .ok();
+        // /// ```
+        // async fn multi_insert_datasource<'a>(instances: &'a mut [&'a mut #ty], datasource_name: &'a str) -> (
+        //     Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+        // ) {
+        //     use canyon_sql::core::QueryParameter;
 
-            let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
-            for instance in instances.iter() {
-                let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields_cloned),*];
+        //     let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
+        //     for instance in instances.iter() {
+        //         let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields_cloned),*];
 
-                let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
-                for value in intermediate.into_iter() {
-                    longer_lived.push(*value)
-                }
+        //         let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
+        //         for value in intermediate.into_iter() {
+        //             longer_lived.push(*value)
+        //         }
 
-                final_values.push(longer_lived)
-            }
+        //         final_values.push(longer_lived)
+        //     }
 
-            let mut mapped_fields: String = String::new();
+        //     let mut mapped_fields: String = String::new();
 
-            #multi_insert_transaction
-        }
+        //     #multi_insert_transaction
+        // }
     }
 }

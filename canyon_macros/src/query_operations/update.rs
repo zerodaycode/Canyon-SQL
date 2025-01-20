@@ -31,43 +31,43 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             .expect("Update method failed to retrieve the index of the primary key");
 
         quote! {
-            /// Updates a database record that matches
-            /// the current instance of a T type, returning a result
-            /// indicating a possible failure querying the database.
-            async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> {
-                let stmt = format!(
-                    "UPDATE {} SET {} WHERE {} = ${:?}",
-                    #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
-                );
-                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values),*];
+            // /// Updates a database record that matches
+            // /// the current instance of a T type, returning a result
+            // /// indicating a possible failure querying the database.
+            // async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> {
+            //     let stmt = format!(
+            //         "UPDATE {} SET {} WHERE {} = ${:?}",
+            //         #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
+            //     );
+            //     let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values),*];
 
-                <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                    stmt, update_values, ""
-                ).await?;
+            //     <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            //         stmt, update_values, ""
+            //     ).await?;
 
-                Ok(())
-            }
+            //     Ok(())
+            // }
 
 
-            /// Updates a database record that matches
-            /// the current instance of a T type, returning a result
-            /// indicating a possible failure querying the database with the
-            /// specified datasource
-            async fn update_datasource<'a>(&self, datasource_name: &'a str)
-                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-            {
-                let stmt = format!(
-                    "UPDATE {} SET {} WHERE {} = ${:?}",
-                    #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
-                );
-                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values_cloned),*];
+            // /// Updates a database record that matches
+            // /// the current instance of a T type, returning a result
+            // /// indicating a possible failure querying the database with the
+            // /// specified datasource
+            // async fn update_datasource<'a>(&self, datasource_name: &'a str)
+            //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            // {
+            //     let stmt = format!(
+            //         "UPDATE {} SET {} WHERE {} = ${:?}",
+            //         #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
+            //     );
+            //     let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values_cloned),*];
 
-                <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                    stmt, update_values, datasource_name
-                ).await?;
+            //     <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            //         stmt, update_values, datasource_name
+            //     ).await?;
 
-                Ok(())
-            }
+            //     Ok(())
+            // }
         }
     } else {
         // If there's no primary key, update method over self won't be available.
@@ -75,31 +75,31 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
         // TODO Returning an error should be a provisional way of doing this
         quote! {
-            async fn update(&self)
-                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-            {
-                Err(
-                    std::io::Error::new(
-                        std::io::ErrorKind::Unsupported,
-                        "You can't use the 'update' method on a \
-                        CanyonEntity that does not have a #[primary_key] annotation. \
-                        If you need to perform an specific search, use the Querybuilder instead."
-                    ).into_inner().unwrap()
-                )
-            }
+            // async fn update(&self)
+            //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            // {
+            //     Err(
+            //         std::io::Error::new(
+            //             std::io::ErrorKind::Unsupported,
+            //             "You can't use the 'update' method on a \
+            //             CanyonEntity that does not have a #[primary_key] annotation. \
+            //             If you need to perform an specific search, use the Querybuilder instead."
+            //         ).into_inner().unwrap()
+            //     )
+            // }
 
-            async fn update_datasource<'a>(&self, datasource_name: &'a str)
-                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-            {
-                Err(
-                    std::io::Error::new(
-                        std::io::ErrorKind::Unsupported,
-                        "You can't use the 'update_datasource' method on a \
-                        CanyonEntity that does not have a #[primary_key] annotation. \
-                        If you need to perform an specific search, use the Querybuilder instead."
-                    ).into_inner().unwrap()
-                )
-            }
+            // async fn update_datasource<'a>(&self, datasource_name: &'a str)
+            //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+            // {
+            //     Err(
+            //         std::io::Error::new(
+            //             std::io::ErrorKind::Unsupported,
+            //             "You can't use the 'update_datasource' method on a \
+            //             CanyonEntity that does not have a #[primary_key] annotation. \
+            //             If you need to perform an specific search, use the Querybuilder instead."
+            //         ).into_inner().unwrap()
+            //     )
+            // }
         }
     }
 }
@@ -113,30 +113,30 @@ pub fn generate_update_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
-        /// that allows you to customize the query by adding parameters and constrains dynamically.
-        ///
-        /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention,
-        /// unless concrete values are set on the available parameters of the
-        /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn update_query<'a>() -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
-            canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, "")
-        }
+        // /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
+        // /// that allows you to customize the query by adding parameters and constrains dynamically.
+        // ///
+        // /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
+        // /// entity but converted to the corresponding database convention,
+        // /// unless concrete values are set on the available parameters of the
+        // /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        // fn update_query<'a>() -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
+        //     canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, "")
+        // }
 
-        /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
-        /// that allows you to customize the query by adding parameters and constrains dynamically.
-        ///
-        /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention,
-        /// unless concrete values are set on the available parameters of the
-        /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        ///
-        /// The query it's made against the database with the configured datasource
-        /// described in the configuration file, and selected with the [`&str`]
-        /// passed as parameter.
-        fn update_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
-            canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, datasource_name)
-        }
+        // /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
+        // /// that allows you to customize the query by adding parameters and constrains dynamically.
+        // ///
+        // /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
+        // /// entity but converted to the corresponding database convention,
+        // /// unless concrete values are set on the available parameters of the
+        // /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        // ///
+        // /// The query it's made against the database with the configured datasource
+        // /// described in the configuration file, and selected with the [`&str`]
+        // /// passed as parameter.
+        // fn update_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::UpdateQueryBuilder<'a, #ty> {
+        //     canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, datasource_name)
+        // }
     }
 }
