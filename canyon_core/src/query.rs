@@ -13,7 +13,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>>;
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>;
 }
 
 #[async_trait]
@@ -26,7 +26,7 @@ pub trait Transaction<T> {
         stmt: S,
         params: Z,
         input: I,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,

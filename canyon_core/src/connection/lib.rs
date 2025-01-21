@@ -100,7 +100,7 @@ pub async fn init_connections_cache() {
 // TODO: doc (main way for the user to obtain a db connection given a datasource identifier)
 pub async fn get_database_connection_by_ds<
     'a,
-    T: AsRef<str> + Copy + Debug + Default + Send + Sync + 'static,
+    T: AsRef<str> + Copy + Debug + Default + Send + Sync + 'a,
 >(
     datasource_name: Option<T>,
 ) -> Result<db_connector::DatabaseConnection, Box<dyn Error + Send + Sync>> {

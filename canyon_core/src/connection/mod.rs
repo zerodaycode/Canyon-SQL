@@ -100,14 +100,14 @@ pub async fn init_connections_cache() {
 // TODO: doc (main way for the user to obtain a db connection given a datasource identifier)
 pub async fn get_database_connection_by_ds<'a>(
     datasource_name: Option<&'a str>,
-) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync + 'a>> {
+) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
     let ds = find_datasource_by_name_or_try_default(datasource_name)?;
     DatabaseConnection::new(ds).await
 }
 
 fn find_datasource_by_name_or_try_default<'a>(
-    datasource_name: Option<&'a str>,
-) -> Result<&'a DatasourceConfig, DatasourceNotFound<'a>> {
+    datasource_name: Option<&str>,
+) -> Result<&DatasourceConfig, DatasourceNotFound> {
     datasource_name
         .map_or_else(
             || DATASOURCES.first(),

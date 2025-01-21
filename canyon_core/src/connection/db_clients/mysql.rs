@@ -19,7 +19,7 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         mysql_query_launcher::launch(stmt, params, self).await
     }
 }
@@ -45,7 +45,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         let mysql_connection = conn.client.get_conn().await?;
 
         let stmt_with_escape_characters = regex::escape(stmt);

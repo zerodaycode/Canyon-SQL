@@ -17,7 +17,7 @@ impl DbConnection for PostgreSqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         postgres_query_launcher::launch(stmt, params, self).await
     }
 }
@@ -31,7 +31,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &PostgreSqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         let mut m_params = Vec::new();
         for param in params {
             m_params.push((*param).as_postgres_param());

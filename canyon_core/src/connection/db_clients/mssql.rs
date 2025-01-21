@@ -17,7 +17,7 @@ impl DbConnection for SqlServerConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         sqlserver_query_launcher::launch(stmt, params, self).await
     }
 }
@@ -32,7 +32,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &SqlServerConnection,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         // TODO: redo this branch into the generated queries, before the MACROS
         // if stmt.contains("RETURNING") {

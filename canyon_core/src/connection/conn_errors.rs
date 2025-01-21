@@ -2,17 +2,17 @@
 
 /// Raised when a [`crate::datasources::DatasourceConfig`] isn't found given a user input
 #[derive(Debug, Clone)]
-pub struct DatasourceNotFound<'a> {
-    pub datasource_name: &'a str,
+pub struct DatasourceNotFound {
+    pub datasource_name: String,
 }
-impl<'a> From<Option<&'a str>> for DatasourceNotFound<'a> {
-    fn from(value: Option<&'a str>) -> Self {
+impl From<Option<& str>> for DatasourceNotFound {
+    fn from(value: Option<& str>) -> Self {
         DatasourceNotFound {
-            datasource_name: value.unwrap_or_default(), // TODO: not default
+            datasource_name: value.map(String::from).unwrap_or_default(), // TODO: not default
         }
     }
 }
-impl<'a> std::fmt::Display for DatasourceNotFound<'a> {
+impl std::fmt::Display for DatasourceNotFound {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(
             f,
@@ -21,4 +21,4 @@ impl<'a> std::fmt::Display for DatasourceNotFound<'a> {
         )
     }
 }
-impl<'a> std::error::Error for DatasourceNotFound<'a> {}
+impl std::error::Error for DatasourceNotFound {}
