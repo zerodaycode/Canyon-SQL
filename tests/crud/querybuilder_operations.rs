@@ -240,7 +240,6 @@
 //         let qpr = q.clone();
 //         println!("PSQL: {:?}", qpr.read_sql());
 //     */
-
 //     // We can now back to the original an throw the query
 //     q.query()
 //         .await

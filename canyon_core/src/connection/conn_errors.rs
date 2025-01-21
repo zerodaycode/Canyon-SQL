@@ -5,8 +5,8 @@
 pub struct DatasourceNotFound {
     pub datasource_name: String,
 }
-impl From<Option<& str>> for DatasourceNotFound {
-    fn from(value: Option<& str>) -> Self {
+impl From<Option<&str>> for DatasourceNotFound {
+    fn from(value: Option<&str>) -> Self {
         DatasourceNotFound {
             datasource_name: value.map(String::from).unwrap_or_default(), // TODO: not default
         }

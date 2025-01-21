@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 
@@ -13,14 +12,15 @@ pub struct MysqlConnection {
     pub client: Pool,
 }
 
-#[async_trait]
 impl DbConnection for MysqlConnection {
-    async fn launch<'a>(
+    fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
-        mysql_query_launcher::launch(stmt, params, self).await
+    ) -> impl std::future::Future<
+        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+    > + Send {
+        mysql_query_launcher::launch(stmt, params, self)
     }
 }
 

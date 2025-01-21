@@ -8,8 +8,6 @@ use crate::query::DbConnection;
 use crate::query_parameters::QueryParameter;
 use crate::rows::CanyonRows;
 
-use async_trait::async_trait;
-
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
 /// process them and generates a pool of 1 to 1 database connection for
@@ -24,22 +22,25 @@ pub enum DatabaseConnection {
     MySQL(MysqlConnection),
 }
 
-#[async_trait]
 impl DbConnection for DatabaseConnection {
-    async fn launch<'a>(
+    fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
-        match self {
-            #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
+    ) -> impl std::future::Future<
+        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+    > + Send {
+        async move {
+            match self {
+                #[cfg(feature = "postgres")]
+                DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
 
-            #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
+                #[cfg(feature = "mssql")]
+                DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
 
-            #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
+                #[cfg(feature = "mysql")]
+                DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
+            }
         }
     }
 }

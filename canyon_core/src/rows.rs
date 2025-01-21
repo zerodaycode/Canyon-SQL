@@ -25,7 +25,7 @@ pub enum CanyonRows {
 impl IntoResults for Result<CanyonRows, CanyonError> {
     fn into_results<T>(self) -> Result<Vec<T>, CanyonError>
     where
-        T: RowMapper<T>
+        T: RowMapper<T>,
     {
         self.map(move |rows| rows.into_results::<T>())
     }

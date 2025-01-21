@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 extern crate proc_macro;
 
-
 mod canyon_entity_macro;
 #[cfg(feature = "migrations")]
 use canyon_macro::main_with_queries;
@@ -20,7 +19,7 @@ use query_operations::{
     delete::{generate_delete_query_tokens, generate_delete_tokens},
     insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     select::{
-        // generate_count_tokens, generate_find_all_query_tokens, 
+        // generate_count_tokens, generate_find_all_query_tokens,
         generate_find_all_tokens,
         // generate_find_by_foreign_key_tokens,
         // generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
@@ -247,8 +246,7 @@ fn impl_crud_operations_trait_for_struct(
     let ty = macro_data.ty;
 
     // Builds the find_all() query
-    let _find_all_tokens =
-        generate_find_all_tokens(macro_data, &table_schema_data);
+    let _find_all_tokens = generate_find_all_tokens(macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
     // let _find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
 

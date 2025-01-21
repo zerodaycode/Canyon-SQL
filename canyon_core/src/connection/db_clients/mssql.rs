@@ -1,7 +1,6 @@
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 
-use async_trait::async_trait;
 use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
 use tiberius::Query;
 
@@ -11,14 +10,15 @@ pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
 }
 
-#[async_trait]
 impl DbConnection for SqlServerConnection {
-    async fn launch<'a>(
+    fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
-        sqlserver_query_launcher::launch(stmt, params, self).await
+    ) -> impl std::future::Future<
+        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+    > + Send {
+        sqlserver_query_launcher::launch(stmt, params, self)
     }
 }
 

@@ -2,7 +2,6 @@ use serde::Deserialize;
 
 use super::datasources::Auth;
 
-
 /// Holds the current supported databases by Canyon-SQL
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {

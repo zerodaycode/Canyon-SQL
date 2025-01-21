@@ -1,19 +1,22 @@
+use crate::{
+    connection::{
+        datasources::DatasourceConfig, db_connector::DatabaseConnection,
+        get_database_connection_by_ds,
+    },
+    query_parameters::{self, QueryParameter},
+    rows::CanyonRows,
+};
 use std::{fmt::Display, future::Future};
-
-use async_trait::async_trait;
-
-use crate::{connection::{datasources::DatasourceConfig, db_connector::DatabaseConnection, get_database_connection_by_ds}, query_parameters::{self, QueryParameter}, rows::CanyonRows};
 
 // TODO: in order to avoid the tiberius transmute, we should define other method that takes the db_conn as a mut ref
 
-#[async_trait]
 pub trait DbConnection {
     // TODO: guess that this is the trait that must remain sealed
-    async fn launch<'a>(
+    fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>;
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>> + Send;
 }
 
 pub trait Transaction<T> {
@@ -29,32 +32,39 @@ pub trait Transaction<T> {
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        I: Into<TransactionInput<'a>> + Sync + Send + 'a
+        I: Into<TransactionInput<'a>> + Sync + Send + 'a,
     {
-        async move {let transaction_input= input.into();
-        let statement = stmt.as_ref();
-        let query_parameters = params.as_ref();
+        async move {
+            let transaction_input = input.into();
+            let statement = stmt.as_ref();
+            let query_parameters = params.as_ref();
 
-        match transaction_input {
-            TransactionInput::DbConnection(conn) => {
-                conn.launch(statement, query_parameters).await
+            match transaction_input {
+                TransactionInput::DbConnection(conn) => {
+                    conn.launch(statement, query_parameters).await
+                }
+                TransactionInput::DbConnectionRef(conn) => {
+                    conn.launch(statement, query_parameters).await
+                }
+                TransactionInput::DbConnectionRefMut(/* TODO: mut*/ conn) => {
+                    conn.launch(statement, query_parameters).await
+                }
+                TransactionInput::DatasourceConfig(ds) => {
+                    // TODO: add a new from_ds_config_mut for mssql
+                    let conn = DatabaseConnection::new(&ds).await?;
+                    conn.launch(statement, query_parameters).await
+                }
+                TransactionInput::DatasourceName(ds_name) => {
+                    let sane_ds_name = if !ds_name.is_empty() {
+                        Some(ds_name)
+                    } else {
+                        None
+                    };
+                    let conn = get_database_connection_by_ds(sane_ds_name).await?;
+                    conn.launch(statement, query_parameters).await
+                }
             }
-            TransactionInput::DbConnectionRef(conn) => {
-                conn.launch(statement, query_parameters).await
-            }
-            TransactionInput::DbConnectionRefMut(/* TODO: mut*/ conn) => {
-                conn.launch(statement, query_parameters).await
-            }
-            TransactionInput::DatasourceConfig(ds) => { // TODO: add a new from_ds_config_mut for mssql
-                let conn = DatabaseConnection::new(&ds).await?;
-                conn.launch(statement, query_parameters).await
-            }
-            TransactionInput::DatasourceName(ds_name) => {
-                let sane_ds_name = if !ds_name.is_empty() { Some(ds_name) } else { None };
-                let conn = get_database_connection_by_ds(sane_ds_name).await?;
-                conn.launch(statement, query_parameters).await
-            }
-        }}
+        }
     }
 }
 

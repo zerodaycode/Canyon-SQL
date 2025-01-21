@@ -1,11 +1,11 @@
 use canyon_core::{
     column::Column,
+    connection::{
+        datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
+    },
     query::Transaction,
     row::{Row, RowOperations},
     rows::CanyonRows,
-    connection::{
-        datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
-    }
 };
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;

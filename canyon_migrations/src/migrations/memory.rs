@@ -67,7 +67,8 @@ impl CanyonMemory {
         // TODO: can't we get the target DS while in the migrations at call site and avoid to
         // duplicate calls to the pool?
         let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
-        let db_conn = canyon_core::connection::get_database_connection(&datasource.name, &mut conn_cache);
+        let db_conn =
+            canyon_core::connection::get_database_connection(&datasource.name, &mut conn_cache);
 
         // Creates the memory table if not exists
         Self::create_memory(&datasource.name, db_conn, &datasource.get_db_type()).await;

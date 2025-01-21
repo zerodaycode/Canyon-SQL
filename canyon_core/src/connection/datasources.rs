@@ -2,7 +2,6 @@ use serde::Deserialize;
 
 use super::database_type::DatabaseType;
 
-
 /// ```
 #[test]
 fn load_ds_config_from_array() {

@@ -5,7 +5,8 @@ use quote::quote;
 
 use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
-const SELECT_ALL_BASE_DOC_COMMENT: &str = "/// Performs a `SELECT * FROM table_name`, where `table_name` it's \
+const SELECT_ALL_BASE_DOC_COMMENT: &str =
+    "/// Performs a `SELECT * FROM table_name`, where `table_name` it's \
         /// the name of your entity but converted to the corresponding \
         /// database convention. P.ej. PostgreSQL prefers table names declared \
         /// with snake_case identifiers.";
@@ -16,15 +17,15 @@ fn generate_function(
     stmt: &str,
     with_lifetime: bool,
     with_unwrap: bool,
-    base_doc_comment: &str
+    base_doc_comment: &str,
 ) -> TokenStream {
     let fn_name = {
-        let fn_name_ident = syn::Ident::new(name, Span::call_site()); 
+        let fn_name_ident = syn::Ident::new(name, Span::call_site());
         quote! { #fn_name_ident }
     };
 
     let doc_comment: &str;
-    let mut datasource_param  = quote! {};
+    let mut datasource_param = quote! {};
     let mut datasource_arg = quote! { "" };
 
     if has_datasource {
@@ -36,14 +37,22 @@ fn generate_function(
         doc_comment = "/// The query is made against the default datasource configured in the configuration file.";
     }
 
-    let (err_type, lt) = if with_lifetime { 
-        (quote!{ Box<(dyn std::error::Error + Send + Sync + 'a)> }, quote!{ <'a> })
-    } else { (quote!{ Box<(dyn std::error::Error + Send + Sync)> }, quote!{} )};
+    let (err_type, lt) = if with_lifetime {
+        (
+            quote! { Box<(dyn std::error::Error + Send + Sync + 'a)> },
+            quote! { <'a> },
+        )
+    } else {
+        (
+            quote! { Box<(dyn std::error::Error + Send + Sync)> },
+            quote! {},
+        )
+    };
 
     let (return_type, with_unwrap) = if with_unwrap {
-        (quote!{ Vec<#ty> }, quote!{ .unwrap() })
+        (quote! { Vec<#ty> }, quote! { .unwrap() })
     } else {
-        (quote!{ Result<Vec<#ty>, #err_type> }, quote!{})
+        (quote! { Result<Vec<#ty>, #err_type> }, quote! {})
     };
 
     quote! {
@@ -75,16 +84,40 @@ pub fn generate_find_all_tokens(
     // and also, we could use the const_format crate
 
     let find_all = generate_function(
-        "find_all", false, ty, &stmt, false, false, SELECT_ALL_BASE_DOC_COMMENT
+        "find_all",
+        false,
+        ty,
+        &stmt,
+        false,
+        false,
+        SELECT_ALL_BASE_DOC_COMMENT,
     );
     let find_all_datasource = generate_function(
-        "find_all_datasource", true, ty, &stmt, true, false, SELECT_ALL_BASE_DOC_COMMENT
+        "find_all_datasource",
+        true,
+        ty,
+        &stmt,
+        true,
+        false,
+        SELECT_ALL_BASE_DOC_COMMENT,
     );
     let find_all_unchecked = generate_function(
-        "find_all_unchecked", false, ty, &stmt, false, true, SELECT_ALL_BASE_DOC_COMMENT
+        "find_all_unchecked",
+        false,
+        ty,
+        &stmt,
+        false,
+        true,
+        SELECT_ALL_BASE_DOC_COMMENT,
     );
     let find_all_unchecked_ds = generate_function(
-        "find_all_unchecked_datasource", true, ty, &stmt, true, true, SELECT_ALL_BASE_DOC_COMMENT
+        "find_all_unchecked_datasource",
+        true,
+        ty,
+        &stmt,
+        true,
+        true,
+        SELECT_ALL_BASE_DOC_COMMENT,
     );
 
     quote! {

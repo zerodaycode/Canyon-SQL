@@ -11,9 +11,8 @@ pub extern crate mysql_async;
 
 pub extern crate lazy_static;
 
-
-pub mod connection;
 pub mod column;
+pub mod connection;
 pub mod mapper;
 pub mod query;
 pub mod query_parameters;

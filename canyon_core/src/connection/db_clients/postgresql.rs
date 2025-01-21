@@ -1,4 +1,3 @@
-use async_trait::async_trait;
 use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
 
 #[cfg(feature = "postgres")]
@@ -11,14 +10,15 @@ pub struct PostgreSqlConnection {
     // pub connection: Connection<Socket, NoTlsStream>, // TODO Hold it, or not to hold it... that's the question!
 }
 
-#[async_trait]
 impl DbConnection for PostgreSqlConnection {
-    async fn launch<'a>(
+    fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
-        postgres_query_launcher::launch(stmt, params, self).await
+    ) -> impl std::future::Future<
+        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+    > + Send {
+        postgres_query_launcher::launch(stmt, params, self)
     }
 }
 
