@@ -22,7 +22,6 @@ use query_operations::{
     select::{
         // generate_count_tokens, generate_find_all_query_tokens, 
         generate_find_all_tokens,
-        generate_find_all_unchecked_tokens, 
         // generate_find_by_foreign_key_tokens,
         // generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
     },
@@ -248,10 +247,8 @@ fn impl_crud_operations_trait_for_struct(
     let ty = macro_data.ty;
 
     // Builds the find_all() query
-    let _find_all_unchecked_tokens =
-        generate_find_all_unchecked_tokens(macro_data, &table_schema_data);
-    // Builds the find_all_result() query
-    let _find_all_tokens = generate_find_all_tokens(macro_data, &table_schema_data);
+    let _find_all_tokens =
+        generate_find_all_tokens(macro_data, &table_schema_data);
     // Builds the find_all_query() query as a QueryBuilder
     // let _find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
 
@@ -300,9 +297,6 @@ fn impl_crud_operations_trait_for_struct(
     let crud_operations_tokens = quote! {
         // The find_all_result impl
         #_find_all_tokens
-
-        // The find_all impl
-        #_find_all_unchecked_tokens
 
         // // The find_all_query impl
         // #_find_all_query_tokens
