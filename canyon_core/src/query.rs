@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, future::Future};
 
 use async_trait::async_trait;
 
@@ -16,23 +16,22 @@ pub trait DbConnection {
     ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>;
 }
 
-#[async_trait]
 pub trait Transaction<T> {
     // provisional name
     /// Performs a query against the targeted database by the selected or
     /// the defaulted datasource, wrapping the resultant collection of entities
     /// in [`super::rows::CanyonRows`]
-    async fn query<'a, S, Z, I>(
+    fn query<'a, S, Z, I>(
         stmt: S,
         params: Z,
         input: I,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
         I: Into<TransactionInput<'a>> + Sync + Send + 'a
     {
-        let transaction_input= input.into();
+        async move {let transaction_input= input.into();
         let statement = stmt.as_ref();
         let query_parameters = params.as_ref();
 
@@ -55,7 +54,7 @@ pub trait Transaction<T> {
                 let conn = get_database_connection_by_ds(sane_ds_name).await?;
                 conn.launch(statement, query_parameters).await
             }
-        }
+        }}
     }
 }
 
