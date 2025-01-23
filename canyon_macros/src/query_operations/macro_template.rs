@@ -4,6 +4,7 @@ use syn::{Type, parse_quote};
 
 pub struct MacroOperationBuilder {
     fn_name: Option<Ident>,
+    user_type: Option<Ident>,
     lifetime: bool, // bool true always will generate <'a>
     datasource_param: Option<TokenStream>,
     datasource_arg: TokenStream,
@@ -18,10 +19,17 @@ pub struct MacroOperationBuilder {
     with_unwrap: bool,
 }
 
+impl ToTokens for MacroOperationBuilder {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        tokens.extend(self.generate_tokens());
+    }
+}
+
 impl MacroOperationBuilder {
     pub fn new() -> Self {
         Self {
             fn_name: None,
+            user_type: None,
             lifetime: false,
             datasource_param: None,
             datasource_arg: quote! { "" },
@@ -47,6 +55,19 @@ impl MacroOperationBuilder {
 
     pub fn fn_name(mut self, name: &str) -> Self {
         self.fn_name = Some(Ident::new(name, Span::call_site()));
+        self
+    }
+
+    fn get_user_type(&self) -> TokenStream {
+        if let Some(user_type) = &self.user_type {
+            quote!{ #user_type }
+        } else {
+            panic!("No T type provided for determining the operations implementor")
+        }
+    }
+
+    pub fn user_type(mut self, ty: &Ident) -> Self {
+        self.user_type = Some(ty.clone());
         self
     }
 
@@ -138,8 +159,8 @@ impl MacroOperationBuilder {
         } else { quote!{ &[] } }
     }
 
-    pub fn with_unwrap(mut self, value: bool) -> Self {
-        self.with_unwrap = value;
+    pub fn with_unwrap(mut self) -> Self {
+        self.with_unwrap = true;
         self
     }
 
@@ -149,8 +170,9 @@ impl MacroOperationBuilder {
         let base_doc_comment = &self.base_doc_comment;
         let doc_comment = &self.doc_comment;
         
+        let ty = self.get_user_type();
         let fn_name = self.get_fn_name();
-        let lifetime = self.get_lifetime();
+        let lifetime = self.get_lifetime(); // TODO: generics instead
 
         let datasource_param = self.get_datasource_param();
         let datasource_name = self.get_datasource_arg();
@@ -167,12 +189,12 @@ impl MacroOperationBuilder {
         };
 
         let body_tokens = quote!{
-            <User as canyon_sql::core::Transaction<User>>::query(
+            <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 #query_string,
                 #forwarded_parameters,
                 #datasource_name
             ).await
-            .into_results::<User>()
+            .into_results::<#ty>()
         };
 
         let separate_params = if self.input_parameters.is_some() && self.datasource_param.is_some() {
@@ -198,19 +220,19 @@ mod tests {
     
     #[test]
     fn test_find_operation_tokens() {
-        let ret_type = Ident::new("User", Span::call_site());
+        let user_type = Ident::new("User", Span::call_site());
 
         let find_operation = MacroOperationBuilder::new()
             .fn_name("find_user_by_id")
+            .user_type(&user_type)
             .with_datasource_param()
-            .return_type(&ret_type)
+            .return_type(&user_type)
             .base_doc_comment("Finds a user by their ID.")
             .doc_comment("This operation retrieves a single user record based on the provided ID.")
             .query_string("SELECT * FROM users WHERE id = ?")
             .input_parameters(quote! { id: &dyn QueryParameters<'_> })
             .forwarded_parameters(quote!{ &[id] })
-            .single_result()
-            .with_unwrap(false);
+            .single_result();
 
         let generated_tokens = find_operation.generate_tokens();
         let expected_tokens = quote! {
@@ -234,15 +256,15 @@ mod tests {
 
     #[test]
     fn test_find_all_operation_tokens() {
-        let ret_type = Ident::new("User", Span::call_site());
+        let user_type = Ident::new("User", Span::call_site());
 
         let find_operation = MacroOperationBuilder::new()
             .fn_name("find_all")
-            .return_type(&ret_type)
+            .user_type(&user_type)
+            .return_type(&user_type)
             .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
             .doc_comment("This operation retrieves all the users records stored with the default datasource")
-            .query_string("SELECT * FROM users")
-            .with_unwrap(false);
+            .query_string("SELECT * FROM users");
 
         let generated_tokens = find_operation.generate_tokens();
         let expected_tokens = quote! {
@@ -266,16 +288,16 @@ mod tests {
 
     #[test]
     fn test_find_all_datasource_operation_tokens() {
-        let ret_type = Ident::new("User", Span::call_site());
+        let user_type = Ident::new("User", Span::call_site());
 
         let find_operation = MacroOperationBuilder::new()
             .fn_name("find_all_datasource")
+            .user_type(&user_type)
             .with_datasource_param()
-            .return_type(&ret_type)
+            .return_type(&user_type)
             .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
             .doc_comment("This operation retrieves all the users records stored in the provided datasource")
-            .query_string("SELECT * FROM users")
-            .with_unwrap(false);
+            .query_string("SELECT * FROM users");
 
         let generated_tokens = find_operation.generate_tokens();
         let expected_tokens = quote! {
