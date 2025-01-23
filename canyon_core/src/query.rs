@@ -3,7 +3,7 @@ use crate::{
         datasources::DatasourceConfig, db_connector::DatabaseConnection,
         get_database_connection_by_ds,
     },
-    query_parameters::{self, QueryParameter},
+    query_parameters::QueryParameter,
     rows::CanyonRows,
 };
 use std::{fmt::Display, future::Future};

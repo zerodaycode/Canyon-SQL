@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+#![allow(unused_variables)]
+#![allow(unused_imports)]
+
 extern crate proc_macro;
 
 mod canyon_entity_macro;
