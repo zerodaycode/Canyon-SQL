@@ -24,8 +24,8 @@ pub fn generate_find_all_tokens(
         .fn_name("find_all")
         .user_type(ty)
         .return_type(ty)
-        .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-        .doc_comment("This operation retrieves all the users records stored with the default datasource")
+        .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
+        .add_doc_comment("This operation retrieves all the users records stored with the default datasource")
         .query_string(&stmt);
 
     let find_all_datasource = MacroOperationBuilder::new()
@@ -33,16 +33,16 @@ pub fn generate_find_all_tokens(
         .user_type(ty)
         .return_type(ty)
         .with_datasource_param()
-        .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-        .doc_comment("This operation retrieves all the users records stored with the provided datasource")
+        .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
+        .add_doc_comment("This operation retrieves all the users records stored with the provided datasource")
         .query_string(&stmt);
 
     let find_all_unchecked = MacroOperationBuilder::new()
         .fn_name("find_all_unchecked")
         .user_type(ty)
         .return_type(ty)
-        .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-        .doc_comment("This operation retrieves all the users records stored with the provided datasource")
+        .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
+        .add_doc_comment("This operation retrieves all the users records stored with the provided datasource")
         .query_string(&stmt)
         .with_unwrap();
 
@@ -51,8 +51,8 @@ pub fn generate_find_all_tokens(
         .user_type(ty)
         .return_type(ty)
         .with_datasource_param()
-        .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-        .doc_comment("This operation retrieves all the users records stored with the provided datasource")
+        .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
+        .add_doc_comment("This operation retrieves all the users records stored with the provided datasource")
         .query_string(&stmt)
         .with_unwrap();
 
@@ -126,15 +126,16 @@ pub fn generate_count_tokens(
         canyon_sql::core::CanyonRows::MySQL(mut v) => v.remove(0)
                 .get::<i64, usize>(0)
                 .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
-            _ => panic!() // TODO remove when the generics will be refactored
+        
+        _ => panic!() // TODO remove when the generics will be refactored
     };
 
     let count = MacroOperationBuilder::new()
         .fn_name("count")
         .user_type(ty)
         .return_type(&syn::Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
-        .base_doc_comment("Performs a COUNT(*) query over the table related to the entity T'")
-        .doc_comment("Executed with the default datasource")
+        .add_doc_comment("Performs a COUNT(*) query over the table related to the entity T'")
+        .add_doc_comment("Executed with the default datasource")
         .query_string(&stmt)
         .transaction_as_variable(quote!{
             match transaction_result { // NOTE: dark magic. Should be refactored
@@ -150,8 +151,8 @@ pub fn generate_count_tokens(
         .user_type(ty)
         .with_datasource_param()
         .return_type(&syn::Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
-        .base_doc_comment("Performs a COUNT(*) query over the table related to the entity T'")
-        .doc_comment("It will be executed with the specified datasource")
+        .add_doc_comment("Performs a COUNT(*) query over the table related to the entity T'")
+        .add_doc_comment("It will be executed with the specified datasource") // TODO: doc_comment as collection of comments as tokens on the format of #[doc = "..."] n times, as much as doc_comments added
         .query_string(&stmt)
         .transaction_as_variable(quote!{
             match transaction_result {

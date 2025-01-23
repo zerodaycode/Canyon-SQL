@@ -9,8 +9,7 @@ pub struct MacroOperationBuilder {
     datasource_param: Option<TokenStream>,
     datasource_arg: Option<TokenStream>,
     return_type: Option<Ident>,
-    base_doc_comment: Option<String>,
-    doc_comment: Option<String>,
+    doc_comments: Vec<String>,
     body_tokens: Option<TokenStream>,
     query_string: Option<String>,
     input_parameters: Option<TokenStream>,
@@ -39,8 +38,7 @@ impl MacroOperationBuilder {
             datasource_param: None,
             datasource_arg: None,
             return_type: None,
-            base_doc_comment: None,
-            doc_comment: None,
+            doc_comments: Vec::new(),
             body_tokens: None,
             query_string: None,
             input_parameters: None,
@@ -142,13 +140,8 @@ impl MacroOperationBuilder {
         self
     }
 
-    pub fn base_doc_comment(mut self, comment: &str) -> Self {
-        self.base_doc_comment = Some(comment.to_string());
-        self
-    }
-
-    pub fn doc_comment(mut self, comment: &str) -> Self {
-        self.doc_comment = Some(comment.to_string());
+    pub fn add_doc_comment(mut self, comment: &str) -> Self {
+        self.doc_comments.push(comment.to_string());
         self
     }
 
@@ -216,8 +209,10 @@ impl MacroOperationBuilder {
 
     /// Generates the final `quote!` tokens for this operation
     pub fn generate_tokens(&self) -> proc_macro2::TokenStream {
-        let base_doc_comment = &self.base_doc_comment;
-        let doc_comment = &self.doc_comment;
+        let doc_comments = &self.doc_comments
+            .iter()
+            .map(|doc_comment| quote! { #[doc = #doc_comment] })
+            .collect::<Vec<_>>();
         
         let ty = self.get_user_type();
         let fn_name = self.get_fn_name();
@@ -256,8 +251,7 @@ impl MacroOperationBuilder {
         } else { quote! {} };
 
         quote! {
-            #[doc = #base_doc_comment]
-            #[doc = #doc_comment]
+            #(#doc_comments)*
             async fn #fn_name #lifetime(#fn_parameters #separate_params #datasource_param) -> #return_type {
                 #body_tokens
                 #unwrap
@@ -281,8 +275,8 @@ mod tests {
             .user_type(&user_type)
             .with_datasource_param()
             .return_type(&user_type)
-            .base_doc_comment("Finds a user by their ID.")
-            .doc_comment("This operation retrieves a single user record based on the provided ID.")
+            .add_doc_comment("Finds a user by their ID.")
+            .add_doc_comment("This operation retrieves a single user record based on the provided ID.")
             .query_string("SELECT * FROM users WHERE id = ?")
             .input_parameters(quote! { id: &dyn QueryParameters<'_> })
             .forwarded_parameters(quote!{ &[id] })
@@ -316,8 +310,8 @@ mod tests {
             .fn_name("find_all")
             .user_type(&user_type)
             .return_type(&user_type)
-            .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-            .doc_comment("This operation retrieves all the users records stored with the default datasource")
+            .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
+            .add_doc_comment("This operation retrieves all the users records stored with the default datasource")
             .query_string("SELECT * FROM users");
 
         let generated_tokens = find_operation.generate_tokens();
@@ -349,8 +343,8 @@ mod tests {
             .user_type(&user_type)
             .with_datasource_param()
             .return_type(&user_type)
-            .base_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-            .doc_comment("This operation retrieves all the users records stored in the provided datasource")
+            .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
+            .add_doc_comment("This operation retrieves all the users records stored in the provided datasource")
             .query_string("SELECT * FROM users");
 
         let generated_tokens = find_operation.generate_tokens();
