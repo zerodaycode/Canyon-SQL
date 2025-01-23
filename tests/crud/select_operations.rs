@@ -142,37 +142,37 @@ fn test_crud_find_all_unchecked_datasource() {
 //     );
 // }
 
-// /// Counts how many rows contains an entity on the target database.
-// #[cfg(feature = "postgres")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_count_operation() {
-//     assert_eq!(
-//         League::find_all().await.unwrap().len() as i64,
-//         League::count().await.unwrap()
-//     );
-// }
+/// Counts how many rows contains an entity on the target database.
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_count_operation() {
+    assert_eq!(
+        League::find_all().await.unwrap().len() as i64,
+        League::count().await.unwrap()
+    );
+}
 
-// /// Counts how many rows contains an entity on the target database using
-// /// the specified datasource mssql
-// #[cfg(feature = "mssql")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_count_datasource_operation_mssql() {
-//     assert_eq!(
-//         League::find_all_datasource(SQL_SERVER_DS)
-//             .await
-//             .unwrap()
-//             .len() as i64,
-//         League::count_datasource(SQL_SERVER_DS).await.unwrap()
-//     );
-// }
+/// Counts how many rows contains an entity on the target database using
+/// the specified datasource mssql
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_count_datasource_operation_mssql() {
+    assert_eq!(
+        League::find_all_datasource(SQL_SERVER_DS)
+            .await
+            .unwrap()
+            .len() as i64,
+        League::count_datasource(SQL_SERVER_DS).await.unwrap()
+    );
+}
 
-// /// Counts how many rows contains an entity on the target database using
-// /// the specified datasource mysql
-// #[cfg(feature = "mysql")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_count_datasource_operation_mysql() {
-//     assert_eq!(
-//         League::find_all_datasource(MYSQL_DS).await.unwrap().len() as i64,
-//         League::count_datasource(MYSQL_DS).await.unwrap()
-//     );
-// }
+/// Counts how many rows contains an entity on the target database using
+/// the specified datasource mysql
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_count_datasource_operation_mysql() {
+    assert_eq!(
+        League::find_all_datasource(MYSQL_DS).await.unwrap().len() as i64,
+        League::count_datasource(MYSQL_DS).await.unwrap()
+    );
+}

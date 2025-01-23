@@ -7,7 +7,7 @@ pub struct MacroOperationBuilder {
     user_type: Option<Ident>,
     lifetime: bool, // bool true always will generate <'a>
     datasource_param: Option<TokenStream>,
-    datasource_arg: TokenStream,
+    datasource_arg: Option<TokenStream>,
     return_type: Option<Ident>,
     base_doc_comment: Option<String>,
     doc_comment: Option<String>,
@@ -17,6 +17,11 @@ pub struct MacroOperationBuilder {
     forwarded_parameters: Option<TokenStream>,
     single_result: bool,
     with_unwrap: bool,
+    transaction_as_variable: bool,
+    disable_mapping: bool,
+    raw_return: bool,
+    propagate_transaction_result: bool,
+    post_body: Option<TokenStream>,
 }
 
 impl ToTokens for MacroOperationBuilder {
@@ -26,13 +31,13 @@ impl ToTokens for MacroOperationBuilder {
 }
 
 impl MacroOperationBuilder {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             fn_name: None,
             user_type: None,
             lifetime: false,
             datasource_param: None,
-            datasource_arg: quote! { "" },
+            datasource_arg: None,
             return_type: None,
             base_doc_comment: None,
             doc_comment: None,
@@ -42,6 +47,11 @@ impl MacroOperationBuilder {
             forwarded_parameters: None,
             single_result: false,
             with_unwrap: false,
+            transaction_as_variable: false,
+            disable_mapping: false,
+            raw_return: false,
+            propagate_transaction_result: false,
+            post_body: None,
         }
     }
 
@@ -80,13 +90,18 @@ impl MacroOperationBuilder {
         quote! { #ds_param }
     }
 
-    fn get_datasource_arg(&self) -> &TokenStream {
-        &self.datasource_arg
+    fn get_datasource_arg(&self) -> TokenStream {
+        if let Some(ds_arg) = &self.datasource_arg {
+            let ds_arg0 = ds_arg;
+            quote! { #ds_arg0 }
+        } else {
+            quote! { "" }
+        }
     }
 
     pub fn with_datasource_param(mut self) -> Self {
         self.datasource_param = Some(quote! { datasource_name: &'a str });
-        self.datasource_arg = quote! { datasource_name };
+        self.datasource_arg = Some(quote! { datasource_name });
         self.lifetime = true;
         self
     }
@@ -97,8 +112,14 @@ impl MacroOperationBuilder {
             quote! { Option }
         } else { quote! { Vec } };
 
+        let ret_type = if self.raw_return {
+            quote! { #organic_ret_type }
+        } else {
+            quote! { #container_ret_type<#organic_ret_type> }
+        };
+
         match &self.with_unwrap { // TODO: distinguish collection from 1 results
-            true => quote! { #container_ret_type<#organic_ret_type> },
+            true => quote! { #ret_type },
             false => {
                 let err_variant = if self.lifetime {
                     quote! { Box<(dyn std::error::Error + Send + Sync + 'a)> }
@@ -106,7 +127,7 @@ impl MacroOperationBuilder {
                     quote! { Box<(dyn std::error::Error + Send + Sync)>}
                 };
 
-                quote! { Result<#container_ret_type<#organic_ret_type>, #err_variant> }
+                quote! { Result<#ret_type, #err_variant> }
             }
         }
     }
@@ -159,11 +180,39 @@ impl MacroOperationBuilder {
         } else { quote!{ &[] } }
     }
 
+    pub fn get_unwrap(&self) -> TokenStream {
+        if self.with_unwrap {
+            quote! { .unwrap() }
+        } else {
+            quote! {}
+        }
+    }
+
     pub fn with_unwrap(mut self) -> Self {
         self.with_unwrap = true;
         self
     }
 
+    pub fn transaction_as_variable(mut self, result_handling: TokenStream) -> Self {
+        self.transaction_as_variable = true;
+        self.post_body = Some(result_handling);
+        self
+    }
+
+    pub fn disable_mapping(mut self) -> Self {
+        self.disable_mapping = true;
+        self
+    }
+
+    pub fn raw_return(mut self) -> Self {
+        self.raw_return = true;
+        self
+    }
+
+    pub fn propagate_transaction_result(mut self) -> Self {
+        self.propagate_transaction_result = true;
+        self
+    }
 
     /// Generates the final `quote!` tokens for this operation
     pub fn generate_tokens(&self) -> proc_macro2::TokenStream {
@@ -182,20 +231,25 @@ impl MacroOperationBuilder {
         let forwarded_parameters = self.get_forwarded_parameters();
         let return_type = self.get_return_type();
         
-        let unwrap_tokens = if self.with_unwrap {
-            quote! { .unwrap() }
-        } else {
-            quote! {}
-        };
+        let unwrap = self.get_unwrap();
 
-        let body_tokens = quote!{
+        let mut base_body_tokens = quote! {
             <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 #query_string,
                 #forwarded_parameters,
                 #datasource_name
             ).await
-            .into_results::<#ty>()
         };
+        if self.propagate_transaction_result { base_body_tokens.extend(quote! { ? }) };
+        if !self.disable_mapping { base_body_tokens.extend(quote! { .into_results::<#ty>() }) };
+
+        let body_tokens = if self.transaction_as_variable {
+            let result_handling = &self.post_body;
+            quote! {
+                let transaction_result = #base_body_tokens;
+                #result_handling
+            }
+        } else { base_body_tokens };
 
         let separate_params = if self.input_parameters.is_some() && self.datasource_param.is_some() {
             quote! {, }
@@ -206,7 +260,7 @@ impl MacroOperationBuilder {
             #[doc = #doc_comment]
             async fn #fn_name #lifetime(#fn_parameters #separate_params #datasource_param) -> #return_type {
                 #body_tokens
-                #unwrap_tokens
+                #unwrap
             }
         }
     }

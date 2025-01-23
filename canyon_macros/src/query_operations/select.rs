@@ -6,70 +6,6 @@ use quote::quote;
 use crate::query_operations::macro_template::MacroOperationBuilder;
 use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
-const SELECT_ALL_BASE_DOC_COMMENT: &str =
-    "/// Performs a `SELECT * FROM table_name`, where `table_name` it's \
-        /// the name of your entity but converted to the corresponding \
-        /// database convention. P.ej. PostgreSQL prefers table names declared \
-        /// with snake_case identifiers.";
-fn generate_function(
-    name: &str,
-    has_datasource: bool,
-    ty: &syn::Ident,
-    stmt: &str,
-    with_lifetime: bool,
-    with_unwrap: bool,
-    base_doc_comment: &str,
-) -> TokenStream {
-    let fn_name = {
-        let fn_name_ident = syn::Ident::new(name, Span::call_site());
-        quote! { #fn_name_ident }
-    };
-
-    let doc_comment: &str;
-    let mut datasource_param = quote! {};
-    let mut datasource_arg = quote! { "" };
-
-    if has_datasource {
-        doc_comment = "/// The query is made against the database with the configured datasource \
-            /// described in the configuration file, and selected with the [`&str`] passed as parameter.";
-        datasource_param = quote! { datasource_name: &'a str };
-        datasource_arg = quote! { datasource_name };
-    } else {
-        doc_comment = "/// The query is made against the default datasource configured in the configuration file.";
-    }
-
-    let (err_type, lt) = if with_lifetime {
-        (
-            quote! { Box<(dyn std::error::Error + Send + Sync + 'a)> },
-            quote! { <'a> },
-        )
-    } else {
-        (
-            quote! { Box<(dyn std::error::Error + Send + Sync)> },
-            quote! {},
-        )
-    };
-
-    let (return_type, with_unwrap) = if with_unwrap {
-        (quote! { Vec<#ty> }, quote! { .unwrap() })
-    } else {
-        (quote! { Result<Vec<#ty>, #err_type> }, quote! {})
-    };
-
-    quote! {
-        #[doc = #base_doc_comment]
-        #[doc = #doc_comment]
-        async fn #fn_name #lt(#datasource_param) -> #return_type {
-            <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                #stmt,
-                &[],
-                #datasource_arg
-            ).await
-            .into_results::<#ty>()
-            #with_unwrap
-        }
-    }
-}
 
 /// Generates the TokenStream for build the __find_all() CRUD
 /// associated function
@@ -136,13 +72,13 @@ pub fn generate_find_all_tokens(
 //     let ty = macro_data.ty;
 
 //     quote! {
-//         /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
-//         /// that allows you to customize the query by adding parameters and constrains dynamically.
-//         ///
-//         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-//         /// entity but converted to the corresponding database convention,
-//         /// unless concrete values are set on the available parameters of the
-//         /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        // / Generates a [`canyon_sql::query::SelectQueryBuilder`]
+        // / that allows you to customize the query by adding parameters and constrains dynamically.
+        // /
+        // / It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        // / entity but converted to the corresponding database convention,
+        // / unless concrete values are set on the available parameters of the
+        // / `canyon_macro(table_name = "table_name", schema = "schema")`
 //         fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
 //             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
 //         }
@@ -164,65 +100,73 @@ pub fn generate_find_all_tokens(
 //     }
 // }
 
-// /// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
-// /// a possible success or error coming from the database
-// pub fn generate_count_tokens(
-//     macro_data: &MacroTokens<'_>,
-//     table_schema_data: &String,
-// ) -> TokenStream {
-//     let ty = macro_data.ty;
-//     let ty_str = &ty.to_string();
-//     let stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
+/// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
+/// a possible success or error coming from the database
+pub fn generate_count_tokens(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &String,
+) -> TokenStream {
+    let ty = macro_data.ty;
+    let ty_str = &ty.to_string();
+    let stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
 
-//     let result_handling = quote! {
-//         #[cfg(feature="postgres")]
-//         canyon_sql::core::CanyonRows::Postgres(mut v) => Ok(
-//                 v.remove(0).get::<&str, i64>("count")
-//             ),
-//         #[cfg(feature="mssql")]
-//         canyon_sql::core::CanyonRows::Tiberius(mut v) =>
-//                 v.remove(0)
-//                     .get::<i32, usize>(0)
-//                     .map(|c| c as i64)
-//                     .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
-//                     .into(),
-//         #[cfg(feature="mysql")]
-//         canyon_sql::core::CanyonRows::MySQL(mut v) => v.remove(0)
-//                 .get::<i64, usize>(0)
-//                 .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
-//             _ => panic!() // TODO remove when the generics will be refactored
-//     };
+    let result_handling = quote! {
+        #[cfg(feature="postgres")]
+        canyon_sql::core::CanyonRows::Postgres(mut v) => Ok(
+                v.remove(0).get::<&str, i64>("count")
+            ),
+        #[cfg(feature="mssql")]
+        canyon_sql::core::CanyonRows::Tiberius(mut v) =>
+                v.remove(0)
+                    .get::<i32, usize>(0)
+                    .map(|c| c as i64)
+                    .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
+                    .into(),
+        #[cfg(feature="mysql")]
+        canyon_sql::core::CanyonRows::MySQL(mut v) => v.remove(0)
+                .get::<i64, usize>(0)
+                .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
+            _ => panic!() // TODO remove when the generics will be refactored
+    };
 
-//     quote! {
-//         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
-//         /// wrapping a possible success or error coming from the database
-//         async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-//             let count = <#ty as canyon_sql::core::Transaction<#ty>>::query(
-//                 #stmt,
-//                 &[],
-//                 ""
-//             ).await?;
+    let count = MacroOperationBuilder::new()
+        .fn_name("count")
+        .user_type(ty)
+        .return_type(&syn::Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
+        .base_doc_comment("Performs a COUNT(*) query over the table related to the entity T'")
+        .doc_comment("Executed with the default datasource")
+        .query_string(&stmt)
+        .transaction_as_variable(quote!{
+            match transaction_result { // NOTE: dark magic. Should be refactored
+                #result_handling
+            }
+        })
+        .propagate_transaction_result()
+        .disable_mapping()
+        .raw_return();
 
-//             match count {
-//                 #result_handling
-//             }
-//         }
+    let count_with = MacroOperationBuilder::new()
+        .fn_name("count_datasource")
+        .user_type(ty)
+        .with_datasource_param()
+        .return_type(&syn::Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
+        .base_doc_comment("Performs a COUNT(*) query over the table related to the entity T'")
+        .doc_comment("It will be executed with the specified datasource")
+        .query_string(&stmt)
+        .transaction_as_variable(quote!{
+            match transaction_result {
+                #result_handling
+            }
+        })
+        .propagate_transaction_result()
+        .disable_mapping()
+        .raw_return();
 
-//         /// Performs a COUNT(*) query over some table, returning a [`Result`] rather than panicking,
-//         /// wrapping a possible success or error coming from the database with the specified datasource
-//         async fn count_datasource<'a>(datasource_name: &'a str) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-//             let count = <#ty as canyon_sql::core::Transaction<#ty>>::query(
-//                 #stmt,
-//                 &[],
-//                 datasource_name
-//             ).await?;
-
-//             match count {
-//                 #result_handling
-//             }
-//         }
-//     }
-// }
+    quote! {
+        #count
+        #count_with
+    }
+}
 
 // /// Generates the TokenStream for build the __find_by_pk() CRUD operation
 // pub fn generate_find_by_pk_tokens(

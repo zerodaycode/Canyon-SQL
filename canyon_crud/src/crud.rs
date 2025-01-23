@@ -40,11 +40,11 @@ where
 
     // fn select_query_datasource(datasource_name: &str) -> SelectQueryBuilder<'_, T>;
 
-    // async fn count<'a>() -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>>;
 
-    // async fn count_datasource<'a>(
-    //     datasource_name: &'a str,
-    // ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    async fn count_datasource<'a>(
+        datasource_name: &'a str,
+    ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
     // async fn find_by_pk<'a>(
     //     value: &'a dyn QueryParameter<'a>,
