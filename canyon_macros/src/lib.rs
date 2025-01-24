@@ -23,8 +23,7 @@ use query_operations::{
     delete::{generate_delete_query_tokens, generate_delete_tokens},
     insert::{generate_insert_tokens, generate_multiple_insert_tokens},
     select::{
-        generate_find_all_tokens,
-        generate_count_tokens,
+        generate_read_operations_tokens,
         generate_find_all_query_tokens,
         // generate_find_by_foreign_key_tokens,
         // generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
@@ -250,13 +249,8 @@ fn impl_crud_operations_trait_for_struct(
 ) -> proc_macro::TokenStream {
     let ty = macro_data.ty;
 
-    // Builds the find_all() query
-    let _find_all_tokens = generate_find_all_tokens(macro_data, &table_schema_data);
-    // Builds the find_all_query() query as a QueryBuilder
-    let _find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
-
-    // Builds a COUNT(*) query over some table
-    let _count_tokens = generate_count_tokens(macro_data, &table_schema_data);
+    let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
+    let find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
 
     // Builds the find_by_pk() query
     // let _find_by_pk_tokens = generate_find_by_pk_tokens(macro_data, &table_schema_data);
@@ -299,13 +293,10 @@ fn impl_crud_operations_trait_for_struct(
 
     let crud_operations_tokens = quote! {
         // The find_all_result impl   // TODO: they must be wrapped into only four, C-R-U-D
-        #_find_all_tokens
+        #read_operations_tokens
 
-        // The SELECT_QUERYBUILDER
-        #_find_all_query_tokens
-
-        // The COUNT(*) impl
-        #_count_tokens
+        // The SELECT_QUERYBUILDER impl
+        #find_all_query_tokens
 
         // // The find_by_pk impl
         // #_find_by_pk_tokens
