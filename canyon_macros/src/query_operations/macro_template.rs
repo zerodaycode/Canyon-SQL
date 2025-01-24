@@ -1,14 +1,15 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Type, parse_quote};
+use syn::{parse_quote, Type};
 
 pub struct MacroOperationBuilder {
     fn_name: Option<Ident>,
     user_type: Option<Ident>,
     lifetime: bool, // bool true always will generate <'a>
-    datasource_param: Option<TokenStream>,
-    datasource_arg: Option<TokenStream>,
+    input_param: Option<TokenStream>,
+    input_fwd_arg: Option<TokenStream>,
     return_type: Option<Ident>,
+    where_clause_bounds: Vec<TokenStream>,
     doc_comments: Vec<String>,
     body_tokens: Option<TokenStream>,
     query_string: Option<String>,
@@ -35,9 +36,10 @@ impl MacroOperationBuilder {
             fn_name: None,
             user_type: None,
             lifetime: false,
-            datasource_param: None,
-            datasource_arg: None,
+            input_param: None,
+            input_fwd_arg: None,
             return_type: None,
+            where_clause_bounds: Vec::new(),
             doc_comments: Vec::new(),
             body_tokens: None,
             query_string: None,
@@ -55,7 +57,7 @@ impl MacroOperationBuilder {
 
     fn get_fn_name(&self) -> TokenStream {
         if let Some(fn_name) = &self.fn_name {
-            quote!{ #fn_name }
+            quote! { #fn_name }
         } else {
             panic!("No function name provided")
         }
@@ -68,7 +70,7 @@ impl MacroOperationBuilder {
 
     fn get_user_type(&self) -> TokenStream {
         if let Some(user_type) = &self.user_type {
-            quote!{ #user_type }
+            quote! { #user_type }
         } else {
             panic!("No T type provided for determining the operations implementor")
         }
@@ -80,17 +82,21 @@ impl MacroOperationBuilder {
     }
 
     fn get_lifetime(&self) -> TokenStream {
-        if self.lifetime { quote!{ <'a> } } else { quote!{} }
+        if self.lifetime {
+            quote! { <'a> }
+        } else {
+            quote! {}
+        }
     }
 
-    fn get_datasource_param(&self) -> TokenStream {
-        let ds_param = &self.datasource_param;
-        quote! { #ds_param }
+    fn get_input_param(&self) -> TokenStream {
+        let input_param = &self.input_param;
+        quote! { #input_param }
     }
 
-    fn get_datasource_arg(&self) -> TokenStream {
-        if let Some(ds_arg) = &self.datasource_arg {
-            let ds_arg0 = ds_arg;
+    fn get_input_arg(&self) -> TokenStream {
+        if let Some(input_arg) = &self.input_fwd_arg {
+            let ds_arg0 = input_arg;
             quote! { #ds_arg0 }
         } else {
             quote! { "" }
@@ -102,10 +108,12 @@ impl MacroOperationBuilder {
         self
     }
 
-    pub fn with_datasource_param(mut self) -> Self {
-        self.datasource_param = Some(quote! { datasource_name: &'a str });
-        self.datasource_arg = Some(quote! { datasource_name });
+    pub fn with_input_param(mut self) -> Self {
+        self.input_param = Some(quote! { input: I });
+        self.input_fwd_arg = Some(quote! { input });
         self.lifetime = true;
+        self.where_clause_bounds
+            .push(quote! { I: Into<TransactionInput<'a>> + Sync + Send + 'a });
         self
     }
 
@@ -113,7 +121,9 @@ impl MacroOperationBuilder {
         let organic_ret_type = &self.return_type;
         let container_ret_type = if self.single_result {
             quote! { Option }
-        } else { quote! { Vec } };
+        } else {
+            quote! { Vec }
+        };
 
         let ret_type = if self.raw_return {
             quote! { #organic_ret_type }
@@ -121,7 +131,8 @@ impl MacroOperationBuilder {
             quote! { #container_ret_type<#organic_ret_type> }
         };
 
-        match &self.with_unwrap { // TODO: distinguish collection from 1 results
+        match &self.with_unwrap {
+            // TODO: distinguish collection from 1 results
             true => quote! { #ret_type },
             false => {
                 let err_variant = if self.lifetime {
@@ -131,6 +142,17 @@ impl MacroOperationBuilder {
                 };
 
                 quote! { Result<#ret_type, #err_variant> }
+            }
+        }
+    }
+
+    fn get_where_clause_bounds(&self) -> TokenStream {
+        if self.where_clause_bounds.is_empty() {
+            quote! {}
+        } else {
+            let where_bounds = &self.where_clause_bounds;
+            quote! {
+                where #(#where_bounds),*
             }
         }
     }
@@ -170,15 +192,17 @@ impl MacroOperationBuilder {
         self
     }
 
-    pub fn get_forwarded_parameters(&self) -> TokenStream {
+    fn get_forwarded_parameters(&self) -> TokenStream {
         let forwarded_parameters = &self.forwarded_parameters;
 
         if let Some(fwd_params) = &self.forwarded_parameters {
             quote! { #forwarded_parameters }
-        } else { quote!{ &[] } }
+        } else {
+            quote! { &[] }
+        }
     }
 
-    pub fn get_unwrap(&self) -> TokenStream {
+    fn get_unwrap(&self) -> TokenStream {
         if self.with_unwrap {
             quote! { .unwrap() }
         } else {
@@ -214,34 +238,40 @@ impl MacroOperationBuilder {
 
     /// Generates the final `quote!` tokens for this operation
     pub fn generate_tokens(&self) -> proc_macro2::TokenStream {
-        let doc_comments = &self.doc_comments
+        let doc_comments = &self
+            .doc_comments
             .iter()
             .map(|doc_comment| quote! { #[doc = #doc_comment] })
             .collect::<Vec<_>>();
-        
+
         let ty = self.get_user_type();
         let fn_name = self.get_fn_name();
         let lifetime = self.get_lifetime(); // TODO: generics instead
 
-        let datasource_param = self.get_datasource_param();
-        let datasource_name = self.get_datasource_arg();
+        let input_param = self.get_input_param();
+        let input_fwd_arg = self.get_input_arg(); // TODO: replace
         let fn_parameters = self.get_fn_parameters();
 
         let query_string = &self.query_string;
         let forwarded_parameters = self.get_forwarded_parameters();
         let return_type = self.get_return_type();
-        
+        let where_clause = self.get_where_clause_bounds();
         let unwrap = self.get_unwrap();
 
         let mut base_body_tokens = quote! {
             <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 #query_string,
                 #forwarded_parameters,
-                #datasource_name
+                #input_fwd_arg
             ).await
         };
-        if self.propagate_transaction_result { base_body_tokens.extend(quote! { ? }) };
-        if !self.disable_mapping { base_body_tokens.extend(quote! { .into_results::<#ty>() }) };
+
+        if self.propagate_transaction_result {
+            base_body_tokens.extend(quote! { ? })
+        };
+        if !self.disable_mapping {
+            base_body_tokens.extend(quote! { .into_results::<#ty>() })
+        };
 
         let body_tokens = if self.transaction_as_variable {
             let result_handling = &self.post_body;
@@ -249,15 +279,25 @@ impl MacroOperationBuilder {
                 let transaction_result = #base_body_tokens;
                 #result_handling
             }
-        } else { base_body_tokens };
+        } else {
+            base_body_tokens
+        };
 
-        let separate_params = if self.input_parameters.is_some() && self.datasource_param.is_some() {
+        let separate_params = if self.input_parameters.is_some() && self.input_param.is_some() // TODO:
+                                                                                               // change
+                                                                                               // for
+                                                                                               // getter?
+        {
             quote! {, }
-        } else { quote! {} };
+        } else {
+            quote! {}
+        };
 
         quote! {
             #(#doc_comments)*
-            async fn #fn_name #lifetime(#fn_parameters #separate_params #datasource_param) -> #return_type {
+            async fn #fn_name #lifetime(#fn_parameters #separate_params #input_param) -> #return_type
+                #where_clause
+            {
                 #body_tokens
                 #unwrap
             }
@@ -270,7 +310,7 @@ mod tests {
     use super::*;
     use quote::quote;
     use syn::parse_quote;
-    
+
     #[test]
     fn test_find_operation_tokens() {
         let user_type = Ident::new("User", Span::call_site());
@@ -278,13 +318,15 @@ mod tests {
         let find_operation = MacroOperationBuilder::new()
             .fn_name("find_user_by_id")
             .user_type(&user_type)
-            .with_datasource_param()
+            .with_input_param()
             .return_type(&user_type)
             .add_doc_comment("Finds a user by their ID.")
-            .add_doc_comment("This operation retrieves a single user record based on the provided ID.")
+            .add_doc_comment(
+                "This operation retrieves a single user record based on the provided ID.",
+            )
             .query_string("SELECT * FROM users WHERE id = ?")
             .input_parameters(quote! { id: &dyn QueryParameters<'_> })
-            .forwarded_parameters(quote!{ &[id] })
+            .forwarded_parameters(quote! { &[id] })
             .single_result();
 
         let generated_tokens = find_operation.generate_tokens();
@@ -301,10 +343,7 @@ mod tests {
             }
         };
 
-        assert_eq!(
-            generated_tokens.to_string(),
-            expected_tokens.to_string()
-        );
+        assert_eq!(generated_tokens.to_string(), expected_tokens.to_string());
     }
 
     #[test]
@@ -316,7 +355,9 @@ mod tests {
             .user_type(&user_type)
             .return_type(&user_type)
             .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-            .add_doc_comment("This operation retrieves all the users records stored with the default datasource")
+            .add_doc_comment(
+                "This operation retrieves all the users records stored with the default datasource",
+            )
             .query_string("SELECT * FROM users");
 
         let generated_tokens = find_operation.generate_tokens();
@@ -333,10 +374,7 @@ mod tests {
             }
         };
 
-        assert_eq!(
-            generated_tokens.to_string(),
-            expected_tokens.to_string()
-        );
+        assert_eq!(generated_tokens.to_string(), expected_tokens.to_string());
     }
 
     #[test]
@@ -346,10 +384,12 @@ mod tests {
         let find_operation = MacroOperationBuilder::new()
             .fn_name("find_all_datasource")
             .user_type(&user_type)
-            .with_datasource_param()
+            .with_input_param()
             .return_type(&user_type)
             .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-            .add_doc_comment("This operation retrieves all the users records stored in the provided datasource")
+            .add_doc_comment(
+                "This operation retrieves all the users records stored in the provided datasource",
+            )
             .query_string("SELECT * FROM users");
 
         let generated_tokens = find_operation.generate_tokens();
@@ -366,10 +406,7 @@ mod tests {
             }
         };
 
-        assert_eq!(
-            generated_tokens.to_string(),
-            expected_tokens.to_string()
-        );
+        assert_eq!(generated_tokens.to_string(), expected_tokens.to_string());
     }
 
     // #[test]

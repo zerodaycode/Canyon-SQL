@@ -51,7 +51,7 @@ pub trait Transaction<T> {
                 }
                 TransactionInput::DatasourceConfig(ds) => {
                     // TODO: add a new from_ds_config_mut for mssql
-                    let conn = DatabaseConnection::new(&ds).await?;
+                    let conn = DatabaseConnection::new(ds).await?;
                     conn.launch(statement, query_parameters).await
                 }
                 TransactionInput::DatasourceName(ds_name) => {
@@ -76,7 +76,7 @@ pub enum TransactionInput<'a> {
     DatasourceName(&'a str),
 }
 
-impl<'a> From<DatabaseConnection> for TransactionInput<'a> {
+impl From<DatabaseConnection> for TransactionInput<'_> {
     fn from(conn: DatabaseConnection) -> Self {
         TransactionInput::DbConnection(conn)
     }
