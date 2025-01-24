@@ -46,14 +46,14 @@ where
         datasource_name: &'a str,
     ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    // async fn find_by_pk<'a>(
-    //     value: &'a dyn QueryParameter<'a>,
-    // ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    async fn find_by_pk<'a>(
+        value: &'a dyn QueryParameter<'a>,
+    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    // async fn find_by_pk_datasource<'a>(
-    //     value: &'a dyn QueryParameter<'a>,
-    //     datasource_name: &'a str,
-    // ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    async fn find_by_pk_datasource<'a>(
+        value: &'a dyn QueryParameter<'a>,
+        datasource_name: &'a str,
+    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
     // async fn insert<'a>(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>;
 

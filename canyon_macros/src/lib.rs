@@ -26,7 +26,7 @@ use query_operations::{
         generate_read_operations_tokens,
         generate_find_all_query_tokens,
         // generate_find_by_foreign_key_tokens,
-        // generate_find_by_pk_tokens, generate_find_by_reverse_foreign_key_tokens,
+        // generate_find_by_reverse_foreign_key_tokens,
     },
     update::{generate_update_query_tokens, generate_update_tokens},
 };
@@ -251,9 +251,6 @@ fn impl_crud_operations_trait_for_struct(
 
     let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
     let find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
-
-    // Builds the find_by_pk() query
-    // let _find_by_pk_tokens = generate_find_by_pk_tokens(macro_data, &table_schema_data);
 
     // Builds the insert() query
     let _insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);

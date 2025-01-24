@@ -97,6 +97,11 @@ impl MacroOperationBuilder {
         }
     }
 
+    pub fn with_lifetime(mut self) -> Self {
+        self.lifetime = true;
+        self
+    }
+
     pub fn with_datasource_param(mut self) -> Self {
         self.datasource_param = Some(quote! { datasource_name: &'a str });
         self.datasource_arg = Some(quote! { datasource_name });

@@ -12,3 +12,22 @@ pub const SELECT_QUERYBUILDER_DOC_COMMENT: &str =
         /// entity but converted to the corresponding database convention, \
         /// unless concrete values are set on the available parameters of the \
         /// `canyon_macro => table_name = \"table_name\", schema = \"schema\")`";
+
+pub const FIND_BY_PK: &str = 
+    "/// Finds an element on the queried table that matches the \
+        /// value of the field annotated with the `primary_key` attribute, \
+        /// filtering by the column that it's declared as the primary \
+        /// key on the database. \
+        /// \
+        /// *NOTE:* This operation it's only available if the [`CanyonEntity`] contains \
+        /// some field declared as primary key. \
+        /// \
+        /// *returns:* a [`Result<Option<T>, Error>`], wrapping a possible failure \
+        /// querying the database, or, if no errors happens, a success containing \
+        /// and Option<T> with the data found wrapped in the Some(T) variant, \
+        /// or None if the value isn't found on the table.";
+        
+pub const DS_ADVERTISING: &str =
+    "/// The query it's made against the database with the configured datasource \
+        /// described in the configuration file, and selected with the [`&str`] \
+        /// passed as parameter.";

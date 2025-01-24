@@ -73,74 +73,74 @@ fn test_crud_find_all_unchecked_datasource() {
     assert!(!find_all_result.is_empty());
 }
 
-// /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
-// /// defined with the #[primary_key] attribute over some field of the type.
-// ///
-// /// Uses the *default datasource*.
-// #[cfg(feature = "postgres")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_by_pk() {
-//     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-//         League::find_by_pk(&1).await;
-//     assert!(find_by_pk_result.as_ref().unwrap().is_some());
+/// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
+/// defined with the #[primary_key] attribute over some field of the type.
+///
+/// Uses the *default datasource*.
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_by_pk() {
+    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+        League::find_by_pk(&1).await;
+    assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
-//     let some_league = find_by_pk_result.unwrap().unwrap();
-//     assert_eq!(some_league.id, 1);
-//     assert_eq!(some_league.ext_id, 100695891328981122_i64);
-//     assert_eq!(some_league.slug, "european-masters");
-//     assert_eq!(some_league.name, "European Masters");
-//     assert_eq!(some_league.region, "EUROPE");
-//     assert_eq!(
-//         some_league.image_url,
-//         "http://static.lolesports.com/leagues/EM_Bug_Outline1.png"
-//     );
-// }
+    let some_league = find_by_pk_result.unwrap().unwrap();
+    assert_eq!(some_league.id, 1);
+    assert_eq!(some_league.ext_id, 100695891328981122_i64);
+    assert_eq!(some_league.slug, "european-masters");
+    assert_eq!(some_league.name, "European Masters");
+    assert_eq!(some_league.region, "EUROPE");
+    assert_eq!(
+        some_league.image_url,
+        "http://static.lolesports.com/leagues/EM_Bug_Outline1.png"
+    );
+}
 
-// /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
-// /// defined with the #[primary_key] attribute over some field of the type.
-// ///
-// /// Uses the *specified datasource mssql* in the second parameter of the function call.
-// #[cfg(feature = "mssql")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_by_pk_datasource_mssql() {
-//     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-//         League::find_by_pk_datasource(&27, SQL_SERVER_DS).await;
-//     assert!(find_by_pk_result.as_ref().unwrap().is_some());
+/// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
+/// defined with the #[primary_key] attribute over some field of the type.
+///
+/// Uses the *specified datasource mssql* in the second parameter of the function call.
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_by_pk_datasource_mssql() {
+    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+        League::find_by_pk_datasource(&27, SQL_SERVER_DS).await;
+    assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
-//     let some_league = find_by_pk_result.unwrap().unwrap();
-//     assert_eq!(some_league.id, 27);
-//     assert_eq!(some_league.ext_id, 107898214974993351_i64);
-//     assert_eq!(some_league.slug, "college_championship");
-//     assert_eq!(some_league.name, "College Championship");
-//     assert_eq!(some_league.region, "NORTH AMERICA");
-//     assert_eq!(
-//         some_league.image_url,
-//         "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
-//     );
-// }
+    let some_league = find_by_pk_result.unwrap().unwrap();
+    assert_eq!(some_league.id, 27);
+    assert_eq!(some_league.ext_id, 107898214974993351_i64);
+    assert_eq!(some_league.slug, "college_championship");
+    assert_eq!(some_league.name, "College Championship");
+    assert_eq!(some_league.region, "NORTH AMERICA");
+    assert_eq!(
+        some_league.image_url,
+        "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
+    );
+}
 
-// /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
-// /// defined with the #[primary_key] attribute over some field of the type.
-// ///
-// /// Uses the *specified datasource mysql* in the second parameter of the function call.
-// #[cfg(feature = "mysql")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_by_pk_datasource_mysql() {
-//     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-//         League::find_by_pk_datasource(&27, MYSQL_DS).await;
-//     assert!(find_by_pk_result.as_ref().unwrap().is_some());
+/// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
+/// defined with the #[primary_key] attribute over some field of the type.
+///
+/// Uses the *specified datasource mysql* in the second parameter of the function call.
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_by_pk_datasource_mysql() {
+    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+        League::find_by_pk_datasource(&27, MYSQL_DS).await;
+    assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
-//     let some_league = find_by_pk_result.unwrap().unwrap();
-//     assert_eq!(some_league.id, 27);
-//     assert_eq!(some_league.ext_id, 107898214974993351_i64);
-//     assert_eq!(some_league.slug, "college_championship");
-//     assert_eq!(some_league.name, "College Championship");
-//     assert_eq!(some_league.region, "NORTH AMERICA");
-//     assert_eq!(
-//         some_league.image_url,
-//         "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
-//     );
-// }
+    let some_league = find_by_pk_result.unwrap().unwrap();
+    assert_eq!(some_league.id, 27);
+    assert_eq!(some_league.ext_id, 107898214974993351_i64);
+    assert_eq!(some_league.slug, "college_championship");
+    assert_eq!(some_league.name, "College Championship");
+    assert_eq!(some_league.region, "NORTH AMERICA");
+    assert_eq!(
+        some_league.image_url,
+        "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
+    );
+}
 
 /// Counts how many rows contains an entity on the target database.
 #[cfg(feature = "postgres")]
