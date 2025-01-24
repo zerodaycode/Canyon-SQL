@@ -36,9 +36,9 @@ where
 
     async fn find_all_unchecked_datasource<'a>(datasource_name: &'a str) -> Vec<T>;
 
-    // fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
+    fn select_query<'a>() -> SelectQueryBuilder<'a, T>;
 
-    // fn select_query_datasource(datasource_name: &str) -> SelectQueryBuilder<'_, T>;
+    fn select_query_datasource(datasource_name: &str) -> SelectQueryBuilder<'_, T>;
 
     async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>>;
 

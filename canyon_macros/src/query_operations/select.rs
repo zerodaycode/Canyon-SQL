@@ -64,41 +64,41 @@ pub fn generate_find_all_tokens(
     }
 }
 
-// /// Same as above, but with a [`canyon_sql::query::QueryBuilder`]
-// pub fn generate_find_all_query_tokens(
-//     macro_data: &MacroTokens<'_>,
-//     table_schema_data: &String,
-// ) -> TokenStream {
-//     let ty = macro_data.ty;
+/// Same as above, but with a [`canyon_sql::query::QueryBuilder`]
+pub fn generate_find_all_query_tokens(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &String,
+) -> TokenStream {
+    let ty = macro_data.ty;
 
-//     quote! {
-        // / Generates a [`canyon_sql::query::SelectQueryBuilder`]
-        // / that allows you to customize the query by adding parameters and constrains dynamically.
-        // /
-        // / It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        // / entity but converted to the corresponding database convention,
-        // / unless concrete values are set on the available parameters of the
-        // / `canyon_macro(table_name = "table_name", schema = "schema")`
-//         fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
-//             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
-//         }
+    quote! {
+        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        ///
+        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are set on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
+        }
 
-//         /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
-//         /// that allows you to customize the query by adding parameters and constrains dynamically.
-//         ///
-//         /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-//         /// entity but converted to the corresponding database convention,
-//         /// unless concrete values are set on the available parameters of the
-//         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-//         ///
-//         /// The query it's made against the database with the configured datasource
-//         /// described in the configuration file, and selected with the [`&str`]
-//         /// passed as parameter.
-//         fn select_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
-//             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, datasource_name)
-//         }
-//     }
-// }
+        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        ///
+        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are set on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        ///
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, and selected with the [`&str`]
+        /// passed as parameter.
+        fn select_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, datasource_name)
+        }
+    }
+}
 
 /// Performs a COUNT(*) query over some table, returning a [`Result`] wrapping
 /// a possible success or error coming from the database
