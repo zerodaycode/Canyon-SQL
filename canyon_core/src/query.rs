@@ -106,3 +106,9 @@ impl<'a> From<&'a str> for TransactionInput<'a> {
         TransactionInput::DatasourceName(ds_name)
     }
 }
+
+impl<'a> From<&'a &'a str> for TransactionInput<'a> {
+    fn from(ds_name: &'a &'a str) -> Self {
+        TransactionInput::DatasourceName(ds_name)
+    }
+}

@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use canyon_core::query_parameters::QueryParameter;
 use canyon_core::{mapper::RowMapper, query::Transaction};
+use canyon_core::connection::db_connector::DatabaseConnection;
 use canyon_core::query::TransactionInput;
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
@@ -28,26 +29,29 @@ where
 {
     async fn find_all() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync)>>;
 
-    async fn find_all_with<'a, I>(input: I) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-    where I: Into<TransactionInput<'a>> + Sync + Send + 'a;
+    async fn find_all_with<'a, I>(input: &'a I) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+        where I: Into<TransactionInput<'a>> + Sync + Send + 'a,
+              TransactionInput<'a>: From<&'a I>;
 
     async fn find_all_unchecked() -> Vec<T>;
 
-    async fn find_all_unchecked_with<'a, I>(input: I) -> Vec<T>
-        where I: Into<TransactionInput<'a>> + Sync + Send + 'a;
-
-    fn select_query<'a, I>() -> SelectQueryBuilder<'a, T, I> where I: Into<TransactionInput<'a>> + Sync + Send + 'a, TransactionInput<'a>: From<&'a I>,;
-
-    fn select_query_with<'a, I>(input: I) -> SelectQueryBuilder<'a, T, I>
+    async fn find_all_unchecked_with<'a, I>(input: &'a I) -> Vec<T>
         where I: Into<TransactionInput<'a>> + Sync + Send + 'a,
-              TransactionInput<'a>: From<&'a I>,;
+              TransactionInput<'a>: From<&'a I>;
+
+    // fn select_query<'a>() -> SelectQueryBuilder<'a, T, &'a str>;
+    // 
+    // fn select_query_with<'a, I>(input: &'a I) -> SelectQueryBuilder<'a, T, I>
+    //     where I: Into<TransactionInput<'a>> + Sync + Send + 'a,
+    //           TransactionInput<'a>: From<&'a I>;
 
     async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>>;
 
     async fn count_with<'a, I>(
-        input: I,
+        input: &'a I,
     ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-    where I: Into<TransactionInput<'a>> + Sync + Send + 'a;
+        where I: Into<TransactionInput<'a>> + Sync + Send + 'a,
+              TransactionInput<'a>: From<&'a I>;
 
     async fn find_by_pk<'a>(
         value: &'a dyn QueryParameter<'a>,
@@ -55,8 +59,10 @@ where
 
     async fn find_by_pk_with<'a, I>(
         value: &'a dyn QueryParameter<'a>,
-        input: I,
-    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+        input: &'a I,
+    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+        where I: Into<TransactionInput<'a>> + Sync + Send + 'a,
+              TransactionInput<'a>: From<&'a I>;
 
     // async fn insert<'a>(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>;
 

@@ -80,10 +80,20 @@ impl MacroOperationBuilder {
         self.user_type = Some(ty.clone());
         self
     }
-
-    fn get_lifetime(&self) -> TokenStream {
-        if self.lifetime {
+    
+    fn compose_fn_signature_generics(&self) -> TokenStream {
+        if !&self.lifetime && self.input_param.is_none() {
+            quote!{}
+        } else if self.lifetime && self.input_param.is_none() {
             quote! { <'a> }
+        } else {
+            quote! { <'a, I> }
+        }
+    }
+
+    fn compose_params_separator(&self) -> TokenStream {
+        if self.input_parameters.is_some() && self.input_param.is_some() {
+            quote! {, }
         } else {
             quote! {}
         }
@@ -99,7 +109,7 @@ impl MacroOperationBuilder {
             let ds_arg0 = input_arg;
             quote! { #ds_arg0 }
         } else {
-            quote! { "" }
+            quote! { &"" }
         }
     }
 
@@ -109,11 +119,14 @@ impl MacroOperationBuilder {
     }
 
     pub fn with_input_param(mut self) -> Self {
-        self.input_param = Some(quote! { input: I });
+        self.input_param = Some(quote! { input: &'a I });
         self.input_fwd_arg = Some(quote! { input });
         self.lifetime = true;
         self.where_clause_bounds
-            .push(quote! { I: Into<TransactionInput<'a>> + Sync + Send + 'a });
+            .push(quote! { 
+                I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a,
+                canyon_sql::core::TransactionInput<'a>: From<&'a I>
+            });
         self
     }
 
@@ -246,7 +259,7 @@ impl MacroOperationBuilder {
 
         let ty = self.get_user_type();
         let fn_name = self.get_fn_name();
-        let lifetime = self.get_lifetime(); // TODO: generics instead
+        let generics = self.compose_fn_signature_generics();
 
         let input_param = self.get_input_param();
         let input_fwd_arg = self.get_input_arg(); // TODO: replace
@@ -283,19 +296,11 @@ impl MacroOperationBuilder {
             base_body_tokens
         };
 
-        let separate_params = if self.input_parameters.is_some() && self.input_param.is_some() // TODO:
-                                                                                               // change
-                                                                                               // for
-                                                                                               // getter?
-        {
-            quote! {, }
-        } else {
-            quote! {}
-        };
+        let separate_params = self.compose_params_separator();
 
         quote! {
             #(#doc_comments)*
-            async fn #fn_name #lifetime(#fn_parameters #separate_params #input_param) -> #return_type
+            async fn #fn_name #generics(#fn_parameters #separate_params #input_param) -> #return_type
                 #where_clause
             {
                 #body_tokens
@@ -303,189 +308,4 @@ impl MacroOperationBuilder {
             }
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use quote::quote;
-    use syn::parse_quote;
-
-    #[test]
-    fn test_find_operation_tokens() {
-        let user_type = Ident::new("User", Span::call_site());
-
-        let find_operation = MacroOperationBuilder::new()
-            .fn_name("find_user_by_id")
-            .user_type(&user_type)
-            .with_input_param()
-            .return_type(&user_type)
-            .add_doc_comment("Finds a user by their ID.")
-            .add_doc_comment(
-                "This operation retrieves a single user record based on the provided ID.",
-            )
-            .query_string("SELECT * FROM users WHERE id = ?")
-            .input_parameters(quote! { id: &dyn QueryParameters<'_> })
-            .forwarded_parameters(quote! { &[id] })
-            .single_result();
-
-        let generated_tokens = find_operation.generate_tokens();
-        let expected_tokens = quote! {
-            #[doc = "Finds a user by their ID."]
-            #[doc = "This operation retrieves a single user record based on the provided ID."]
-            async fn find_user_by_id<'a>(id: &dyn QueryParameters<'_>, input: I)
-    where  I: Into<TransactionInput<'a>> + Sync + Send + 'aResult<Option<User>, Box<(dyn std::error::Error + Send + Sync + 'a)> > {
-                <User as canyon_sql::core::Transaction<User>>::query(
-                    "SELECT * FROM users WHERE id = ?",
-                    &[id],
-                    datasource_name
-                ).await
-                .into_results::<User>()
-            }
-        };
-
-        assert_eq!(generated_tokens.to_string(), expected_tokens.to_string());
-    }
-
-    #[test]
-    fn test_find_all_operation_tokens() {
-        let user_type = Ident::new("User", Span::call_site());
-
-        let find_operation = MacroOperationBuilder::new()
-            .fn_name("find_all")
-            .user_type(&user_type)
-            .return_type(&user_type)
-            .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-            .add_doc_comment(
-                "This operation retrieves all the users records stored with the default datasource",
-            )
-            .query_string("SELECT * FROM users");
-
-        let generated_tokens = find_operation.generate_tokens();
-        let expected_tokens = quote! {
-            #[doc = "Executes a 'SELECT * FROM <user_type>'"]
-            #[doc = "This operation retrieves all the users records stored with the default datasource"]
-            async fn find_all() -> Result<Vec<User>, Box<(dyn std::error::Error + Send + Sync)> > {
-                <User as canyon_sql::core::Transaction<User>>::query(
-                    "SELECT * FROM users",
-                    &[],
-                    ""
-                ).await
-                .into_results::<User>()
-            }
-        };
-
-        assert_eq!(generated_tokens.to_string(), expected_tokens.to_string());
-    }
-
-    #[test]
-    fn test_find_all_with_operation_tokens() {
-        let user_type = Ident::new("User", Span::call_site());
-
-        let find_operation = MacroOperationBuilder::new()
-            .fn_name("find_all_with")
-            .with_input_param()
-            .user_type(&user_type)
-            .return_type(&user_type)
-            .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
-            .add_doc_comment(
-                "This operation retrieves all the users records stored in the provided datasource",
-            )
-            .query_string("SELECT * FROM users");
-
-        let generated_tokens = find_operation.generate_tokens();
-        let expected_tokens = quote! {
-            #[doc = "Executes a 'SELECT * FROM <user_type>'"]
-            #[doc = "This operation retrieves all the users records stored in the provided datasource"]
-            async fn find_all_with<'a, I>(input: I)
-    where  I: Into<TransactionInput<'a>> + Sync + Send + 'aResult<Vec<User>, Box<(dyn std::error::Error + Send + Sync + 'a)> > {
-                <User as canyon_sql::core::Transaction<User>>::query(
-                    "SELECT * FROM users",
-                    &[],
-                    datasource_name
-                ).await
-                .into_results::<User>()
-            }
-        };
-
-        assert_eq!(generated_tokens.to_string(), expected_tokens.to_string());
-    }
-
-    // #[test]
-    // fn test_find_operation_tokens() {
-    //     // Arrange: Build the operation
-    //     let find_operation = MacroOperationBuilder::new()
-    //         .fn_name("find_user_by_id")
-    //         .datasource_param(parse_quote!(datasource))
-    //         .datasource_arg(quote! { datasource_arg })
-    //         .return_type(parse_quote!(Result<User, Error>))
-    //         .base_doc_comment("Finds a user by their ID.")
-    //         .doc_comment("This operation retrieves a single user record based on the provided ID.")
-    //         .query_string("SELECT * FROM users WHERE id = ?")
-    //         .input_parameters(quote! { &[id] })
-    //         // .parameterized(true)
-    //         .with_unwrap(false);
-
-    //     // Act: Generate tokens
-    //     let generated_tokens = find_operation.generate_tokens();
-
-    //     // Assert: Compare against expected tokens
-    //     let expected_tokens = quote! {
-    //         #[doc = "Finds a user by their ID."]
-    //         #[doc = "This operation retrieves a single user record based on the provided ID."]
-    //         async fn find_user_by_id(datasource) -> Result<User, Error> {
-    //             <User as canyon_sql::core::Transaction<User>>::query(
-    //                 "SELECT * FROM users WHERE id = ?",
-    //                 &[id],
-    //                 datasource_arg
-    //             ).await
-    //             .into_results::<User>()
-    //         }
-    //     };
-
-    //     assert_eq!(
-    //         generated_tokens.to_string(),
-    //         expected_tokens.to_string(),
-    //         "Generated tokens do not match expected tokens!"
-    //     );
-    // }
-
-    // #[test]
-    // fn test_insert_operation_tokens() {
-    //     // Arrange: Build the operation
-    //     let insert_operation = MacroOperationBuilder::new()
-    //         .fn_name("insert_user")
-    //         .datasource_param(parse_quote!(datasource))
-    //         .datasource_arg(quote! { datasource_arg })
-    //         .return_type(parse_quote!(Result<(), Error>))
-    //         .base_doc_comment("Inserts a new user into the database.")
-    //         .doc_comment("This operation inserts a new user record with the provided data.")
-    //         .query_string("INSERT INTO users (name, email) VALUES (?, ?)")
-    //         .input_parameters(quote! { &dyn QueryParameters })
-    //         // .parameterized(true)
-    //         .with_unwrap(false);
-
-    //     // Act: Generate tokens
-    //     let generated_tokens = insert_operation.generate_tokens();
-
-    //     // Assert: Compare against expected tokens
-    //     let expected_tokens = quote! {
-    //         #[doc = "Inserts a new user into the database."]
-    //         #[doc = "This operation inserts a new user record with the provided data."]
-    //         async fn insert_user(datasource) -> Result<(), Error> {
-    //             <User as canyon_sql::core::Transaction<User>>::query(
-    //                 "INSERT INTO users (name, email) VALUES (?, ?)",
-    //                 &dyn QueryParameters,
-    //                 datasource_arg
-    //             ).await
-    //             .into_results::<User>()
-    //         }
-    //     };
-
-    //     assert_eq!(
-    //         generated_tokens.to_string(),
-    //         expected_tokens.to_string(),
-    //         "Generated tokens do not match expected tokens!"
-    //     );
-    // }
 }

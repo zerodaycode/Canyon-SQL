@@ -51,33 +51,34 @@ pub fn generate_find_all_query_tokens(
     let ty = macro_data.ty;
 
     quote! {
-        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
-        /// that allows you to customize the query by adding parameters and constrains dynamically.
-        ///
-        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention,
-        /// unless concrete values are set on the available parameters of the
-        /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty, &str> {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
-        }
+        // Generates a [`canyon_sql::query::SelectQueryBuilder`]
+        // that allows you to customize the query by adding parameters and constrains dynamically.
+        // 
+        // It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        // entity but converted to the corresponding database convention,
+        // unless concrete values are set on the available parameters of the
+        // `canyon_macro(table_name = "table_name", schema = "schema")`
+        // fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty, &'a str> {
+        //     canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
+        // }
 
-        /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
-        /// that allows you to customize the query by adding parameters and constrains dynamically.
-        ///
-        /// It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention,
-        /// unless concrete values are set on the available parameters of the
-        /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        ///
-        /// The query it's made against the database with the configured datasource
-        /// described in the configuration file, and selected with the [`&str`]
-        /// passed as parameter.
-        fn select_query_datasource<'a, I>(input: I) -> canyon_sql::query::SelectQueryBuilder<'a, #ty, I>
-            where I: Into<TransactionInput<'a>> + Sync + Send + 'a
-        {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, datasource_name)
-        }
+        // Generates a [`canyon_sql::query::SelectQueryBuilder`]
+        // that allows you to customize the query by adding parameters and constrains dynamically.
+        // 
+        // It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your
+        // entity but converted to the corresponding database convention,
+        // unless concrete values are set on the available parameters of the
+        // `canyon_macro(table_name = "table_name", schema = "schema")`
+        // 
+        // The query it's made against the database with the configured datasource
+        // described in the configuration file, and selected with the [`&str`]
+        // passed as parameter.
+        // fn select_query_with<'a, I>(input: &'a I) -> canyon_sql::query::SelectQueryBuilder<'a, #ty, I>
+        //     where I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a,
+        //         canyon_sql::core::TransactionInput<'a>: From<&'a I>
+        // {
+        //     canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, input)
+        // }
     }
 }
 
@@ -97,7 +98,6 @@ fn generate_find_by_pk_tokens(
         return quote! {
             async fn find_by_pk<'a>(value: &'a dyn canyon_sql::core::QueryParameter<'a>)
                 -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                where I: Into<TransactionInput<'a>> + Sync + Send + 'a
             {
                 Err(
                     std::io::Error::new(
@@ -111,9 +111,9 @@ fn generate_find_by_pk_tokens(
 
             async fn find_by_pk_with<'a, I>(
                 value: &'a dyn canyon_sql::core::QueryParameter<'a>,
-                input: I
+                input: &'a I
             ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                where I: Into<TransactionInput<'a>> + Sync + Send + 'a
+                where I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a
             {
                 Err(
                     std::io::Error::new(
@@ -136,193 +136,13 @@ fn generate_find_by_pk_tokens(
     };
 
     let find_by_pk = create_find_by_pk_macro(ty, &stmt, &result_handling);
-    let find_by_pk_ds = create_find_by_pk_with(ty, &stmt, &result_handling);
+    let find_by_pk_with = create_find_by_pk_with(ty, &stmt, &result_handling);
 
     quote! {
         #find_by_pk
-        #find_by_pk_ds
+        #find_by_pk_with
     }
 }
-
-// /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
-// /// of a T type of as an associated function of same T type, but wrapped as a Result<T, Err>, representing
-// /// a possible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
-// /// derive macro on the parent side of the relation
-// pub fn generate_find_by_foreign_key_tokens(
-//     macro_data: &MacroTokens<'_>,
-// ) -> Vec<(TokenStream, TokenStream)> {
-//     let mut fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
-
-//     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
-//         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
-//             let method_name = "search_".to_owned() + table;
-
-//             // TODO this is not a good implementation. We must try to capture the
-//             // related entity in some way, and compare it with something else
-//             let fk_ty = database_table_name_to_struct_ident(table);
-
-//             // Generate and identifier for the method based on the convention of "search_related_types"
-//             // where types is a placeholder for the plural name of the type referenced
-//             let method_name_ident =
-//                 proc_macro2::Ident::new(&method_name, proc_macro2::Span::call_site());
-//             let method_name_ident_ds = proc_macro2::Ident::new(
-//                 &format!("{}_with", &method_name),
-//                 proc_macro2::Span::call_site(),
-//             );
-//             let quoted_method_signature: TokenStream = quote! {
-//                 async fn #method_name_ident(&self) ->
-//                     Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-//             };
-//             let quoted_with_method_signature: TokenStream = quote! {
-//                 async fn #method_name_ident_ds<'a>(&self, input: I) ->
-//                     Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-//             };
-
-//             let stmt = format!(
-//                 "SELECT * FROM {} WHERE {} = $1",
-//                 table,
-//                 format!("\"{column}\"").as_str(),
-//             );
-//             let result_handler = quote! {
-//                 match result {
-//                     n if n.len() == 0 => Ok(None),
-//                     _ => Ok(Some(
-//                         result.into_results::<#fk_ty>().remove(0)
-//                     ))
-//                 }
-//             };
-
-//             fk_quotes.push((
-//                 quote! { #quoted_method_signature; },
-//                 quote! {
-//                     /// Searches the parent entity (if exists) for this type
-//                     #quoted_method_signature {
-//                         let result = <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query(
-//                             #stmt,
-//                             &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
-//                             ""
-//                         ).await?;
-
-//                         #result_handler
-//                     }
-//                 },
-//             ));
-
-//             fk_quotes.push((
-//                 quote! { #quoted_with_method_signature; },
-//                 quote! {
-//                     /// Searches the parent entity (if exists) for this type with the specified datasource
-//                     #quoted_with_method_signature {
-//                         let result = <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query(
-//                             #stmt,
-//                             &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
-//                             datasource_name
-//                         ).await?;
-
-//                         #result_handler
-//                     }
-//                 },
-//             ));
-//         }
-//     }
-
-//     fk_quotes
-// }
-
-// /// Generates the TokenStream for build the __search_by_foreign_key() CRUD
-// /// associated function, but wrapped as a Result<T, Err>, representing
-// /// a possible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable
-// /// derive macro on the parent side of the relation
-// pub fn generate_find_by_reverse_foreign_key_tokens(
-//     macro_data: &MacroTokens<'_>,
-//     table_schema_data: &String,
-// ) -> Vec<(TokenStream, TokenStream)> {
-//     let mut rev_fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
-//     let ty = macro_data.ty;
-
-//     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
-//         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
-//             let method_name = format!("search_{table}_childrens");
-
-//             // Generate and identifier for the method based on the convention of "search_by__" (note the double underscore)
-//             // plus the 'table_name' property of the ForeignKey annotation
-//             let method_name_ident =
-//                 proc_macro2::Ident::new(&method_name, proc_macro2::Span::call_site());
-//             let method_name_ident_ds = proc_macro2::Ident::new(
-//                 &format!("{}_with", &method_name),
-//                 proc_macro2::Span::call_site(),
-//             );
-//             let quoted_method_signature: TokenStream = quote! {
-//                 async fn #method_name_ident<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) ->
-//                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-//             };
-//             let quoted_with_method_signature: TokenStream = quote! {
-//                 async fn #method_name_ident_ds<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>
-//                     (value: &F, input: I) ->
-//                     Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'static)>>
-//             };
-
-//             let f_ident = field_ident.to_string();
-
-//             rev_fk_quotes.push((
-//                 quote! { #quoted_method_signature; },
-//                 quote! {
-//                     /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
-//                     /// performns a search to find the children that belong to that concrete parent.
-//                     #quoted_method_signature
-//                     {
-//                         let lookage_value = value.get_fk_column(#column)
-//                             .expect(format!(
-//                                 "Column: {:?} not found in type: {:?}", #column, #table
-//                             ).as_str());
-
-//                         let stmt = format!(
-//                             "SELECT * FROM {} WHERE {} = $1",
-//                             #table_schema_data,
-//                             format!("\"{}\"", #f_ident).as_str()
-//                         );
-
-//                         Ok(<#ty as canyon_sql::core::Transaction<#ty>>::query(
-//                             stmt,
-//                             &[lookage_value],
-//                             ""
-//                         ).await?.into_results::<#ty>())
-//                     }
-//                 },
-//             ));
-
-//             rev_fk_quotes.push((
-//                 quote! { #quoted_with_method_signature; },
-//                 quote! {
-//                     /// Given a parent entity T annotated with the derive proc macro `ForeignKeyable`,
-//                     /// performns a search to find the children that belong to that concrete parent
-//                     /// with the specified datasource.
-//                     #quoted_with_method_signature
-//                     {
-//                         let lookage_value = value.get_fk_column(#column)
-//                             .expect(format!(
-//                                 "Column: {:?} not found in type: {:?}", #column, #table
-//                             ).as_str());
-
-//                         let stmt = format!(
-//                             "SELECT * FROM {} WHERE {} = $1",
-//                             #table_schema_data,
-//                             format!("\"{}\"", #f_ident).as_str()
-//                         );
-
-//                         Ok(<#ty as canyon_sql::core::Transaction<#ty>>::query(
-//                             stmt,
-//                             &[lookage_value],
-//                             datasource_name
-//                         ).await?.into_results::<#ty>())
-//                     }
-//                 },
-//             ));
-//         }
-//     }
-
-//     rev_fk_quotes
-// }
 
 mod __details {
     use crate::query_operations::{doc_comments, macro_template::MacroOperationBuilder};
@@ -537,7 +357,9 @@ mod macro_builder_read_ops_tests {
 
     const MAPS_TO: &str = "into_results :: < User > ()";
     const LT_CONSTRAINT: &str = "< 'a >";
-    const DS_PARAM: &str = "datasource_name : & 'a str";
+    const INPUT_PARAM: &str = "input : & 'a I";
+    
+    const WITH_WHERE_BOUNDS: &str =  "where I : Into < canyon_sql::core::TransactionInput < 'a >> + Sync + Send + 'a ";
 
     #[test]
     fn test_macro_builder_find_all() {
@@ -553,12 +375,12 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_all_with() {
         let ty: Ident = Ident::new("User", Span::call_site());
         let find_all_builder = create_find_all_with_macro(&ty, SELECT_ALL_STMT);
-        let find_all_ds = find_all_builder.generate_tokens().to_string();
+        let find_all_with = find_all_builder.generate_tokens().to_string();
 
-        assert!(find_all_ds.contains("async fn find_all_with"));
-        assert!(find_all_ds.contains(RES_RET_TY_LT));
-        assert!(find_all_ds.contains(LT_CONSTRAINT));
-        assert!(find_all_ds.contains(DS_PARAM));
+        assert!(find_all_with.contains("async fn find_all_with"));
+        assert!(find_all_with.contains(RES_RET_TY_LT));
+        assert!(find_all_with.contains(LT_CONSTRAINT));
+        assert!(find_all_with.contains(WITH_WHERE_BOUNDS));
     }
 
     #[test]
@@ -575,12 +397,12 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_all_unchecked_with() {
         let ty: Ident = Ident::new("User", Span::call_site());
         let find_all_unc_with_builder = create_find_all_unchecked_with_macro(&ty, SELECT_ALL_STMT);
-        let find_all_unc_ds = find_all_unc_with_builder.generate_tokens().to_string();
+        let find_all_unc_with = find_all_unc_with_builder.generate_tokens().to_string();
 
-        assert!(find_all_unc_ds.contains("async fn find_all_unchecked_with"));
-        assert!(find_all_unc_ds.contains(RAW_RET_TY));
-        assert!(find_all_unc_ds.contains(LT_CONSTRAINT));
-        assert!(find_all_unc_ds.contains(DS_PARAM));
+        assert!(find_all_unc_with.contains("async fn find_all_unchecked_with"));
+        assert!(find_all_unc_with.contains(RAW_RET_TY));
+        assert!(find_all_unc_with.contains(LT_CONSTRAINT));
+        assert!(find_all_unc_with.contains(INPUT_PARAM));
     }
 
     #[test]
@@ -597,12 +419,12 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_count_with() {
         let ty: Ident = Ident::new("User", Span::call_site());
         let count_with_builder = create_count_with_macro(&ty, COUNT_STMT);
-        let count_ds = count_with_builder.generate_tokens().to_string();
+        let count_with = count_with_builder.generate_tokens().to_string();
 
-        assert!(count_ds.contains("async fn count_with"));
-        assert!(count_ds.contains("Result < i64"));
-        assert!(count_ds.contains(LT_CONSTRAINT));
-        assert!(count_ds.contains(DS_PARAM));
+        assert!(count_with.contains("async fn count_with"));
+        assert!(count_with.contains("Result < i64"));
+        assert!(count_with.contains(LT_CONSTRAINT));
+        assert!(count_with.contains(INPUT_PARAM));
     }
 
     #[test]
@@ -620,13 +442,13 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk_with() {
         let ty: Ident = Ident::new("User", Span::call_site());
         let find_by_pk_with_builder = create_find_by_pk_with(&ty, FIND_BY_PK_STMT, &quote! {});
-        let find_by_pk_ds = find_by_pk_with_builder.generate_tokens().to_string();
-        println!("{:?}", find_by_pk_ds.split("\n").collect::<Vec<_>>());
+        let find_by_pk_with = find_by_pk_with_builder.generate_tokens().to_string();
+        println!("{:?}", find_by_pk_with.split("\n").collect::<Vec<_>>());
 
-        assert!(find_by_pk_ds.contains("async fn find_by_pk_with"));
-        assert!(find_by_pk_ds.contains(LT_CONSTRAINT));
-        assert!(find_by_pk_ds.contains(DS_PARAM));
-        assert!(find_by_pk_ds.contains(OPT_RET_TY_LT));
+        assert!(find_by_pk_with.contains("async fn find_by_pk_with"));
+        assert!(find_by_pk_with.contains(LT_CONSTRAINT));
+        assert!(find_by_pk_with.contains(INPUT_PARAM));
+        assert!(find_by_pk_with.contains(OPT_RET_TY_LT));
     }
 }
 

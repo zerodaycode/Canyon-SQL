@@ -304,7 +304,7 @@ where
 pub struct SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a + ?Sized,
     TransactionInput<'a>: From<&'a I>,
 {
     _inner: QueryBuilder<'a, T, I>,
