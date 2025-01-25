@@ -38,7 +38,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             // /// Deletes from a database entity the row that matches
             // /// the current instance of a T type, returning a result
             // /// indicating a possible failure querying the database with the specified datasource.
-            // async fn delete_datasource<'a>(&self, datasource_name: &'a str)
+            // async fn delete_with<'a, I>(&self, input: I)
             //     -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>
             // {
             //     <#ty as canyon_sql::core::Transaction<#ty>>::query(
@@ -65,12 +65,12 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         //         ).into_inner().unwrap())
         //     }
 
-        //     async fn delete_datasource<'a>(&self, datasource_name: &'a str)
+        //     async fn delete_with<'a, I>(&self, input: I)
         //         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         //     {
         //         Err(std::io::Error::new(
         //             std::io::ErrorKind::Unsupported,
-        //             "You can't use the 'delete_datasource' method on a \
+        //             "You can't use the 'delete_with' method on a \
         //             CanyonEntity that does not have a #[primary_key] annotation. \
         //             If you need to perform an specific search, use the Querybuilder instead."
         //         ).into_inner().unwrap())

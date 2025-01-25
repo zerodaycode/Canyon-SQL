@@ -190,7 +190,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         // / }
         // / ```
         // /
-        // async fn insert_datasource<'a>(&mut self, datasource_name: &'a str)
+        // async fn insert_with<'a, I>(&mut self, input: I)
         //     -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
         // {
         //     let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];

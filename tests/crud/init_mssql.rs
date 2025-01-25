@@ -40,7 +40,7 @@ fn initialize_sql_server_docker_instance() {
         let query_result = client.query(SQL_SERVER_CREATE_TABLES, &[]).await;
         assert!(query_result.is_ok());
 
-        let leagues_sql = League::find_all_datasource(SQL_SERVER_DS).await;
+        let leagues_sql = League::find_all_with(SQL_SERVER_DS).await;
         println!("LSQL ERR: {leagues_sql:?}");
         assert!(leagues_sql.is_ok());
 

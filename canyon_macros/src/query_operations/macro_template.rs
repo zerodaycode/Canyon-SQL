@@ -333,7 +333,8 @@ mod tests {
         let expected_tokens = quote! {
             #[doc = "Finds a user by their ID."]
             #[doc = "This operation retrieves a single user record based on the provided ID."]
-            async fn find_user_by_id<'a>(id: &dyn QueryParameters<'_>, datasource_name: &'a str) -> Result<Option<User>, Box<(dyn std::error::Error + Send + Sync + 'a)> > {
+            async fn find_user_by_id<'a>(id: &dyn QueryParameters<'_>, input: I)
+    where  I: Into<TransactionInput<'a>> + Sync + Send + 'aResult<Option<User>, Box<(dyn std::error::Error + Send + Sync + 'a)> > {
                 <User as canyon_sql::core::Transaction<User>>::query(
                     "SELECT * FROM users WHERE id = ?",
                     &[id],
@@ -378,13 +379,13 @@ mod tests {
     }
 
     #[test]
-    fn test_find_all_datasource_operation_tokens() {
+    fn test_find_all_with_operation_tokens() {
         let user_type = Ident::new("User", Span::call_site());
 
         let find_operation = MacroOperationBuilder::new()
-            .fn_name("find_all_datasource")
-            .user_type(&user_type)
+            .fn_name("find_all_with")
             .with_input_param()
+            .user_type(&user_type)
             .return_type(&user_type)
             .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
             .add_doc_comment(
@@ -396,7 +397,8 @@ mod tests {
         let expected_tokens = quote! {
             #[doc = "Executes a 'SELECT * FROM <user_type>'"]
             #[doc = "This operation retrieves all the users records stored in the provided datasource"]
-            async fn find_all_datasource<'a>(datasource_name: &'a str) -> Result<Vec<User>, Box<(dyn std::error::Error + Send + Sync + 'a)> > {
+            async fn find_all_with<'a, I>(input: I)
+    where  I: Into<TransactionInput<'a>> + Sync + Send + 'aResult<Vec<User>, Box<(dyn std::error::Error + Send + Sync + 'a)> > {
                 <User as canyon_sql::core::Transaction<User>>::query(
                     "SELECT * FROM users",
                     &[],

@@ -1,8 +1,8 @@
 use std::fmt::Debug;
-
+use std::marker::PhantomData;
 use canyon_core::connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
 use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
-
+use canyon_core::query::TransactionInput;
 use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier},
     crud::CrudOperations,
@@ -135,37 +135,46 @@ pub mod ops {
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
-#[derive(Debug, Clone)]
-pub struct QueryBuilder<'a, T>
+pub struct QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
-    query: Query<'a, T>,
-    datasource_name: &'a str,
+    query: Query<'a>,
+    input: &'a I,
     datasource_type: DatabaseType,
+    pd: PhantomData<T> // TODO: provisional while reworking the bounds
 }
 
-unsafe impl<'a, T> Send for QueryBuilder<'a, T> where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
+unsafe impl<'a, T, I> Send for QueryBuilder<'a, T, I>
+    where T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+  TransactionInput<'a>: From<&'a I>,
 {
 }
-unsafe impl<'a, T> Sync for QueryBuilder<'a, T> where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>
-{
-}
+unsafe impl<'a, T, I> Sync for QueryBuilder<'a, T, I>
+    where T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+          I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+          TransactionInput<'a>: From<&'a I>
+{}
 
-impl<'a, T> QueryBuilder<'a, T>
+impl<'a, T, I> QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     /// Returns a new instance of the [`QueryBuilder`]
-    pub fn new(query: Query<'a, T>, datasource_name: &'a str) -> Self {
+    pub fn new(query: Query<'a>, input: &I) -> Self {
         Self {
             query,
-            datasource_name,
-            datasource_type: DatabaseType::from(
-                &get_database_config(datasource_name, &DATASOURCES).auth,
-            ),
+            input,
+            datasource_type: todo!("The from type on the querybuilder"),
+            // DatabaseType::from(
+            //     &get_database_config(input, &DATASOURCES).auth,
+            // ),
+            pd: Default::default(),
         }
     }
 
@@ -173,13 +182,13 @@ where
     /// by the selected datasource
     pub async fn query(
         &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self.query.sql.push(';');
 
         Ok(T::query(
             self.query.sql.clone(),
             self.query.params.to_vec(),
-            self.datasource_name,
+            self.input,
         )
         .await?
         .into_results::<T>())
@@ -292,24 +301,27 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct SelectQueryBuilder<'a, T>
+pub struct SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
-    _inner: QueryBuilder<'a, T>,
+    _inner: QueryBuilder<'a, T, I>,
 }
 
-impl<'a, T> SelectQueryBuilder<'a, T>
+impl<'a, T, I> SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
-    pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
+    pub fn new(table_schema_data: &str, input: &I) -> Self  {
         Self {
-            _inner: QueryBuilder::<T>::new(
+            _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("SELECT * FROM {table_schema_data}")),
-                datasource_name,
+                input,
             ),
         }
     }
@@ -319,7 +331,7 @@ where
     #[inline]
     pub async fn query(
         &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 
@@ -388,9 +400,11 @@ where
     }
 }
 
-impl<'a, T> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T>
+impl<'a, T, I> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -455,24 +469,27 @@ where
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///     update with the provided values
-#[derive(Debug, Clone)]
-pub struct UpdateQueryBuilder<'a, T>
+pub struct UpdateQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
-    _inner: QueryBuilder<'a, T>,
+    _inner: QueryBuilder<'a, T, I>,
 }
 
-impl<'a, T> UpdateQueryBuilder<'a, T>
+impl<'a, T, I> UpdateQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
-    pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
+    pub fn new(table_schema_data: &str, input: &I) -> Self {
         Self {
-            _inner: QueryBuilder::<T>::new(
+            _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("UPDATE {table_schema_data}")),
-                datasource_name,
+                input,
             ),
         }
     }
@@ -482,7 +499,7 @@ where
     #[inline]
     pub async fn query(
         &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 
@@ -526,9 +543,11 @@ where
     }
 }
 
-impl<'a, T> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T>
+impl<'a, T, I> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -594,24 +613,27 @@ where
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///     update with the provided values
-#[derive(Debug, Clone)]
-pub struct DeleteQueryBuilder<'a, T>
+pub struct DeleteQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
-    _inner: QueryBuilder<'a, T>,
+    _inner: QueryBuilder<'a, T, I>,
 }
 
-impl<'a, T> DeleteQueryBuilder<'a, T>
+impl<'a, T, I> DeleteQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
-    pub fn new(table_schema_data: &str, datasource_name: &'a str) -> Self {
+    pub fn new(table_schema_data: &str, input: I) -> Self {
         Self {
-            _inner: QueryBuilder::<T>::new(
+            _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("DELETE FROM {table_schema_data}")),
-                datasource_name,
+                &input,
             ),
         }
     }
@@ -621,14 +643,16 @@ where
     #[inline]
     pub async fn query(
         &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'static)>> {
+    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 }
 
-impl<'a, T> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T>
+impl<'a, T, I> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    TransactionInput<'a>: From<&'a I>,
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {

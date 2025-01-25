@@ -45,9 +45,9 @@ fn test_crud_find_all_unchecked() {
 /// and using the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_all_datasource_mssql() {
+fn test_crud_find_all_with_mssql() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
-        League::find_all_datasource(SQL_SERVER_DS).await;
+        League::find_all_with(SQL_SERVER_DS).await;
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());
@@ -55,21 +55,21 @@ fn test_crud_find_all_datasource_mssql() {
 
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_all_datasource_mysql() {
+fn test_crud_find_all_with_mysql() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
-        League::find_all_datasource(MYSQL_DS).await;
+        League::find_all_with(MYSQL_DS).await;
 
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());
 }
 
-/// Same as the `find_all_datasource()`, but with the unchecked variant and the specified dataosource,
+/// Same as the `find_all_with()`, but with the unchecked variant and the specified dataosource,
 /// returning directly `Vec<T>` and not `Result<Vec<T>, Err>`
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_all_unchecked_datasource() {
-    let find_all_result: Vec<League> = League::find_all_unchecked_datasource(SQL_SERVER_DS).await;
+fn test_crud_find_all_unchecked_with() {
+    let find_all_result: Vec<League> = League::find_all_unchecked_with(SQL_SERVER_DS).await;
     assert!(!find_all_result.is_empty());
 }
 
@@ -102,9 +102,9 @@ fn test_crud_find_by_pk() {
 /// Uses the *specified datasource mssql* in the second parameter of the function call.
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_by_pk_datasource_mssql() {
+fn test_crud_find_by_pk_with_mssql() {
     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-        League::find_by_pk_datasource(&27, SQL_SERVER_DS).await;
+        League::find_by_pk_with(&27, SQL_SERVER_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
     let some_league = find_by_pk_result.unwrap().unwrap();
@@ -125,9 +125,9 @@ fn test_crud_find_by_pk_datasource_mssql() {
 /// Uses the *specified datasource mysql* in the second parameter of the function call.
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_by_pk_datasource_mysql() {
+fn test_crud_find_by_pk_with_mysql() {
     let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-        League::find_by_pk_datasource(&27, MYSQL_DS).await;
+        League::find_by_pk_with(&27, MYSQL_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
     let some_league = find_by_pk_result.unwrap().unwrap();
@@ -156,13 +156,13 @@ fn test_crud_count_operation() {
 /// the specified datasource mssql
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_count_datasource_operation_mssql() {
+fn test_crud_count_with_operation_mssql() {
     assert_eq!(
-        League::find_all_datasource(SQL_SERVER_DS)
+        League::find_all_with(SQL_SERVER_DS)
             .await
             .unwrap()
             .len() as i64,
-        League::count_datasource(SQL_SERVER_DS).await.unwrap()
+        League::count_with(SQL_SERVER_DS).await.unwrap()
     );
 }
 
@@ -170,9 +170,9 @@ fn test_crud_count_datasource_operation_mssql() {
 /// the specified datasource mysql
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_count_datasource_operation_mysql() {
+fn test_crud_count_with_operation_mysql() {
     assert_eq!(
-        League::find_all_datasource(MYSQL_DS).await.unwrap().len() as i64,
-        League::count_datasource(MYSQL_DS).await.unwrap()
+        League::find_all_with(MYSQL_DS).await.unwrap().len() as i64,
+        League::count_with(MYSQL_DS).await.unwrap()
     );
 }

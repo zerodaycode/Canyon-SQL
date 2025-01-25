@@ -27,15 +27,16 @@ pub trait Transaction<T> {
     fn query<'a, S, Z, I>(
         stmt: S,
         params: Z,
-        input: I,
+        input: &'a I,
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
         I: Into<TransactionInput<'a>> + Sync + Send + 'a,
+        TransactionInput<'a>: From<&'a I>,
     {
         async move {
-            let transaction_input = input.into();
+            let transaction_input: TransactionInput<'a> = TransactionInput::from(input);
             let statement = stmt.as_ref();
             let query_parameters = params.as_ref();
 

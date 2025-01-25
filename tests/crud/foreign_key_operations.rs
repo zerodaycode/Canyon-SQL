@@ -45,15 +45,15 @@
 // /// Same as the search by foreign key, but with the specified datasource
 // #[cfg(feature = "mssql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_search_by_foreign_key_datasource_mssql() {
-//     let some_tournament: Tournament = Tournament::find_by_pk_datasource(&10, SQL_SERVER_DS)
+// fn test_crud_search_by_foreign_key_with_mssql() {
+//     let some_tournament: Tournament = Tournament::find_by_pk_with(&10, SQL_SERVER_DS)
 //         .await
 //         .expect("Result variant of the query is err")
 //         .expect("No result found for the given parameter");
 
 //     // We can get the parent entity for the retrieved child instance
 //     let parent_entity: Option<League> = some_tournament
-//         .search_league_datasource(SQL_SERVER_DS)
+//         .search_league_with(SQL_SERVER_DS)
 //         .await
 //         .expect("Result variant of the query is err");
 
@@ -71,15 +71,15 @@
 // /// Same as the search by foreign key, but with the specified datasource
 // #[cfg(feature = "mysql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_search_by_foreign_key_datasource_mysql() {
-//     let some_tournament: Tournament = Tournament::find_by_pk_datasource(&10, MYSQL_DS)
+// fn test_crud_search_by_foreign_key_with_mysql() {
+//     let some_tournament: Tournament = Tournament::find_by_pk_with(&10, MYSQL_DS)
 //         .await
 //         .expect("Result variant of the query is err")
 //         .expect("No result found for the given parameter");
 
 //     // We can get the parent entity for the retrieved child instance
 //     let parent_entity: Option<League> = some_tournament
-//         .search_league_datasource(MYSQL_DS)
+//         .search_league_with(MYSQL_DS)
 //         .await
 //         .expect("Result variant of the query is err");
 
@@ -122,15 +122,15 @@
 // /// but with the specified datasource
 // #[cfg(feature = "mssql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_search_reverse_side_foreign_key_datasource_mssql() {
-//     let some_league: League = League::find_by_pk_datasource(&1, SQL_SERVER_DS)
+// fn test_crud_search_reverse_side_foreign_key_with_mssql() {
+//     let some_league: League = League::find_by_pk_with(&1, SQL_SERVER_DS)
 //         .await
 //         .expect("Result variant of the query is err")
 //         .expect("No result found for the given parameter");
 
 //     // Computes how many tournaments are pointing to the retrieved league
 //     let child_tournaments: Vec<Tournament> =
-//         Tournament::search_league_childrens_datasource(&some_league, SQL_SERVER_DS)
+//         Tournament::search_league_childrens_with(&some_league, SQL_SERVER_DS)
 //             .await
 //             .expect("Result variant of the query is err");
 
@@ -144,15 +144,15 @@
 // /// but with the specified datasource
 // #[cfg(feature = "mysql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_search_reverse_side_foreign_key_datasource_mysql() {
-//     let some_league: League = League::find_by_pk_datasource(&1, MYSQL_DS)
+// fn test_crud_search_reverse_side_foreign_key_with_mysql() {
+//     let some_league: League = League::find_by_pk_with(&1, MYSQL_DS)
 //         .await
 //         .expect("Result variant of the query is err")
 //         .expect("No result found for the given parameter");
 
 //     // Computes how many tournaments are pointing to the retrieved league
 //     let child_tournaments: Vec<Tournament> =
-//         Tournament::search_league_childrens_datasource(&some_league, MYSQL_DS)
+//         Tournament::search_league_childrens_with(&some_league, MYSQL_DS)
 //             .await
 //             .expect("Result variant of the query is err");
 

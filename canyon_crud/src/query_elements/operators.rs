@@ -22,7 +22,7 @@ pub enum Comp {
 }
 
 impl Operator for Comp {
-    fn as_str(&self, placeholder_counter: usize, _datasource_type: &DatabaseType) -> String {
+    fn as_str(&self, placeholder_counter: usize, _with_type: &DatabaseType) -> String {
         match *self {
             Self::Eq => format!(" = ${placeholder_counter}"),
             Self::Neq => format!(" <> ${placeholder_counter}"),

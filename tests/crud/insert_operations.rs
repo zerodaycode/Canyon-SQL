@@ -61,7 +61,7 @@
 // /// the specified datasource
 // #[cfg(feature = "mssql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_insert_datasource_mssql_operation() {
+// fn test_crud_insert_with_mssql_operation() {
 //     let mut new_league: League = League {
 //         id: Default::default(),
 //         ext_id: 7892635306594_i64,
@@ -73,7 +73,7 @@
 
 //     // We insert the instance on the database, on the `League` entity
 //     new_league
-//         .insert_datasource(SQL_SERVER_DS)
+//         .insert_with(SQL_SERVER_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 
@@ -81,7 +81,7 @@
 //     // value for the primary key field, which is id. So, we can query the
 //     // database again with the find by primary key operation to check if
 //     // the value was really inserted
-//     let inserted_league = League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
+//     let inserted_league = League::find_by_pk_with(&new_league.id, SQL_SERVER_DS)
 //         .await
 //         .expect("Failed the query to the database")
 //         .expect("No entity found for the primary key value passed in");
@@ -93,7 +93,7 @@
 // /// the specified datasource
 // #[cfg(feature = "mysql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_insert_datasource_mysql_operation() {
+// fn test_crud_insert_with_mysql_operation() {
 //     let mut new_league: League = League {
 //         id: Default::default(),
 //         ext_id: 7892635306594_i64,
@@ -105,7 +105,7 @@
 
 //     // We insert the instance on the database, on the `League` entity
 //     new_league
-//         .insert_datasource(MYSQL_DS)
+//         .insert_with(MYSQL_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 
@@ -113,7 +113,7 @@
 //     // value for the primary key field, which is id. So, we can query the
 //     // database again with the find by primary key operation to check if
 //     // the value was really inserted
-//     let inserted_league = League::find_by_pk_datasource(&new_league.id, MYSQL_DS)
+//     let inserted_league = League::find_by_pk_with(&new_league.id, MYSQL_DS)
 //         .await
 //         .expect("Failed the query to the database")
 //         .expect("No entity found for the primary key value passed in");
@@ -195,7 +195,7 @@
 // /// Same as the multi insert above, but with the specified datasource
 // #[cfg(feature = "mssql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_multi_insert_datasource_mssql_operation() {
+// fn test_crud_multi_insert_with_mssql_operation() {
 //     let mut new_league_mi: League = League {
 //         id: Default::default(),
 //         ext_id: 54376478_i64,
@@ -223,28 +223,28 @@
 
 //     // Insert the instance as database entities
 //     new_league_mi
-//         .insert_datasource(SQL_SERVER_DS)
+//         .insert_with(SQL_SERVER_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 //     new_league_mi_2
-//         .insert_datasource(SQL_SERVER_DS)
+//         .insert_with(SQL_SERVER_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 //     new_league_mi_3
-//         .insert_datasource(SQL_SERVER_DS)
+//         .insert_with(SQL_SERVER_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 
 //     // Recover the inserted data by primary key
-//     let inserted_league = League::find_by_pk_datasource(&new_league_mi.id, SQL_SERVER_DS)
+//     let inserted_league = League::find_by_pk_with(&new_league_mi.id, SQL_SERVER_DS)
 //         .await
 //         .expect("[1] - Failed the query to the database")
 //         .expect("[1] - No entity found for the primary key value passed in");
-//     let inserted_league_2 = League::find_by_pk_datasource(&new_league_mi_2.id, SQL_SERVER_DS)
+//     let inserted_league_2 = League::find_by_pk_with(&new_league_mi_2.id, SQL_SERVER_DS)
 //         .await
 //         .expect("[2] - Failed the query to the database")
 //         .expect("[2] - No entity found for the primary key value passed in");
-//     let inserted_league_3 = League::find_by_pk_datasource(&new_league_mi_3.id, SQL_SERVER_DS)
+//     let inserted_league_3 = League::find_by_pk_with(&new_league_mi_3.id, SQL_SERVER_DS)
 //         .await
 //         .expect("[3] - Failed the query to the database")
 //         .expect("[3] - No entity found for the primary key value passed in");
@@ -257,7 +257,7 @@
 // /// Same as the multi insert above, but with the specified datasource
 // #[cfg(feature = "mysql")]
 // #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_multi_insert_datasource_mysql_operation() {
+// fn test_crud_multi_insert_with_mysql_operation() {
 //     let mut new_league_mi: League = League {
 //         id: Default::default(),
 //         ext_id: 54376478_i64,
@@ -285,28 +285,28 @@
 
 //     // Insert the instance as database entities
 //     new_league_mi
-//         .insert_datasource(MYSQL_DS)
+//         .insert_with(MYSQL_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 //     new_league_mi_2
-//         .insert_datasource(MYSQL_DS)
+//         .insert_with(MYSQL_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 //     new_league_mi_3
-//         .insert_datasource(MYSQL_DS)
+//         .insert_with(MYSQL_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
 
 //     // Recover the inserted data by primary key
-//     let inserted_league = League::find_by_pk_datasource(&new_league_mi.id, MYSQL_DS)
+//     let inserted_league = League::find_by_pk_with(&new_league_mi.id, MYSQL_DS)
 //         .await
 //         .expect("[1] - Failed the query to the database")
 //         .expect("[1] - No entity found for the primary key value passed in");
-//     let inserted_league_2 = League::find_by_pk_datasource(&new_league_mi_2.id, MYSQL_DS)
+//     let inserted_league_2 = League::find_by_pk_with(&new_league_mi_2.id, MYSQL_DS)
 //         .await
 //         .expect("[2] - Failed the query to the database")
 //         .expect("[2] - No entity found for the primary key value passed in");
-//     let inserted_league_3 = League::find_by_pk_datasource(&new_league_mi_3.id, MYSQL_DS)
+//     let inserted_league_3 = League::find_by_pk_with(&new_league_mi_3.id, MYSQL_DS)
 //         .await
 //         .expect("[3] - Failed the query to the database")
 //         .expect("[3] - No entity found for the primary key value passed in");
