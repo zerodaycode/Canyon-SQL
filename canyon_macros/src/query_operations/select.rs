@@ -358,8 +358,9 @@ mod macro_builder_read_ops_tests {
     const MAPS_TO: &str = "into_results :: < User > ()";
     const LT_CONSTRAINT: &str = "< 'a >";
     const INPUT_PARAM: &str = "input : & 'a I";
-    
-    const WITH_WHERE_BOUNDS: &str =  "where I : Into < canyon_sql::core::TransactionInput < 'a >> + Sync + Send + 'a ";
+
+    const WITH_WHERE_BOUNDS: &str =
+        "where I : Into < canyon_sql::core::TransactionInput < 'a >> + Sync + Send + 'a ";
 
     #[test]
     fn test_macro_builder_find_all() {
@@ -451,4 +452,3 @@ mod macro_builder_read_ops_tests {
         assert!(find_by_pk_with.contains(OPT_RET_TY_LT));
     }
 }
-

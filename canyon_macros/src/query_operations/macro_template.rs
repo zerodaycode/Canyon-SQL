@@ -80,10 +80,10 @@ impl MacroOperationBuilder {
         self.user_type = Some(ty.clone());
         self
     }
-    
+
     fn compose_fn_signature_generics(&self) -> TokenStream {
         if !&self.lifetime && self.input_param.is_none() {
-            quote!{}
+            quote! {}
         } else if self.lifetime && self.input_param.is_none() {
             quote! { <'a> }
         } else {
@@ -122,10 +122,9 @@ impl MacroOperationBuilder {
         self.input_param = Some(quote! { input: I });
         self.input_fwd_arg = Some(quote! { input });
         self.lifetime = true;
-        self.where_clause_bounds
-            .push(quote! { 
-                I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a
-            });
+        self.where_clause_bounds.push(quote! {
+            I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a
+        });
         self
     }
 

@@ -32,7 +32,7 @@ pub trait Transaction<T> {
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
-        I: Into<TransactionInput<'a>> + Sync + Send + 'a
+        I: Into<TransactionInput<'a>> + Sync + Send + 'a,
     {
         async move {
             let transaction_input: TransactionInput<'a> = input.into();

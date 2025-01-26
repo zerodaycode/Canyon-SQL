@@ -1,4 +1,3 @@
-
 // /// Generates the TokenStream for build the search by foreign key feature, also as a method instance
 // /// of a T type of as an associated function of same T type, but wrapped as a Result<T, Err>, representing
 // /// a possible failure querying the database, a bad or missing FK annotation or a missed ForeignKeyable

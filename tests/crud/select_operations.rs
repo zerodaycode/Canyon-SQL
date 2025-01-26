@@ -158,10 +158,7 @@ fn test_crud_count_operation() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_count_with_operation_mssql() {
     assert_eq!(
-        League::find_all_with(SQL_SERVER_DS)
-            .await
-            .unwrap()
-            .len() as i64,
+        League::find_all_with(SQL_SERVER_DS).await.unwrap().len() as i64,
         League::count_with(SQL_SERVER_DS).await.unwrap()
     );
 }

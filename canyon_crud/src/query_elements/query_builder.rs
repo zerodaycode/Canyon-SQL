@@ -1,14 +1,14 @@
-use std::fmt::Debug;
-use std::marker::PhantomData;
-use canyon_core::connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
-use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
-use canyon_core::query::TransactionInput;
 use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier},
     crud::CrudOperations,
     query_elements::query::Query,
     Operator,
 };
+use canyon_core::connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
+use canyon_core::query::TransactionInput;
+use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
+use std::fmt::Debug;
+use std::marker::PhantomData;
 
 /// Contains the elements that makes part of the formal declaration
 /// of the behaviour of the Canyon-SQL QueryBuilder
@@ -63,7 +63,7 @@ pub mod ops {
         /// generated one
         ///
         /// * `sql` - The [`&str`] to be wired in the SQL
-        fn push_sql(&mut self, sql: &str);
+        fn push_sql(self, sql: &str);
 
         /// Generates a `WHERE` SQL clause for constraint the query.
         ///
@@ -72,10 +72,10 @@ pub mod ops {
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
         fn r#where<Z: FieldValueIdentifier<'a, T>>(
-            &mut self,
+            self,
             column: Z,
             op: impl Operator,
-        ) -> &mut Self
+        ) -> Self
         where
             T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 
@@ -86,10 +86,10 @@ pub mod ops {
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
         fn and<Z: FieldValueIdentifier<'a, T>>(
-            &mut self,
+            self,
             column: Z,
             op: impl Operator,
-        ) -> &mut Self;
+        ) -> Self;
 
         /// Generates an `AND` SQL clause for constraint the query that will create
         /// the filter in conjunction with an `IN` operator that will ac
@@ -99,7 +99,7 @@ pub mod ops {
         ///     the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameter`] with the values to filter
         ///     inside the `IN` operator
-        fn and_values_in<Z, Q>(&mut self, column: Z, values: &'a [Q]) -> &mut Self
+        fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> Self
         where
             Z: FieldIdentifier<T>,
             Q: QueryParameter<'a>;
@@ -112,7 +112,7 @@ pub mod ops {
         ///     the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameter`] with the values to filter
         ///     inside the `IN` operator
-        fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
+        fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> Self
         where
             Z: FieldIdentifier<T>,
             Q: QueryParameter<'a>;
@@ -123,14 +123,14 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator)
-            -> &mut Self;
+        fn or<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator)
+            -> Self;
 
         /// Generates a `ORDER BY` SQL clause for constraint the query.
         ///
         /// * `order_by` - A [`FieldIdentifier`] that will provide the target  column name
         /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be in ascending or descending order
-        fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self;
+        fn order_by<Z: FieldIdentifier<T>>(self, order_by: Z, desc: bool) -> Self;
     }
 }
 
@@ -138,25 +138,26 @@ pub mod ops {
 pub struct QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
 {
     query: Query<'a>,
     input: I,
     datasource_type: DatabaseType,
-    pd: PhantomData<T> // TODO: provisional while reworking the bounds
+    pd: PhantomData<T>, // TODO: provisional while reworking the bounds
 }
 
 unsafe impl<'a, T, I> Send for QueryBuilder<'a, T, I>
-    where T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+where
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
     I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-  TransactionInput<'a>: From<&'a I>,
 {
 }
 unsafe impl<'a, T, I> Sync for QueryBuilder<'a, T, I>
-    where T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-          I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-          TransactionInput<'a>: From<&'a I>
-{}
+where
+    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+{
+}
 
 impl<'a, T, I> QueryBuilder<'a, T, I>
 where
@@ -180,14 +181,14 @@ where
     /// Launches the generated query against the database targeted
     /// by the selected datasource
     pub async fn query(
-        &'a mut self,
+        mut self,
     ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self.query.sql.push(';');
 
         Ok(T::query(
             self.query.sql.clone(),
             self.query.params.to_vec(),
-            &self.input,
+            self.input,
         )
         .await?
         .into_results::<T>())
@@ -303,7 +304,7 @@ where
 pub struct SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a + ?Sized,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
     TransactionInput<'a>: From<&'a I>,
 {
     _inner: QueryBuilder<'a, T, I>,
@@ -316,7 +317,7 @@ where
     TransactionInput<'a>: From<&'a I>,
 {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
-    pub fn new(table_schema_data: &str, input: I) -> Self  {
+    pub fn new(table_schema_data: &str, input: I) -> Self {
         Self {
             _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("SELECT * FROM {table_schema_data}")),
@@ -328,9 +329,7 @@ where
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query(
-        &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
+    pub async fn query(self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 
@@ -342,7 +341,7 @@ where
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    pub fn left_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+    pub fn left_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
             .query
             .sql
@@ -358,7 +357,7 @@ where
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    pub fn inner_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+    pub fn inner_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
             .query
             .sql
@@ -374,7 +373,7 @@ where
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    pub fn right_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+    pub fn right_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
             .query
             .sql
@@ -390,7 +389,7 @@ where
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    pub fn full_join(&mut self, join_table: &str, col1: &str, col2: &str) -> &mut Self {
+    pub fn full_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
             .query
             .sql
@@ -411,28 +410,28 @@ where
     }
 
     #[inline(always)]
-    fn push_sql(&mut self, sql: &str) {
+    fn push_sql(mut self, sql: &str) {
         self._inner.query.sql.push_str(sql);
     }
 
     #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(
-        &mut self,
+        mut self,
         r#where: Z,
         op: impl Operator,
-    ) -> &mut Self {
+    ) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+    fn and<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
 
     #[inline]
-    fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
+    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
@@ -442,7 +441,7 @@ where
     }
 
     #[inline]
-    fn or_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
+    fn or_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
@@ -452,13 +451,13 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+    fn or<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }
 
     #[inline]
-    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
+    fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
         self._inner.order_by(order_by, desc);
         self
     }
@@ -497,13 +496,13 @@ where
     /// selected datasource
     #[inline]
     pub async fn query(
-        &'a mut self,
+        self,
     ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 
-    /// Creates an SQL `SET` clause to especify the columns that must be updated in the sentence
-    pub fn set<Z, Q>(&mut self, columns: &'a [(Z, Q)]) -> &mut Self
+    /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
+    pub fn set<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Self
     where
         Z: FieldIdentifier<T> + Clone,
         Q: QueryParameter<'a>,
@@ -554,28 +553,28 @@ where
     }
 
     #[inline(always)]
-    fn push_sql(&mut self, sql: &str) {
+    fn push_sql(mut self, sql: &str) {
         self._inner.query.sql.push_str(sql);
     }
 
     #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(
-        &mut self,
+        mut self,
         r#where: Z,
         op: impl Operator,
-    ) -> &mut Self {
+    ) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+    fn and<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
 
     #[inline]
-    fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
+    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
@@ -585,7 +584,7 @@ where
     }
 
     #[inline]
-    fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
+    fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
@@ -595,13 +594,13 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+    fn or<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }
 
     #[inline]
-    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
+    fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
         self._inner.order_by(order_by, desc);
         self
     }
@@ -640,9 +639,7 @@ where
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query(
-        &'a mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
+    pub async fn query(self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 }
@@ -659,28 +656,28 @@ where
     }
 
     #[inline(always)]
-    fn push_sql(&mut self, sql: &str) {
+    fn push_sql(mut self, sql: &str) {
         self._inner.query.sql.push_str(sql);
     }
 
     #[inline]
     fn r#where<Z: FieldValueIdentifier<'a, T>>(
-        &mut self,
+        mut self,
         r#where: Z,
         op: impl Operator,
-    ) -> &mut Self {
+    ) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+    fn and<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
 
     #[inline]
-    fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q]) -> &mut Self
+    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
@@ -690,7 +687,7 @@ where
     }
 
     #[inline]
-    fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> &mut Self
+    fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier<T>,
         Q: QueryParameter<'a>,
@@ -700,13 +697,13 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, column: Z, op: impl Operator) -> &mut Self {
+    fn or<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }
 
     #[inline]
-    fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) -> &mut Self {
+    fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
         self._inner.order_by(order_by, desc);
         self
     }
