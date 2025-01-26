@@ -108,13 +108,8 @@ pub async fn get_database_connection_by_ds<'a>(
 pub fn find_datasource_by_name_or_try_default<'a>(
     datasource_name: Option<&str>, // TODO: with the new inputs, we don't want anymore this as Option
 ) -> Result<&DatasourceConfig, DatasourceNotFound> {
-    let datasource_name = if let Some(ds_name) = datasource_name {
-        if !ds_name.is_empty() {
-            Some(ds_name)
-        } else { None }
-    } else {
-        None
-    };
+    let datasource_name = datasource_name
+        .filter(|&ds_name| !ds_name.is_empty());
     
     datasource_name
         .map_or_else(

@@ -166,14 +166,13 @@ where
 {
     /// Returns a new instance of the [`QueryBuilder`]
     pub fn new(query: Query<'a>, input: I) -> Self {
-        // let ti = input.into();
+        let db_type = input
+            .get_database_type()
+            .expect("QueryBuilder::<T>::get_database_type(). Querybuilder new must return Result on it's public API, refactor it"); // TODO:
         Self {
             query,
             input,
-            datasource_type: todo!(),
-            // DatabaseType::from(
-            //     &get_database_config(input, &DATASOURCES).auth,
-            // ),
+            datasource_type: db_type,
             pd: Default::default(),
         }
     }
