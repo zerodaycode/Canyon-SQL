@@ -1,3 +1,4 @@
+use std::error::Error;
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 
@@ -5,6 +6,7 @@ use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonR
 use mysql_async::Row;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;
+use crate::connection::database_type::DatabaseType;
 
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
@@ -21,6 +23,10 @@ impl DbConnection for MysqlConnection {
         Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
     > + Send {
         mysql_query_launcher::launch(stmt, params, self)
+    }
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+        Ok(DatabaseType::MySQL)
     }
 }
 

@@ -22,7 +22,7 @@ use crate::tests_models::tournament::*;
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_generated_sql_by_the_select_querybuilder() {
-    let mut select_with_joins = League::select_query()
+    let select_with_joins = League::select_query()
         .inner_join("tournament", "league.id", "tournament.league_id")
         .left_join("team", "tournament.id", "player.tournament_id")
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
@@ -32,7 +32,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
     // .await;
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the
-    // generated SQL by the SelectQueryBuilder<T> is the spected
+    // generated SQL by the SelectQueryBuilder<T> is the expected
     assert_eq!(
         select_with_joins.read_sql(),
         "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"

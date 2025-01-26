@@ -1,3 +1,4 @@
+use std::error::Error;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
 use crate::connection::db_clients::mssql::SqlServerConnection;
@@ -43,6 +44,10 @@ impl DbConnection for DatabaseConnection {
             }
         }
     }
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+        Ok(self.get_db_type())
+    }
 }
 
 impl DbConnection for &mut DatabaseConnection {
@@ -51,7 +56,7 @@ impl DbConnection for &mut DatabaseConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
     > + Send {
         async move {
             match self {
@@ -66,6 +71,10 @@ impl DbConnection for &mut DatabaseConnection {
             }
         }
     }
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+        Ok(self.get_db_type())
+    }
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -74,7 +83,7 @@ unsafe impl Sync for DatabaseConnection {}
 impl DatabaseConnection {
     pub async fn new(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
         match datasource.get_db_type() {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => {
@@ -90,15 +99,15 @@ impl DatabaseConnection {
             DatabaseType::MySQL => connection_helpers::create_mysql_connection(datasource).await,
         }
     }
-    
+
     pub fn get_db_type(&self) -> DatabaseType {
         match self {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(conn) => DatabaseType::PostgreSql,
+            DatabaseConnection::Postgres(_) => DatabaseType::PostgreSql,
             #[cfg(feature = "postgres")]
-            DatabaseConnection::SqlServer(conn) => DatabaseType::SqlServer,
+            DatabaseConnection::SqlServer(_) => DatabaseType::SqlServer,
             #[cfg(feature = "postgres")]
-            DatabaseConnection::MySQL(conn) => DatabaseType::MySQL,
+            DatabaseConnection::MySQL(_) => DatabaseType::MySQL,
         }
     }
 

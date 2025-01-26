@@ -105,9 +105,17 @@ pub async fn get_database_connection_by_ds<'a>(
     DatabaseConnection::new(ds).await
 }
 
-fn find_datasource_by_name_or_try_default<'a>(
-    datasource_name: Option<&str>,
+pub fn find_datasource_by_name_or_try_default<'a>(
+    datasource_name: Option<&str>, // TODO: with the new inputs, we don't want anymore this as Option
 ) -> Result<&DatasourceConfig, DatasourceNotFound> {
+    let datasource_name = if let Some(ds_name) = datasource_name {
+        if !ds_name.is_empty() {
+            Some(ds_name)
+        } else { None }
+    } else {
+        None
+    };
+    
     datasource_name
         .map_or_else(
             || DATASOURCES.first(),

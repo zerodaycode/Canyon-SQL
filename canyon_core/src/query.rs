@@ -9,6 +9,7 @@ use crate::{
 use std::{fmt::Display, future::Future};
 use std::error::Error;
 use crate::connection::database_type::DatabaseType;
+use crate::connection::find_datasource_by_name_or_try_default;
 // TODO: in order to avoid the tiberius transmute, we should define other method that takes the db_conn as a mut ref
 
 pub trait DbConnection {
@@ -18,9 +19,10 @@ pub trait DbConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
-    
+
     // TODO: the querybuilder needs to know the underlying db type associated with self, so provide
     // a method to obtain it
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>>;
 }
 
 /// This impl of [` DbConnection` ] for [`&str`] allows the client to use the exposed input types
@@ -28,7 +30,7 @@ pub trait DbConnection {
 /// directly with an [`&str`] that must match one of the datasources defined
 /// within the user config file
 impl DbConnection for &str {
-    fn launch<'a>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>]) 
+    fn launch<'a>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
         -> impl Future<Output=Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
     {
         async move {
@@ -40,6 +42,10 @@ impl DbConnection for &str {
             let conn = get_database_connection_by_ds(sane_ds_name).await?;
             conn.launch(stmt, params).await
         }
+    }
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+        Ok(find_datasource_by_name_or_try_default(Some(*self))?.get_db_type())
     }
 }
 
