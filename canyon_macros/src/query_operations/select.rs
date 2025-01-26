@@ -74,8 +74,7 @@ pub fn generate_find_all_query_tokens(
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
         fn select_query_with<'a, I>(input: I) -> canyon_sql::query::SelectQueryBuilder<'a, #ty, I>
-            where I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a,
-                canyon_sql::core::TransactionInput<'a>: From<&'a I>
+            where I: canyon_sql::core::DbConnection + Send + 'a,
         {
             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, input)
         }
@@ -113,7 +112,7 @@ fn generate_find_by_pk_tokens(
                 value: &'a dyn canyon_sql::core::QueryParameter<'a>,
                 input: I
             ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                where I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a
+                    where I: canyon_sql::core::DbConnection + Send + 'a,
             {
                 Err(
                     std::io::Error::new(

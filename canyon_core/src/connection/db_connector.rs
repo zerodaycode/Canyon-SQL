@@ -45,6 +45,29 @@ impl DbConnection for DatabaseConnection {
     }
 }
 
+impl DbConnection for &mut DatabaseConnection {
+    fn launch<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl std::future::Future<
+        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+    > + Send {
+        async move {
+            match self {
+                #[cfg(feature = "postgres")]
+                DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
+
+                #[cfg(feature = "mssql")]
+                DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
+
+                #[cfg(feature = "mysql")]
+                DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
+            }
+        }
+    }
+}
+
 unsafe impl Send for DatabaseConnection {}
 unsafe impl Sync for DatabaseConnection {}
 
@@ -65,6 +88,17 @@ impl DatabaseConnection {
 
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => connection_helpers::create_mysql_connection(datasource).await,
+        }
+    }
+    
+    pub fn get_db_type(&self) -> DatabaseType {
+        match self {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(conn) => DatabaseType::PostgreSql,
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::SqlServer(conn) => DatabaseType::SqlServer,
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::MySQL(conn) => DatabaseType::MySQL,
         }
     }
 

@@ -44,7 +44,6 @@ pub mod core {
     pub use canyon_core::mapper::*;
     pub use canyon_core::query::DbConnection;
     pub use canyon_core::query::Transaction;
-    pub use canyon_core::query::TransactionInput;
     pub use canyon_core::query_parameters::QueryParameter;
     pub use canyon_core::rows::CanyonRows;
 }

@@ -5,7 +5,7 @@ use crate::{
     Operator,
 };
 use canyon_core::connection::{database_type::DatabaseType, get_database_config, DATASOURCES};
-use canyon_core::query::TransactionInput;
+use canyon_core::query::DbConnection;
 use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
 use std::fmt::Debug;
 use std::marker::PhantomData;
@@ -46,7 +46,7 @@ pub mod ops {
     /// specific operations, like, for example, join operations
     /// on the [`super::SelectQueryBuilder`], and the usage
     /// of the `SET` clause on a [`super::UpdateQueryBuilder`],
-    /// without mixing types or convoluting everything into
+    /// without mixing types or polluting everything into
     /// just one type.
     pub trait QueryBuilder<'a, T>
     where
@@ -138,7 +138,7 @@ pub mod ops {
 pub struct QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    I: DbConnection,
 {
     query: Query<'a>,
     input: I,
@@ -149,28 +149,28 @@ where
 unsafe impl<'a, T, I> Send for QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    I: DbConnection + Send + 'a
 {
 }
 unsafe impl<'a, T, I> Sync for QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
+    I: DbConnection + Send + 'a
 {
 }
 
 impl<'a, T, I> QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     /// Returns a new instance of the [`QueryBuilder`]
     pub fn new(query: Query<'a>, input: I) -> Self {
+        // let ti = input.into();
         Self {
             query,
             input,
-            datasource_type: todo!("The from type on the querybuilder"),
+            datasource_type: todo!(),
             // DatabaseType::from(
             //     &get_database_config(input, &DATASOURCES).auth,
             // ),
@@ -304,8 +304,7 @@ where
 pub struct SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     _inner: QueryBuilder<'a, T, I>,
 }
@@ -313,8 +312,7 @@ where
 impl<'a, T, I> SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
     pub fn new(table_schema_data: &str, input: I) -> Self {
@@ -401,8 +399,7 @@ where
 impl<'a, T, I> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -470,8 +467,7 @@ where
 pub struct UpdateQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     _inner: QueryBuilder<'a, T, I>,
 }
@@ -479,8 +475,7 @@ where
 impl<'a, T, I> UpdateQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(table_schema_data: &str, input: I) -> Self {
@@ -544,8 +539,7 @@ where
 impl<'a, T, I> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -614,8 +608,7 @@ where
 pub struct DeleteQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     _inner: QueryBuilder<'a, T, I>,
 }
@@ -623,8 +616,7 @@ where
 impl<'a, T, I> DeleteQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(table_schema_data: &str, input: I) -> Self {
@@ -647,8 +639,7 @@ where
 impl<'a, T, I> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: DbConnection + Send + 'a
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {

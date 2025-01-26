@@ -123,7 +123,7 @@ impl MacroOperationBuilder {
         self.input_fwd_arg = Some(quote! { input });
         self.lifetime = true;
         self.where_clause_bounds.push(quote! {
-            I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a
+            I: canyon_sql::core::DbConnection + Send + 'a,
         });
         self
     }
