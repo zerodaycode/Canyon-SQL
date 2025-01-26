@@ -65,12 +65,14 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // async fn insert<'a>(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>;
+    async fn insert(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    // async fn insert_with<'a>(
-    //     &mut self,
-    //     datasource_name: &'a str,
-    // ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>;
+    async fn insert_with<'a, I>(
+        &mut self,
+        input: I,
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    where
+        I: DbConnection + Send + 'a;
 
     // async fn multi_insert<'a>(
     //     instances: &'a mut [&'a mut T],
@@ -92,12 +94,14 @@ where
 
     // fn update_query_with(datasource_name: &str) -> UpdateQueryBuilder<'_, T>;
 
-    // async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    // async fn delete_with<'a>(
-    //     &self,
-    //     datasource_name: &'a str,
-    // ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    async fn delete_with<'a, I>(
+        &self,
+        input: I,
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    where
+        I: DbConnection + Send + 'a;
 
     // fn delete_query<'a>() -> DeleteQueryBuilder<'a, T>;
 

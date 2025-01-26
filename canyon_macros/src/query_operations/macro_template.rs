@@ -6,9 +6,11 @@ pub struct MacroOperationBuilder {
     fn_name: Option<Ident>,
     user_type: Option<Ident>,
     lifetime: bool, // bool true always will generate <'a>
+    self_as_ref: bool,
     input_param: Option<TokenStream>,
     input_fwd_arg: Option<TokenStream>,
     return_type: Option<Ident>,
+    return_type_ts: Option<TokenStream>,
     where_clause_bounds: Vec<TokenStream>,
     doc_comments: Vec<String>,
     body_tokens: Option<TokenStream>,
@@ -17,7 +19,9 @@ pub struct MacroOperationBuilder {
     forwarded_parameters: Option<TokenStream>,
     single_result: bool,
     with_unwrap: bool,
+    with_no_result_value: bool, // Ok(())
     transaction_as_variable: bool,
+    direct_error_return: Option<String>,
     disable_mapping: bool,
     raw_return: bool,
     propagate_transaction_result: bool,
@@ -36,9 +40,11 @@ impl MacroOperationBuilder {
             fn_name: None,
             user_type: None,
             lifetime: false,
+            self_as_ref: false,
             input_param: None,
             input_fwd_arg: None,
             return_type: None,
+            return_type_ts: None,
             where_clause_bounds: Vec::new(),
             doc_comments: Vec::new(),
             body_tokens: None,
@@ -47,7 +53,9 @@ impl MacroOperationBuilder {
             forwarded_parameters: None,
             single_result: false,
             with_unwrap: false,
+            with_no_result_value: false,
             transaction_as_variable: false,
+            direct_error_return: None,
             disable_mapping: false,
             raw_return: false,
             propagate_transaction_result: false,
@@ -91,12 +99,28 @@ impl MacroOperationBuilder {
         }
     }
 
+    fn compose_self_params_separator(&self) -> TokenStream {
+        // TODO: missing combinations
+        if self.self_as_ref && self.input_param.is_some() {
+            quote! {, }
+        } else {
+            quote! {}
+        }
+    }
+    
     fn compose_params_separator(&self) -> TokenStream {
         if self.input_parameters.is_some() && self.input_param.is_some() {
             quote! {, }
         } else {
             quote! {}
         }
+    }
+
+    fn get_as_method(&self) -> TokenStream {
+        if self.self_as_ref {
+            let self_ident = Ident::new("self", Span::call_site());
+            quote! { &#self_ident, }
+        } else { quote!{} }
     }
 
     fn get_input_param(&self) -> TokenStream {
@@ -111,6 +135,11 @@ impl MacroOperationBuilder {
         } else {
             quote! { "" }
         }
+    }
+
+    pub fn with_self_as_ref(mut self) -> Self {
+        self.self_as_ref = true;
+        self
     }
 
     pub fn with_lifetime(mut self) -> Self {
@@ -129,7 +158,14 @@ impl MacroOperationBuilder {
     }
 
     fn get_return_type(&self) -> TokenStream {
-        let organic_ret_type = &self.return_type;
+        let organic_ret_type = if let Some(return_ty_ts) = &self.return_type_ts {
+            let rt_ts = return_ty_ts;
+            quote! { #rt_ts }
+        } else {
+            let rt = &self.return_type;
+            quote!{ #rt }
+        };
+        
         let container_ret_type = if self.single_result {
             quote! { Option }
         } else {
@@ -170,6 +206,11 @@ impl MacroOperationBuilder {
 
     pub fn return_type(mut self, return_type: &Ident) -> Self {
         self.return_type = Some(return_type.clone());
+        self
+    }
+
+    pub fn return_type_ts(mut self, return_type: &TokenStream) -> Self {
+        self.return_type_ts = Some(return_type.clone());
         self
     }
 
@@ -226,6 +267,16 @@ impl MacroOperationBuilder {
         self
     }
 
+    pub fn with_no_result_value(mut self) -> Self {
+        self.with_no_result_value = true;
+        self
+    }
+
+    pub fn with_direct_error_return<E: AsRef<str>>(mut self, err: E) -> Self {
+        self.direct_error_return = Some(err.as_ref().to_string());
+        self
+    }
+
     pub fn transaction_as_variable(mut self, result_handling: TokenStream) -> Self {
         self.transaction_as_variable = true;
         self.post_body = Some(result_handling);
@@ -259,6 +310,7 @@ impl MacroOperationBuilder {
         let fn_name = self.get_fn_name();
         let generics = self.compose_fn_signature_generics();
 
+        let as_method = self.get_as_method();
         let input_param = self.get_input_param();
         let input_fwd_arg = self.get_input_arg(); // TODO: replace
         let fn_parameters = self.get_fn_parameters();
@@ -283,8 +335,22 @@ impl MacroOperationBuilder {
         if !self.disable_mapping {
             base_body_tokens.extend(quote! { .into_results::<#ty>() })
         };
-
-        let body_tokens = if self.transaction_as_variable {
+        if self.with_no_result_value { // TODO: should we validate some combiantions? in the future, some of them can be hard to reason about
+            // like transaction_as_variable and with_no_result_value, they can't coexist
+            base_body_tokens.extend(quote! {; Ok(()) })
+        }
+        
+        let body_tokens = if let Some(direct_err_return) = &self.direct_error_return {
+            let err = &self.direct_error_return;
+            quote! {
+                Err(
+                    std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        #err
+                    ).into_inner().unwrap()
+                ) // TODO: waiting for creating our custom error types
+            }
+        } else if self.transaction_as_variable {
             let result_handling = &self.post_body;
             quote! {
                 let transaction_result = #base_body_tokens;
@@ -295,10 +361,16 @@ impl MacroOperationBuilder {
         };
 
         let separate_params = self.compose_params_separator();
+        let separate_self_params = self.compose_self_params_separator();
 
         quote! {
             #(#doc_comments)*
-            async fn #fn_name #generics(#fn_parameters #separate_params #input_param) -> #return_type
+            async fn #fn_name #generics(
+                #as_method
+                #fn_parameters
+                #separate_params
+                #input_param
+            ) -> #return_type
                 #where_clause
             {
                 #body_tokens

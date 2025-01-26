@@ -1,6 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-
+use syn::Type;
+use crate::query_operations::delete::__details::{create_delete_err_macro, create_delete_err_with_macro, create_delete_macro, create_delete_with_macro};
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the __delete() CRUD operation
@@ -10,6 +11,9 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     let fields = macro_data.get_struct_fields();
     let pk = macro_data.get_primary_key_annotation();
+
+    let ret_ty: Type = syn::parse_str("()").expect("Failed to parse unit type");
+    let q_ret_ty: TokenStream = quote!{#ret_ty};
 
     if let Some(primary_key) = pk {
         let pk_field = fields
@@ -21,60 +25,22 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         let pk_field_value =
             quote! { &self.#pk_field as &dyn canyon_sql::core::QueryParameter<'_> };
 
+        let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_schema_data, primary_key);
+        
+        let delete_tokens = create_delete_macro(ty, &stmt, &pk_field_value, &q_ret_ty);
+        let delete_with_tokens = create_delete_with_macro(ty, &stmt, &pk_field_value, &q_ret_ty);
+        
         quote! {
-            // /// Deletes from a database entity the row that matches
-            // /// the current instance of a T type, returning a result
-            // /// indicating a possible failure querying the database.
-            // async fn delete(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>> {
-            //     <#ty as canyon_sql::core::Transaction<#ty>>::query(
-            //         format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key),
-            //         &[#pk_field_value],
-            //         ""
-            //     ).await?;
-
-            //     Ok(())
-            // }
-
-            // /// Deletes from a database entity the row that matches
-            // /// the current instance of a T type, returning a result
-            // /// indicating a possible failure querying the database with the specified datasource.
-            // async fn delete_with<'a, I>(&self, input: I)
-            //     -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'static)>>
-            // {
-            //     <#ty as canyon_sql::core::Transaction<#ty>>::query(
-            //         format!("DELETE FROM {} WHERE {:?} = $1", #table_schema_data, #primary_key),
-            //         &[#pk_field_value],
-            //         datasource_name
-            //     ).await?;
-
-            //     Ok(())
-            // }
+            #delete_tokens
+            #delete_with_tokens
         }
     } else {
-        // Delete operation over an instance isn't available without declaring a primary key.
-        // The delete querybuilder variant must be used for the case when there's no pk declared
+        let delete_err_tokens = create_delete_err_macro(ty, &q_ret_ty);
+        let delete_err_with_tokens = create_delete_err_with_macro(ty, &q_ret_ty);
+        
         quote! {
-        //     async fn delete(&self)
-        //         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-        //     {
-        //         Err(std::io::Error::new(
-        //             std::io::ErrorKind::Unsupported,
-        //             "You can't use the 'delete' method on a \
-        //             CanyonEntity that does not have a #[primary_key] annotation. \
-        //             If you need to perform an specific search, use the Querybuilder instead."
-        //         ).into_inner().unwrap())
-        //     }
-
-        //     async fn delete_with<'a, I>(&self, input: I)
-        //         -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
-        //     {
-        //         Err(std::io::Error::new(
-        //             std::io::ErrorKind::Unsupported,
-        //             "You can't use the 'delete_with' method on a \
-        //             CanyonEntity that does not have a #[primary_key] annotation. \
-        //             If you need to perform an specific search, use the Querybuilder instead."
-        //         ).into_inner().unwrap())
-        //     }
+            #delete_err_tokens
+            #delete_err_with_tokens
         }
     }
 }
@@ -83,7 +49,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
 pub fn generate_delete_query_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &String,
+    table_schema_data: &str,
 ) -> TokenStream {
     let ty = macro_data.ty;
 
@@ -113,5 +79,69 @@ pub fn generate_delete_query_tokens(
         // fn delete_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::DeleteQueryBuilder<'a, #ty> {
         //     canyon_sql::query::DeleteQueryBuilder::new(#table_schema_data, datasource_name)
         // }
+    }
+}
+
+mod __details {
+    use proc_macro2::Span;
+    use crate::query_operations::doc_comments;
+    use crate::query_operations::macro_template::MacroOperationBuilder;
+    use super::*;
+
+    pub fn create_delete_macro(ty: &syn::Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
+        MacroOperationBuilder::new()
+            .fn_name("delete")
+            .with_self_as_ref()
+            .user_type(ty)
+            .return_type_ts(ret_ty)
+            .raw_return()
+            .add_doc_comment(doc_comments::DELETE)
+            .query_string(stmt)
+            .forwarded_parameters(quote!{&[#pk_field_value]})
+            .propagate_transaction_result()
+            .disable_mapping()
+            .raw_return()
+            .with_no_result_value()
+    }
+
+    pub fn create_delete_with_macro(ty: &syn::Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
+        MacroOperationBuilder::new()
+            .fn_name("delete_with")
+            .with_self_as_ref()
+            .with_input_param()
+            .user_type(ty)
+            .return_type_ts(ret_ty)
+            .raw_return()
+            .add_doc_comment(doc_comments::DELETE)
+            .add_doc_comment(doc_comments::DS_ADVERTISING)
+            .query_string(stmt)
+            .forwarded_parameters(quote!{&[#pk_field_value]})
+            .propagate_transaction_result()
+            .disable_mapping()
+            .raw_return()
+            .with_no_result_value()
+    }
+
+    pub fn create_delete_err_macro(ty: &syn::Ident, ret_ty: &TokenStream) -> MacroOperationBuilder {
+        MacroOperationBuilder::new()
+            .fn_name("delete")
+            .with_self_as_ref()
+            .user_type(ty)
+            .return_type_ts(ret_ty)
+            .raw_return()
+            .add_doc_comment(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
+            .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
+    }
+
+    pub fn create_delete_err_with_macro(ty: &syn::Ident, ret_ty: &TokenStream) -> MacroOperationBuilder {
+        MacroOperationBuilder::new()
+            .fn_name("delete_with")
+            .with_self_as_ref()
+            .with_input_param()
+            .user_type(ty)
+            .return_type_ts(ret_ty)
+            .raw_return()
+            .add_doc_comment(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
+            .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
     }
 }

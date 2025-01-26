@@ -30,3 +30,12 @@ pub const DS_ADVERTISING: &str =
     "/// The query it's made against the database with the configured datasource \
         /// described in the configuration file, and selected with the [`&str`] \
         /// passed as parameter.";
+
+pub const DELETE: &str = "Deletes from a database entity the row that matches
+    the current instance of a T type based on the actual value of the primary
+    key field, returning a result
+    indicating a possible failure querying the database.";
+
+pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str = "Operation is unavailable. T doesn't contain a #[primary_key]\
+    annotation. You must construct the query with the QueryBuilder type\
+    (<op_type>_query method for the CrudOperations implementors";
