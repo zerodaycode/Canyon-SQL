@@ -138,11 +138,10 @@ pub mod ops {
 pub struct QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: Into<TransactionInput<'a>> + Send + Sync + 'a,
-    TransactionInput<'a>: From<&'a I>,
+    I: Into<TransactionInput<'a>> + Send + Sync + 'a
 {
     query: Query<'a>,
-    input: &'a I,
+    input: I,
     datasource_type: DatabaseType,
     pd: PhantomData<T> // TODO: provisional while reworking the bounds
 }
@@ -166,7 +165,7 @@ where
     TransactionInput<'a>: From<&'a I>,
 {
     /// Returns a new instance of the [`QueryBuilder`]
-    pub fn new(query: Query<'a>, input: &I) -> Self {
+    pub fn new(query: Query<'a>, input: I) -> Self {
         Self {
             query,
             input,
@@ -188,7 +187,7 @@ where
         Ok(T::query(
             self.query.sql.clone(),
             self.query.params.to_vec(),
-            self.input,
+            &self.input,
         )
         .await?
         .into_results::<T>())
@@ -317,7 +316,7 @@ where
     TransactionInput<'a>: From<&'a I>,
 {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
-    pub fn new(table_schema_data: &str, input: &I) -> Self  {
+    pub fn new(table_schema_data: &str, input: I) -> Self  {
         Self {
             _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("SELECT * FROM {table_schema_data}")),
@@ -485,7 +484,7 @@ where
     TransactionInput<'a>: From<&'a I>,
 {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
-    pub fn new(table_schema_data: &str, input: &I) -> Self {
+    pub fn new(table_schema_data: &str, input: I) -> Self {
         Self {
             _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("UPDATE {table_schema_data}")),
@@ -633,7 +632,7 @@ where
         Self {
             _inner: QueryBuilder::<T, I>::new(
                 Query::new(format!("DELETE FROM {table_schema_data}")),
-                &input,
+                input,
             ),
         }
     }

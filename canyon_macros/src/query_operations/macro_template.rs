@@ -109,7 +109,7 @@ impl MacroOperationBuilder {
             let ds_arg0 = input_arg;
             quote! { #ds_arg0 }
         } else {
-            quote! { &"" }
+            quote! { "" }
         }
     }
 
@@ -119,13 +119,12 @@ impl MacroOperationBuilder {
     }
 
     pub fn with_input_param(mut self) -> Self {
-        self.input_param = Some(quote! { input: &'a I });
+        self.input_param = Some(quote! { input: I });
         self.input_fwd_arg = Some(quote! { input });
         self.lifetime = true;
         self.where_clause_bounds
             .push(quote! { 
-                I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a,
-                canyon_sql::core::TransactionInput<'a>: From<&'a I>
+                I: Into<canyon_sql::core::TransactionInput<'a>> + Sync + Send + 'a
             });
         self
     }
