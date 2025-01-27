@@ -1,4 +1,4 @@
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::Type;
 use crate::query_operations::delete::__details::{create_delete_err_macro, create_delete_err_with_macro, create_delete_macro, create_delete_with_macro};
@@ -7,6 +7,8 @@ use crate::utils::macro_tokens::MacroTokens;
 /// Generates the TokenStream for the __delete() CRUD operation
 /// returning a result, indicating a possible failure querying the database
 pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+    let mut delete_ops_tokens = TokenStream::new();
+    
     let ty = macro_data.ty;
 
     let fields = macro_data.get_struct_fields();
@@ -30,55 +32,59 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         let delete_tokens = create_delete_macro(ty, &stmt, &pk_field_value, &q_ret_ty);
         let delete_with_tokens = create_delete_with_macro(ty, &stmt, &pk_field_value, &q_ret_ty);
         
-        quote! {
+        delete_ops_tokens.extend(quote! {
             #delete_tokens
             #delete_with_tokens
-        }
+        });
     } else {
         let delete_err_tokens = create_delete_err_macro(ty, &q_ret_ty);
         let delete_err_with_tokens = create_delete_err_with_macro(ty, &q_ret_ty);
         
-        quote! {
+        delete_ops_tokens.extend(quote! {
             #delete_err_tokens
             #delete_err_with_tokens
-        }
+        });
     }
+    
+    let delete_with_querybuilder = generate_delete_query_tokens(&ty, table_schema_data);
+    delete_ops_tokens.extend(delete_with_querybuilder);
+    
+    delete_ops_tokens
 }
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
-pub fn generate_delete_query_tokens(
-    macro_data: &MacroTokens,
+fn generate_delete_query_tokens(
+    ty: &Ident,
     table_schema_data: &str,
 ) -> TokenStream {
-    let ty = macro_data.ty;
-
     quote! {
-        // /// Generates a [`canyon_sql::query::DeleteQueryBuilder`]
-        // /// that allows you to customize the query by adding parameters and constrains dynamically.
-        // ///
-        // /// It performs an `DELETE FROM table_name`, where `table_name` it's the name of your
-        // /// entity but converted to the corresponding database convention,
-        // /// unless concrete values are set on the available parameters of the
-        // /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        // fn delete_query<'a>() -> canyon_sql::query::DeleteQueryBuilder<'a, #ty> {
-        //     canyon_sql::query::DeleteQueryBuilder::new(#table_schema_data, "")
-        // }
+        /// Generates a [`canyon_sql::query::DeleteQueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        ///
+        /// It performs an `DELETE FROM table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are set on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        fn delete_query<'a>() -> canyon_sql::query::DeleteQueryBuilder<'a, #ty, &'a str> {
+            canyon_sql::query::DeleteQueryBuilder::new(#table_schema_data, "")
+        }
 
-        // /// Generates a [`canyon_sql::query::DeleteQueryBuilder`]
-        // /// that allows you to customize the query by adding parameters and constrains dynamically.
-        // ///
-        // /// It performs an `DELETE FROM table_name`, where `table_name` it's the name of your
-        // /// entity but converted to the corresponding database convention,
-        // /// unless concrete values are set on the available parameters of the
-        // /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        // ///
-        // /// The query it's made against the database with the configured datasource
-        // /// described in the configuration file, and selected with the [`&str`]
-        // /// passed as parameter.
-        // fn delete_query_datasource<'a>(datasource_name: &'a str) -> canyon_sql::query::DeleteQueryBuilder<'a, #ty> {
-        //     canyon_sql::query::DeleteQueryBuilder::new(#table_schema_data, datasource_name)
-        // }
+        /// Generates a [`canyon_sql::query::DeleteQueryBuilder`]
+        /// that allows you to customize the query by adding parameters and constrains dynamically.
+        ///
+        /// It performs an `DELETE FROM table_name`, where `table_name` it's the name of your
+        /// entity but converted to the corresponding database convention,
+        /// unless concrete values are set on the available parameters of the
+        /// `canyon_macro(table_name = "table_name", schema = "schema")`
+        ///
+        /// The query it's made against the database with the configured datasource
+        /// described in the configuration file, selected with the input parameter
+        fn delete_query_with<'a, I>(input: I) -> canyon_sql::query::DeleteQueryBuilder<'a, #ty, I>
+            where I: canyon_sql::core::DbConnection + Send + 'a
+        {
+            canyon_sql::query::DeleteQueryBuilder::new(#table_schema_data, input)
+        }
     }
 }
 

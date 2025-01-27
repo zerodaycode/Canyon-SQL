@@ -103,7 +103,9 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // fn delete_query<'a>() -> DeleteQueryBuilder<'a, T>;
+    fn delete_query<'a>() -> DeleteQueryBuilder<'a, T, &'a str>;
 
-    // fn delete_query_with(datasource_name: &str) -> DeleteQueryBuilder<'_, T>;
+    fn delete_query_with<'a, I>(input: I) -> DeleteQueryBuilder<'a, T, I>
+    where
+        I: DbConnection + Send + 'a;
 }

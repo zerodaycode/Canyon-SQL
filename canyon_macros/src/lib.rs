@@ -30,7 +30,7 @@ use query_operations::{
              // generate_multiple_insert_tokens
     },
     update::{generate_update_query_tokens, generate_update_tokens},
-    delete::{generate_delete_query_tokens, generate_delete_tokens},
+    delete::generate_delete_tokens,
 };
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
@@ -267,9 +267,6 @@ fn impl_crud_operations_trait_for_struct(
     // Builds the delete() queries
     let delete_tokens = generate_delete_tokens(macro_data, &table_schema_data);
 
-    // Builds the delete() query as a QueryBuilder
-    let _delete_query_tokens = generate_delete_query_tokens(macro_data, &table_schema_data);
-
     // // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
     // let _search_by_fk_tokens: Vec<(TokenStream, TokenStream)> =
     //     generate_find_by_foreign_key_tokens(macro_data);
@@ -314,9 +311,6 @@ fn impl_crud_operations_trait_for_struct(
 
         // // The delete impl
         #delete_tokens
-
-        // // The delete as querybuilder impl
-        // #_delete_query_tokens
     };
 
     // let tokens = if !_search_by_fk_tokens.is_empty() {

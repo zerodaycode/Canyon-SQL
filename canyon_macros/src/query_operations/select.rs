@@ -74,7 +74,7 @@ pub fn generate_find_all_query_tokens(
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
         fn select_query_with<'a, I>(input: I) -> canyon_sql::query::SelectQueryBuilder<'a, #ty, I>
-            where I: canyon_sql::core::DbConnection + Send + 'a,
+            where I: canyon_sql::core::DbConnection + Send + 'a
         {
             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, input)
         }
