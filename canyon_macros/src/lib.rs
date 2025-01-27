@@ -26,10 +26,8 @@ use query_operations::{
         // generate_find_by_foreign_key_tokens,
         // generate_find_by_reverse_foreign_key_tokens,
     },
-    insert::{generate_insert_tokens,
-             // generate_multiple_insert_tokens
-    },
-    update::{generate_update_query_tokens, generate_update_tokens},
+    insert::generate_insert_tokens,
+    update::generate_update_tokens,
     delete::generate_delete_tokens,
 };
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
@@ -260,9 +258,7 @@ fn impl_crud_operations_trait_for_struct(
     // let _insert_multi_tokens = generate_multiple_insert_tokens(macro_data, &table_schema_data);
 
     // Builds the update() queries
-    let _update_tokens = generate_update_tokens(macro_data, &table_schema_data);
-    // Builds the update() query as a QueryBuilder
-    let _update_query_tokens = generate_update_query_tokens(macro_data, &table_schema_data);
+    let update_tokens = generate_update_tokens(macro_data, &table_schema_data);
 
     // Builds the delete() queries
     let delete_tokens = generate_delete_tokens(macro_data, &table_schema_data);
@@ -294,22 +290,16 @@ fn impl_crud_operations_trait_for_struct(
         // The SELECT_QUERYBUILDER impl
         #find_all_query_tokens
 
-        // // The find_by_pk impl
-        // #_find_by_pk_tokens
-
         // The insert impl
         #insert_tokens
 
         // // The insert of multiple entities impl
         // #_insert_multi_tokens
 
-        // // The update impl
-        // #_update_tokens
+        // The update impl
+        #update_tokens
 
-        // // The update as a querybuilder impl
-        // #_update_query_tokens
-
-        // // The delete impl
+        // The delete impl
         #delete_tokens
     };
 

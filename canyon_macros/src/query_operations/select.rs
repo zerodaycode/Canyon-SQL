@@ -338,7 +338,7 @@ mod __details {
 #[cfg(test)]
 mod macro_builder_read_ops_tests {
     use super::__details::{count_generators::*, find_all_generators::*, pk_generators::*};
-    use crate::query_operations::tests_consts::*;
+    use crate::query_operations::consts::*;
     use proc_macro2::Span;
     use quote::quote;
     use syn::Ident;

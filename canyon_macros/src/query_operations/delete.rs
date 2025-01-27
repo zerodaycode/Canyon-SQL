@@ -8,9 +8,8 @@ use crate::utils::macro_tokens::MacroTokens;
 /// returning a result, indicating a possible failure querying the database
 pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
     let mut delete_ops_tokens = TokenStream::new();
-    
-    let ty = macro_data.ty;
 
+    let ty = macro_data.ty;
     let fields = macro_data.get_struct_fields();
     let pk = macro_data.get_primary_key_annotation();
 
@@ -45,10 +44,10 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             #delete_err_with_tokens
         });
     }
-    
+
     let delete_with_querybuilder = generate_delete_query_tokens(&ty, table_schema_data);
     delete_ops_tokens.extend(delete_with_querybuilder);
-    
+
     delete_ops_tokens
 }
 
@@ -94,7 +93,7 @@ mod __details {
     use crate::query_operations::macro_template::MacroOperationBuilder;
     use super::*;
 
-    pub fn create_delete_macro(ty: &syn::Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
+    pub fn create_delete_macro(ty: &Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("delete")
             .with_self_as_ref()
@@ -110,7 +109,7 @@ mod __details {
             .with_no_result_value()
     }
 
-    pub fn create_delete_with_macro(ty: &syn::Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
+    pub fn create_delete_with_macro(ty: &Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("delete_with")
             .with_self_as_ref()
@@ -128,7 +127,7 @@ mod __details {
             .with_no_result_value()
     }
 
-    pub fn create_delete_err_macro(ty: &syn::Ident, ret_ty: &TokenStream) -> MacroOperationBuilder {
+    pub fn create_delete_err_macro(ty: &Ident, ret_ty: &TokenStream) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("delete")
             .with_self_as_ref()
@@ -139,7 +138,7 @@ mod __details {
             .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
     }
 
-    pub fn create_delete_err_with_macro(ty: &syn::Ident, ret_ty: &TokenStream) -> MacroOperationBuilder {
+    pub fn create_delete_err_with_macro(ty: &Ident, ret_ty: &TokenStream) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("delete_with")
             .with_self_as_ref()
@@ -154,7 +153,7 @@ mod __details {
 
 #[cfg(test)]
 mod delete_tests {
-    use crate::query_operations::tests_consts::*;
+    use crate::query_operations::consts::*;
     use super::__details::*;
     use proc_macro2::Span;
     use quote::quote;

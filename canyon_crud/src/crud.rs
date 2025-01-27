@@ -83,16 +83,20 @@ where
     //     datasource_name: &'a str,
     // ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    // async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
-    // async fn update_with<'a>(
-    //     &self,
-    //     datasource_name: &'a str,
-    // ) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    async fn update_with<'a, I>(
+        &self,
+        input: I,
+    ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    where
+        I: DbConnection + Send + 'a;
 
-    // fn update_query<'a>() -> UpdateQueryBuilder<'a, T>;
+    fn update_query<'a>() -> UpdateQueryBuilder<'a, T, &'a str>;
 
-    // fn update_query_with(datasource_name: &str) -> UpdateQueryBuilder<'_, T>;
+    fn update_query_with<'a, I>(input: I) -> UpdateQueryBuilder<'a, T, I>
+    where
+        I: DbConnection + Send + 'a;
 
     async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 

@@ -6,4 +6,4 @@ pub mod update;
 
 mod doc_comments;
 mod macro_template;
-mod tests_consts;
+mod consts;
