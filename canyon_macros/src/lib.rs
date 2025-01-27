@@ -293,9 +293,6 @@ fn impl_crud_operations_trait_for_struct(
         // The insert impl
         #insert_tokens
 
-        // // The insert of multiple entities impl
-        // #_insert_multi_tokens
-
         // The update impl
         #update_tokens
 

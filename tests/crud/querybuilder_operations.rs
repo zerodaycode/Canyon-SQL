@@ -126,7 +126,7 @@ fn test_crud_find_with_querybuilder_and_leftlike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
     // Find all the leagues whose name ends with "CK"
-    let mut filtered_leagues_result = League::select_query()
+    let filtered_leagues_result = League::select_query()
         .r#where(LeagueFieldValue::name(&"CK"), Like::Left);
 
     assert_eq!(
@@ -228,7 +228,7 @@ fn test_crud_find_with_querybuilder_with_mysql() {
 fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let mut q = League::update_query()
+    let q = League::update_query()
         .set(&[
             (LeagueField::slug, "Updated with the QueryBuilder"),
             (LeagueField::name, "Random"),
@@ -262,7 +262,7 @@ fn test_crud_update_with_querybuilder() {
 fn test_crud_update_with_querybuilder_with_mssql() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let mut q = Player::update_query_with(SQL_SERVER_DS);
+    let q = Player::update_query_with(SQL_SERVER_DS);
     q.set(&[
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
@@ -293,7 +293,7 @@ fn test_crud_update_with_querybuilder_with_mysql() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
 
-    let mut q = Player::update_query_with(MYSQL_DS);
+    let q = Player::update_query_with(MYSQL_DS);
     q.set(&[
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
@@ -378,7 +378,7 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
 /// WHERE clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_where_clause() {
-    let mut l = League::select_query()
+    let l = League::select_query()
         .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq);
 
     assert_eq!(l.read_sql(), "SELECT * FROM league WHERE name = $1")
@@ -388,7 +388,7 @@ fn test_where_clause() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause() {
-    let mut l = League::select_query()
+    let l = League::select_query()
         .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
         .and(LeagueFieldValue::id(&10), Comp::LtEq);
 
@@ -402,7 +402,7 @@ fn test_and_clause() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause_with_in_constraint() {
-    let mut l = League::select_query()
+    let l = League::select_query()
         .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
         .and_values_in(LeagueField::id, &[1, 7, 10]);
 
@@ -416,7 +416,7 @@ fn test_and_clause_with_in_constraint() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause() {
-    let mut l = League::select_query()
+    let l = League::select_query()
         .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
         .or(LeagueFieldValue::id(&10), Comp::LtEq);
 
@@ -430,7 +430,7 @@ fn test_or_clause() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause_with_in_constraint() {
-    let mut l = League::select_query()
+    let l = League::select_query()
         .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
         .or_values_in(LeagueField::id, &[1, 7, 10]);
 
@@ -444,7 +444,7 @@ fn test_or_clause_with_in_constraint() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_order_by_clause() {
-    let mut l = League::select_query()
+    let l = League::select_query()
         .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
         .order_by(LeagueField::id, false);
 

@@ -74,14 +74,16 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // async fn multi_insert<'a>(
-    //     instances: &'a mut [&'a mut T],
-    // ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    async fn multi_insert<'a>(
+        instances: &'a mut [&'a mut T],
+    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
 
-    // async fn multi_insert_with<'a>(
-    //     instances: &'a mut [&'a mut T],
-    //     datasource_name: &'a str,
-    // ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    async fn multi_insert_with<'a, I>(
+        instances: &'a mut [&'a mut T],
+        input: I,
+    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>
+    where
+        I: DbConnection + Send + 'a;
 
     async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
 
