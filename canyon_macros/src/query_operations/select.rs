@@ -338,6 +338,7 @@ mod __details {
 #[cfg(test)]
 mod macro_builder_read_ops_tests {
     use super::__details::{count_generators::*, find_all_generators::*, pk_generators::*};
+    use crate::query_operations::tests_consts::*;
     use proc_macro2::Span;
     use quote::quote;
     use syn::Ident;
@@ -346,25 +347,12 @@ mod macro_builder_read_ops_tests {
     const COUNT_STMT: &str = "SELECT COUNT(*) FROM public.user";
     const FIND_BY_PK_STMT: &str = "SELECT * FROM public.user WHERE id = $1";
 
-    const RAW_RET_TY: &str = "Vec < User >";
-    const RES_RET_TY: &str =
-        "Result < Vec < User > , Box < (dyn std :: error :: Error + Send + Sync) > >";
-    const RES_RET_TY_LT: &str =
-        "Result < Vec < User > , Box < (dyn std :: error :: Error + Send + Sync + 'a) > >";
-    const OPT_RET_TY_LT: &str =
-        "Result < Option < User > , Box < (dyn std :: error :: Error + Send + Sync + 'a) > >";
-
-    const MAPS_TO: &str = "into_results :: < User > ()";
-    const LT_CONSTRAINT: &str = "< 'a >";
-    const INPUT_PARAM: &str = "input : & 'a I";
-
-    const WITH_WHERE_BOUNDS: &str =
-        "where I : Into < canyon_sql::core::TransactionInput < 'a >> + Sync + Send + 'a ";
-
     #[test]
     fn test_macro_builder_find_all() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let find_all_builder = create_find_all_macro(&ty, SELECT_ALL_STMT);
+        let find_all_builder = create_find_all_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            SELECT_ALL_STMT
+        );
         let find_all = find_all_builder.generate_tokens().to_string();
 
         assert!(find_all.contains("async fn find_all"));
@@ -373,8 +361,10 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_find_all_with() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let find_all_builder = create_find_all_with_macro(&ty, SELECT_ALL_STMT);
+        let find_all_builder = create_find_all_with_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            SELECT_ALL_STMT
+        );
         let find_all_with = find_all_builder.generate_tokens().to_string();
 
         assert!(find_all_with.contains("async fn find_all_with"));
@@ -385,8 +375,10 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_find_all_unchecked() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let find_all_unc_builder = create_find_all_unchecked_macro(&ty, SELECT_ALL_STMT);
+        let find_all_unc_builder = create_find_all_unchecked_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            SELECT_ALL_STMT
+        );
         let find_all_unc = find_all_unc_builder.generate_tokens().to_string();
 
         assert!(find_all_unc.contains("async fn find_all_unchecked"));
@@ -395,8 +387,10 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_find_all_unchecked_with() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let find_all_unc_with_builder = create_find_all_unchecked_with_macro(&ty, SELECT_ALL_STMT);
+        let find_all_unc_with_builder = create_find_all_unchecked_with_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            SELECT_ALL_STMT
+        );
         let find_all_unc_with = find_all_unc_with_builder.generate_tokens().to_string();
 
         assert!(find_all_unc_with.contains("async fn find_all_unchecked_with"));
@@ -407,8 +401,10 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_count() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let count_builder = create_count_macro(&ty, COUNT_STMT);
+        let count_builder = create_count_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            COUNT_STMT
+        );
         let count = count_builder.generate_tokens().to_string();
 
         assert!(count.contains("async fn count"));
@@ -417,8 +413,10 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_count_with() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let count_with_builder = create_count_with_macro(&ty, COUNT_STMT);
+        let count_with_builder = create_count_with_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            COUNT_STMT
+        );
         let count_with = count_with_builder.generate_tokens().to_string();
 
         assert!(count_with.contains("async fn count_with"));
@@ -429,8 +427,11 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_find_by_pk() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let find_by_pk_builder = create_find_by_pk_macro(&ty, FIND_BY_PK_STMT, &quote! {});
+        let find_by_pk_builder = create_find_by_pk_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            FIND_BY_PK_STMT, 
+            &quote! {}
+        );
         let find_by_pk = find_by_pk_builder.generate_tokens().to_string();
 
         assert!(find_by_pk.contains("async fn find_by_pk"));
@@ -440,10 +441,12 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_macro_builder_find_by_pk_with() {
-        let ty: Ident = Ident::new("User", Span::call_site());
-        let find_by_pk_with_builder = create_find_by_pk_with(&ty, FIND_BY_PK_STMT, &quote! {});
+        let find_by_pk_with_builder = create_find_by_pk_with(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            FIND_BY_PK_STMT, 
+            &quote! {}
+        );
         let find_by_pk_with = find_by_pk_with_builder.generate_tokens().to_string();
-        println!("{:?}", find_by_pk_with.split("\n").collect::<Vec<_>>());
 
         assert!(find_by_pk_with.contains("async fn find_by_pk_with"));
         assert!(find_by_pk_with.contains(LT_CONSTRAINT));

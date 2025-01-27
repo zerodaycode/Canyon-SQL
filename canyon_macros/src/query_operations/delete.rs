@@ -145,3 +145,70 @@ mod __details {
             .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
     }
 }
+
+#[cfg(test)]
+mod delete_tests {
+    use crate::query_operations::tests_consts::*;
+    use super::__details::*;
+    use proc_macro2::Span;
+    use quote::quote;
+    use syn::Ident;
+
+    const DELETE_MOCK_STMT: &str = "DELETE FROM public.user WHERE user.id = 1";
+
+    #[test]
+    fn test_macro_builder_delete() {
+        let delete_builder = create_delete_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            DELETE_MOCK_STMT,
+            &PK_MOCK_FIELD_VALUE.with(|pk_field_mock_value| pk_field_mock_value.borrow().clone()),
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+        );
+        let delete = delete_builder.generate_tokens().to_string();
+
+        assert!(delete.contains("async fn delete"));
+        assert!(delete.contains(RES_VOID_RET_TY));
+    }
+
+    #[test]
+    fn test_macro_builder_delete_with() {
+        let delete_builder = create_delete_with_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            DELETE_MOCK_STMT,
+            &PK_MOCK_FIELD_VALUE.with(|pk_field_mock_value| pk_field_mock_value.borrow().clone()),
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+        );
+        let delete_with = delete_builder.generate_tokens().to_string();
+
+        assert!(delete_with.contains("async fn delete_with"));
+        assert!(delete_with.contains(RES_VOID_RET_TY_LT));
+        assert!(delete_with.contains(LT_CONSTRAINT));
+        assert!(delete_with.contains(INPUT_PARAM));
+    }
+
+    #[test]
+    fn test_macro_builder_delete_err() {
+        let delete_err_builder = create_delete_err_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+        );
+        let delete_err = delete_err_builder.generate_tokens().to_string();
+
+        assert!(delete_err.contains("async fn delete"));
+        assert!(delete_err.contains(RES_VOID_RET_TY));
+    }
+
+    #[test]
+    fn test_macro_builder_delete_err_with() {
+        let delete_err_with_builder = create_delete_err_with_macro(
+            &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+        );
+        let delete_err_with = delete_err_with_builder.generate_tokens().to_string();
+
+        assert!(delete_err_with.contains("async fn delete_with"));
+        assert!(delete_err_with.contains(RES_VOID_RET_TY_LT));
+        assert!(delete_err_with.contains(LT_CONSTRAINT));
+        assert!(delete_err_with.contains(INPUT_PARAM));
+    }
+}
