@@ -88,7 +88,7 @@ fn generate_delete_query_tokens(
 }
 
 mod __details {
-    use proc_macro2::Span;
+    
     use crate::query_operations::doc_comments;
     use crate::query_operations::macro_template::MacroOperationBuilder;
     use super::*;

@@ -124,8 +124,8 @@ fn generate_update_query_tokens(
 }
 
 mod __details {
-    use quote::quote;
-    use proc_macro2::TokenStream;
+    
+    
     use crate::query_operations::consts::VOID_RET_TY;
     use crate::query_operations::doc_comments;
     use crate::query_operations::macro_template::MacroOperationBuilder;

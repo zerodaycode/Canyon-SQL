@@ -1,11 +1,10 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{parse_quote, Type};
 
 pub struct MacroOperationBuilder {
     fn_name: Option<Ident>,
     user_type: Option<Ident>,
-    lifetime: bool, // bool true always will generate <'a>
+    lifetime: bool,
     self_as_ref: bool,
     input_param: Option<TokenStream>,
     input_fwd_arg: Option<TokenStream>,
@@ -119,7 +118,7 @@ impl MacroOperationBuilder {
     fn get_as_method(&self) -> TokenStream {
         if self.self_as_ref {
             let self_ident = Ident::new("self", Span::call_site());
-            quote! { &#self_ident, }
+            quote! { &#self_ident }
         } else { quote!{} }
     }
 
@@ -245,10 +244,8 @@ impl MacroOperationBuilder {
     }
 
     fn get_forwarded_parameters(&self) -> TokenStream {
-        let forwarded_parameters = &self.forwarded_parameters;
-
         if let Some(fwd_params) = &self.forwarded_parameters {
-            quote! { #forwarded_parameters }
+            quote! { #fwd_params }
         } else {
             quote! { &[] }
         }
@@ -299,7 +296,7 @@ impl MacroOperationBuilder {
     }
 
     /// Generates the final `quote!` tokens for this operation
-    pub fn generate_tokens(&self) -> proc_macro2::TokenStream {
+    pub fn generate_tokens(&self) -> TokenStream {
         let doc_comments = &self
             .doc_comments
             .iter()
@@ -335,13 +332,13 @@ impl MacroOperationBuilder {
         if !self.disable_mapping {
             base_body_tokens.extend(quote! { .into_results::<#ty>() })
         };
-        if self.with_no_result_value { // TODO: should we validate some combiantions? in the future, some of them can be hard to reason about
+        if self.with_no_result_value { // TODO: should we validate some combinations? in the future, some of them can be hard to reason about
             // like transaction_as_variable and with_no_result_value, they can't coexist
             base_body_tokens.extend(quote! {; Ok(()) })
         }
         
         let body_tokens = if let Some(direct_err_return) = &self.direct_error_return {
-            let err = &self.direct_error_return;
+            let err = direct_err_return;
             quote! {
                 Err(
                     std::io::Error::new(
@@ -367,6 +364,7 @@ impl MacroOperationBuilder {
             #(#doc_comments)*
             async fn #fn_name #generics(
                 #as_method
+                #separate_self_params
                 #fn_parameters
                 #separate_params
                 #input_param

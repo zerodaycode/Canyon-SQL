@@ -1,6 +1,5 @@
 use proc_macro2::TokenStream;
 use quote::quote;
-use canyon_entities::manager_builder::generate_user_struct;
 use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the _insert_result() CRUD operation

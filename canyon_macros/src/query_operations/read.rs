@@ -1,10 +1,7 @@
-use canyon_entities::field_annotation::EntityFieldAnnotation;
 
-use proc_macro2::{Span, TokenStream};
+use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::query_operations::macro_template::MacroOperationBuilder;
-use crate::utils::helpers::*;
 use crate::utils::macro_tokens::MacroTokens;
 
 // The API for export to the real macro implementation the generated macros for the READ operations

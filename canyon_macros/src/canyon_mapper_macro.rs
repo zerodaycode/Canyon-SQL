@@ -102,7 +102,6 @@ fn create_sqlserver_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> M
 
 #[cfg(feature = "mssql")]
 fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -> TokenStream {
-    println!("Handling type: {:?} for field: {:?}", target_type, ident_name);
     let is_opt_type = target_type.contains("Option");
     let handle_opt = if !is_opt_type {
         quote! { .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref()) }
