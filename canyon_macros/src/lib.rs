@@ -12,6 +12,7 @@ use canyon_macro::main_with_queries;
 mod canyon_macro;
 mod query_operations;
 mod utils;
+mod canyon_mapper_macro;
 
 use canyon_entity_macro::parse_canyon_entity_proc_macro_attr;
 use proc_macro::TokenStream as CompilerTokenStream;
@@ -36,6 +37,8 @@ use canyon_entities::{
     register_types::{CanyonRegisterEntity, CanyonRegisterEntityField},
     CANYON_REGISTER_ENTITIES,
 };
+use crate::canyon_mapper_macro::canyon_mapper_impl_tokens;
+use crate::utils::helpers::filter_fields;
 
 /// Macro for handling the entry point to the program.
 ///
@@ -218,10 +221,6 @@ pub fn canyon_entity(
 /// type, as defined in the `CrudOperations` + `Transaction` traits.
 #[proc_macro_derive(CanyonCrud)]
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Construct a representation of Rust code as a syntax tree
-    // that we can manipulate
-
-    // Calls the helper struct to build the tokens that generates the final CRUD methods
     let ast: DeriveInput =
         syn::parse(input).expect("Error parsing `Canyon Entity for generate the CRUD methods");
     let macro_data = MacroTokens::new(&ast);
@@ -331,201 +330,7 @@ pub fn implement_foreignkeyable_for_type(
 
 #[proc_macro_derive(CanyonMapper)]
 pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    // Gets the data from the AST
     let ast: DeriveInput = syn::parse(input).unwrap();
-
-    // Recovers the identifiers of the structs members
-    let fields = fields_with_types(match ast.data {
-        syn::Data::Struct(ref s) => &s.fields,
-        _ => {
-            return syn::Error::new(ast.ident.span(), "CanyonMapper only works with Structs")
-                .to_compile_error()
-                .into()
-        }
-    });
-
-    #[cfg(feature = "postgres")]
-    // Here it's where the incoming values of the DatabaseResult are wired into a new
-    // instance, mapping the fields of the type against the columns
-    let init_field_values = fields.iter().map(|(_vis, ident, _ty)| {
-        let ident_name = ident.to_string();
-        quote! {
-            #ident: row.try_get(#ident_name)
-                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
-        }
-    });
-
-    #[cfg(feature = "mssql")]
-    let init_field_values_sqlserver = fields.iter().map(|(_vis, ident, ty)| {
-        let ident_name = ident.to_string();
-
-        if get_field_type_as_string(ty) == "String" {
-            quote! {
-                #ident: row.get::<&str, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-                    .to_string()
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i64>" {
-            quote! {
-                #ident: row.get::<i64, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
-            quote! {
-                #ident: row.get::<i32, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
-            quote! {
-                #ident: row.get::<i16, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
-            quote! {
-                #ident: row.get::<f32, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
-            quote! {
-                #ident: row.get::<f64, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
-            quote! {
-                #ident: row.get::<&str, &str>(#ident_name)
-                    .map( |x| x.to_owned() )
-            }
-        } else if get_field_type_as_string(ty) == "NaiveDate" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty) == "NaiveTime" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty) == "NaiveDateTime" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty) == "DateTime" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
-            }
-        } else {
-            quote! {
-                #ident: row.get::<#ty, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        }
-    });
-
-    #[cfg(feature = "mysql")]
-    let init_field_values_mysql = fields.iter().map(|(_vis, ident, _ty)| {
-        let ident_name = ident.to_string();
-        quote! {
-            #ident: row.get(#ident_name)
-                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
-        }
-    });
-
-    // The type of the Struct
-    let ty = ast.ident;
-
-    let mut impl_methods = quote! {}; // Collect methods conditionally
-
-    #[cfg(feature = "postgres")]
-    impl_methods.extend(quote! {
-        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> #ty {
-            Self {
-                #(#init_field_values),*
-            }
-        }
-    });
-
-    #[cfg(feature = "mssql")]
-    impl_methods.extend(quote! {
-        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> #ty {
-            Self {
-                #(#init_field_values_sqlserver),*
-            }
-        }
-    });
-
-    #[cfg(feature = "mysql")]
-    impl_methods.extend(quote! {
-        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> #ty {
-            Self {
-                #(#init_field_values_mysql),*
-            }
-        }
-    });
-
-    // Wrap everything in the shared `impl` block
-    let tokens = quote! {
-        impl canyon_sql::core::RowMapper<Self> for #ty {
-            #impl_methods
-        }
-    };
-
-    tokens.into()
+    canyon_mapper_impl_tokens(ast).into()
 }
 
-/// Helper for generate the fields data for the Custom Derives Macros
-fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
-    fields
-        .iter()
-        .map(|field| (field.vis.clone(), field.ident.as_ref().unwrap().clone()))
-        .collect::<Vec<_>>()
-}
-
-fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
-    fields
-        .iter()
-        .map(|field| {
-            (
-                field.vis.clone(),
-                field.ident.as_ref().unwrap().clone(),
-                field.ty.clone(),
-            )
-        })
-        .collect::<Vec<_>>()
-}
-
-#[cfg(feature = "mssql")]
-use quote::ToTokens;
-#[cfg(feature = "mssql")]
-fn get_field_type_as_string(typ: &Type) -> String {
-    match typ {
-        Type::Array(type_) => type_.to_token_stream().to_string(),
-        Type::BareFn(type_) => type_.to_token_stream().to_string(),
-        Type::Group(type_) => type_.to_token_stream().to_string(),
-        Type::ImplTrait(type_) => type_.to_token_stream().to_string(),
-        Type::Infer(type_) => type_.to_token_stream().to_string(),
-        Type::Macro(type_) => type_.to_token_stream().to_string(),
-        Type::Never(type_) => type_.to_token_stream().to_string(),
-        Type::Paren(type_) => type_.to_token_stream().to_string(),
-        Type::Path(type_) => type_.to_token_stream().to_string(),
-        Type::Ptr(type_) => type_.to_token_stream().to_string(),
-        Type::Reference(type_) => type_.to_token_stream().to_string(),
-        Type::Slice(type_) => type_.to_token_stream().to_string(),
-        Type::TraitObject(type_) => type_.to_token_stream().to_string(),
-        Type::Tuple(type_) => type_.to_token_stream().to_string(),
-        Type::Verbatim(type_) => type_.to_token_stream().to_string(),
-        _ => "".to_owned(),
-    }
-}

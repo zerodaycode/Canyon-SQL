@@ -1,7 +1,27 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use syn::{punctuated::Punctuated, MetaNameValue, Token};
+use syn::{punctuated::Punctuated, Fields, MetaNameValue, Token, Type, Visibility};
 
 use super::macro_tokens::MacroTokens;
+
+pub fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
+    fields
+        .iter()
+        .map(|field| (field.vis.clone(), field.ident.as_ref().unwrap().clone()))
+        .collect::<Vec<_>>()
+}
+
+pub fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
+    fields
+        .iter()
+        .map(|field| {
+            (
+                field.vis.clone(),
+                field.ident.as_ref().unwrap().clone(),
+                field.ty.clone(),
+            )
+        })
+        .collect::<Vec<_>>()
+}
 
 /// If the `canyon_entity` macro has valid attributes attached, and those attrs are the
 /// user's desired `table_name` and/or the `schema_name`, this method returns its
