@@ -20,10 +20,7 @@ use quote::quote;
 use syn::{DeriveInput, Fields, Type, Visibility};
 
 use query_operations::{
-    select::{
-        generate_read_operations_tokens,
-        generate_find_all_query_tokens
-    },
+    read::generate_read_operations_tokens,
     insert::generate_insert_tokens,
     update::generate_update_tokens,
     delete::generate_delete_tokens,
@@ -165,8 +162,7 @@ pub fn canyon_entity(
     }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
-    let entity = entity_res.expect("Unexpected error parsing the struct");
-    // Generate the bits of code that we should give back to the compiler
+    let entity = entity_res.unwrap();
     let generated_user_struct = generate_user_struct(&entity);
 
     // The identifier of the entities
@@ -250,14 +246,12 @@ fn impl_crud_operations_trait_for_struct(
     let ty = macro_data.ty;
 
     let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
-    let find_all_query_tokens = generate_find_all_query_tokens(macro_data, &table_schema_data);
     let insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
     let update_tokens = generate_update_tokens(macro_data, &table_schema_data);
     let delete_tokens = generate_delete_tokens(macro_data, &table_schema_data);
 
     let crud_operations_tokens = quote! { // TODO: bring this directly from mod.rs or query_operations?
         #read_operations_tokens
-        #find_all_query_tokens
         #insert_tokens
         #update_tokens
         #delete_tokens
@@ -350,9 +344,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
         }
     });
 
-    // TODO: refactor the code below after the current bugfixes, to conditinally generate
-    // the required methods and populate the CanyonMapper trait dependencing on the cfg flags
-    // enabled with a more elegant solution (a fn for feature, for ex)
     #[cfg(feature = "postgres")]
     // Here it's where the incoming values of the DatabaseResult are wired into a new
     // instance, mapping the fields of the type against the columns

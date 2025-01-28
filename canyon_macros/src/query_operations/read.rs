@@ -30,6 +30,8 @@ pub fn generate_read_operations_tokens(
     let count_with = create_count_with_macro(ty, &count_stmt);
 
     let find_by_pk_complex_tokens = generate_find_by_pk_tokens(macro_data, table_schema_data);
+    
+    let read_querybuilder_ops = generate_find_all_query_tokens(macro_data, table_schema_data);
 
     quote! {
         #find_all
@@ -41,10 +43,12 @@ pub fn generate_read_operations_tokens(
         #count_with
 
         #find_by_pk_complex_tokens
+        
+        #read_querybuilder_ops
     }
 }
 
-pub fn generate_find_all_query_tokens(
+fn generate_find_all_query_tokens(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &String,
 ) -> TokenStream {
