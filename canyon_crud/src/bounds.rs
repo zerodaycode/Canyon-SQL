@@ -1,4 +1,4 @@
-use canyon_core::{mapper::RowMapper, query::Transaction, query_parameters::QueryParameter};
+use canyon_core::{mapper::RowMapper, transaction::Transaction, query_parameters::QueryParameter};
 
 use crate::crud::CrudOperations;
 

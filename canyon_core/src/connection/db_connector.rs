@@ -1,13 +1,49 @@
 use std::error::Error;
+use std::future::Future;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
 use crate::connection::db_clients::mssql::SqlServerConnection;
 use crate::connection::db_clients::mysql::MysqlConnection;
 use crate::connection::db_clients::postgresql::PostgreSqlConnection;
-
-use crate::query::DbConnection;
+use crate::connection::{find_datasource_by_name_or_try_default, get_database_connection_by_ds};
 use crate::query_parameters::QueryParameter;
 use crate::rows::CanyonRows;
+
+
+pub trait DbConnection {
+    // TODO: guess that this is the trait that must remain sealed
+    fn launch<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>>;
+}
+
+/// This impl of [` DbConnection` ] for [`&str`] allows the client to use the exposed input types
+/// on the public API that works with a generic parameter to refer to a database connection
+/// directly with an [`&str`] that must match one of the datasources defined
+/// within the user config file
+impl DbConnection for &str {
+    fn launch<'a>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
+                  -> impl Future<Output=Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
+    {
+        async move {
+            let sane_ds_name = if !self.is_empty() {
+                Some(*self)
+            } else {
+                None
+            };
+            let conn = get_database_connection_by_ds(sane_ds_name).await?;
+            conn.launch(stmt, params).await
+        }
+    }
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+        Ok(find_datasource_by_name_or_try_default(Some(*self))?.get_db_type())
+    }
+}
 
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
@@ -29,7 +65,7 @@ impl DbConnection for DatabaseConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
     > + Send {
         async move {
             match self {
@@ -55,9 +91,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
-    > + Send {
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
         async move {
             match self {
                 #[cfg(feature = "postgres")]
@@ -146,7 +180,7 @@ mod connection_helpers {
     #[cfg(feature = "postgres")]
     pub async fn create_postgres_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
         let url = connection_string(user, password, datasource);
 
@@ -168,7 +202,7 @@ mod connection_helpers {
     #[cfg(feature = "mssql")]
     pub async fn create_sqlserver_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
         use async_std::net::TcpStream;
 
         let mut tiberius_config = tiberius::Config::new();
@@ -179,7 +213,7 @@ mod connection_helpers {
 
         let auth_config = auth::extract_mssql_auth(&datasource.auth)?;
         tiberius_config.authentication(auth_config);
-        tiberius_config.trust_cert(); // TODO: this should be specificaly set via user input
+        tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
 
         let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
         tcp.set_nodelay(true)?;
@@ -194,7 +228,7 @@ mod connection_helpers {
     #[cfg(feature = "mysql")]
     pub async fn create_mysql_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
         use mysql_async::Pool;
 
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;

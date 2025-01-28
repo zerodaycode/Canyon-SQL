@@ -1,10 +1,10 @@
 use crate::query_elements::query_builder::{
-    DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
+    SelectQueryBuilder, UpdateQueryBuilder, DeleteQueryBuilder
 };
 use async_trait::async_trait;
-use canyon_core::query::DbConnection;
 use canyon_core::query_parameters::QueryParameter;
-use canyon_core::{mapper::RowMapper, query::Transaction};
+use canyon_core::{mapper::RowMapper, transaction::Transaction};
+use canyon_core::connection::db_connector::DbConnection;
 
 /// *CrudOperations* it's the core part of Canyon-SQL.
 ///

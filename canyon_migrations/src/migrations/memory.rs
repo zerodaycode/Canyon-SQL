@@ -1,6 +1,6 @@
 use crate::constants;
 use canyon_core::connection::db_connector::DatabaseConnection;
-use canyon_core::query::Transaction;
+use canyon_core::transaction::Transaction;
 use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;

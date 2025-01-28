@@ -3,7 +3,7 @@ use canyon_core::{
     connection::{
         datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
     },
-    query::Transaction,
+    transaction::Transaction,
     row::{Row, RowOperations},
     rows::CanyonRows,
 };

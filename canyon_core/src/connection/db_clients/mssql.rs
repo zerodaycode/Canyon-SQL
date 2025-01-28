@@ -2,9 +2,10 @@ use std::error::Error;
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 
-use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 use tiberius::Query;
 use crate::connection::database_type::DatabaseType;
+use crate::connection::db_connector::DbConnection;
 
 /// A connection with a `SqlServer` database
 #[cfg(feature = "mssql")]
@@ -18,7 +19,7 @@ impl DbConnection for SqlServerConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
     > + Send {
         sqlserver_query_launcher::launch(stmt, params, self)
     }

@@ -1,7 +1,7 @@
 //! File that contains all the datatypes and logic to perform the migrations
 //! over a target database
 use async_trait::async_trait;
-use canyon_core::query::Transaction;
+use canyon_core::transaction::Transaction;
 use canyon_crud::DatabaseType;
 use regex::Regex;
 use std::collections::HashMap;

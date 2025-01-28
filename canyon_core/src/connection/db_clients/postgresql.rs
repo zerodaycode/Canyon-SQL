@@ -1,9 +1,10 @@
 use std::error::Error;
-use crate::{query::DbConnection, query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 
 #[cfg(feature = "postgres")]
 use tokio_postgres::Client;
 use crate::connection::database_type::DatabaseType;
+use crate::connection::db_connector::DbConnection;
 
 /// A connection with a `PostgreSQL` database
 #[cfg(feature = "postgres")]
@@ -18,7 +19,7 @@ impl DbConnection for PostgreSqlConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>>,
+        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
     > + Send {
         postgres_query_launcher::launch(stmt, params, self)
     }

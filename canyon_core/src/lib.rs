@@ -14,7 +14,7 @@ pub extern crate lazy_static;
 pub mod column;
 pub mod connection;
 pub mod mapper;
-pub mod query;
+pub mod transaction;
 pub mod query_parameters;
 pub mod row;
 pub mod rows;

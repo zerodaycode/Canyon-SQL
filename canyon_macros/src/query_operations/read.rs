@@ -1,4 +1,3 @@
-
 use proc_macro2::TokenStream;
 use quote::quote;
 
@@ -239,7 +238,7 @@ mod __details {
             MacroOperationBuilder::new()
                 .fn_name("count")
                 .user_type(ty)
-                .return_type(&syn::Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
+                .return_type(&Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
                 .add_doc_comment(
                     "Performs a COUNT(*) query over the table related to the entity T'",
                 )
@@ -262,7 +261,7 @@ mod __details {
                 .fn_name("count_with")
                 .user_type(ty)
                 .with_input_param()
-                .return_type(&syn::Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
+                .return_type(&Ident::new("i64", Span::call_site())) // TODO: into ident or take by value
                 .add_doc_comment(
                     "Performs a COUNT(*) query over the table related to the entity T'",
                 )
@@ -340,9 +339,7 @@ mod __details {
 mod macro_builder_read_ops_tests {
     use super::__details::{count_generators::*, find_all_generators::*, pk_generators::*};
     use crate::query_operations::consts::*;
-    use proc_macro2::Span;
     use quote::quote;
-    use syn::Ident;
 
     const SELECT_ALL_STMT: &str = "SELECT * FROM public.user"; // TODO: introduce the const_format crate
     const COUNT_STMT: &str = "SELECT COUNT(*) FROM public.user";
