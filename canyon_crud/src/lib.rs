@@ -1,5 +1,3 @@
-pub extern crate async_trait;
-
 pub mod bounds;
 pub mod crud;
 pub mod query_elements;

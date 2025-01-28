@@ -1,7 +1,8 @@
+use std::error::Error;
+use std::future::Future;
 use crate::query_elements::query_builder::{
     SelectQueryBuilder, UpdateQueryBuilder, DeleteQueryBuilder
 };
-use async_trait::async_trait;
 use canyon_core::query_parameters::QueryParameter;
 use canyon_core::{mapper::RowMapper, transaction::Transaction};
 use canyon_core::connection::db_connector::DbConnection;
@@ -21,22 +22,21 @@ use canyon_core::connection::db_connector::DbConnection;
 /// See it's definition and docs to see the implementations.
 /// Also, you can find the written macro-code that performs the auto-mapping
 /// in the *canyon_sql_root::canyon_macros* crates, on the root of this project.
-#[async_trait]
 pub trait CrudOperations<T>: Transaction<T>
 where
     T: CrudOperations<T> + RowMapper<T>,
 {
-    async fn find_all() -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync)>>;
+    fn find_all() -> impl Future<Output = Result<Vec<T>, Box<(dyn Error + Sync + Send)>>> + Send;
 
-    async fn find_all_with<'a, I>(
+    fn find_all_with<'a, I>(
         input: I,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+    ) -> impl Future<Output = Result<Vec<T>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    async fn find_all_unchecked() -> Vec<T>;
+    fn find_all_unchecked() -> impl Future<Output = Vec<T>> + Send;
 
-    async fn find_all_unchecked_with<'a, I>(input: I) -> Vec<T>
+    fn find_all_unchecked_with<'a, I>(input: I) -> impl Future<Output = Vec<T>> + Send
     where
         I: DbConnection + Send + 'a;
 
@@ -46,51 +46,51 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>>;
+    fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send)>>> + Send;
 
-    async fn count_with<'a, I>(
+    fn count_with<'a, I>(
         input: I,
-    ) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+    ) -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    async fn find_by_pk<'a>(
+    fn find_by_pk<'a>(
         value: &'a dyn QueryParameter<'a>,
-    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    ) -> impl Future<Output = Result<Option<T>, Box<(dyn Error + Sync + Send + 'a)>>> + Send;
 
-    async fn find_by_pk_with<'a, I>(
+    fn find_by_pk_with<'a, I>(
         value: &'a dyn QueryParameter<'a>,
         input: I,
-    ) -> Result<Option<T>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+    ) -> impl Future<Output = Result<Option<T>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    async fn insert(&mut self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    fn insert(&mut self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
 
-    async fn insert_with<'a, I>(
+    fn insert_with<'a, I>(
         &mut self,
         input: I,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    async fn multi_insert<'a>(
+    fn multi_insert<'a>(
         instances: &'a mut [&'a mut T],
-    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>;
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
 
-    async fn multi_insert_with<'a, I>(
+    fn multi_insert_with<'a, I>(
         instances: &'a mut [&'a mut T],
         input: I,
-    ) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    fn update(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
 
-    async fn update_with<'a, I>(
+    fn update_with<'a, I>(
         &self,
         input: I,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
@@ -100,12 +100,12 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Sync + Send>>;
+    fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
 
-    async fn delete_with<'a, I>(
+    fn delete_with<'a, I>(
         &self,
         input: I,
-    ) -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 

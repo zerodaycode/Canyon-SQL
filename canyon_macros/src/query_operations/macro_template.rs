@@ -177,8 +177,8 @@ impl MacroOperationBuilder {
             quote! { #container_ret_type<#organic_ret_type> }
         };
 
-        match &self.with_unwrap {
-            // TODO: distinguish collection from 1 results
+        let expected_data = match &self.with_unwrap {
+            // TODO: distinguish collection from rows with only results
             true => quote! { #ret_type },
             false => {
                 let err_variant = if self.lifetime {
@@ -189,7 +189,9 @@ impl MacroOperationBuilder {
 
                 quote! { Result<#ret_type, #err_variant> }
             }
-        }
+        };
+        
+        quote! { impl std::future::Future<Output = #expected_data> + Send }
     }
 
     fn get_where_clause_bounds(&self) -> TokenStream {
@@ -362,7 +364,7 @@ impl MacroOperationBuilder {
 
         quote! {
             #(#doc_comments)*
-            async fn #fn_name #generics(
+            fn #fn_name #generics(
                 #as_method
                 #separate_self_params
                 #fn_parameters
@@ -371,8 +373,10 @@ impl MacroOperationBuilder {
             ) -> #return_type
                 #where_clause
             {
-                #body_tokens
-                #unwrap
+                async move {
+                    #body_tokens
+                    #unwrap
+                }
             }
         }
     }

@@ -20,9 +20,6 @@ tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
 mysql_common = { workspace = true, optional = true }
 
-
-async-trait = { workspace = true }
-
 regex = { workspace = true }
 partialdebug = { workspace = true }
 walkdir = { workspace = true }

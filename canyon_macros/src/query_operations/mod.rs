@@ -40,7 +40,6 @@ pub fn impl_crud_operations_trait_for_struct(
     crud_ops_tokens.extend(quote!{
         use canyon_sql::core::IntoResults;
 
-        #[canyon_sql::macros::async_trait] // TODO: get rid of the async_trait
         impl canyon_sql::crud::CrudOperations<#ty> for #ty {
             #crud_operations_tokens
         }

@@ -21,7 +21,6 @@ pub use canyon_macros::main;
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
 pub mod macros {
-    pub use canyon_crud::async_trait::*;
     pub use canyon_macros::*;
 }
 

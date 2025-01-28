@@ -17,7 +17,6 @@ mysql_common = { workspace = true, optional = true }
 
 chrono = { workspace = true }
 async-std = { workspace = true, optional = true }
-async-trait = { workspace = true }
 regex = { workspace = true }
 
 tokio = { workspace = true }

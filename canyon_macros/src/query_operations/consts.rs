@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::cell::RefCell;
 
 use proc_macro2::{Span, TokenStream};
