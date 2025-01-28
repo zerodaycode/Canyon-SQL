@@ -18,6 +18,7 @@ quote = { workspace = true }
 proc-macro2 = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
+regex = { workspace = true }
 
 canyon_core = { workspace = true }
 canyon_crud = { workspace = true }

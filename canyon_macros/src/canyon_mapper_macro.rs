@@ -1,15 +1,18 @@
 use std::iter::Map;
 use std::slice::Iter;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{DeriveInput, Type, Visibility};
-
+use regex::Regex;
 use crate::utils::helpers::{fields_with_types};
+
+#[cfg(feature = "mssql")]
+const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
 pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
     let ty = &ast.ident;
     let mut impl_methods = TokenStream::new();
-    
+
     // Recovers the identifiers of the structs members
     let fields = fields_with_types(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,
@@ -30,7 +33,7 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
             }
         }
     });
-    
+
     #[cfg(feature = "mssql")]
     let sqlserver_implementation = create_sqlserver_fields_mapping(&fields);
     #[cfg(feature = "mssql")]
@@ -41,7 +44,7 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
             }
         }
     });
-    
+
     #[cfg(feature = "mysql")]
     let mysql_implementation = create_mysql_fields_mapping(&fields);
     #[cfg(feature = "mysql")]
@@ -84,83 +87,68 @@ fn create_mysql_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Map<I
 
 #[cfg(feature = "mssql")]
 fn create_sqlserver_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
-    fields.iter().map(|(_vis, ident, ty)| {
+    fields.into_iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
 
-        if get_field_type_as_string(ty) == "String" {
-            quote! {
-                #ident: row.get::<&str, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-                    .to_string()
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option < i64 >" {
-            quote! {
-                #ident: row.get::<i64, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i32>" {
-            quote! {
-                #ident: row.get::<i32, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<i16>" {
-            quote! {
-                #ident: row.get::<i16, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f32>" {
-            quote! {
-                #ident: row.get::<f32, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<f64>" {
-            quote! {
-                #ident: row.get::<f64, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<String>" {
-            quote! {
-                #ident: row.get::<&str, &str>(#ident_name)
-                    .map( |x| x.to_owned() )
-            }
-        } else if get_field_type_as_string(ty) == "NaiveDate" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDate>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDate, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty) == "NaiveTime" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveTime>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveTime, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty) == "NaiveDateTime" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<NaiveDateTime>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::NaiveDateTime, &str>(#ident_name)
-            }
-        } else if get_field_type_as_string(ty) == "DateTime" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
-        } else if get_field_type_as_string(ty).replace(' ', "") == "Option<DateTime>" {
-            quote! {
-                #ident: row.get::<canyon_sql::date_time::DateTime, &str>(#ident_name)
-            }
-        } else {
-            quote! {
-                #ident: row.get::<#ty, &str>(#ident_name)
-                    .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref())
-            }
+        let target_field_type_str = get_field_type_as_string(ty);
+        let field_deserialize_impl =
+            handle_stupid_tiberius_sql_conversions(&target_field_type_str, &ident_name);
+
+        quote!{
+            #ident: #field_deserialize_impl
         }
     })
+}
+
+#[cfg(feature = "mssql")]
+fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -> TokenStream {
+    println!("Handling type: {:?} for field: {:?}", target_type, ident_name);
+    let is_opt_type = target_type.contains("Option");
+    let handle_opt = if !is_opt_type {
+        quote! { .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref()) }
+    } else { quote! {} };
+
+    let deserializing_type = get_deserializing_type(target_type);
+    let to_owned = if BY_VALUE_CONVERSION_TARGETS
+        .iter()
+        .any(|bv| target_type.contains(bv))
+    {
+        if is_opt_type {
+            quote! { .map(|inner| inner.to_owned()) }
+        } else {
+            quote! { .to_owned() }
+        }
+    } else { quote! {} };
+
+
+    quote! {
+        row.get::<#deserializing_type, &str>(#ident_name)
+            #handle_opt
+            #to_owned
+    }
+}
+
+fn get_deserializing_type(target_type: &str) -> TokenStream {
+    let re = Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?").unwrap();
+    re
+        .captures(&*target_type)
+        .map(|inner| String::from(&inner["type"]))
+        .map(|tt| {
+            if BY_VALUE_CONVERSION_TARGETS.contains(&tt.as_str()) {
+                quote! { &str }
+                // potentially others on demand on the future
+            } else if tt.contains("Date") || tt.contains("Time") {
+                let dt = Ident::new(
+                    tt.as_str(),
+                    Span::call_site()
+                );
+                quote! { canyon_sql::date_time::#dt }
+            } else {
+                let tt = Ident::new(tt.as_str(), Span::call_site());
+                quote! { #tt } 
+            }
+        })
+        .expect(&format!("Unable to process type: {} on the given struct for SqlServer", target_type))
 }
 
 #[cfg(feature = "mssql")]
@@ -184,5 +172,20 @@ fn get_field_type_as_string(typ: &Type) -> String {
         Type::Tuple(type_) => type_.to_token_stream().to_string(),
         Type::Verbatim(type_) => type_.to_token_stream().to_string(),
         _ => "".to_owned(),
+    }
+}
+
+#[cfg(test)]
+mod mapper_macro_tests {
+    use crate::canyon_mapper_macro::get_deserializing_type;
+
+    #[test]
+    fn test_regex_extraction_for_the_tiberius_target_types() {
+        assert_eq!("&str", get_deserializing_type("String").to_string());
+        assert_eq!("&str", get_deserializing_type("Option<String>").to_string());
+        assert_eq!("i64", get_deserializing_type("i64").to_string());
+
+        assert_eq!("canyon_sql::date_time::DateTime", get_deserializing_type("DateTime").to_string());
+        assert_eq!("canyon_sql::date_time::NaiveDateTime", get_deserializing_type("NaiveDateTime").to_string());
     }
 }

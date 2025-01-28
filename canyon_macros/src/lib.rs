@@ -4,6 +4,7 @@
 #![allow(unused_imports)]
 
 extern crate proc_macro;
+extern crate regex;
 
 mod canyon_entity_macro;
 #[cfg(feature = "migrations")]
