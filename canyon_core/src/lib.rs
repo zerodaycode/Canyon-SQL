@@ -10,11 +10,12 @@ pub extern crate tiberius;
 pub extern crate mysql_async;
 
 pub extern crate lazy_static;
+// extern crate cfg_if;
 
 pub mod column;
 pub mod connection;
 pub mod mapper;
-pub mod transaction;
 pub mod query_parameters;
 pub mod row;
 pub mod rows;
+pub mod transaction;

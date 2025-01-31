@@ -1,11 +1,11 @@
-use std::error::Error;
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
+use std::error::Error;
 
-use crate::{query_parameters::QueryParameter, rows::CanyonRows};
-use tiberius::Query;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
+use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+use tiberius::Query;
 
 /// A connection with a `SqlServer` database
 #[cfg(feature = "mssql")]
@@ -18,9 +18,8 @@ impl DbConnection for SqlServerConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
-    > + Send {
+    ) -> impl std::future::Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
+    {
         sqlserver_query_launcher::launch(stmt, params, self)
     }
 
@@ -42,18 +41,19 @@ pub(crate) mod sqlserver_query_launcher {
     ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
         // Re-generate de insert statement to adequate it to the SQL SERVER syntax to retrieve the PK value(s) after insert
         // TODO: redo this branch into the generated queries, before the MACROS
-        // if stmt.contains("RETURNING") {
-        //     let c = stmt.clone();
-        //     let temp = c.split_once("RETURNING").unwrap();
-        //     let temp2 = temp.0.split_once("VALUES").unwrap();
-        //
-        //     *stmt = format!(
-        //         "{} OUTPUT inserted.{} VALUES {}",
-        //         temp2.0.trim(),
-        //         temp.1.trim(),
-        //         temp2.1.trim()
-        //     );
-        // }
+        let mut stmt = String::from(stmt);
+        if stmt.contains("RETURNING") {
+            let c = stmt.clone();
+            let temp = c.split_once("RETURNING").unwrap();
+            let temp2 = temp.0.split_once("VALUES").unwrap();
+
+            stmt = format!(
+                "{} OUTPUT inserted.{} VALUES {}",
+                temp2.0.trim(),
+                temp.1.trim(),
+                temp2.1.trim()
+            );
+        }
 
         // TODO: We must address the query generation. Look at the returning example, or the
         // replace below. We may use our own type Query to address this concerns when the query

@@ -1,8 +1,11 @@
+use crate::query_operations::delete::__details::{
+    create_delete_err_macro, create_delete_err_with_macro, create_delete_macro,
+    create_delete_with_macro,
+};
+use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::Type;
-use crate::query_operations::delete::__details::{create_delete_err_macro, create_delete_err_with_macro, create_delete_macro, create_delete_with_macro};
-use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the __delete() CRUD operation
 /// returning a result, indicating a possible failure querying the database
@@ -14,7 +17,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let pk = macro_data.get_primary_key_annotation();
 
     let ret_ty: Type = syn::parse_str("()").expect("Failed to parse unit type");
-    let q_ret_ty: TokenStream = quote!{#ret_ty};
+    let q_ret_ty: TokenStream = quote! {#ret_ty};
 
     if let Some(primary_key) = pk {
         let pk_field = fields
@@ -26,11 +29,14 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         let pk_field_value =
             quote! { &self.#pk_field as &dyn canyon_sql::core::QueryParameter<'_> };
 
-        let stmt = format!("DELETE FROM {} WHERE {:?} = $1", table_schema_data, primary_key);
-        
+        let stmt = format!(
+            "DELETE FROM {} WHERE {:?} = $1",
+            table_schema_data, primary_key
+        );
+
         let delete_tokens = create_delete_macro(ty, &stmt, &pk_field_value, &q_ret_ty);
         let delete_with_tokens = create_delete_with_macro(ty, &stmt, &pk_field_value, &q_ret_ty);
-        
+
         delete_ops_tokens.extend(quote! {
             #delete_tokens
             #delete_with_tokens
@@ -38,7 +44,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     } else {
         let delete_err_tokens = create_delete_err_macro(ty, &q_ret_ty);
         let delete_err_with_tokens = create_delete_err_with_macro(ty, &q_ret_ty);
-        
+
         delete_ops_tokens.extend(quote! {
             #delete_err_tokens
             #delete_err_with_tokens
@@ -53,10 +59,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
-fn generate_delete_query_tokens(
-    ty: &Ident,
-    table_schema_data: &str,
-) -> TokenStream {
+fn generate_delete_query_tokens(ty: &Ident, table_schema_data: &str) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::DeleteQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -88,12 +91,17 @@ fn generate_delete_query_tokens(
 }
 
 mod __details {
-    
+
+    use super::*;
     use crate::query_operations::doc_comments;
     use crate::query_operations::macro_template::MacroOperationBuilder;
-    use super::*;
 
-    pub fn create_delete_macro(ty: &Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
+    pub fn create_delete_macro(
+        ty: &Ident,
+        stmt: &str,
+        pk_field_value: &TokenStream,
+        ret_ty: &TokenStream,
+    ) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("delete")
             .with_self_as_ref()
@@ -102,14 +110,19 @@ mod __details {
             .raw_return()
             .add_doc_comment(doc_comments::DELETE)
             .query_string(stmt)
-            .forwarded_parameters(quote!{&[#pk_field_value]})
+            .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
             .disable_mapping()
             .raw_return()
             .with_no_result_value()
     }
 
-    pub fn create_delete_with_macro(ty: &Ident, stmt: &str, pk_field_value: &TokenStream, ret_ty: &TokenStream) -> MacroOperationBuilder {
+    pub fn create_delete_with_macro(
+        ty: &Ident,
+        stmt: &str,
+        pk_field_value: &TokenStream,
+        ret_ty: &TokenStream,
+    ) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("delete_with")
             .with_self_as_ref()
@@ -120,7 +133,7 @@ mod __details {
             .add_doc_comment(doc_comments::DELETE)
             .add_doc_comment(doc_comments::DS_ADVERTISING)
             .query_string(stmt)
-            .forwarded_parameters(quote!{&[#pk_field_value]})
+            .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
             .disable_mapping()
             .raw_return()
@@ -153,8 +166,8 @@ mod __details {
 
 #[cfg(test)]
 mod delete_tests {
-    use crate::query_operations::consts::*;
     use super::__details::*;
+    use crate::query_operations::consts::*;
     use proc_macro2::Span;
     use quote::quote;
     use syn::Ident;
@@ -167,7 +180,7 @@ mod delete_tests {
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
             DELETE_MOCK_STMT,
             &PK_MOCK_FIELD_VALUE.with(|pk_field_mock_value| pk_field_mock_value.borrow().clone()),
-            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone()),
         );
         let delete = delete_builder.generate_tokens().to_string();
 
@@ -181,7 +194,7 @@ mod delete_tests {
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
             DELETE_MOCK_STMT,
             &PK_MOCK_FIELD_VALUE.with(|pk_field_mock_value| pk_field_mock_value.borrow().clone()),
-            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone()),
         );
         let delete_with = delete_builder.generate_tokens().to_string();
 
@@ -195,7 +208,7 @@ mod delete_tests {
     fn test_macro_builder_delete_err() {
         let delete_err_builder = create_delete_err_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone()),
         );
         let delete_err = delete_err_builder.generate_tokens().to_string();
 
@@ -207,7 +220,7 @@ mod delete_tests {
     fn test_macro_builder_delete_err_with() {
         let delete_err_with_builder = create_delete_err_with_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone())
+            &VOID_RET_TY.with(|void_ret_ty| void_ret_ty.borrow().clone()),
         );
         let delete_err_with = delete_err_with_builder.generate_tokens().to_string();
 

@@ -26,7 +26,7 @@ pub fn generate_read_operations_tokens(
     let count_with = create_count_with_macro(ty, &count_stmt);
 
     let find_by_pk_complex_tokens = generate_find_by_pk_tokens(macro_data, table_schema_data);
-    
+
     let read_querybuilder_ops = generate_find_all_query_tokens(macro_data, table_schema_data);
 
     quote! {
@@ -39,7 +39,7 @@ pub fn generate_read_operations_tokens(
         #count_with
 
         #find_by_pk_complex_tokens
-        
+
         #read_querybuilder_ops
     }
 }
@@ -349,7 +349,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_all() {
         let find_all_builder = create_find_all_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            SELECT_ALL_STMT
+            SELECT_ALL_STMT,
         );
         let find_all = find_all_builder.generate_tokens().to_string();
 
@@ -361,7 +361,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_all_with() {
         let find_all_builder = create_find_all_with_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            SELECT_ALL_STMT
+            SELECT_ALL_STMT,
         );
         let find_all_with = find_all_builder.generate_tokens().to_string();
 
@@ -375,7 +375,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_all_unchecked() {
         let find_all_unc_builder = create_find_all_unchecked_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            SELECT_ALL_STMT
+            SELECT_ALL_STMT,
         );
         let find_all_unc = find_all_unc_builder.generate_tokens().to_string();
 
@@ -387,7 +387,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_all_unchecked_with() {
         let find_all_unc_with_builder = create_find_all_unchecked_with_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            SELECT_ALL_STMT
+            SELECT_ALL_STMT,
         );
         let find_all_unc_with = find_all_unc_with_builder.generate_tokens().to_string();
 
@@ -401,7 +401,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_count() {
         let count_builder = create_count_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            COUNT_STMT
+            COUNT_STMT,
         );
         let count = count_builder.generate_tokens().to_string();
 
@@ -413,7 +413,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_count_with() {
         let count_with_builder = create_count_with_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            COUNT_STMT
+            COUNT_STMT,
         );
         let count_with = count_with_builder.generate_tokens().to_string();
 
@@ -427,8 +427,8 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk() {
         let find_by_pk_builder = create_find_by_pk_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            FIND_BY_PK_STMT, 
-            &quote! {}
+            FIND_BY_PK_STMT,
+            &quote! {},
         );
         let find_by_pk = find_by_pk_builder.generate_tokens().to_string();
 
@@ -441,8 +441,8 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk_with() {
         let find_by_pk_with_builder = create_find_by_pk_with(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            FIND_BY_PK_STMT, 
-            &quote! {}
+            FIND_BY_PK_STMT,
+            &quote! {},
         );
         let find_by_pk_with = find_by_pk_with_builder.generate_tokens().to_string();
 

@@ -1,13 +1,13 @@
+use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
-use crate::utils::macro_tokens::MacroTokens;
 
 /// Generates the TokenStream for the _insert_result() CRUD operation
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
     let mut insert_ops_tokens = TokenStream::new();
-    
+
     let ty = macro_data.ty;
-    
+
     // Retrieves the fields of the Struct as a collection of Strings, already parsed
     // the condition of remove the primary key if it's present and it's autoincremental
     let insert_columns = macro_data.get_column_names_pk_parsed().join(", ");
@@ -31,8 +31,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         quote! {}
     };
 
+    let stmt = format!(
+        "INSERT INTO {} ({}) VALUES ({})",
+        table_schema_data, insert_columns, placeholders
+    );
+
     let pk_ident_type = macro_data
-        ._fields_with_types()
+        .fields_with_types()
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
     let insert_transaction = if let Some(pk_data) = &pk_ident_type {
@@ -42,62 +47,21 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         quote! {
             #remove_pk_value_from_fn_entry;
 
-            let stmt = format!(
-                "INSERT INTO {} ({}) VALUES ({}) RETURNING {}",
-                #table_schema_data,
-                #insert_columns,
-                #placeholders,
-                #primary_key
-            );
+            let stmt = format!("{} RETURNING {}", #stmt , #primary_key);
 
-            let rows = <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            self.#pk_ident = <#ty as canyon_sql::core::Transaction<#ty>>::query(
                 stmt,
                 values,
                 input
-            ).await?;
+            ).await?
+            .get_column_at_row::<#pk_type>(#primary_key, 0)?;
 
-           match rows {
-                #[cfg(feature = "postgres")]
-                canyon_sql::core::CanyonRows::Postgres(mut v) => {
-                    self.#pk_ident = v
-                        .get(0)
-                        .ok_or("Failed getting the returned IDs for an insert")?
-                        .get::<&str, #pk_type>(#primary_key);
-                    Ok(())
-                },
-                #[cfg(feature = "mssql")]
-                canyon_sql::core::CanyonRows::Tiberius(mut v) => {
-                    self.#pk_ident = v
-                        .get(0)
-                        .ok_or("Failed getting the returned IDs for a multi insert")?
-                        .get::<#pk_type, &str>(#primary_key)
-                        .ok_or("SQL Server primary key type failed to be set as value")?;
-                    Ok(())
-                },
-                #[cfg(feature = "mysql")]
-                canyon_sql::core::CanyonRows::MySQL(mut v) => {
-                    self.#pk_ident = v
-                        .get(0)
-                        .ok_or("Failed getting the returned IDs for a multi insert")?
-                        .get::<#pk_type,usize>(0)
-                        .ok_or("MYSQL primary key type failed to be set as value")?;
-                    Ok(())
-                },
-                _ => panic!("Reached the panic match arm of insert for the DatabaseConnection type") // TODO remove when the generics will be refactored
-            }
+            Ok(())
         }
     } else {
         quote! {
-            let stmt = format!(
-                "INSERT INTO {} ({}) VALUES ({})",
-                #table_schema_data,
-                #insert_columns,
-                #placeholders,
-                #primary_key
-            );
-
             <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                stmt,
+                #stmt,
                 values,
                 input
             ).await?;
@@ -145,8 +109,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// }
         /// ```
         ///
-        async fn insert(&mut self)
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>>
+        async fn insert<'a>(&'a mut self)
+            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
         {
             let input = "";
             let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values),*];
@@ -201,7 +165,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         }
 
     });
-    
+
     let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
     insert_ops_tokens.extend(multi_insert_tokens);
 
@@ -232,7 +196,7 @@ fn generate_multiple_insert_tokens(
     let pk = macro_data.get_primary_key_annotation().unwrap_or_default();
 
     let pk_ident_type = macro_data
-        ._fields_with_types()
+        .fields_with_types()
         .into_iter()
         .find(|(i, _t)| *i == pk);
 
@@ -450,24 +414,24 @@ fn generate_multiple_insert_tokens(
          ) {
              use canyon_sql::core::QueryParameter;
              let input = "";
-        
+
               let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
               for instance in instances.iter() {
                   let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields),*];
-        
+
                   let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
                   for value in intermediate.into_iter() {
                       longer_lived.push(*value)
                   }
-        
+
                   final_values.push(longer_lived)
              }
-        
+
              let mut mapped_fields: String = String::new();
-        
+
              #multi_insert_transaction
          }
-        
+
         /// Inserts multiple instances of some type `T` into its related table with the specified
         /// datasource by its `datasource name`, defined in the configuration file.
         ///

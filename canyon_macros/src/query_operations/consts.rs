@@ -33,5 +33,4 @@ pub const MAPS_TO: &str = "into_results :: < User > ()";
 pub const LT_CONSTRAINT: &str = "< 'a ";
 pub const INPUT_PARAM: &str = "input : I";
 
-pub const WITH_WHERE_BOUNDS: &str =
-    "where I : canyon_sql :: core :: DbConnection + Send + 'a ";
+pub const WITH_WHERE_BOUNDS: &str = "where I : canyon_sql :: core :: DbConnection + Send + 'a ";

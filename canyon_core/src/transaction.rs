@@ -1,10 +1,7 @@
-use crate::{
-    query_parameters::QueryParameter,
-    rows::CanyonRows,
-};
-use std::{fmt::Display, future::Future};
-use std::error::Error;
 use crate::connection::db_connector::DbConnection;
+use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+use std::error::Error;
+use std::{fmt::Display, future::Future};
 
 pub trait Transaction<T> {
     // provisional name
@@ -18,10 +15,8 @@ pub trait Transaction<T> {
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
-        async move {
-            input.launch(stmt.as_ref(), params.as_ref()).await
-        }
+        async move { input.launch(stmt.as_ref(), params.as_ref()).await }
     }
 }

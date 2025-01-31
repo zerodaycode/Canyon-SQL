@@ -1,10 +1,13 @@
-use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-use canyon_entities::field_annotation::EntityFieldAnnotation;
 use crate::utils::helpers::database_table_name_to_struct_ident;
 use crate::utils::macro_tokens::MacroTokens;
+use canyon_entities::field_annotation::EntityFieldAnnotation;
+use proc_macro2::{Ident, TokenStream};
+use quote::quote;
 
-pub fn generate_find_by_fk_ops(macro_data: &MacroTokens<'_>, table_schema_data: &str) -> TokenStream {
+pub fn generate_find_by_fk_ops(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> TokenStream {
     let ty = &macro_data.ty;
 
     // Search by foreign (d) key as Vec, cause Canyon supports multiple fields having FK annotation
@@ -28,7 +31,7 @@ pub fn generate_find_by_fk_ops(macro_data: &MacroTokens<'_>, table_schema_data: 
     );
 
     if search_by_reverse_fk_tokens.is_empty() {
-        return quote!{}; // early guard
+        return quote! {}; // early guard
     }
 
     quote! {
@@ -72,8 +75,7 @@ fn generate_find_by_foreign_key_tokens(
 
             // Generate and identifier for the method based on the convention of "search_related_types"
             // where types is a placeholder for the plural name of the type referenced
-            let method_name_ident =
-                Ident::new(&method_name, proc_macro2::Span::call_site());
+            let method_name_ident = Ident::new(&method_name, proc_macro2::Span::call_site());
             let method_name_ident_with = Ident::new(
                 &format!("{}_with", &method_name),
                 proc_macro2::Span::call_site(),
@@ -160,8 +162,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
 
             // Generate and identifier for the method based on the convention of "search_by__" (note the double underscore)
             // plus the 'table_name' property of the ForeignKey annotation
-            let method_name_ident =
-                Ident::new(&method_name, proc_macro2::Span::call_site());
+            let method_name_ident = Ident::new(&method_name, proc_macro2::Span::call_site());
             let method_name_ident_with = Ident::new(
                 &format!("{}_with", &method_name),
                 proc_macro2::Span::call_site(),

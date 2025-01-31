@@ -46,7 +46,7 @@ impl<'a> MacroTokens<'a> {
 
     /// Gives a Vec of tuples that contains the name and
     /// the type of every field on a Struct
-    pub fn _fields_with_types(&self) -> Vec<(Ident, Type)> {
+    pub fn fields_with_types(&self) -> Vec<(Ident, Type)> {
         self.fields
             .iter()
             .map(|field| (field.ident.as_ref().unwrap().clone(), field.ty.clone()))

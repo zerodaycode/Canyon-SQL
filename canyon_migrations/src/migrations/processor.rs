@@ -166,19 +166,16 @@ impl MigrationsProcessor {
 
     /// Generates a database agnostic query to change the name of a table
     fn create_table(&mut self, table_name: String, entity_fields: Vec<CanyonRegisterEntityField>) {
-        self.table_operations.push(TableOperation::CreateTable(
-            table_name,
-            entity_fields,
-        ));
+        self.table_operations
+            .push(TableOperation::CreateTable(table_name, entity_fields));
     }
 
     /// Generates a database agnostic query to change the name of a table
     fn table_rename(&mut self, old_table_name: String, new_table_name: String) {
-        self.table_operations
-            .push(TableOperation::AlterTableName(
-                old_table_name,
-                new_table_name,
-            ));
+        self.table_operations.push(TableOperation::AlterTableName(
+            old_table_name,
+            new_table_name,
+        ));
     }
 
     // Creates or modify (currently only datatype) a column for a given canyon register entity field
@@ -286,23 +283,17 @@ impl MigrationsProcessor {
 
     fn change_column_datatype(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.column_operations
-            .push(ColumnOperation::AlterColumnType(
-                table_name, field,
-            ));
+            .push(ColumnOperation::AlterColumnType(table_name, field));
     }
 
     fn set_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.column_operations
-            .push(ColumnOperation::AlterColumnSetNotNull(
-                table_name, field,
-            ));
+            .push(ColumnOperation::AlterColumnSetNotNull(table_name, field));
     }
 
     fn drop_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
         self.column_operations
-            .push(ColumnOperation::AlterColumnDropNotNull(
-                table_name, field,
-            ));
+            .push(ColumnOperation::AlterColumnDropNotNull(table_name, field));
     }
 
     fn add_constraints(
@@ -766,7 +757,6 @@ mod migrations_helper_tests {
         assert!(!mocked_league_entity_on_database)
     }
 }
-
 
 trait DatabaseOperation: Debug {
     fn generate_sql(&self, datasource: &DatasourceConfig) -> impl Future<Output = ()>;

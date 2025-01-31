@@ -4,29 +4,26 @@ extern crate regex;
 #[cfg(feature = "migrations")]
 use canyon_macro::main_with_queries;
 
-mod canyon_macro;
 mod canyon_entity_macro;
-mod query_operations;
-mod utils;
+mod canyon_macro;
 mod canyon_mapper_macro;
 mod foreignkeyable_macro;
+mod query_operations;
+mod utils;
 
 use proc_macro::TokenStream as CompilerTokenStream;
 use quote::quote;
 use syn::DeriveInput;
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use canyon_entities::{
-    entity::CanyonEntity,
-    manager_builder::{
-        generate_enum_with_fields,
-        generate_enum_with_fields_values,
-    },
-};
 use crate::canyon_entity_macro::generate_canyon_entity_tokens;
 use crate::canyon_mapper_macro::canyon_mapper_impl_tokens;
 use crate::foreignkeyable_macro::foreignkeyable_impl_tokens;
 use crate::query_operations::impl_crud_operations_trait_for_struct;
+use canyon_entities::{
+    entity::CanyonEntity,
+    manager_builder::{generate_enum_with_fields, generate_enum_with_fields_values},
+};
 
 /// Macro for handling the entry point to the program.
 ///
@@ -109,14 +106,8 @@ pub fn canyon_tokio_test(
 /// Also, it's the responsible for generate the tokens for all the `Crud` methods available over
 /// your type
 #[proc_macro_attribute]
-pub fn canyon_entity(
-    _meta: CompilerTokenStream,
-    input: CompilerTokenStream,
-) -> CompilerTokenStream {
-    let attrs = syn::parse_macro_input!(_meta as syn::AttributeArgs);
-
-    
-
+pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
+    let attrs = syn::parse_macro_input!(meta as syn::AttributeArgs);
     generate_canyon_entity_tokens(attrs, input).into()
 }
 

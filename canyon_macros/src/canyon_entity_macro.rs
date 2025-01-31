@@ -1,14 +1,17 @@
+use crate::utils::helpers;
+use canyon_entities::entity::CanyonEntity;
+use canyon_entities::manager_builder::generate_user_struct;
+use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
+use canyon_entities::CANYON_REGISTER_ENTITIES;
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{AttributeArgs, NestedMeta};
-use canyon_entities::CANYON_REGISTER_ENTITIES;
-use canyon_entities::entity::CanyonEntity;
-use canyon_entities::manager_builder::generate_user_struct;
-use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
-use crate::utils::helpers;
 
-pub fn generate_canyon_entity_tokens(attrs: AttributeArgs, input: CompilerTokenStream) -> TokenStream {
+pub fn generate_canyon_entity_tokens(
+    attrs: AttributeArgs,
+    input: CompilerTokenStream,
+) -> TokenStream {
     let (table_name, schema_name, parsing_attribute_error) =
         parse_canyon_entity_proc_macro_attr(attrs);
 
@@ -20,7 +23,7 @@ pub fn generate_canyon_entity_tokens(attrs: AttributeArgs, input: CompilerTokenS
             .into_compile_error()
             .into();
     }
-    
+
     // No errors detected on the parsing, so we can safely unwrap the parse result
     let entity = entity_res.unwrap();
     let generated_user_struct = generate_user_struct(&entity);

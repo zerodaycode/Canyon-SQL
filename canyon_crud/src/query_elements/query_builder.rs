@@ -5,15 +5,17 @@ use crate::{
     Operator,
 };
 use canyon_core::connection::database_type::DatabaseType;
-use canyon_core::{mapper::RowMapper, transaction::Transaction, query_parameters::QueryParameter};
+use canyon_core::connection::db_connector::DbConnection;
+use canyon_core::{mapper::RowMapper, query_parameters::QueryParameter, transaction::Transaction};
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use canyon_core::connection::db_connector::DbConnection;
 
 /// Contains the elements that makes part of the formal declaration
 /// of the behaviour of the Canyon-SQL QueryBuilder
 pub mod ops {
-    use canyon_core::{mapper::RowMapper, transaction::Transaction, query_parameters::QueryParameter};
+    use canyon_core::{
+        mapper::RowMapper, query_parameters::QueryParameter, transaction::Transaction,
+    };
 
     use crate::crud::CrudOperations;
 
@@ -71,11 +73,7 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn r#where<Z: FieldValueIdentifier<'a, T>>(
-            self,
-            column: Z,
-            op: impl Operator,
-        ) -> Self
+        fn r#where<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator) -> Self
         where
             T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
 
@@ -85,11 +83,7 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn and<Z: FieldValueIdentifier<'a, T>>(
-            self,
-            column: Z,
-            op: impl Operator,
-        ) -> Self;
+        fn and<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates an `AND` SQL clause for constraint the query that will create
         /// the filter in conjunction with an `IN` operator that will ac
@@ -123,8 +117,7 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn or<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator)
-            -> Self;
+        fn or<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates a `ORDER BY` SQL clause for constraint the query.
         ///
@@ -149,20 +142,20 @@ where
 unsafe impl<'a, T, I> Send for QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
 }
 unsafe impl<'a, T, I> Sync for QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
 }
 
 impl<'a, T, I> QueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     /// Returns a new instance of the [`QueryBuilder`]
     pub fn new(query: Query<'a>, input: I) -> Self {
@@ -303,7 +296,7 @@ where
 pub struct SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     _inner: QueryBuilder<'a, T, I>,
 }
@@ -311,7 +304,7 @@ where
 impl<'a, T, I> SelectQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
     pub fn new(table_schema_data: &str, input: I) -> Self {
@@ -398,7 +391,7 @@ where
 impl<'a, T, I> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -411,11 +404,7 @@ where
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(
-        mut self,
-        r#where: Z,
-        op: impl Operator,
-    ) -> Self {
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
@@ -466,7 +455,7 @@ where
 pub struct UpdateQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     _inner: QueryBuilder<'a, T, I>,
 }
@@ -474,7 +463,7 @@ where
 impl<'a, T, I> UpdateQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(table_schema_data: &str, input: I) -> Self {
@@ -489,9 +478,7 @@ where
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query(
-        self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
+    pub async fn query(self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self._inner.query().await
     }
 
@@ -538,7 +525,7 @@ where
 impl<'a, T, I> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -551,11 +538,7 @@ where
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(
-        mut self,
-        r#where: Z,
-        op: impl Operator,
-    ) -> Self {
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
@@ -607,7 +590,7 @@ where
 pub struct DeleteQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     _inner: QueryBuilder<'a, T, I>,
 }
@@ -615,7 +598,7 @@ where
 impl<'a, T, I> DeleteQueryBuilder<'a, T, I>
 where
     T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(table_schema_data: &str, input: I) -> Self {
@@ -638,7 +621,7 @@ where
 impl<'a, T, I> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T, I>
 where
     T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: DbConnection + Send + 'a
+    I: DbConnection + Send + 'a,
 {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
@@ -651,11 +634,7 @@ where
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(
-        mut self,
-        r#where: Z,
-        op: impl Operator,
-    ) -> Self {
+    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }

@@ -16,7 +16,7 @@ pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue;
+    fn as_mysql_param(&self) -> &dyn ToValue;
 }
 
 /// The implementation of the [`canyon_core::connection::tiberius`] [`IntoSql`] for the

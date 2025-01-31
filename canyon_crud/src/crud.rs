@@ -1,11 +1,11 @@
-use std::error::Error;
-use std::future::Future;
 use crate::query_elements::query_builder::{
-    SelectQueryBuilder, UpdateQueryBuilder, DeleteQueryBuilder
+    DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
+use canyon_core::connection::db_connector::DbConnection;
 use canyon_core::query_parameters::QueryParameter;
 use canyon_core::{mapper::RowMapper, transaction::Transaction};
-use canyon_core::connection::db_connector::DbConnection;
+use std::error::Error;
+use std::future::Future;
 
 /// *CrudOperations* it's the core part of Canyon-SQL.
 ///
@@ -65,7 +65,9 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn insert(&mut self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
+    fn insert<'a>(
+        &'a mut self,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
 
     fn insert_with<'a, I>(
         &mut self,

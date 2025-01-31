@@ -1,11 +1,11 @@
+use crate::utils::helpers::filter_fields;
 use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
-use crate::utils::helpers::filter_fields;
 
 pub fn foreignkeyable_impl_tokens(ast: DeriveInput) -> TokenStream {
     let ty = ast.ident;
-    
+
     // Recovers the identifiers of the structs members
     let fields = filter_fields(match ast.data {
         syn::Data::Struct(ref s) => &s.fields,

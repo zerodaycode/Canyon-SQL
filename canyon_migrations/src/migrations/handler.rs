@@ -3,9 +3,9 @@ use canyon_core::{
     connection::{
         datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
     },
-    transaction::Transaction,
     row::{Row, RowOperations},
     rows::CanyonRows,
+    transaction::Transaction,
 };
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;

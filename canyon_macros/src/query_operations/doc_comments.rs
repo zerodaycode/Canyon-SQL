@@ -6,7 +6,7 @@ pub const SELECT_ALL_BASE_DOC_COMMENT: &str =
         database convention. P.ej. PostgreSQL prefers table names declared \
         with snake_case identifiers.";
 
-pub const SELECT_QUERYBUILDER_DOC_COMMENT: &str = 
+pub const SELECT_QUERYBUILDER_DOC_COMMENT: &str =
     "Generates a [`canyon_sql::query::SelectQueryBuilder`] \
         that allows you to customize the query by adding parameters and constrains dynamically. \
         \
@@ -38,6 +38,7 @@ pub const DELETE: &str = "Deletes from a database entity the row that matches
     key field, returning a result
     indicating a possible failure querying the database.";
 
-pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str = "Operation is unavailable. T doesn't contain a #[primary_key]\
+pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str =
+    "Operation is unavailable. T doesn't contain a #[primary_key]\
     annotation. You must construct the query with the QueryBuilder type\
     (<op_type>_query method for the CrudOperations implementors";

@@ -1,10 +1,10 @@
-use std::iter::Map;
-use std::slice::Iter;
+use crate::utils::helpers::fields_with_types;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{DeriveInput, Type, Visibility};
 use regex::Regex;
-use crate::utils::helpers::{fields_with_types};
+use std::iter::Map;
+use std::slice::Iter;
+use syn::{DeriveInput, Type, Visibility};
 
 #[cfg(feature = "mssql")]
 const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
@@ -64,7 +64,9 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
 }
 
 #[cfg(feature = "postgres")]
-fn create_postgres_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
+fn create_postgres_fields_mapping(
+    fields: &Vec<(Visibility, Ident, Type)>,
+) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
         quote! {
@@ -75,7 +77,9 @@ fn create_postgres_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Ma
 }
 
 #[cfg(feature = "mysql")]
-fn create_mysql_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
+fn create_mysql_fields_mapping(
+    fields: &Vec<(Visibility, Ident, Type)>,
+) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
         quote! {
@@ -86,7 +90,9 @@ fn create_mysql_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Map<I
 }
 
 #[cfg(feature = "mssql")]
-fn create_sqlserver_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
+fn create_sqlserver_fields_mapping(
+    fields: &Vec<(Visibility, Ident, Type)>,
+) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
     fields.into_iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
 
@@ -94,7 +100,7 @@ fn create_sqlserver_fields_mapping(fields: &Vec<(Visibility, Ident, Type)>) -> M
         let field_deserialize_impl =
             handle_stupid_tiberius_sql_conversions(&target_field_type_str, &ident_name);
 
-        quote!{
+        quote! {
             #ident: #field_deserialize_impl
         }
     })
@@ -105,7 +111,9 @@ fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -
     let is_opt_type = target_type.contains("Option");
     let handle_opt = if !is_opt_type {
         quote! { .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref()) }
-    } else { quote! {} };
+    } else {
+        quote! {}
+    };
 
     let deserializing_type = get_deserializing_type(target_type);
     let to_owned = if BY_VALUE_CONVERSION_TARGETS
@@ -117,8 +125,9 @@ fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -
         } else {
             quote! { .to_owned() }
         }
-    } else { quote! {} };
-
+    } else {
+        quote! {}
+    };
 
     quote! {
         row.get::<#deserializing_type, &str>(#ident_name)
@@ -127,27 +136,27 @@ fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -
     }
 }
 
+#[cfg(feature = "mssql")]
 fn get_deserializing_type(target_type: &str) -> TokenStream {
     let re = Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?").unwrap();
-    re
-        .captures(&*target_type)
+    re.captures(&*target_type)
         .map(|inner| String::from(&inner["type"]))
         .map(|tt| {
             if BY_VALUE_CONVERSION_TARGETS.contains(&tt.as_str()) {
                 quote! { &str }
                 // potentially others on demand on the future
             } else if tt.contains("Date") || tt.contains("Time") {
-                let dt = Ident::new(
-                    tt.as_str(),
-                    Span::call_site()
-                );
+                let dt = Ident::new(tt.as_str(), Span::call_site());
                 quote! { canyon_sql::date_time::#dt }
             } else {
                 let tt = Ident::new(tt.as_str(), Span::call_site());
-                quote! { #tt } 
+                quote! { #tt }
             }
         })
-        .expect(&format!("Unable to process type: {} on the given struct for SqlServer", target_type))
+        .expect(&format!(
+            "Unable to process type: {} on the given struct for SqlServer",
+            target_type
+        ))
 }
 
 #[cfg(feature = "mssql")]
@@ -184,7 +193,13 @@ mod mapper_macro_tests {
         assert_eq!("&str", get_deserializing_type("Option<String>").to_string());
         assert_eq!("i64", get_deserializing_type("i64").to_string());
 
-        assert_eq!("canyon_sql::date_time::DateTime", get_deserializing_type("DateTime").to_string());
-        assert_eq!("canyon_sql::date_time::NaiveDateTime", get_deserializing_type("NaiveDateTime").to_string());
+        assert_eq!(
+            "canyon_sql::date_time::DateTime",
+            get_deserializing_type("DateTime").to_string()
+        );
+        assert_eq!(
+            "canyon_sql::date_time::NaiveDateTime",
+            get_deserializing_type("NaiveDateTime").to_string()
+        );
     }
 }

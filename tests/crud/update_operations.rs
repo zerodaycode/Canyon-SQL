@@ -30,7 +30,7 @@ fn test_crud_update_method_operation() {
 
     // The ext_id field value is extracted from the sql scripts under the
     // docker/sql folder. We are retrieving the first entity inserted at the
-    // wake up time of the database, and now checking some of its properties.
+    // wake-up time of the database, and now checking some of its properties.
     assert_eq!(updt_candidate.ext_id, 100695891328981122_i64);
 
     // Modify the value, and perform the update
@@ -49,13 +49,13 @@ fn test_crud_update_method_operation() {
 
     assert_eq!(updt_entity.ext_id, updt_value);
 
-    // We rollback the changes to the initial value to don't broke other tests
+    // We roll back the changes to the initial value to don't broke other tests
     // the next time that will run
     updt_candidate.ext_id = 100695891328981122_i64;
     updt_candidate
         .update()
         .await
-        .expect("Failed the restablish initial value update operation");
+        .expect("Failed to restore the initial value in the psql update operation");
 }
 
 /// Same as the above test, but with the specified datasource.
@@ -71,7 +71,7 @@ fn test_crud_update_with_mssql_method_operation() {
 
     // The ext_id field value is extracted from the sql scripts under the
     // docker/sql folder. We are retrieving the first entity inserted at the
-    // wake up time of the database, and now checking some of its properties.
+    // wake-up time of the database, and now checking some of its properties.
     assert_eq!(updt_candidate.ext_id, 100695891328981122_i64);
 
     // Modify the value, and perform the update

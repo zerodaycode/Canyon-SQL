@@ -1,17 +1,18 @@
-use std::error::Error;
-use std::future::Future;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
+#[cfg(feature = "mssql")]
 use crate::connection::db_clients::mssql::SqlServerConnection;
+#[cfg(feature = "mysql")]
 use crate::connection::db_clients::mysql::MysqlConnection;
+#[cfg(feature = "postgres")]
 use crate::connection::db_clients::postgresql::PostgreSqlConnection;
 use crate::connection::{find_datasource_by_name_or_try_default, get_database_connection_by_ds};
 use crate::query_parameters::QueryParameter;
 use crate::rows::CanyonRows;
-
+use std::error::Error;
+use std::future::Future;
 
 pub trait DbConnection {
-    // TODO: guess that this is the trait that must remain sealed
     fn launch<'a>(
         &self,
         stmt: &str,
@@ -26,15 +27,13 @@ pub trait DbConnection {
 /// directly with an [`&str`] that must match one of the datasources defined
 /// within the user config file
 impl DbConnection for &str {
-    fn launch<'a>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
-                  -> impl Future<Output=Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
-    {
+    fn launch<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
         async move {
-            let sane_ds_name = if !self.is_empty() {
-                Some(*self)
-            } else {
-                None
-            };
+            let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
             let conn = get_database_connection_by_ds(sane_ds_name).await?;
             conn.launch(stmt, params).await
         }
@@ -64,9 +63,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl std::future::Future<
-        Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>,
-    > + Send {
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
         async move {
             match self {
                 #[cfg(feature = "postgres")]
@@ -138,9 +135,9 @@ impl DatabaseConnection {
         match self {
             #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(_) => DatabaseType::PostgreSql,
-            #[cfg(feature = "postgres")]
+            #[cfg(feature = "mssql")]
             DatabaseConnection::SqlServer(_) => DatabaseType::SqlServer,
-            #[cfg(feature = "postgres")]
+            #[cfg(feature = "mysql")]
             DatabaseConnection::MySQL(_) => DatabaseType::MySQL,
         }
     }

@@ -27,24 +27,19 @@ pub mod macros {
 /// connection module serves to reexport the public elements of the `canyon_connection` crate,
 /// exposing them through the public API
 pub mod connection {
-    #[cfg(feature = "postgres")]
-    pub use canyon_core::connection::db_connector::DatabaseConnection::Postgres;
-
-    #[cfg(feature = "mssql")]
-    pub use canyon_core::connection::db_connector::DatabaseConnection::SqlServer;
-
-    #[cfg(feature = "mysql")]
-    pub use canyon_core::connection::db_connector::DatabaseConnection::MySQL;
-
-    pub use canyon_core::connection::*;
+    pub use canyon_core::connection::database_type::DatabaseType;
+    pub use canyon_core::connection::db_connector::DatabaseConnection;
+    pub use canyon_core::connection::get_database_config;
+    pub use canyon_core::connection::get_database_connection;
+    pub use canyon_core::connection::get_database_connection_by_ds;
 }
 
 pub mod core {
-    pub use canyon_core::mapper::*;
     pub use canyon_core::connection::db_connector::DbConnection;
-    pub use canyon_core::transaction::Transaction;
+    pub use canyon_core::mapper::*;
     pub use canyon_core::query_parameters::QueryParameter;
     pub use canyon_core::rows::CanyonRows;
+    pub use canyon_core::transaction::Transaction;
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
@@ -52,7 +47,6 @@ pub mod core {
 pub mod crud {
     pub use canyon_crud::bounds;
     pub use canyon_crud::crud::*;
-    pub use canyon_crud::DatabaseType;
 }
 
 /// Re-exports the query elements from the `crud`crate
