@@ -113,11 +113,11 @@ impl CanyonRows {
     pub fn first_row<T: RowMapper<T>>(&self) -> Option<T> {
         match self {
             #[cfg(feature = "postgres")]
-            Self::Postgres(v) => v.get(0).map(|r| T::deserialize_postgresql(r)),
+            Self::Postgres(v) => v.first().map(|r| T::deserialize_postgresql(r)),
             #[cfg(feature = "mssql")]
-            Self::Tiberius(v) => v.get(0).map(|r| T::deserialize_sqlserver(r)),
+            Self::Tiberius(v) => v.first().map(|r| T::deserialize_sqlserver(r)),
             #[cfg(feature = "mysql")]
-            Self::MySQL(v) => v.get(0).map(|r| T::deserialize_mysql(r)),
+            Self::MySQL(v) => v.first().map(|r| T::deserialize_mysql(r)),
         }
     }
 

@@ -90,7 +90,7 @@ impl Migrations {
     }
 
     /// Fetches a concrete schema metadata by target the database
-    /// chosen by it's datasource name property
+    /// chosen by its datasource name property
     async fn fetch_database(
         ds_name: &str,
         db_conn: &mut DatabaseConnection,
