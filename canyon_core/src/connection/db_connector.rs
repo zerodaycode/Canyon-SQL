@@ -15,7 +15,7 @@ use crate::connection::db_connector::connection_helpers::{db_conn_launch_impl, d
 use crate::mapper::RowMapper;
 
 pub trait DbConnection {
-    fn launch<'a>(
+    fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
@@ -35,14 +35,14 @@ pub trait DbConnection {
 /// directly with an [`&str`] that must match one of the datasources defined
 /// within the user config file
 impl DbConnection for &str {
-    async fn launch<'a>(
+    async fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>>{
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
-        conn.launch(stmt, params).await
+        conn.query(stmt, params).await
     }
 
     async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
@@ -73,7 +73,7 @@ pub enum DatabaseConnection {
 }
 
 impl DbConnection for DatabaseConnection {
-    async fn launch<'a>(
+    async fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
@@ -93,7 +93,7 @@ impl DbConnection for DatabaseConnection {
 }
 
 impl DbConnection for &mut DatabaseConnection {
-    async fn launch<'a>(
+    async fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
@@ -263,13 +263,13 @@ mod connection_helpers {
     pub(crate) async fn db_conn_launch_impl<'a>(c: &DatabaseConnection, stmt: &str, params: &[&'a (dyn QueryParameter<'a> + 'a)]) -> Result<CanyonRows, Box<dyn Error + Send + Sync>>{
         match c {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
+            DatabaseConnection::Postgres(client) => client.query(stmt, params).await,
 
             #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
+            DatabaseConnection::SqlServer(client) => client.query(stmt, params).await,
 
             #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
+            DatabaseConnection::MySQL(client) => client.query(stmt, params).await,
         }
     }
 

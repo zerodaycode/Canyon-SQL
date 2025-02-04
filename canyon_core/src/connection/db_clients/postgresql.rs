@@ -15,7 +15,7 @@ pub struct PostgreSqlConnection {
 }
 
 impl DbConnection for PostgreSqlConnection {
-    fn launch<'a>(
+    fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],

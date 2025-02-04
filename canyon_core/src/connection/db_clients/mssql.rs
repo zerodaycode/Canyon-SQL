@@ -15,7 +15,7 @@ pub struct SqlServerConnection {
 }
 
 impl DbConnection for SqlServerConnection {
-    fn launch<'a>(
+    fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
@@ -39,14 +39,10 @@ impl DbConnection for SqlServerConnection {
 
 #[cfg(feature = "mssql")]
 pub(crate) mod sqlserver_query_launcher {
-    use std::future::Future;
-    use std::io::ErrorKind;
-    use tiberius::Row;
     use crate::mapper::RowMapper;
     use super::*;
 
     #[inline(always)]
-
     pub(crate) async fn launch<'a>(
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],

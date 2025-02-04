@@ -17,6 +17,6 @@ pub trait Transaction<T> {
         S: AsRef<str> + Display + Sync + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a,
     {
-        async move { input.launch(stmt.as_ref(), params.as_ref()).await }
+        async move { input.query(stmt.as_ref(), params.as_ref()).await }
     }
 }

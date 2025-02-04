@@ -17,7 +17,7 @@ pub struct MysqlConnection {
 }
 
 impl DbConnection for MysqlConnection {
-    fn launch<'a>(
+    fn query<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
