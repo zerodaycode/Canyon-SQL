@@ -110,6 +110,17 @@ impl CanyonRows {
         }
     }
 
+    pub fn first_row<T: RowMapper<T>>(&self) -> Option<T> {
+        match self {
+            #[cfg(feature = "postgres")]
+            Self::Postgres(v) => v.get(0).map(|r| T::deserialize_postgresql(r)),
+            #[cfg(feature = "mssql")]
+            Self::Tiberius(v) => v.get(0).map(|r| T::deserialize_sqlserver(r)),
+            #[cfg(feature = "mysql")]
+            Self::MySQL(v) => v.get(0).map(|r| T::deserialize_mysql(r)),
+        }
+    }
+
     pub fn get_column_at_row<'a, C: FromSql<'a, C>>(
         &'a self,
         column_name: &str,

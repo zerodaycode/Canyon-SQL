@@ -11,6 +11,8 @@ use crate::query_parameters::QueryParameter;
 use crate::rows::CanyonRows;
 use std::error::Error;
 use std::future::Future;
+use crate::connection::db_connector::connection_helpers::{db_conn_launch_impl, db_conn_query_one_impl};
+use crate::mapper::RowMapper;
 
 pub trait DbConnection {
     fn launch<'a>(
@@ -18,6 +20,12 @@ pub trait DbConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
+
+    fn query_one<'a, R: RowMapper<R>>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send;
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>>;
 }
@@ -27,16 +35,22 @@ pub trait DbConnection {
 /// directly with an [`&str`] that must match one of the datasources defined
 /// within the user config file
 impl DbConnection for &str {
-    fn launch<'a>(
+    async fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
-        async move {
-            let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
-            let conn = get_database_connection_by_ds(sane_ds_name).await?;
-            conn.launch(stmt, params).await
-        }
+    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>>{
+        let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
+        let conn = get_database_connection_by_ds(sane_ds_name).await?;
+        conn.launch(stmt, params).await
+    }
+
+    async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
+        -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+    {
+        let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
+        let conn = get_database_connection_by_ds(sane_ds_name).await?;
+        conn.query_one(stmt, params).await
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -59,23 +73,18 @@ pub enum DatabaseConnection {
 }
 
 impl DbConnection for DatabaseConnection {
-    fn launch<'a>(
+    async fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
-        async move {
-            match self {
-                #[cfg(feature = "postgres")]
-                DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
+    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+        db_conn_launch_impl(self, stmt, params).await
+    }
 
-                #[cfg(feature = "mssql")]
-                DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
-
-                #[cfg(feature = "mysql")]
-                DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
-            }
-        }
+    async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
+                                            -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+    {
+        db_conn_query_one_impl(self, stmt, params).await
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -84,23 +93,18 @@ impl DbConnection for DatabaseConnection {
 }
 
 impl DbConnection for &mut DatabaseConnection {
-    fn launch<'a>(
+    async fn launch<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
-        async move {
-            match self {
-                #[cfg(feature = "postgres")]
-                DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
+    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+        db_conn_launch_impl(self, stmt, params).await
+    }
 
-                #[cfg(feature = "mssql")]
-                DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
-
-                #[cfg(feature = "mysql")]
-                DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
-            }
-        }
+    async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
+        -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+    {
+        db_conn_query_one_impl(self, stmt, params).await
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -173,6 +177,7 @@ impl DatabaseConnection {
 mod connection_helpers {
     use super::*;
     use tokio_postgres::NoTls;
+    
 
     #[cfg(feature = "postgres")]
     pub async fn create_postgres_connection(
@@ -253,6 +258,36 @@ mod connection_helpers {
             port = datasource.properties.port.unwrap_or_default(),
             db = datasource.properties.db_name
         )
+    }
+
+    pub(crate) async fn db_conn_launch_impl<'a>(c: &DatabaseConnection, stmt: &str, params: &[&'a (dyn QueryParameter<'a> + 'a)]) -> Result<CanyonRows, Box<dyn Error + Send + Sync>>{
+        match c {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => client.launch(stmt, params).await,
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => client.launch(stmt, params).await,
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => client.launch(stmt, params).await,
+        }
+    }
+
+    pub(crate) async fn db_conn_query_one_impl<'a, T: RowMapper<T>>(c: &DatabaseConnection,
+                                                stmt: &str,
+                                                params: &[&'a (dyn QueryParameter<'a> + 'a)])
+        -> Result<Option<T>, Box<dyn Error + Send + Sync>>
+    {
+        match c {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => client.query_one(stmt, params).await,
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => client.query_one(stmt, params).await,
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => client.query_one(stmt, params).await,
+        }
     }
 }
 

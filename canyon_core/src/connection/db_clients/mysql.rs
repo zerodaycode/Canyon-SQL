@@ -1,13 +1,14 @@
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 use std::error::Error;
-
+use std::future::Future;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
 use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 use mysql_async::Row;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;
+use crate::mapper::RowMapper;
 
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
@@ -20,9 +21,15 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl std::future::Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
     {
-        mysql_query_launcher::launch(stmt, params, self)
+        mysql_query_launcher::query(stmt, params, self)
+    }
+
+    fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>]) 
+        -> impl Future<Output=Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    {
+        mysql_query_launcher::query_one(stmt, params, self)
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -45,13 +52,25 @@ pub(crate) mod mysql_query_launcher {
     use regex::Regex;
     use std::sync::Arc;
 
-    #[inline(always)]
-
-    pub(crate) async fn launch<'a>(
+    #[inline(always)] // TODO: very provisional implementation! care!
+    // TODO: would be better to launch a simple query for the last id?
+    pub(crate) async fn query_one<'a, R: RowMapper<R>>(
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn std::error::Error + Sync + Send)>> {
+    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
+        Ok(query(stmt, params, conn)
+            .await?
+            .first_row()
+        )
+    }
+
+    #[inline(always)] 
+    pub(crate) async fn query<'a>(
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+        conn: &MysqlConnection,
+    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
         let mysql_connection = conn.client.get_conn().await?;
 
         let stmt_with_escape_characters = regex::escape(stmt);
