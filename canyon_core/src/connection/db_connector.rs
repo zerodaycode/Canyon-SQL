@@ -10,9 +10,11 @@ use crate::connection::{find_datasource_by_name_or_try_default, get_database_con
 use crate::query_parameters::QueryParameter;
 use crate::rows::CanyonRows;
 use std::error::Error;
+use std::fmt::Display;
 use std::future::Future;
 use crate::connection::db_connector::connection_helpers::{db_conn_launch_impl, db_conn_query_one_impl};
 use crate::mapper::RowMapper;
+use crate::row::Row;
 
 pub trait DbConnection {
     fn query<'a>(
@@ -20,6 +22,15 @@ pub trait DbConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
+
+    fn query_rows<'a, S, Z, R: RowMapper<R>>(
+        &self,
+        stmt: S,
+        params: Z,
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        S: AsRef<str> + Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a;
 
     fn query_one<'a, R: RowMapper<R>>(
         &self,
@@ -40,9 +51,21 @@ impl DbConnection for &str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>>{
-        let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
-        let conn = get_database_connection_by_ds(sane_ds_name).await?;
+        let conn = get_database_connection_by_ds(Some(&self)).await?;
         conn.query(stmt, params).await
+    }
+
+    async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+        &self,
+        stmt: S,
+        params: Z,
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    where
+        S: AsRef<str> + Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    {
+        let conn = get_database_connection_by_ds(Some(&self)).await?;
+        conn.query_rows(stmt, params).await
     }
 
     async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
@@ -81,6 +104,27 @@ impl DbConnection for DatabaseConnection {
         db_conn_launch_impl(self, stmt, params).await
     }
 
+    async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+        &self,
+        stmt: S,
+        params: Z,
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    where
+        S: AsRef<str> + Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    {
+        match self {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => client.query_rows(stmt, params).await,
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => client.query_rows(stmt, params).await,
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => client.query_rows(stmt, params).await,
+        }
+    }
+
     async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
                                             -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
     {
@@ -99,6 +143,26 @@ impl DbConnection for &mut DatabaseConnection {
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
         db_conn_launch_impl(self, stmt, params).await
+    }
+    async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+        &self,
+        stmt: S,
+        params: Z,
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    where
+        S: AsRef<str> + Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    {
+        match self {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => client.query_rows(stmt, params).await,
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => client.query_rows(stmt, params).await,
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => client.query_rows(stmt, params).await,
+        }
     }
 
     async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])

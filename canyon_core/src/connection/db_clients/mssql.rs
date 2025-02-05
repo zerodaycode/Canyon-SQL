@@ -1,6 +1,7 @@
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 use std::error::Error;
+use std::fmt::Display;
 use std::future::Future;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
@@ -22,6 +23,14 @@ impl DbConnection for SqlServerConnection {
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
     {
         sqlserver_query_launcher::launch(stmt, params, self)
+    }
+
+    fn query_rows<'a, S, Z, R: RowMapper<R>>(&self, stmt: S, params: Z) -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        S: AsRef<str> + Display + Sync + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+    {
+        async move { todo!() }
     }
 
     fn query_one<'a, R>(&self, stmt: &str, params: &[&'a (dyn QueryParameter<'a>)])
