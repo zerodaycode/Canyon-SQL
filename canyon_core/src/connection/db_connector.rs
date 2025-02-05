@@ -14,23 +14,21 @@ use std::fmt::Display;
 use std::future::Future;
 use crate::connection::db_connector::connection_helpers::{db_conn_launch_impl, db_conn_query_one_impl};
 use crate::mapper::RowMapper;
-use crate::row::Row;
 
 pub trait DbConnection {
-    fn query<'a>(
+    fn query_rows<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
 
-    fn query_rows<'a, S, Z, R: RowMapper<R>>(
+    fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: Z,
+        params: &[&'a (dyn QueryParameter<'_>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a;
+        S: AsRef<str> + Display + Send;
 
     fn query_one<'a, R: RowMapper<R>>(
         &self,
@@ -46,26 +44,25 @@ pub trait DbConnection {
 /// directly with an [`&str`] that must match one of the datasources defined
 /// within the user config file
 impl DbConnection for &str {
-    async fn query<'a>(
+    async fn query_rows<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>>{
-        let conn = get_database_connection_by_ds(Some(&self)).await?;
-        conn.query(stmt, params).await
+        let conn = get_database_connection_by_ds(Some(self)).await?;
+        conn.query_rows(stmt, params).await
     }
 
-    async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+    async fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: Z,
+        params: &[&'a (dyn QueryParameter<'_>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        S: AsRef<str> + Display + Send,
     {
-        let conn = get_database_connection_by_ds(Some(&self)).await?;
-        conn.query_rows(stmt, params).await
+        let conn = get_database_connection_by_ds(Some(self)).await?;
+        conn.query(stmt, params).await
     }
 
     async fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>])
@@ -96,7 +93,7 @@ pub enum DatabaseConnection {
 }
 
 impl DbConnection for DatabaseConnection {
-    async fn query<'a>(
+    async fn query_rows<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
@@ -104,24 +101,23 @@ impl DbConnection for DatabaseConnection {
         db_conn_launch_impl(self, stmt, params).await
     }
 
-    async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+    async fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: Z,
+        params: &[&'a (dyn QueryParameter<'_>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        S: AsRef<str> + Display + Send,
     {
         match self {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(client) => client.query_rows(stmt, params).await,
+            DatabaseConnection::Postgres(client) => client.query(stmt, params).await,
 
             #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(client) => client.query_rows(stmt, params).await,
+            DatabaseConnection::SqlServer(client) => client.query(stmt, params).await,
 
             #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(client) => client.query_rows(stmt, params).await,
+            DatabaseConnection::MySQL(client) => client.query(stmt, params).await,
         }
     }
 
@@ -137,31 +133,30 @@ impl DbConnection for DatabaseConnection {
 }
 
 impl DbConnection for &mut DatabaseConnection {
-    async fn query<'a>(
+    async fn query_rows<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
         db_conn_launch_impl(self, stmt, params).await
     }
-    async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+    async fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: Z,
+        params: &[&'a (dyn QueryParameter<'_>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        S: AsRef<str> + Display + Send,
     {
         match self {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(client) => client.query_rows(stmt, params).await,
+            DatabaseConnection::Postgres(client) => client.query(stmt, params).await,
 
             #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(client) => client.query_rows(stmt, params).await,
+            DatabaseConnection::SqlServer(client) => client.query(stmt, params).await,
 
             #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(client) => client.query_rows(stmt, params).await,
+            DatabaseConnection::MySQL(client) => client.query(stmt, params).await,
         }
     }
 
@@ -327,13 +322,13 @@ mod connection_helpers {
     pub(crate) async fn db_conn_launch_impl<'a>(c: &DatabaseConnection, stmt: &str, params: &[&'a (dyn QueryParameter<'a> + 'a)]) -> Result<CanyonRows, Box<dyn Error + Send + Sync>>{
         match c {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(client) => client.query(stmt, params).await,
+            DatabaseConnection::Postgres(client) => client.query_rows(stmt, params).await,
 
             #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(client) => client.query(stmt, params).await,
+            DatabaseConnection::SqlServer(client) => client.query_rows(stmt, params).await,
 
             #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(client) => client.query(stmt, params).await,
+            DatabaseConnection::MySQL(client) => client.query_rows(stmt, params).await,
         }
     }
 

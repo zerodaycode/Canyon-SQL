@@ -34,13 +34,13 @@ pub fn generate_read_operations_tokens(
         #find_all_with
         #find_all_unchecked
         #find_all_unchecked_with
-
-        #count
-        #count_with
-
-        #find_by_pk_complex_tokens
-
-        #read_querybuilder_ops
+        // 
+        // #count
+        // #count_with
+        // 
+        // #find_by_pk_complex_tokens
+        // 
+        // #read_querybuilder_ops
     }
 }
 
@@ -250,7 +250,6 @@ mod __details {
                     }
                 })
                 .propagate_transaction_result()
-                .disable_mapping()
                 .raw_return()
         }
 
@@ -273,7 +272,6 @@ mod __details {
                     }
                 })
                 .propagate_transaction_result()
-                .disable_mapping()
                 .raw_return()
         }
     }
@@ -299,7 +297,6 @@ mod __details {
                 .input_parameters(quote! { value: &'a dyn canyon_sql::core::QueryParameter<'a> })
                 .forwarded_parameters(quote! { vec![value] })
                 .propagate_transaction_result()
-                .disable_mapping()
                 .single_result()
                 .transaction_as_variable(quote! {
                     match transaction_result { // NOTE: dark magic. Should be refactored
@@ -324,7 +321,6 @@ mod __details {
                 .input_parameters(quote! { value: &'a dyn canyon_sql::core::QueryParameter<'a> })
                 .forwarded_parameters(quote! { vec![value] })
                 .propagate_transaction_result()
-                .disable_mapping()
                 .single_result()
                 .transaction_as_variable(quote! {
                     match transaction_result { // NOTE: dark magic. Should be refactored

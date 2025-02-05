@@ -240,5 +240,6 @@ fn generate_find_by_reverse_foreign_key_tokens(
         }
     }
 
-    rev_fk_quotes
+    rev_fk_quotes;
+    vec![]
 }

@@ -587,7 +587,7 @@ impl MigrationsProcessor {
                     &mut conn_cache,
                 );
 
-                let res = Self::query(query_to_execute, [], db_conn).await;
+                let res = Self::query_rows(query_to_execute, [], db_conn).await;
 
                 match res {
                     Ok(_) => println!(

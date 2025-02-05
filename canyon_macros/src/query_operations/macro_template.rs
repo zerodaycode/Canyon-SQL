@@ -21,7 +21,7 @@ pub struct MacroOperationBuilder {
     with_no_result_value: bool, // Ok(())
     transaction_as_variable: bool,
     direct_error_return: Option<String>,
-    disable_mapping: bool,
+    enable_mapping: bool,
     raw_return: bool,
     propagate_transaction_result: bool,
     post_body: Option<TokenStream>,
@@ -55,7 +55,7 @@ impl MacroOperationBuilder {
             with_no_result_value: false,
             transaction_as_variable: false,
             direct_error_return: None,
-            disable_mapping: false,
+            enable_mapping: false,
             raw_return: false,
             propagate_transaction_result: false,
             post_body: None,
@@ -285,7 +285,7 @@ impl MacroOperationBuilder {
     }
 
     pub fn disable_mapping(mut self) -> Self {
-        self.disable_mapping = true;
+        self.enable_mapping = true;
         self
     }
 
@@ -333,7 +333,7 @@ impl MacroOperationBuilder {
         if self.propagate_transaction_result {
             base_body_tokens.extend(quote! { ? })
         };
-        if !self.disable_mapping {
+        if self.enable_mapping {
             base_body_tokens.extend(quote! { .into_results::<#ty>() })
         };
         if self.with_no_result_value {

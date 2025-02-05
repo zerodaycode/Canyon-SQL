@@ -14,7 +14,7 @@ fn test_migrations_postgresql_status_query() {
     assert!(conn_res.is_ok());
 
     let db_conn = &mut conn_res.unwrap();
-    let results = Migrations::query(constants::FETCH_PUBLIC_SCHEMA, [], db_conn).await;
+    let results = Migrations::query_rows(constants::FETCH_PUBLIC_SCHEMA, [], db_conn).await;
     assert!(results.is_ok());
 
     let res = results.unwrap();

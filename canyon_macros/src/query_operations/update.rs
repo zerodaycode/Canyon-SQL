@@ -86,7 +86,9 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let querybuilder_update_tokens = generate_update_query_tokens(ty, table_schema_data);
     update_ops_tokens.extend(querybuilder_update_tokens);
 
-    update_ops_tokens
+    update_ops_tokens;
+    
+    quote!{}
 }
 
 /// Generates the TokenStream for the __update() CRUD operation

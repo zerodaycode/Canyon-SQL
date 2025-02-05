@@ -18,21 +18,21 @@ pub struct MysqlConnection {
 }
 
 impl DbConnection for MysqlConnection {
-    fn query<'a>(
+    fn query_rows<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
     {
-        mysql_query_launcher::query(stmt, params, self)
+        mysql_query_launcher::query_rows(stmt, params, self)
     }
 
-    fn query_rows<'a, S, Z, R: RowMapper<R>>(&self, stmt: S, params: Z) -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    fn query<'a, S, R: RowMapper<R>>(&self, stmt: S, params: &[&'a (dyn QueryParameter<'_>)],)
+        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        S: AsRef<str> + Display + Send
     {
-        async move { todo!() }
+        mysql_query_launcher::query(stmt, params, self)
     }
 
     fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>]) 
@@ -61,28 +61,62 @@ pub(crate) mod mysql_query_launcher {
     use regex::Regex;
     use std::sync::Arc;
 
-    #[inline(always)] // TODO: very provisional implementation! care!
-    // TODO: would be better to launch a simple query for the last id?
+    #[inline(always)]
+    pub async fn query<'a, S, R: RowMapper<R>>(
+        stmt: S,
+        params: &[&'a dyn QueryParameter<'_>],
+        conn: &MysqlConnection,
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    where
+        S: AsRef<str> + Display + Send
+    {
+        Ok(
+            execute_query(stmt, params, conn).await?
+                .iter()
+                .map(|row| R::deserialize_mysql(row))
+                .collect()
+        )
+    }
+
+    #[inline(always)]
+    pub(crate) async fn query_rows<'a>(
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+        conn: &MysqlConnection,
+    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+        Ok(CanyonRows::MySQL(
+            execute_query(stmt, params, conn).await?
+        ))
+    }
+
+    #[inline(always)]
     pub(crate) async fn query_one<'a, R: RowMapper<R>>(
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
     ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
-        Ok(query(stmt, params, conn)
-            .await?
-            .first_row()
-        )
+        let result = execute_query(stmt, params, conn)
+            .await?;
+        
+        match result.first() {
+            Some(r) => Ok(Some(R::deserialize_mysql(r))),
+            None => Ok(None),
+        }
     }
 
-    #[inline(always)] 
-    pub(crate) async fn query<'a>(
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
+    #[inline(always)] // TODO: very provisional implementation! care!
+    // TODO: would be better to launch a simple query for the last id?
+    async fn execute_query<'a, S>(
+        stmt: S,
+        params: &[&'a dyn QueryParameter<'_>],
         conn: &MysqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<Vec<Row>, Box<(dyn Error + Sync + Send)>>
+    where
+        S: AsRef<str> + Display + Send
+    {
         let mysql_connection = conn.client.get_conn().await?;
 
-        let stmt_with_escape_characters = regex::escape(stmt);
+        let stmt_with_escape_characters = regex::escape(stmt.as_ref());
         let query_string =
             Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
 
@@ -99,7 +133,7 @@ pub(crate) mod mysql_query_launcher {
         }
 
         let params_query: Vec<Value> =
-            reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value());
+            reorder_params(stmt.as_ref(), params, |f| (*f).as_mysql_param().to_value());
 
         let query_with_params = QueryWithParams {
             query: query_string,
@@ -108,8 +142,7 @@ pub(crate) mod mysql_query_launcher {
 
         let mut query_result = query_with_params
             .run(mysql_connection)
-            .await
-            .expect("Error executing query in mysql");
+            .await?;
 
         let result_rows = if is_insert {
             let last_insert = query_result
@@ -124,11 +157,10 @@ pub(crate) mod mysql_query_launcher {
         } else {
             query_result
                 .collect::<Row>()
-                .await
-                .expect("Error resolved trait FromRow in mysql")
+                .await?
         };
-        let a = CanyonRows::MySQL(result_rows);
-        Ok(a)
+        
+        Ok(result_rows)
     }
 }
 

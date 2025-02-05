@@ -7,7 +7,6 @@ use crate::connection::db_connector::DbConnection;
 #[cfg(feature = "postgres")]
 use tokio_postgres::Client;
 use crate::mapper::RowMapper;
-use crate::row::Row;
 
 /// A connection with a `PostgreSQL` database
 #[cfg(feature = "postgres")]
@@ -17,25 +16,24 @@ pub struct PostgreSqlConnection {
 }
 
 impl DbConnection for PostgreSqlConnection {
-    fn query<'a>(
+    fn query_rows<'a>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output=Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
     {
-        postgres_query_launcher::query(stmt, params, self)
+        postgres_query_launcher::query_rows(stmt, params, self)
     }
 
-    fn query_rows<'a, S, Z, R: RowMapper<R>>(
+    fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: Z,
+        params: &[&'a (dyn QueryParameter<'_>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        S: AsRef<str> + Display + Send
     {
-        postgres_query_launcher::query_rows(stmt, params, self)
+        postgres_query_launcher::query(stmt, params, self)
     }
 
     fn query_one<'a, R>(&self, stmt: &str, params: &[&'a (dyn QueryParameter<'a>)])
@@ -53,13 +51,13 @@ impl DbConnection for PostgreSqlConnection {
 
 #[cfg(feature = "postgres")]
 pub(crate) mod postgres_query_launcher {
-    use std::iter::Map;
-    use std::slice::Iter;
+    
+    
     use tokio_postgres::types::ToSql;
     use super::*;
 
     #[inline(always)]
-    pub(crate) async fn query<'a>(
+    pub(crate) async fn query_rows<'a>(
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &PostgreSqlConnection,
@@ -81,14 +79,13 @@ pub(crate) mod postgres_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_rows<'a, S, Z, R: RowMapper<R>>(
+    pub(crate) async fn query<'a, S, R: RowMapper<R>>(
         stmt: S,
-        params: Z,
+        params: &[&'a (dyn QueryParameter<'_>)],
         conn: &PostgreSqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
     where
-        S: AsRef<str> + Display + Sync + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
+        S: AsRef<str> + Display + Send
     {
         Ok(conn.client
             .query(stmt.as_ref(), &get_psql_params(params))
@@ -99,9 +96,8 @@ pub(crate) mod postgres_query_launcher {
         )
     }
     
-    fn get_psql_params<'a, Z>(params: Z)
+    fn get_psql_params<'a>(params: &[&'a (dyn QueryParameter<'_>)],)
         -> Vec<&'a (dyn ToSql + Sync)>
-    where Z: AsRef<[&'a dyn QueryParameter<'a>]> + Sync + Send + 'a
     {
         params
             .as_ref()

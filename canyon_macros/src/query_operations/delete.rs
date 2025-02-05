@@ -51,10 +51,12 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         });
     }
 
-    let delete_with_querybuilder = generate_delete_query_tokens(&ty, table_schema_data);
-    delete_ops_tokens.extend(delete_with_querybuilder);
+    // let delete_with_querybuilder = generate_delete_query_tokens(&ty, table_schema_data);
+    // delete_ops_tokens.extend(delete_with_querybuilder);
+    // 
+    // delete_ops_tokens
 
-    delete_ops_tokens
+    quote!{}
 }
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
@@ -112,7 +114,6 @@ mod __details {
             .query_string(stmt)
             .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
-            .disable_mapping()
             .raw_return()
             .with_no_result_value()
     }
@@ -135,7 +136,6 @@ mod __details {
             .query_string(stmt)
             .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
-            .disable_mapping()
             .raw_return()
             .with_no_result_value()
     }

@@ -74,7 +74,7 @@ impl CanyonMemory {
         Self::create_memory(&datasource.name, db_conn, &datasource.get_db_type()).await;
 
         // Retrieve the last status data from the `canyon_memory` table
-        let res = Self::query("SELECT * FROM canyon_memory", [], db_conn)
+        let res = Self::query_rows("SELECT * FROM canyon_memory", [], db_conn)
             .await
             .expect("Error querying Canyon Memory");
 
@@ -262,7 +262,7 @@ impl CanyonMemory {
             DatabaseType::MySQL => todo!("Memory table in mysql not implemented"),
         };
 
-        Self::query(query, [], db_conn)
+        Self::query_rows(query, [], db_conn)
             .await
             .unwrap_or_else(|_| panic!("Error creating the 'canyon_memory' table while processing the datasource: {datasource_name}"));
     }
