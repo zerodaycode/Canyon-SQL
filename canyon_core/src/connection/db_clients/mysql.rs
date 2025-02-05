@@ -32,7 +32,8 @@ impl DbConnection for MysqlConnection {
     where
         S: AsRef<str> + Display + Send
     {
-        mysql_query_launcher::query(stmt, params, self)
+        // mysql_query_launcher::query(stmt, params, self)
+        async move { todo!() }
     }
 
     fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>]) 

@@ -20,12 +20,12 @@ pub trait Transaction<T> {
         async move { input.query_rows(stmt.as_ref(), params.as_ref()).await }
     }
     
-    fn query<'a, R: RowMapper<R>>(
-        stmt: &str,
+    fn query<'a, S, R: RowMapper<R>>(
+        stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
         input: impl DbConnection + Send,
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>>
-    where
+    where S: AsRef<str> + Display + Send,
     {
         async move { input.query(stmt, params).await }
     }

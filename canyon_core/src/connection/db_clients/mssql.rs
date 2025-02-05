@@ -26,11 +26,12 @@ impl DbConnection for SqlServerConnection {
     }
 
     fn query<'a, S, R: RowMapper<R>>(&self, stmt: S, params: &[&'a (dyn QueryParameter<'_>)])
-        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send + 'a
     where
         S: AsRef<str> + Display + Send
     {
-        sqlserver_query_launcher::query(stmt, params, self)
+        // sqlserver_query_launcher::query(stmt, params, self)
+        async move { todo!() }
     }
 
     fn query_one<'a, R>(&self, stmt: &str, params: &[&'a (dyn QueryParameter<'a>)])
@@ -48,7 +49,7 @@ impl DbConnection for SqlServerConnection {
 
 #[cfg(feature = "mssql")]
 pub(crate) mod sqlserver_query_launcher {
-    use tiberius::QueryStream;
+    use tiberius::{ColumnData, QueryStream};
     use crate::mapper::RowMapper;
     use super::*;
     
@@ -107,12 +108,10 @@ pub(crate) mod sqlserver_query_launcher {
         }
     }
 
-    async fn execute_query<'a, S>(stmt: S, params: &[&'a (dyn QueryParameter<'_>)], conn: &SqlServerConnection)
+    async fn execute_query<'a>(stmt: &str, params: &[&'a (dyn QueryParameter<'_>)], conn: &SqlServerConnection)
         -> Result<QueryStream<'a>, Box<(dyn Error + Send + Sync)>>
-    where
-        S: AsRef<str> + Display
     {
-        let mut stmt = String::from(stmt.as_ref());
+        let mut stmt = String::from(stmt);
         if stmt.contains("RETURNING") {
             let c = stmt.clone();
             let temp = c.split_once("RETURNING").unwrap();
@@ -130,7 +129,30 @@ pub(crate) mod sqlserver_query_launcher {
         // replace below. We may use our own type Query to address this concerns when the query
         // is generated
         let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-        params.iter().for_each(|param| mssql_query.bind(*param));
+        params.iter().for_each(|param| {
+            let column_data = param.as_sqlserver_param();
+            match column_data {
+                ColumnData::U8(v) => { mssql_query.bind(v) }
+                ColumnData::I16(v) => { mssql_query.bind(v) }
+                ColumnData::I32(v) => { mssql_query.bind(v) }
+                ColumnData::I64(v) => { mssql_query.bind(v) }
+                ColumnData::F32(v) => { mssql_query.bind(v) }
+                ColumnData::F64(v) => { mssql_query.bind(v) }
+                ColumnData::Bit(v) => { mssql_query.bind(v) }
+                ColumnData::String(v) => { mssql_query.bind(v) }
+                ColumnData::Guid(v) => { mssql_query.bind(v) }
+                ColumnData::Binary(v) => { mssql_query.bind(v) }
+                ColumnData::Numeric(v) => { mssql_query.bind(v) }
+                ColumnData::Xml(v) => { mssql_query.bind(v.as_deref().map(ToString::to_string)) }
+                ColumnData::DateTime(v) => { todo!() }
+                ColumnData::SmallDateTime(v) => { todo!() }
+                ColumnData::Time(v) => { todo!() }
+                ColumnData::Date(v) => { todo!() }
+                ColumnData::DateTime2(v) => { todo!() }
+                ColumnData::DateTimeOffset(v) => { todo!() }
+            }
+            // mssql_query.bind()
+        });
 
         #[allow(mutable_transmutes)] // TODO: pls solve this elegantly someday :(
         let sqlservconn =
