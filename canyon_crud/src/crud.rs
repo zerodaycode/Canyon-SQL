@@ -13,7 +13,7 @@ use std::future::Future;
 /// that the user has available, just by deriving the `CanyonCrud`
 /// derive macro when a struct contains the annotation.
 ///
-/// Also, this traits needs that the type T over what it's generified
+/// Also, these traits needs that the type T over what it's generified
 /// to implement certain types in order to work correctly.
 ///
 /// The most notorious one it's the [`RowMapper<T>`] one, which allows
@@ -65,28 +65,28 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // fn insert<'a>(
-    //     &'a mut self,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-    //
-    // fn insert_with<'a, I>(
-    //     &mut self,
-    //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a;
-    //
-    // fn multi_insert<'a>(
-    //     instances: &'a mut [&'a mut T],
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-    //
-    // fn multi_insert_with<'a, I>(
-    //     instances: &'a mut [&'a mut T],
-    //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a;
-    //
+    fn insert<'a>(
+        &'a mut self,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    
+    fn insert_with<'a, I>(
+        &mut self,
+        input: I,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        I: DbConnection + Send + 'a;
+    
+    fn multi_insert<'a>(
+        instances: &'a mut [&'a mut T],
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    
+    fn multi_insert_with<'a, I>(
+        instances: &'a mut [&'a mut T],
+        input: I,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        I: DbConnection + Send + 'a;
+    
     // fn update(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
     //
     // fn update_with<'a, I>(

@@ -1,6 +1,6 @@
 // use crate::tests_models::league::League;
 // use canyon_sql::{date_time::NaiveDate, macros::*};
-// 
+//
 // #[derive(Debug, Clone, Fields, CanyonCrud, CanyonMapper, Eq, PartialEq)]
 // #[canyon_entity]
 // pub struct Tournament {

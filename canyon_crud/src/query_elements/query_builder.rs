@@ -177,12 +177,7 @@ where
     ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
         self.query.sql.push(';');
 
-        T::query(
-            &self.query.sql,
-            &self.query.params,
-            self.input,
-        )
-        .await
+        T::query(&self.query.sql, &self.query.params, self.input).await
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {

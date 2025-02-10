@@ -105,9 +105,11 @@ impl Migrations {
             DatabaseType::MySQL => todo!("Not implemented fetch database in mysql"),
         };
 
-        Self::query_rows(query, [], db_conn).await.unwrap_or_else(|_| {
-            panic!("Error querying the schema information for the datasource: {ds_name}")
-        })
+        Self::query_rows(query, [], db_conn)
+            .await
+            .unwrap_or_else(|_| {
+                panic!("Error querying the schema information for the datasource: {ds_name}")
+            })
     }
 
     /// Handler for parse the result of query the information of some database schema,

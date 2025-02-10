@@ -53,10 +53,10 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     // let delete_with_querybuilder = generate_delete_query_tokens(&ty, table_schema_data);
     // delete_ops_tokens.extend(delete_with_querybuilder);
-    // 
+    //
     // delete_ops_tokens
 
-    quote!{}
+    quote! {}
 }
 
 /// Generates the TokenStream for the __delete() CRUD operation as a

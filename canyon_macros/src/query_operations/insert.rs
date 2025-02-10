@@ -40,6 +40,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         .fields_with_types()
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
+
     let insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;
         let pk_type = &pk_data.1;
@@ -49,18 +50,21 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
             let stmt = format!("{} RETURNING {}", #stmt , #primary_key);
 
-            self.#pk_ident = <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            self.#pk_ident = <#ty as canyon_sql::core::Transaction<#ty>>::query_one_for::<
+                String,
+                Vec<&'_ dyn QueryParameter<'_>>,
+                #pk_type
+            >(
                 stmt,
                 values,
                 input
-            ).await?
-            .get_column_at_row::<#pk_type>(#primary_key, 0)?;
+            ).await?;
 
             Ok(())
         }
     } else {
         quote! {
-            <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            <#ty as canyon_sql::core::Transaction<#ty>>::query_rows( // TODO: this should be execute
                 #stmt,
                 values,
                 input
@@ -166,11 +170,10 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     });
 
-    // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
-    // insert_ops_tokens.extend(multi_insert_tokens);
+    let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
+    insert_ops_tokens.extend(multi_insert_tokens);
 
-    // insert_ops_tokens
-    quote!{}
+    insert_ops_tokens
 }
 
 /// Generates the TokenStream for the __insert() CRUD operation, but being available
@@ -215,9 +218,18 @@ fn generate_multiple_insert_tokens(
             let mut split = mapped_fields.split(", ")
                 .collect::<Vec<&str>>();
 
+            mapped_fields = #column_names
+                .split(", ")
+                .map( |column_name| format!("\"{}\"", column_name))
+                .collect::<Vec<String>>()
+                .join(", ");
+
+            let mut split = mapped_fields.split(", ")
+                .collect::<Vec<&str>>();
+
             let pk_value_index = split.iter()
                 .position(|pk| *pk == format!("\"{}\"", #pk).as_str())
-                .expect("Error. No primary key found when should be there");
+                .unwrap(); // ensured that is there
             split.retain(|pk| *pk != format!("\"{}\"", #pk).as_str());
             mapped_fields = split.join(", ").to_string();
 
@@ -267,7 +279,7 @@ fn generate_multiple_insert_tokens(
                 }
             }
 
-            let multi_insert_result = <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            let multi_insert_result = <#ty as canyon_sql::core::Transaction<#ty>>::query_rows(
                 stmt,
                 v_arr,
                 input
@@ -366,7 +378,7 @@ fn generate_multiple_insert_tokens(
                 }
             }
 
-            <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            <#ty as canyon_sql::core::Transaction<#ty>>::query_rows(
                 stmt,
                 v_arr,
                 input
