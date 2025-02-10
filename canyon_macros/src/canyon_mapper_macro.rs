@@ -130,6 +130,7 @@ fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -
     };
 
     quote! {
+        // TODO: try_get
         row.get::<#deserializing_type, &str>(#ident_name)
             #handle_opt
             #to_owned

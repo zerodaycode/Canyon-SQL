@@ -34,13 +34,13 @@ pub fn generate_read_operations_tokens(
         #find_all_with
         #find_all_unchecked
         #find_all_unchecked_with
-        // 
-        // #count
-        // #count_with
-        // 
-        // #find_by_pk_complex_tokens
-        // 
-        // #read_querybuilder_ops
+
+        #count
+        #count_with
+
+        #find_by_pk_complex_tokens
+
+        #read_querybuilder_ops
     }
 }
 
@@ -126,16 +126,16 @@ fn generate_find_by_pk_tokens(
         };
     }
 
-    // TODO: this can be functionally handled, instead of this impl
-    let result_handling = quote! {
-        n if n.len() == 0 => Ok(None),
-        _ => Ok(
-            Some(transaction_result.into_results::<#ty>().remove(0))
-        )
-    };
+    // // TODO: this can be functionally handled, instead of this impl
+    // let result_handling = quote! {
+    //     n if n.len() == 0 => Ok(None),
+    //     _ => Ok(
+    //         Some(transaction_result.into_results::<#ty>().remove(0))
+    //     )
+    // };
 
-    let find_by_pk = create_find_by_pk_macro(ty, &stmt, &result_handling);
-    let find_by_pk_with = create_find_by_pk_with(ty, &stmt, &result_handling);
+    let find_by_pk = create_find_by_pk_macro(ty, &stmt);
+    let find_by_pk_with = create_find_by_pk_with(ty, &stmt);
 
     quote! {
         #find_by_pk
@@ -204,10 +204,15 @@ mod __details {
     }
 
     pub mod count_generators {
+        use super::*;
+        use crate::query_operations::macro_template::TransactionMethod;
         use proc_macro2::TokenStream;
 
-        use super::*;
-
+        // NOTE: We can't use the QueryOneFor here due that the Tiberius `.get::<i64, usize>(0)` for
+        // some reason returns an I32(Some(v)), instead of I64, so we need to manually mapped the wrapped
+        // type as i64. Also, we don't have in the count macro datasource info to match it by database,
+        // so isn't worth to refactor for the other two drivers and then do some dirty magic on mssql,
+        // since we don't distinguish them as the returned type isn't a CanyonRows wrapped one
         fn generate_count_manual_result_handling(ty: &Ident) -> TokenStream {
             let ty_str = ty.to_string();
 
@@ -227,8 +232,6 @@ mod __details {
                 canyon_sql::core::CanyonRows::MySQL(mut v) => v.remove(0)
                     .get::<i64, usize>(0)
                     .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
-
-                _ => panic!() // TODO remove when the generics will be refactored
             }
         }
 
@@ -244,6 +247,7 @@ mod __details {
                 )
                 .add_doc_comment("Executed with the default datasource")
                 .query_string(stmt)
+                .with_transaction_method(TransactionMethod::QueryRows)
                 .transaction_as_variable(quote! {
                     match transaction_result { // NOTE: dark magic. Should be refactored
                         #result_handling
@@ -266,8 +270,9 @@ mod __details {
                 )
                 .add_doc_comment("It will be executed with the specified datasource")
                 .query_string(stmt)
+                .with_transaction_method(TransactionMethod::QueryRows)
                 .transaction_as_variable(quote! {
-                    match transaction_result {
+                    match transaction_result { // NOTE: dark magic. Should be refactored
                         #result_handling
                     }
                 })
@@ -277,15 +282,11 @@ mod __details {
     }
 
     pub mod pk_generators {
+        use super::*;
+        use crate::query_operations::macro_template::TransactionMethod;
         use proc_macro2::TokenStream;
 
-        use super::*;
-
-        pub fn create_find_by_pk_macro(
-            ty: &Ident,
-            stmt: &str,
-            result_handling: &TokenStream,
-        ) -> MacroOperationBuilder {
+        pub fn create_find_by_pk_macro(ty: &Ident, stmt: &str) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_by_pk")
                 .with_lifetime()
@@ -296,20 +297,10 @@ mod __details {
                 .query_string(stmt)
                 .input_parameters(quote! { value: &'a dyn canyon_sql::core::QueryParameter<'a> })
                 .forwarded_parameters(quote! { vec![value] })
-                .propagate_transaction_result()
-                .single_result()
-                .transaction_as_variable(quote! {
-                    match transaction_result { // NOTE: dark magic. Should be refactored
-                        #result_handling
-                    }
-                })
+                .with_transaction_method(TransactionMethod::QueryOne)
         }
 
-        pub fn create_find_by_pk_with(
-            ty: &Ident,
-            stmt: &str,
-            result_handling: &TokenStream,
-        ) -> MacroOperationBuilder {
+        pub fn create_find_by_pk_with(ty: &Ident, stmt: &str) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_by_pk_with")
                 .with_input_param()
@@ -320,13 +311,7 @@ mod __details {
                 .query_string(stmt)
                 .input_parameters(quote! { value: &'a dyn canyon_sql::core::QueryParameter<'a> })
                 .forwarded_parameters(quote! { vec![value] })
-                .propagate_transaction_result()
-                .single_result()
-                .transaction_as_variable(quote! {
-                    match transaction_result { // NOTE: dark magic. Should be refactored
-                        #result_handling
-                    }
-                })
+                .with_transaction_method(TransactionMethod::QueryOne)
         }
     }
 }
@@ -423,8 +408,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk() {
         let find_by_pk_builder = create_find_by_pk_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            FIND_BY_PK_STMT,
-            &quote! {},
+            FIND_BY_PK_STMT
         );
         let find_by_pk = find_by_pk_builder.generate_tokens().to_string();
 
@@ -437,8 +421,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk_with() {
         let find_by_pk_with_builder = create_find_by_pk_with(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            FIND_BY_PK_STMT,
-            &quote! {},
+            FIND_BY_PK_STMT
         );
         let find_by_pk_with = find_by_pk_with_builder.generate_tokens().to_string();
 

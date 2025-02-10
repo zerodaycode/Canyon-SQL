@@ -1,6 +1,25 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 
+#[derive(Debug, Copy, Clone)]
+pub enum TransactionMethod {
+    Query,
+    QueryOne,
+    QueryOneFor,
+    QueryRows,
+}
+
+impl ToTokens for TransactionMethod {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            TransactionMethod::Query => tokens.extend(quote! {query}),
+            TransactionMethod::QueryOne => tokens.extend(quote! {query_one}),
+            TransactionMethod::QueryOneFor => tokens.extend(quote! {query_one_for}),
+            TransactionMethod::QueryRows => tokens.extend(quote! {query_rows}),
+        }
+    }
+}
+
 pub struct MacroOperationBuilder {
     fn_name: Option<Ident>,
     user_type: Option<Ident>,
@@ -16,6 +35,7 @@ pub struct MacroOperationBuilder {
     query_string: Option<String>,
     input_parameters: Option<TokenStream>,
     forwarded_parameters: Option<TokenStream>,
+    transaction_method: TransactionMethod,
     single_result: bool,
     with_unwrap: bool,
     with_no_result_value: bool, // Ok(())
@@ -50,6 +70,7 @@ impl MacroOperationBuilder {
             query_string: None,
             input_parameters: None,
             forwarded_parameters: None,
+            transaction_method: TransactionMethod::Query,
             single_result: false,
             with_unwrap: false,
             with_no_result_value: false,
@@ -255,6 +276,18 @@ impl MacroOperationBuilder {
         }
     }
 
+    pub fn with_transaction_method(mut self, transaction_method: TransactionMethod) -> Self {
+        self.transaction_method = transaction_method;
+        match &self.transaction_method {
+            TransactionMethod::QueryOne => self.single_result(),
+            _ => self,
+        }
+    }
+
+    fn get_transaction_method(&self) -> TransactionMethod {
+        self.transaction_method
+    }
+
     fn get_unwrap(&self) -> TokenStream {
         if self.with_unwrap {
             quote! { .unwrap() }
@@ -320,10 +353,11 @@ impl MacroOperationBuilder {
         let forwarded_parameters = self.get_forwarded_parameters();
         let return_type = self.get_return_type();
         let where_clause = self.get_where_clause_bounds();
+        let transaction_method = self.get_transaction_method();
         let unwrap = self.get_unwrap();
 
         let mut base_body_tokens = quote! {
-            <#ty as canyon_sql::core::Transaction<#ty>>::query(
+            <#ty as canyon_sql::core::Transaction<#ty>>::#transaction_method(
                 #query_string,
                 #forwarded_parameters,
                 #input_fwd_arg

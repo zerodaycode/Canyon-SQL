@@ -30,6 +30,15 @@ cfg_if! {
         + tiberius::FromSql<'a>
         + mysql_async::prelude::FromValue
         {}
+
+      pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned
+        + tiberius::FromSqlOwned
+        + mysql_async::prelude::FromValue {}
+      impl<T> FromSqlOwnedValue<T> for T where T:
+        tokio_postgres::types::FromSqlOwned
+        + tiberius::FromSqlOwned
+        + mysql_async::prelude::FromValue
+        {}
     }
     // TODO: missing combinations else
 }

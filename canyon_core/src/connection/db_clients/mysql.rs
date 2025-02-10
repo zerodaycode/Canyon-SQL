@@ -1,15 +1,16 @@
-#[cfg(feature = "mysql")]
-use mysql_async::Pool;
-use std::error::Error;
-use std::fmt::Display;
-use std::future::Future;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
+use crate::mapper::RowMapper;
+use crate::rows::{FromSql, FromSqlOwnedValue};
 use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+#[cfg(feature = "mysql")]
+use mysql_async::Pool;
 use mysql_async::Row;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;
-use crate::mapper::RowMapper;
+use std::error::Error;
+use std::fmt::Display;
+use std::future::Future;
 
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
@@ -22,24 +23,36 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
-    {
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
         mysql_query_launcher::query_rows(stmt, params, self)
     }
 
-    fn query<'a, S, R: RowMapper<R>>(&self, stmt: S, params: &[&'a (dyn QueryParameter<'_>)],)
-        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    fn query<'a, S, R: RowMapper<R>>(
+        &self,
+        stmt: S,
+        params: &[&'a (dyn QueryParameter<'_>)],
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
-        S: AsRef<str> + Display + Send
+        S: AsRef<str> + Display + Send,
     {
         mysql_query_launcher::query(stmt, params, self)
         // async move { todo!() }
     }
 
-    fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>]) 
-        -> impl Future<Output=Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send
-    {
+    fn query_one<'a, R: RowMapper<R>>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send {
         mysql_query_launcher::query_one(stmt, params, self)
+    }
+
+    fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<T, Box<(dyn Error + Sync + Send)>>> + Send {
+        mysql_query_launcher::query_one_for(stmt, params, self)
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -69,14 +82,13 @@ pub(crate) mod mysql_query_launcher {
         conn: &MysqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
-        S: AsRef<str> + Display + Send
+        S: AsRef<str> + Display + Send,
     {
-        Ok(
-            execute_query(stmt, params, conn).await?
-                .iter()
-                .map(|row| R::deserialize_mysql(row))
-                .collect()
-        )
+        Ok(execute_query(stmt, params, conn)
+            .await?
+            .iter()
+            .map(|row| R::deserialize_mysql(row))
+            .collect())
     }
 
     #[inline(always)]
@@ -85,9 +97,7 @@ pub(crate) mod mysql_query_launcher {
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
-        Ok(CanyonRows::MySQL(
-            execute_query(stmt, params, conn).await?
-        ))
+        Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
     }
 
     #[inline(always)]
@@ -96,24 +106,38 @@ pub(crate) mod mysql_query_launcher {
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
     ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
-        let result = execute_query(stmt, params, conn)
-            .await?;
-        
+        let result = execute_query(stmt, params, conn).await?;
+
         match result.first() {
             Some(r) => Ok(Some(R::deserialize_mysql(r))),
             None => Ok(None),
         }
     }
 
+    #[inline(always)]
+    pub(crate) async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+        conn: &MysqlConnection,
+    ) -> Result<T, Box<(dyn Error + Sync + Send)>> {
+        Ok(execute_query(stmt, params, conn)
+            .await?
+            .first()
+            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first row with stmt: {:?}", stmt))?
+            .get::<T, usize>(0)
+            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first column value on the first row with stmt: {:?}", stmt))?
+        )
+    }
+
     #[inline(always)] // TODO: very provisional implementation! care!
-    // TODO: would be better to launch a simple query for the last id?
+                      // TODO: would be better to launch a simple query for the last id?
     async fn execute_query<'a, S>(
         stmt: S,
         params: &[&'a dyn QueryParameter<'_>],
         conn: &MysqlConnection,
     ) -> Result<Vec<Row>, Box<(dyn Error + Sync + Send)>>
     where
-        S: AsRef<str> + Display + Send
+        S: AsRef<str> + Display + Send,
     {
         let mysql_connection = conn.client.get_conn().await?;
 
@@ -141,9 +165,7 @@ pub(crate) mod mysql_query_launcher {
             params: params_query,
         };
 
-        let mut query_result = query_with_params
-            .run(mysql_connection)
-            .await?;
+        let mut query_result = query_with_params.run(mysql_connection).await?;
 
         let result_rows = if is_insert {
             let last_insert = query_result
@@ -156,11 +178,9 @@ pub(crate) mod mysql_query_launcher {
                 Arc::new([mysql_async::Column::new(ColumnType::MYSQL_TYPE_UNKNOWN)]),
             )]
         } else {
-            query_result
-                .collect::<Row>()
-                .await?
+            query_result.collect::<Row>().await?
         };
-        
+
         Ok(result_rows)
     }
 }
