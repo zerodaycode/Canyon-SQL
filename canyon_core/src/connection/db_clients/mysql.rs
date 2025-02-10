@@ -28,12 +28,12 @@ impl DbConnection for MysqlConnection {
     }
 
     fn query<'a, S, R: RowMapper<R>>(&self, stmt: S, params: &[&'a (dyn QueryParameter<'_>)],)
-        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send
     {
-        // mysql_query_launcher::query(stmt, params, self)
-        async move { todo!() }
+        mysql_query_launcher::query(stmt, params, self)
+        // async move { todo!() }
     }
 
     fn query_one<'a, R: RowMapper<R>>(&self, stmt: &str, params: &[&'a dyn QueryParameter<'a>]) 

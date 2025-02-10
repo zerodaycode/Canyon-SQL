@@ -29,7 +29,7 @@ impl DbConnection for PostgreSqlConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'_>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send
     {
@@ -83,7 +83,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: S,
         params: &[&'a (dyn QueryParameter<'_>)],
         conn: &PostgreSqlConnection,
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send
     {

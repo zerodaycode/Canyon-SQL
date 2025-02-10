@@ -26,7 +26,7 @@ impl DbConnection for SqlServerConnection {
     }
 
     fn query<'a, S, R: RowMapper<R>>(&self, stmt: S, params: &[&'a (dyn QueryParameter<'_>)])
-        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send + 'a
+        -> impl Future<Output=Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send
     {

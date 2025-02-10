@@ -26,7 +26,7 @@ pub trait DbConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'_>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send;
 
@@ -57,7 +57,7 @@ impl DbConnection for &str {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'_>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
     {
@@ -105,7 +105,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'_>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
     {
@@ -144,7 +144,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'_>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
     {

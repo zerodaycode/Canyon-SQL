@@ -24,7 +24,7 @@ pub trait Transaction<T> {
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
         input: impl DbConnection + Send,
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>>
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>>
     where S: AsRef<str> + Display + Send,
     {
         async move { input.query(stmt, params).await }
