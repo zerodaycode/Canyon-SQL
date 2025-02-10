@@ -5,21 +5,6 @@ use std::{fmt::Display, future::Future};
 use crate::mapper::RowMapper;
 
 pub trait Transaction<T> {
-    /// Performs a query against the targeted database by the selected or
-    /// the defaulted datasource, wrapping the resultant collection of entities
-    /// in [`super::rows::CanyonRows`]
-    fn query_rows<'a, S, Z>(
-        stmt: S,
-        params: Z,
-        input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
-    where
-        S: AsRef<str> + Display + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
-    {
-        async move { input.query_rows(stmt.as_ref(), params.as_ref()).await }
-    }
-    
     fn query<'a, S, R: RowMapper<R>>(
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
@@ -40,5 +25,20 @@ pub trait Transaction<T> {
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
     {
         async move { input.query_one(stmt.as_ref(), params.as_ref()).await }
+    }
+
+    /// Performs a query against the targeted database by the selected or
+    /// the defaulted datasource, wrapping the resultant collection of entities
+    /// in [`super::rows::CanyonRows`]
+    fn query_rows<'a, S, Z>(
+        stmt: S,
+        params: Z,
+        input: impl DbConnection + Send + 'a,
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
+    where
+        S: AsRef<str> + Display + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+    {
+        async move { input.query_rows(stmt.as_ref(), params.as_ref()).await }
     }
 }

@@ -30,8 +30,7 @@ impl DbConnection for SqlServerConnection {
     where
         S: AsRef<str> + Display + Send
     {
-        // sqlserver_query_launcher::query(stmt, params, self)
-        async move { todo!() }
+        sqlserver_query_launcher::query(stmt, params, self)
     }
 
     fn query_one<'a, R>(&self, stmt: &str, params: &[&'a (dyn QueryParameter<'a>)])
