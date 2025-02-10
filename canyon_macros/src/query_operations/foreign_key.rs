@@ -19,7 +19,7 @@ pub fn generate_find_by_fk_ops(
     // The tokens for generating the methods that enable Canyon to retrieve the child entities that are of T type
     // given a parent entity U: ForeignKeyable, as an associated function for the child type (T)
     let search_by_reverse_fk_tokens: Vec<(TokenStream, TokenStream)> =
-        generate_find_by_reverse_foreign_key_tokens(macro_data, &table_schema_data);
+        generate_find_by_reverse_foreign_key_tokens(macro_data, table_schema_data);
     let rev_fk_method_signatures = search_by_reverse_fk_tokens.iter().map(|(sign, _)| sign);
     let rev_fk_method_implementations =
         search_by_reverse_fk_tokens.iter().map(|(_, m_impl)| m_impl);
@@ -110,13 +110,11 @@ fn generate_find_by_foreign_key_tokens(
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
                         async move {
-                            let result = <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query(
+                            <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
                                 #stmt,
                                 &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
                                 ""
-                            ).await?;
-
-                            #result_handler
+                            ).await
                         }
                     }
                 },
@@ -128,13 +126,11 @@ fn generate_find_by_foreign_key_tokens(
                     /// Searches the parent entity (if exists) for this type with the specified datasource
                     #quoted_with_method_signature {
                         async move {
-                            let result = <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query(
+                            <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
                                 #stmt,
                                 &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
                                 input
-                            ).await?;
-
-                            #result_handler
+                            ).await
                         }
                     }
                 },
@@ -198,11 +194,11 @@ fn generate_find_by_reverse_foreign_key_tokens(
                                 format!("\"{}\"", #f_ident).as_str()
                             );
 
-                            Ok(<#ty as canyon_sql::core::Transaction<#ty>>::query(
+                            <#ty as canyon_sql::core::Transaction<#ty>>::query(
                                 stmt,
                                 &[lookage_value],
                                 ""
-                            ).await?.into_results::<#ty>())
+                            ).await
                         }
                     }
                 },
@@ -228,11 +224,11 @@ fn generate_find_by_reverse_foreign_key_tokens(
                                 format!("\"{}\"", #f_ident).as_str()
                             );
 
-                            Ok(<#ty as canyon_sql::core::Transaction<#ty>>::query(
+                            <#ty as canyon_sql::core::Transaction<#ty>>::query(
                                 stmt,
                                 &[lookage_value],
                                 input
-                            ).await?.into_results::<#ty>())
+                            ).await
                         }
                     }
                 },
@@ -240,6 +236,5 @@ fn generate_find_by_reverse_foreign_key_tokens(
         }
     }
 
-    rev_fk_quotes;
-    vec![]
+    rev_fk_quotes
 }
