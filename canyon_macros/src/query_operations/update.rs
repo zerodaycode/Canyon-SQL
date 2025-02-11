@@ -36,39 +36,30 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             /// Updates a database record that matches
             /// the current instance of a T type, returning a result
             /// indicating a possible failure querying the database.
-            async fn update(&self) -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send>> {
+            async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>> {
                 let stmt = format!(
                     "UPDATE {} SET {} WHERE {} = ${:?}",
                     #table_schema_data, #str_columns_values, #primary_key, &self.#pk_ident
                 );
                 let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values),*];
 
-                <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                    stmt, update_values, ""
-                ).await?;
-
-                Ok(())
+                <#ty as canyon_sql::core::Transaction<#ty>>::execute(stmt, update_values, "").await
             }
-
             /// Updates a database record that matches
             /// the current instance of a T type, returning a result
             /// indicating a possible failure querying the database with the
             /// specified datasource
             async fn update_with<'a, I>(&self, input: I)
-                -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
-                where I: canyon_sql::core::DbConnection + Send + 'a
+                -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
+            where I: canyon_sql::core::DbConnection + Send + 'a
             {
                 let stmt = format!(
                     "UPDATE {} SET {} WHERE {} = ${:?}",
-                    #table_schema_data, #str_columns_values, #primary_key, #pk_index + 1
+                    #table_schema_data, #str_columns_values, #primary_key, &self.#pk_ident
                 );
                 let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values_cloned),*];
 
-                <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                    stmt, update_values, input
-                ).await?;
-
-                Ok(())
+                <#ty as canyon_sql::core::Transaction<#ty>>::execute(stmt, update_values, input).await
             }
         });
     } else {
@@ -86,9 +77,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let querybuilder_update_tokens = generate_update_query_tokens(ty, table_schema_data);
     update_ops_tokens.extend(querybuilder_update_tokens);
 
-    update_ops_tokens;
-
-    quote! {}
+    update_ops_tokens
 }
 
 /// Generates the TokenStream for the __update() CRUD operation
@@ -125,17 +114,16 @@ fn generate_update_query_tokens(ty: &Ident, table_schema_data: &String) -> Token
 }
 
 mod __details {
-
-    use crate::query_operations::consts::VOID_RET_TY;
     use crate::query_operations::doc_comments;
     use crate::query_operations::macro_template::MacroOperationBuilder;
+    use proc_macro2::{Ident, Span};
 
     pub fn create_update_err_macro(ty: &syn::Ident) -> MacroOperationBuilder {
         MacroOperationBuilder::new()
             .fn_name("update")
             .with_self_as_ref()
             .user_type(ty)
-            .return_type_ts(&VOID_RET_TY.with(|v| v.borrow().clone()))
+            .return_type(&Ident::new("u64", Span::call_site()))
             .raw_return()
             .add_doc_comment(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
             .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
@@ -147,7 +135,7 @@ mod __details {
             .with_self_as_ref()
             .with_input_param()
             .user_type(ty)
-            .return_type_ts(&VOID_RET_TY.with(|v| v.borrow().clone()))
+            .return_type(&Ident::new("u64", Span::call_site()))
             .raw_return()
             .add_doc_comment(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
             .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)

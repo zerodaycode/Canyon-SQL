@@ -408,7 +408,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk() {
         let find_by_pk_builder = create_find_by_pk_macro(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            FIND_BY_PK_STMT
+            FIND_BY_PK_STMT,
         );
         let find_by_pk = find_by_pk_builder.generate_tokens().to_string();
 
@@ -421,7 +421,7 @@ mod macro_builder_read_ops_tests {
     fn test_macro_builder_find_by_pk_with() {
         let find_by_pk_with_builder = create_find_by_pk_with(
             &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-            FIND_BY_PK_STMT
+            FIND_BY_PK_STMT,
         );
         let find_by_pk_with = find_by_pk_with_builder.generate_tokens().to_string();
 

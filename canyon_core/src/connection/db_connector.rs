@@ -50,6 +50,14 @@ pub trait DbConnection {
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<T, Box<(dyn Error + Sync + Send)>>> + Send;
 
+    /// Executes the given SQL statement against the target database, being any implementor of self,
+    /// returning only a numerical positive integer number reflecting the number of affected rows
+    fn execute<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send;
+
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>>;
 }
 
@@ -97,6 +105,16 @@ impl DbConnection for &str {
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
         conn.query_one_for(stmt, params).await
+    }
+
+    async fn execute<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> Result<u64, Box<(dyn Error + Sync + Send)>> {
+        let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
+        let conn = get_database_connection_by_ds(sane_ds_name).await?;
+        conn.execute(stmt, params).await
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -171,6 +189,22 @@ impl DbConnection for DatabaseConnection {
             DatabaseConnection::MySQL(client) => client.query_one_for(stmt, params).await,
         }
     }
+    async fn execute<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> Result<u64, Box<(dyn Error + Sync + Send)>> {
+        match self {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => client.execute(stmt, params).await,
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => client.execute(stmt, params).await,
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => client.execute(stmt, params).await,
+        }
+    }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
         Ok(self.get_db_type())
@@ -227,6 +261,23 @@ impl DbConnection for &mut DatabaseConnection {
 
             #[cfg(feature = "mysql")]
             DatabaseConnection::MySQL(client) => client.query_one_for(stmt, params).await,
+        }
+    }
+
+    async fn execute<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> Result<u64, Box<(dyn Error + Sync + Send)>> {
+        match self {
+            #[cfg(feature = "postgres")]
+            DatabaseConnection::Postgres(client) => client.execute(stmt, params).await,
+
+            #[cfg(feature = "mssql")]
+            DatabaseConnection::SqlServer(client) => client.execute(stmt, params).await,
+
+            #[cfg(feature = "mysql")]
+            DatabaseConnection::MySQL(client) => client.execute(stmt, params).await,
         }
     }
 

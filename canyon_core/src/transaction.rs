@@ -55,4 +55,16 @@ pub trait Transaction<T> {
     {
         async move { input.query_rows(stmt.as_ref(), params.as_ref()).await }
     }
+
+    fn execute<'a, S, Z>(
+        stmt: S,
+        params: Z,
+        input: impl DbConnection + Send + 'a,
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send
+    where
+        S: AsRef<str> + Display + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+    {
+        async move { input.execute(stmt.as_ref(), params.as_ref()).await }
+    }
 }

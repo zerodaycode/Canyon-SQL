@@ -36,7 +36,6 @@ impl DbConnection for MysqlConnection {
         S: AsRef<str> + Display + Send,
     {
         mysql_query_launcher::query(stmt, params, self)
-        // async move { todo!() }
     }
 
     fn query_one<'a, R: RowMapper<R>>(
@@ -53,6 +52,14 @@ impl DbConnection for MysqlConnection {
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<T, Box<(dyn Error + Sync + Send)>>> + Send {
         mysql_query_launcher::query_one_for(stmt, params, self)
+    }
+
+    fn execute<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send {
+        mysql_query_launcher::execute(stmt, params, self)
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
@@ -129,49 +136,25 @@ pub(crate) mod mysql_query_launcher {
         )
     }
 
-    #[inline(always)] // TODO: very provisional implementation! care!
-                      // TODO: would be better to launch a simple query for the last id?
-    async fn execute_query<'a, S>(
+    #[inline(always)]
+    async fn execute_query<S>(
         stmt: S,
-        params: &[&'a dyn QueryParameter<'_>],
+        params: &[&'_ dyn QueryParameter<'_>],
         conn: &MysqlConnection,
     ) -> Result<Vec<Row>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
     {
         let mysql_connection = conn.client.get_conn().await?;
+        let is_insert = stmt.as_ref().find(" RETURNING");
+        let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
 
-        let stmt_with_escape_characters = regex::escape(stmt.as_ref());
-        let query_string =
-            Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
-
-        let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
-            .replace_all(&query_string, "")
-            .to_string();
-
-        let mut is_insert = false;
-        // TODO: take care of this ugly replace for the concrete client syntax by using canyon
-        // Query
-        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
-            query_string.truncate(index_start_clausule_returning);
-            is_insert = true;
-        }
-
-        let params_query: Vec<Value> =
-            reorder_params(stmt.as_ref(), params, |f| (*f).as_mysql_param().to_value());
-
-        let query_with_params = QueryWithParams {
-            query: query_string,
-            params: params_query,
-        };
-
-        let mut query_result = query_with_params.run(mysql_connection).await?;
-
-        let result_rows = if is_insert {
+        let mut query_result = mysql_stmt.run(mysql_connection).await?;
+        let result_rows = if is_insert.is_some() {
             let last_insert = query_result
                 .last_insert_id()
                 .map(Value::UInt)
-                .expect("Error getting pk id in insert");
+                .ok_or("MySQL: Error getting the id in insert")?;
 
             vec![row::new_row(
                 vec![last_insert],
@@ -183,32 +166,71 @@ pub(crate) mod mysql_query_launcher {
 
         Ok(result_rows)
     }
-}
 
-#[cfg(feature = "mysql")]
-fn reorder_params<T>(
-    stmt: &str,
-    params: &[&'_ dyn QueryParameter<'_>],
-    fn_parser: impl Fn(&&dyn QueryParameter<'_>) -> T,
-) -> Vec<T> {
-    use mysql_query_launcher::DETECT_PARAMS_IN_QUERY;
+    pub(crate) async fn execute<S>(
+        stmt: S,
+        params: &[&'_ dyn QueryParameter<'_>],
+        conn: &MysqlConnection,
+    ) -> Result<u64, Box<(dyn Error + Sync + Send)>>
+    where
+        S: AsRef<str> + Display + Send,
+    {
+        let mysql_connection = conn.client.get_conn().await?;
+        let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
 
-    let mut ordered_params = vec![];
-    let rg = regex::Regex::new(DETECT_PARAMS_IN_QUERY)
-        .expect("Error create regex with detect params pattern expression");
-
-    for positional_param in rg.find_iter(stmt) {
-        let pp: &str = positional_param.as_str();
-        let pp_index = pp[1..] // param $1 -> get 1
-            .parse::<usize>()
-            .expect("Error parse mapped parameter to usized.")
-            - 1;
-
-        let element = params
-            .get(pp_index)
-            .expect("Error obtaining the element of the mapping against parameters.");
-        ordered_params.push(fn_parser(element));
+        Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())
     }
 
-    ordered_params
+    #[cfg(feature = "mysql")]
+    fn generate_mysql_stmt(
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter<'_>],
+    ) -> Result<QueryWithParams<String, Vec<Value>>, Box<dyn Error + Send + Sync>> {
+        let stmt_with_escape_characters = regex::escape(stmt);
+        let query_string =
+            Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
+
+        let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
+            .replace_all(&query_string, "")
+            .to_string();
+
+        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
+            query_string.truncate(index_start_clausule_returning);
+        }
+
+        let params_query: Vec<Value> =
+            reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value())?;
+
+        Ok(QueryWithParams {
+            query: query_string,
+            params: params_query,
+        })
+    }
+
+    #[cfg(feature = "mysql")]
+    fn reorder_params<T>(
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter<'_>],
+        fn_parser: impl Fn(&&dyn QueryParameter<'_>) -> T,
+    ) -> Result<Vec<T>, Box<dyn Error + Send + Sync>> {
+        use mysql_query_launcher::DETECT_PARAMS_IN_QUERY;
+
+        let mut ordered_params = vec![];
+        let rg = Regex::new(DETECT_PARAMS_IN_QUERY)
+            .expect("Error create regex with detect params pattern expression");
+
+        for positional_param in rg.find_iter(stmt) {
+            let pp: &str = positional_param.as_str();
+            let pp_index = pp[1..] // param $1 -> get 1
+                .parse::<usize>()?
+                - 1;
+
+            let element = params
+                .get(pp_index)
+                .expect("Error obtaining the element of the mapping against parameters.");
+            ordered_params.push(fn_parser(element));
+        }
+
+        Ok(ordered_params)
+    }
 }

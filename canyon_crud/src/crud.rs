@@ -68,42 +68,42 @@ where
     fn insert<'a>(
         &'a mut self,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-    
+
     fn insert_with<'a, I>(
         &mut self,
         input: I,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
-    
+
     fn multi_insert<'a>(
         instances: &'a mut [&'a mut T],
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-    
+
     fn multi_insert_with<'a, I>(
         instances: &'a mut [&'a mut T],
         input: I,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
-    
-    // fn update(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
-    //
-    // fn update_with<'a, I>(
-    //     &self,
-    //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a;
-    //
-    // fn update_query<'a>() -> UpdateQueryBuilder<'a, T, &'a str>;
-    //
-    // fn update_query_with<'a, I>(input: I) -> UpdateQueryBuilder<'a, T, I>
-    // where
-    //     I: DbConnection + Send + 'a;
-    //
+
+    fn update(&self) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send;
+
+    fn update_with<'a, I>(
+        &self,
+        input: I,
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        I: DbConnection + Send + 'a;
+
+    fn update_query<'a>() -> UpdateQueryBuilder<'a, T, &'a str>;
+
+    fn update_query_with<'a, I>(input: I) -> UpdateQueryBuilder<'a, T, I>
+    where
+        I: DbConnection + Send + 'a;
+
     // fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
-    //
+
     // fn delete_with<'a, I>(
     //     &self,
     //     input: I,

@@ -55,6 +55,14 @@ impl DbConnection for SqlServerConnection {
         sqlserver_query_launcher::query_one_for(stmt, params, self)
     }
 
+    fn execute<'a>(
+        &self,
+        stmt: &str,
+        params: &[&'a (dyn QueryParameter<'a>)],
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send {
+        sqlserver_query_launcher::execute(stmt, params, self)
+    }
+
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
         Ok(DatabaseType::SqlServer)
     }
@@ -139,11 +147,41 @@ pub(crate) mod sqlserver_query_launcher {
         )
     }
 
+    pub(crate) async fn execute<'a>(
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'a>],
+        conn: &SqlServerConnection,
+    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+        let mssql_query = generate_mssql_stmt(stmt, params).await;
+
+        #[allow(mutable_transmutes)] // TODO: pls solve this elegantly someday :(
+        let sqlservconn =
+            unsafe { std::mem::transmute::<&SqlServerConnection, &mut SqlServerConnection>(conn) };
+
+        mssql_query
+            .execute(sqlservconn.client)
+            .await
+            .map(|r| r.total())
+            .map_err(From::from)
+    }
+
     async fn execute_query<'a>(
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'_>)],
         conn: &SqlServerConnection,
     ) -> Result<QueryStream<'a>, Box<(dyn Error + Send + Sync)>> {
+        let mssql_query = generate_mssql_stmt(stmt, params).await;
+
+        #[allow(mutable_transmutes)] // TODO: pls solve this elegantly someday :(
+        let sqlservconn =
+            unsafe { std::mem::transmute::<&SqlServerConnection, &mut SqlServerConnection>(conn) };
+        Ok(mssql_query.query(sqlservconn.client).await?)
+    }
+
+    async fn generate_mssql_stmt<'a>(
+        stmt: &str,
+        params: &[&'a dyn QueryParameter<'_>],
+    ) -> Query<'a> {
         let mut stmt = String::from(stmt);
         if stmt.contains("RETURNING") {
             let c = stmt.clone();
@@ -199,9 +237,6 @@ pub(crate) mod sqlserver_query_launcher {
             // mssql_query.bind()
         });
 
-        #[allow(mutable_transmutes)] // TODO: pls solve this elegantly someday :(
-        let sqlservconn =
-            unsafe { std::mem::transmute::<&SqlServerConnection, &mut SqlServerConnection>(conn) };
-        Ok(mssql_query.query(sqlservconn.client).await?)
+        mssql_query
     }
 }

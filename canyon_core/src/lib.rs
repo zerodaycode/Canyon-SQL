@@ -9,6 +9,7 @@ pub extern crate tiberius;
 #[cfg(feature = "mysql")]
 pub extern crate mysql_async;
 
+extern crate core;
 pub extern crate lazy_static;
 // extern crate cfg_if;
 
