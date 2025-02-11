@@ -102,18 +102,18 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
+    fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
 
-    // fn delete_with<'a, I>(
-    //     &self,
-    //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a;
-    //
-    // fn delete_query<'a>() -> DeleteQueryBuilder<'a, T, &'a str>;
-    //
-    // fn delete_query_with<'a, I>(input: I) -> DeleteQueryBuilder<'a, T, I>
-    // where
-    //     I: DbConnection + Send + 'a;
+    fn delete_with<'a, I>(
+        &self,
+        input: I,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        I: DbConnection + Send + 'a;
+    
+    fn delete_query<'a>() -> DeleteQueryBuilder<'a, T, &'a str>;
+    
+    fn delete_query_with<'a, I>(input: I) -> DeleteQueryBuilder<'a, T, I>
+    where
+        I: DbConnection + Send + 'a;
 }

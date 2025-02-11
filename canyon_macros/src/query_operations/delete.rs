@@ -51,12 +51,10 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         });
     }
 
-    // let delete_with_querybuilder = generate_delete_query_tokens(&ty, table_schema_data);
-    // delete_ops_tokens.extend(delete_with_querybuilder);
-    //
-    // delete_ops_tokens
-
-    quote! {}
+    let delete_with_querybuilder = generate_delete_query_tokens(ty, table_schema_data);
+    delete_ops_tokens.extend(delete_with_querybuilder);
+    
+    delete_ops_tokens
 }
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
@@ -92,11 +90,13 @@ fn generate_delete_query_tokens(ty: &Ident, table_schema_data: &str) -> TokenStr
     }
 }
 
+// NOTE: The delete operations shouldn't be using TransactionMethod::QueryRows
+// This should be refactored on the future
 mod __details {
 
     use super::*;
     use crate::query_operations::doc_comments;
-    use crate::query_operations::macro_template::MacroOperationBuilder;
+    use crate::query_operations::macro_template::{MacroOperationBuilder, TransactionMethod};
 
     pub fn create_delete_macro(
         ty: &Ident,
@@ -114,6 +114,7 @@ mod __details {
             .query_string(stmt)
             .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
+            .with_transaction_method(TransactionMethod::QueryRows)
             .raw_return()
             .with_no_result_value()
     }
@@ -136,6 +137,7 @@ mod __details {
             .query_string(stmt)
             .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
+            .with_transaction_method(TransactionMethod::QueryRows)
             .raw_return()
             .with_no_result_value()
     }
