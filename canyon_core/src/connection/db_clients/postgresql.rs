@@ -76,9 +76,9 @@ pub(crate) mod postgres_query_launcher {
     use tokio_postgres::types::ToSql;
 
     #[inline(always)]
-    pub(crate) async fn query<'a, S, R: RowMapper<R>>(
+    pub(crate) async fn query<S, R: RowMapper<R>>(
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'_ (dyn QueryParameter<'_>)],
         conn: &PostgreSqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
@@ -145,9 +145,9 @@ pub(crate) mod postgres_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn execute<'a, S>(
+    pub(crate) async fn execute<S>(
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'_ (dyn QueryParameter<'_>)],
         conn: &PostgreSqlConnection,
     ) -> Result<u64, Box<(dyn Error + Sync + Send)>>
     where

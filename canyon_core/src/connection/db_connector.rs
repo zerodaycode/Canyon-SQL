@@ -12,7 +12,7 @@ use crate::connection::db_connector::connection_helpers::{
 use crate::connection::{find_datasource_by_name_or_try_default, get_database_connection_by_ds};
 use crate::mapper::RowMapper;
 use crate::query_parameters::QueryParameter;
-use crate::rows::{CanyonRows, FromSql, FromSqlOwnedValue};
+use crate::rows::{CanyonRows, FromSqlOwnedValue};
 use std::error::Error;
 use std::fmt::Display;
 use std::future::Future;
@@ -479,9 +479,9 @@ mod auth {
     use crate::connection::datasources::SqlServerAuth;
 
     #[cfg(feature = "postgres")]
-    pub fn extract_postgres_auth<'a>(
-        auth: &'a Auth,
-    ) -> Result<(&'a str, &'a str), Box<(dyn std::error::Error + Send + Sync)>> {
+    pub fn extract_postgres_auth(
+        auth: &Auth,
+    ) -> Result<(&str, &str), Box<(dyn std::error::Error + Send + Sync)>> {
         match auth {
             Auth::Postgres(pg_auth) => match pg_auth {
                 PostgresAuth::Basic { username, password } => Ok((username, password)),
@@ -492,8 +492,8 @@ mod auth {
     }
 
     #[cfg(feature = "mssql")]
-    pub fn extract_mssql_auth<'a>(
-        auth: &'a Auth,
+    pub fn extract_mssql_auth(
+        auth: &Auth,
     ) -> Result<tiberius::AuthMethod, Box<(dyn std::error::Error + Send + Sync)>> {
         match auth {
             Auth::SqlServer(sql_server_auth) => match sql_server_auth {
@@ -508,9 +508,9 @@ mod auth {
     }
 
     #[cfg(feature = "mysql")]
-    pub fn extract_mysql_auth<'a>(
-        auth: &'a Auth,
-    ) -> Result<(&'a str, &'a str), Box<(dyn std::error::Error + Send + Sync)>> {
+    pub fn extract_mysql_auth(
+        auth: &Auth,
+    ) -> Result<(&str, &str), Box<(dyn std::error::Error + Send + Sync)>> {
         match auth {
             Auth::MySQL(mysql_auth) => match mysql_auth {
                 MySQLAuth::Basic { username, password } => Ok((username, password)),

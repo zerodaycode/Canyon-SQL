@@ -19,7 +19,6 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
         _ => {
             return syn::Error::new(ast.ident.span(), "CanyonMapper only works with Structs")
                 .to_compile_error()
-                .into()
         }
     });
 
@@ -64,8 +63,9 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
 }
 
 #[cfg(feature = "postgres")]
+#[allow(clippy::type_complexity)]
 fn create_postgres_fields_mapping(
-    fields: &Vec<(Visibility, Ident, Type)>,
+    fields: &[(Visibility, Ident, Type)],
 ) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
@@ -77,8 +77,8 @@ fn create_postgres_fields_mapping(
 }
 
 #[cfg(feature = "mysql")]
-fn create_mysql_fields_mapping(
-    fields: &Vec<(Visibility, Ident, Type)>,
+#[allow(clippy::type_complexity)]fn create_mysql_fields_mapping(
+    fields: &[(Visibility, Ident, Type)],
 ) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
@@ -90,10 +90,11 @@ fn create_mysql_fields_mapping(
 }
 
 #[cfg(feature = "mssql")]
+#[allow(clippy::type_complexity)]
 fn create_sqlserver_fields_mapping(
-    fields: &Vec<(Visibility, Ident, Type)>,
+    fields: &[(Visibility, Ident, Type)],
 ) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
-    fields.into_iter().map(|(_vis, ident, ty)| {
+    fields.iter().map(|(_vis, ident, ty)| {
         let ident_name = ident.to_string();
 
         let target_field_type_str = get_field_type_as_string(ty);
@@ -140,7 +141,7 @@ fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -
 #[cfg(feature = "mssql")]
 fn get_deserializing_type(target_type: &str) -> TokenStream {
     let re = Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?").unwrap();
-    re.captures(&*target_type)
+    re.captures(target_type)
         .map(|inner| String::from(&inner["type"]))
         .map(|tt| {
             if BY_VALUE_CONVERSION_TARGETS.contains(&tt.as_str()) {
@@ -154,10 +155,8 @@ fn get_deserializing_type(target_type: &str) -> TokenStream {
                 quote! { #tt }
             }
         })
-        .expect(&format!(
-            "Unable to process type: {} on the given struct for SqlServer",
-            target_type
-        ))
+        .unwrap_or_else(|| panic!("Unable to process type: {} on the given struct for SqlServer",
+            target_type))
 }
 
 #[cfg(feature = "mssql")]

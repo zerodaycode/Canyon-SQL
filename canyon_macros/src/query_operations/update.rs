@@ -26,11 +26,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let update_values_cloned = update_values.clone();
 
     if let Some(primary_key) = macro_data.get_primary_key_annotation() {
-        let pk_ident = Ident::new(&primary_key, Span::call_site()); // TODO get it
-                                                                    // from macro_data in the future, saving operations
-        let pk_index = macro_data
-            .get_pk_index()
-            .expect("Update method failed to retrieve the index of the primary key");
+        let pk_ident = Ident::new(&primary_key, Span::call_site());
 
         update_ops_tokens.extend(quote! {
             /// Updates a database record that matches
@@ -145,7 +141,7 @@ mod __details {
 #[cfg(test)]
 mod update_tokens_tests {
     use crate::query_operations::consts::{
-        INPUT_PARAM, LT_CONSTRAINT, RES_VOID_RET_TY, RES_VOID_RET_TY_LT, USER_MOCK_TY, VOID_RET_TY,
+        INPUT_PARAM, LT_CONSTRAINT, RES_VOID_RET_TY, RES_VOID_RET_TY_LT, USER_MOCK_TY,
     };
     use crate::query_operations::update::__details::{
         create_update_err_macro, create_update_err_with_macro,

@@ -20,8 +20,7 @@ pub fn generate_canyon_entity_tokens(
     if entity_res.is_err() {
         return entity_res
             .expect_err("Unexpected error parsing the struct")
-            .into_compile_error()
-            .into();
+            .into_compile_error();
     }
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
@@ -70,9 +69,8 @@ pub fn generate_canyon_entity_tokens(
             #macro_error
             #generated_user_struct
         }
-        .into()
     } else {
-        tokens.into()
+        tokens
     }
 }
 

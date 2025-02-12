@@ -284,7 +284,7 @@ mod __details {
     pub mod pk_generators {
         use super::*;
         use crate::query_operations::macro_template::TransactionMethod;
-        use proc_macro2::TokenStream;
+        
 
         pub fn create_find_by_pk_macro(ty: &Ident, stmt: &str) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
@@ -320,7 +320,7 @@ mod __details {
 mod macro_builder_read_ops_tests {
     use super::__details::{count_generators::*, find_all_generators::*, pk_generators::*};
     use crate::query_operations::consts::*;
-    use quote::quote;
+    
 
     const SELECT_ALL_STMT: &str = "SELECT * FROM public.user"; // TODO: introduce the const_format crate
     const COUNT_STMT: &str = "SELECT COUNT(*) FROM public.user";

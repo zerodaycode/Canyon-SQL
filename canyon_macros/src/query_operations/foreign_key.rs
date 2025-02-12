@@ -81,12 +81,12 @@ fn generate_find_by_foreign_key_tokens(
                 proc_macro2::Span::call_site(),
             );
             let quoted_method_signature: TokenStream = quote! {
-                fn #method_name_ident<'a>(&self) ->
-                    impl std::future::Future<Output = Result<Option<#fk_ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>> + Send
+                async fn #method_name_ident<'a>(&self) ->
+                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
             };
             let quoted_with_method_signature: TokenStream = quote! {
-                fn #method_name_ident_with<'a, I>(&self, input: I) ->
-                    impl std::future::Future<Output = Result<Option<#fk_ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>> + Send
+                async fn #method_name_ident_with<'a, I>(&self, input: I) ->
+                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
                 where I: canyon_sql::core::DbConnection + Send + 'a
             };
 
@@ -95,27 +95,16 @@ fn generate_find_by_foreign_key_tokens(
                 table,
                 format!("\"{column}\"").as_str(),
             );
-            let result_handler = quote! {
-                match result {
-                    n if n.len() == 0 => Ok(None),
-                    _ => Ok(Some(
-                        result.into_results::<#fk_ty>().remove(0)
-                    ))
-                }
-            };
-
             fk_quotes.push((
                 quote! { #quoted_method_signature; },
                 quote! {
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
-                        async move {
-                            <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
-                                #stmt,
-                                &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
-                                ""
-                            ).await
-                        }
+                        <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
+                            #stmt,
+                            &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
+                            ""
+                        ).await
                     }
                 },
             ));
@@ -125,13 +114,11 @@ fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type with the specified datasource
                     #quoted_with_method_signature {
-                        async move {
-                            <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
-                                #stmt,
-                                &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
-                                input
-                            ).await
-                        }
+                        <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
+                            #stmt,
+                            &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
+                            input
+                        ).await
                     }
                 },
             ));
@@ -164,12 +151,12 @@ fn generate_find_by_reverse_foreign_key_tokens(
                 proc_macro2::Span::call_site(),
             );
             let quoted_method_signature: TokenStream = quote! {
-                fn #method_name_ident<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) ->
-                    impl std::future::Future<Output = Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>> + Send
+                async fn #method_name_ident<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) ->
+                    Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
             };
             let quoted_with_method_signature: TokenStream = quote! {
-                fn #method_name_ident_with<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send, I> (value: &F, input: I)
-                    -> impl std::future::Future<Output = Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>> + Send
+                async fn #method_name_ident_with<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send, I> (value: &F, input: I)
+                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
                 where I: canyon_sql::core::DbConnection + Send + 'a
             };
 
@@ -182,24 +169,22 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     /// performs a search to find the children that belong to that concrete parent.
                     #quoted_method_signature
                     {
-                        async move {
-                            let lookage_value = value.get_fk_column(#column)
-                                .expect(format!(
-                                    "Column: {:?} not found in type: {:?}", #column, #table
-                                ).as_str());
+                        let lookage_value = value.get_fk_column(#column)
+                            .expect(format!(
+                                "Column: {:?} not found in type: {:?}", #column, #table
+                            ).as_str());
 
-                            let stmt = format!(
-                                "SELECT * FROM {} WHERE {} = $1",
-                                #table_schema_data,
-                                format!("\"{}\"", #f_ident).as_str()
-                            );
+                        let stmt = format!(
+                            "SELECT * FROM {} WHERE {} = $1",
+                            #table_schema_data,
+                            format!("\"{}\"", #f_ident).as_str()
+                        );
 
-                            <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                                stmt,
-                                &[lookage_value],
-                                ""
-                            ).await
-                        }
+                        <#ty as canyon_sql::core::Transaction<#ty>>::query(
+                            stmt,
+                            &[lookage_value],
+                            ""
+                        ).await
                     }
                 },
             ));
@@ -212,24 +197,22 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     /// with the specified datasource.
                     #quoted_with_method_signature
                     {
-                        async move {
-                            let lookage_value = value.get_fk_column(#column)
-                                .expect(format!(
-                                    "Column: {:?} not found in type: {:?}", #column, #table
-                                ).as_str());
+                        let lookage_value = value.get_fk_column(#column)
+                            .expect(format!(
+                                "Column: {:?} not found in type: {:?}", #column, #table
+                            ).as_str());
 
-                            let stmt = format!(
-                                "SELECT * FROM {} WHERE {} = $1",
-                                #table_schema_data,
-                                format!("\"{}\"", #f_ident).as_str()
-                            );
+                        let stmt = format!(
+                            "SELECT * FROM {} WHERE {} = $1",
+                            #table_schema_data,
+                            format!("\"{}\"", #f_ident).as_str()
+                        );
 
-                            <#ty as canyon_sql::core::Transaction<#ty>>::query(
-                                stmt,
-                                &[lookage_value],
-                                input
-                            ).await
-                        }
+                        <#ty as canyon_sql::core::Transaction<#ty>>::query(
+                            stmt,
+                            &[lookage_value],
+                            input
+                        ).await
                     }
                 },
             ));

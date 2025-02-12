@@ -83,9 +83,9 @@ pub(crate) mod mysql_query_launcher {
     use std::sync::Arc;
 
     #[inline(always)]
-    pub async fn query<'a, S, R: RowMapper<R>>(
+    pub async fn query<S, R: RowMapper<R>>(
         stmt: S,
-        params: &[&'a dyn QueryParameter<'_>],
+        params: &[&'_ dyn QueryParameter<'_>],
         conn: &MysqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where

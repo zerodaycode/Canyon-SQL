@@ -73,7 +73,7 @@ pub(crate) mod sqlserver_query_launcher {
     use super::*;
     use crate::mapper::RowMapper;
     use crate::rows::FromSqlOwnedValue;
-    use tiberius::{ColumnData, IntoSql, QueryStream};
+    use tiberius::QueryStream;
 
     #[inline(always)]
     pub(crate) async fn query<'a, S, R: RowMapper<R>>(

@@ -98,14 +98,14 @@ pub async fn init_connections_cache() {
 // user code determine whenever you can find a valid datasource via a concrete type instead of an string?
 
 // TODO: doc (main way for the user to obtain a db connection given a datasource identifier)
-pub async fn get_database_connection_by_ds<'a>(
-    datasource_name: Option<&'a str>,
+pub async fn get_database_connection_by_ds(
+    datasource_name: Option<&str>,
 ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
     let ds = find_datasource_by_name_or_try_default(datasource_name)?;
     DatabaseConnection::new(ds).await
 }
 
-pub fn find_datasource_by_name_or_try_default<'a>(
+pub fn find_datasource_by_name_or_try_default(
     datasource_name: Option<&str>, // TODO: with the new inputs, we don't want anymore this as Option
 ) -> Result<&DatasourceConfig, DatasourceNotFound> {
     let datasource_name = datasource_name.filter(|&ds_name| !ds_name.is_empty());

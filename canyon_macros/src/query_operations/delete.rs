@@ -170,9 +170,9 @@ mod __details {
 mod delete_tests {
     use super::__details::*;
     use crate::query_operations::consts::*;
-    use proc_macro2::Span;
-    use quote::quote;
-    use syn::Ident;
+    
+    
+    
 
     const DELETE_MOCK_STMT: &str = "DELETE FROM public.user WHERE user.id = 1";
 

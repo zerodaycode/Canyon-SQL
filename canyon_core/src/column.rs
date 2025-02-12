@@ -14,7 +14,7 @@ pub struct Column<'a> {
     pub(crate) name: Cow<'a, str>,
     pub(crate) type_: ColumnType,
 }
-impl<'a> Column<'a> {
+impl Column<'_> {
     pub fn name(&self) -> &str {
         &self.name
     }

@@ -195,6 +195,7 @@ impl CanyonMemory {
         &mut self,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) {
+        let re = Regex::new(r#"\bstruct\s+(\w+)"#).unwrap();
         for file in WalkDir::new("./src")
             .into_iter()
             .filter_map(|file| file.ok())
@@ -215,8 +216,7 @@ impl CanyonMemory {
                     {
                         canyon_entity_macro_counter += 1;
                     }
-
-                    let re = Regex::new(r#"\bstruct\s+(\w+)"#).unwrap();
+                    
                     if let Some(captures) = re.captures(line) {
                         struct_name.push_str(captures.get(1).unwrap().as_str());
                     }

@@ -34,7 +34,6 @@ pub struct MacroOperationBuilder {
     return_type_ts: Option<TokenStream>,
     where_clause_bounds: Vec<TokenStream>,
     doc_comments: Vec<String>,
-    body_tokens: Option<TokenStream>,
     query_string: Option<String>,
     input_parameters: Option<TokenStream>,
     forwarded_parameters: Option<TokenStream>,
@@ -69,7 +68,6 @@ impl MacroOperationBuilder {
             return_type_ts: None,
             where_clause_bounds: Vec::new(),
             doc_comments: Vec::new(),
-            body_tokens: None,
             query_string: None,
             input_parameters: None,
             forwarded_parameters: None,
@@ -315,11 +313,6 @@ impl MacroOperationBuilder {
     pub fn transaction_as_variable(mut self, result_handling: TokenStream) -> Self {
         self.transaction_as_variable = true;
         self.post_body = Some(result_handling);
-        self
-    }
-
-    pub fn disable_mapping(mut self) -> Self {
-        self.enable_mapping = true;
         self
     }
 

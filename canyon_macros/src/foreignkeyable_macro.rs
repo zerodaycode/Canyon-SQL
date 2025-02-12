@@ -12,7 +12,6 @@ pub fn foreignkeyable_impl_tokens(ast: DeriveInput) -> TokenStream {
         _ => {
             return syn::Error::new(ty.span(), "ForeignKeyable only works with Structs")
                 .to_compile_error()
-                .into()
         }
     });
 
