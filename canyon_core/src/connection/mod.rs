@@ -28,7 +28,7 @@ use datasources::{CanyonSqlConfig, DatasourceConfig};
 use db_connector::DatabaseConnection;
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
-use tokio::sync::{Mutex, MutexGuard};
+use tokio::sync::Mutex;
 use walkdir::WalkDir;
 
 lazy_static! {
@@ -36,9 +36,8 @@ lazy_static! {
         tokio::runtime::Runtime::new()  // TODO Make the config with the builder
             .expect("Failed initializing the Canyon-SQL Tokio Runtime");
 
-    static ref RAW_CONFIG_FILE: String = fs::read_to_string(find_canyon_config_file())
-        .expect("Error opening or reading the Canyon configuration file");
-    static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(RAW_CONFIG_FILE.as_str())
+    static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(&fs::read_to_string(find_canyon_config_file())
+        .expect("Error opening or reading the Canyon configuration file"))
         .expect("Error generating the configuration for Canyon-SQL");
 
     pub static ref DATASOURCES: Vec<DatasourceConfig> =
@@ -115,30 +114,4 @@ pub fn find_datasource_by_name_or_try_default(
             |ds_name| DATASOURCES.iter().find(|ds| ds.name.eq(ds_name)),
         )
         .ok_or_else(|| DatasourceNotFound::from(datasource_name))
-}
-
-// TODO: create a new one that just receives a str and tries to find the ds config on the vec, so we can make a facade over the one above
-
-// TODO: get_cached_database_connection
-// the idea behind this is that we can have a #cfg feature that offers the end user to let Canyon to automagically manage the connections
-// to the db servers, instead of being the default behaviour
-pub fn get_database_connection<'a>(
-    datasource_name: &str,
-    guarded_cache: &'a mut MutexGuard<IndexMap<&str, DatabaseConnection>>,
-) -> &'a mut DatabaseConnection {
-    if datasource_name.is_empty() {
-        guarded_cache
-            .get_mut(
-                DATASOURCES
-                    .first()
-                    .expect("We didn't found any valid datasource configuration. Check your `canyon.toml` file")
-                    .name
-                    .as_str()
-            ).unwrap_or_else(|| panic!("No default datasource found. Check your `canyon.toml` file"))
-    } else {
-        guarded_cache.get_mut(datasource_name)
-            .unwrap_or_else(||
-                panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}")
-            )
-    }
 }

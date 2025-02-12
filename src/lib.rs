@@ -29,7 +29,6 @@ pub mod macros {
 pub mod connection {
     pub use canyon_core::connection::database_type::DatabaseType;
     pub use canyon_core::connection::db_connector::DatabaseConnection;
-    pub use canyon_core::connection::get_database_connection;
     pub use canyon_core::connection::get_database_connection_by_ds;
 }
 

@@ -64,17 +64,17 @@ impl CanyonMemory {
         datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
-        // TODO: can't we get the target DS while in the migrations at call site and avoid to
-        // duplicate calls to the pool?
-        let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
-        let db_conn =
-            canyon_core::connection::get_database_connection(&datasource.name, &mut conn_cache);
+        let datasource_name = &datasource.name;
+        let mut db_conn =
+            canyon_core::connection::get_database_connection_by_ds(Some(datasource_name)).await
+                .unwrap_or_else(|_| panic!("Unable to get a database connection on the migrations processor for: {:?}", datasource_name));
+
 
         // Creates the memory table if not exists
-        Self::create_memory(&datasource.name, db_conn, &datasource.get_db_type()).await;
+        Self::create_memory(&datasource.name, &mut db_conn, &datasource.get_db_type()).await;
 
         // Retrieve the last status data from the `canyon_memory` table
-        let res = Self::query_rows("SELECT * FROM canyon_memory", [], db_conn)
+        let res = Self::query_rows("SELECT * FROM canyon_memory", [], &mut db_conn)
             .await
             .expect("Error querying Canyon Memory");
 
@@ -216,7 +216,7 @@ impl CanyonMemory {
                     {
                         canyon_entity_macro_counter += 1;
                     }
-                    
+
                     if let Some(captures) = re.captures(line) {
                         struct_name.push_str(captures.get(1).unwrap().as_str());
                     }
