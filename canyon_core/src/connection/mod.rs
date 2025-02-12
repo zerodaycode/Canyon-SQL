@@ -41,8 +41,7 @@ lazy_static! {
     static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(RAW_CONFIG_FILE.as_str())
         .expect("Error generating the configuration for Canyon-SQL");
 
-    pub static ref DATASOURCES: Vec<
-    DatasourceConfig> =
+    pub static ref DATASOURCES: Vec<DatasourceConfig> =
         CONFIG_FILE.canyon_sql.datasources.clone();
 
     pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
@@ -141,21 +140,5 @@ pub fn get_database_connection<'a>(
             .unwrap_or_else(||
                 panic!("Canyon couldn't find a datasource in the pool with the argument provided: {datasource_name}")
             )
-    }
-}
-
-pub fn get_database_config<'a>(
-    datasource_name: &str,
-    datasources_config: &'a [DatasourceConfig],
-) -> &'a DatasourceConfig {
-    if datasource_name.is_empty() {
-        datasources_config
-            .first()
-            .unwrap_or_else(|| panic!("Not exist datasource"))
-    } else {
-        datasources_config
-            .iter()
-            .find(|dc| dc.name == datasource_name)
-            .unwrap_or_else(|| panic!("Not found datasource expected {datasource_name}"))
     }
 }

@@ -1,8 +1,6 @@
 use canyon_core::{
     column::Column,
-    connection::{
-        datasources::Migrations as MigrationsStatus, db_connector::DatabaseConnection, DATASOURCES,
-    },
+    connection::{db_connector::DatabaseConnection, DATASOURCES},
     row::{Row, RowOperations},
     rows::CanyonRows,
     transaction::Transaction,
@@ -31,16 +29,7 @@ impl Migrations {
     /// migrations over the targeted database
     pub async fn migrate() {
         for datasource in DATASOURCES.iter() {
-            if datasource
-                .properties
-                .migrations
-                .filter(|status| !status.eq(&MigrationsStatus::Disabled))
-                .is_none()
-            {
-                println!(
-                    "Skipped datasource: {:?} for being disabled (or not configured)",
-                    datasource.name
-                );
+            if !datasource.has_migrations_enabled() {
                 continue;
             }
             println!(
@@ -49,16 +38,16 @@ impl Migrations {
             );
 
             let mut migrations_processor = MigrationsProcessor::default();
-            let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
-            let db_conn = // TODO: use the appropiated new way
-                canyon_core::connection::get_database_connection(&datasource.name, &mut conn_cache);
+            let mut db_conn = canyon_core::connection::get_database_connection_by_ds(Some(&datasource.name))
+                .await
+                .unwrap_or_else(|_| panic!("Unable to get a database connection on the migrations processor for: {:?}", datasource.name));
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;
 
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
-                Self::fetch_database(&datasource.name, db_conn, datasource.get_db_type()).await;
+                Self::fetch_database(&datasource.name, &mut db_conn, datasource.get_db_type()).await;
             let database_tables_schema_info =
                 Self::map_rows(schema_status, datasource.get_db_type());
 

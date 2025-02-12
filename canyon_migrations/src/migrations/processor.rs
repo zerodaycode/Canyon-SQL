@@ -575,17 +575,14 @@ impl MigrationsProcessor {
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
-    #[allow(clippy::await_holding_lock)]
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
             for query_to_execute in datasource.1 {
                 let datasource_name = datasource.0;
 
-                let mut conn_cache = canyon_core::connection::CACHED_DATABASE_CONN.lock().await;
-                let db_conn = canyon_core::connection::get_database_connection(
-                    datasource_name,
-                    &mut conn_cache,
-                );
+                let db_conn = canyon_core::connection::get_database_connection_by_ds(Some(datasource_name))
+                    .await
+                    .unwrap_or_else(|_| panic!("Unable to get a database connection on the migrations processor for: {:?}", datasource_name));
 
                 let res = Self::query_rows(query_to_execute, [], db_conn).await;
 

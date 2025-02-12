@@ -18,13 +18,6 @@ pub enum DatabaseType {
 
 impl From<&Auth> for DatabaseType {
     fn from(value: &Auth) -> Self {
-        match value {
-            #[cfg(feature = "postgres")]
-            Auth::Postgres(_) => DatabaseType::PostgreSql,
-            #[cfg(feature = "mssql")]
-            Auth::SqlServer(_) => DatabaseType::SqlServer,
-            #[cfg(feature = "mysql")]
-            Auth::MySQL(_) => DatabaseType::MySQL,
-        }
+        value.get_db_type()
     }
 }

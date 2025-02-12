@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 use super::database_type::DatabaseType;
 
-/// ```
+/// ```rust
 #[test]
 fn load_ds_config_from_array() {
     #[cfg(feature = "postgres")]
@@ -112,14 +112,13 @@ pub struct DatasourceConfig {
 
 impl DatasourceConfig {
     pub fn get_db_type(&self) -> DatabaseType {
-        match self.auth {
-            #[cfg(feature = "postgres")]
-            Auth::Postgres(_) => DatabaseType::PostgreSql,
-            #[cfg(feature = "mssql")]
-            Auth::SqlServer(_) => DatabaseType::SqlServer,
-            #[cfg(feature = "mysql")]
-            Auth::MySQL(_) => DatabaseType::MySQL,
-        }
+        self.auth.get_db_type()
+    }
+    
+    pub fn has_migrations_enabled(&self) -> bool {
+        if let Some(migrations) = self.properties.migrations {
+            migrations.has_migrations_enabled()
+        } else { false }
     }
 }
 
@@ -134,6 +133,19 @@ pub enum Auth {
     #[serde(alias = "MYSQL", alias = "mysql", alias = "MySQL")]
     #[cfg(feature = "mysql")]
     MySQL(MySQLAuth),
+}
+
+impl Auth {
+    pub fn get_db_type(&self) -> DatabaseType {
+        match self {
+            #[cfg(feature = "postgres")]
+            Auth::Postgres(_) => DatabaseType::PostgreSql,
+            #[cfg(feature = "mssql")]
+            Auth::SqlServer(_) => DatabaseType::SqlServer,
+            #[cfg(feature = "mysql")]
+            Auth::MySQL(_) => DatabaseType::MySQL,
+        }
+    }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]
@@ -174,6 +186,12 @@ pub enum Migrations {
     Enabled,
     #[serde(alias = "Disabled", alias = "disabled")]
     Disabled,
+}
+
+impl Migrations {
+    pub fn has_migrations_enabled(&self) -> bool {
+        matches!(self, Migrations::Enabled)
+    }
 }
 
 #[cfg(test)]
