@@ -2,11 +2,13 @@ use proc_macro2::{Ident, Span, TokenStream};
 use quote::{quote, ToTokens};
 
 #[derive(Debug, Copy, Clone)]
+#[allow(dead_code)]
 pub enum TransactionMethod {
     Query,
     QueryOne,
     QueryOneFor,
     QueryRows,
+    Execute
 }
 
 impl ToTokens for TransactionMethod {
@@ -16,6 +18,7 @@ impl ToTokens for TransactionMethod {
             TransactionMethod::QueryOne => tokens.extend(quote! {query_one}),
             TransactionMethod::QueryOneFor => tokens.extend(quote! {query_one_for}),
             TransactionMethod::QueryRows => tokens.extend(quote! {query_rows}),
+            TransactionMethod::Execute => tokens.extend(quote! {execute}),
         }
     }
 }

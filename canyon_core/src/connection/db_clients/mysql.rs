@@ -1,7 +1,7 @@
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
 use crate::mapper::RowMapper;
-use crate::rows::{FromSql, FromSqlOwnedValue};
+use crate::rows::FromSqlOwnedValue;
 use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
@@ -30,7 +30,7 @@ impl DbConnection for MysqlConnection {
     fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,

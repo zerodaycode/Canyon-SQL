@@ -114,7 +114,7 @@ mod __details {
             .query_string(stmt)
             .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
-            .with_transaction_method(TransactionMethod::QueryRows)
+            .with_transaction_method(TransactionMethod::Execute)
             .raw_return()
             .with_no_result_value()
     }
@@ -137,7 +137,7 @@ mod __details {
             .query_string(stmt)
             .forwarded_parameters(quote! {&[#pk_field_value]})
             .propagate_transaction_result()
-            .with_transaction_method(TransactionMethod::QueryRows)
+            .with_transaction_method(TransactionMethod::Execute)
             .raw_return()
             .with_no_result_value()
     }

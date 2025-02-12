@@ -1,7 +1,7 @@
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
 use crate::mapper::RowMapper;
-use crate::rows::{FromSql, FromSqlOwnedValue};
+use crate::rows::FromSqlOwnedValue;
 use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
@@ -28,7 +28,7 @@ impl DbConnection for SqlServerConnection {
     fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
@@ -73,12 +73,12 @@ pub(crate) mod sqlserver_query_launcher {
     use super::*;
     use crate::mapper::RowMapper;
     use crate::rows::FromSqlOwnedValue;
-    use tiberius::{ColumnData, QueryStream};
+    use tiberius::{ColumnData, IntoSql, QueryStream};
 
     #[inline(always)]
     pub(crate) async fn query<'a, S, R: RowMapper<R>>(
         stmt: S,
-        params: &[&'a dyn QueryParameter<'_>],
+        params: &[&'a dyn QueryParameter<'a>],
         conn: &SqlServerConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
@@ -167,7 +167,7 @@ pub(crate) mod sqlserver_query_launcher {
 
     async fn execute_query<'a>(
         stmt: &str,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
         conn: &SqlServerConnection,
     ) -> Result<QueryStream<'a>, Box<(dyn Error + Send + Sync)>> {
         let mssql_query = generate_mssql_stmt(stmt, params).await;
@@ -180,7 +180,7 @@ pub(crate) mod sqlserver_query_launcher {
 
     async fn generate_mssql_stmt<'a>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter<'_>],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Query<'a> {
         let mut stmt = String::from(stmt);
         if stmt.contains("RETURNING") {
@@ -196,47 +196,10 @@ pub(crate) mod sqlserver_query_launcher {
             );
         }
 
-        // TODO: We must address the query generation. Look at the returning example, or the
-        // replace below. We may use our own type Query to address this concerns when the query
-        // is generated
+        // TODO: We must address the query generation
         let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-        params.iter().for_each(|param| {
-            let column_data = param.as_sqlserver_param();
-            match column_data {
-                ColumnData::U8(v) => mssql_query.bind(v),
-                ColumnData::I16(v) => mssql_query.bind(v),
-                ColumnData::I32(v) => mssql_query.bind(v),
-                ColumnData::I64(v) => mssql_query.bind(v),
-                ColumnData::F32(v) => mssql_query.bind(v),
-                ColumnData::F64(v) => mssql_query.bind(v),
-                ColumnData::Bit(v) => mssql_query.bind(v),
-                ColumnData::String(v) => mssql_query.bind(v),
-                ColumnData::Guid(v) => mssql_query.bind(v),
-                ColumnData::Binary(v) => mssql_query.bind(v),
-                ColumnData::Numeric(v) => mssql_query.bind(v),
-                ColumnData::Xml(v) => mssql_query.bind(v.as_deref().map(ToString::to_string)),
-                ColumnData::DateTime(v) => {
-                    todo!()
-                }
-                ColumnData::SmallDateTime(v) => {
-                    todo!()
-                }
-                ColumnData::Time(v) => {
-                    todo!()
-                }
-                ColumnData::Date(v) => {
-                    todo!()
-                }
-                ColumnData::DateTime2(v) => {
-                    todo!()
-                }
-                ColumnData::DateTimeOffset(v) => {
-                    todo!()
-                }
-            }
-            // mssql_query.bind()
-        });
-
+        params.iter().for_each(|param| { mssql_query.bind(*param); });
+       
         mssql_query
     }
 }

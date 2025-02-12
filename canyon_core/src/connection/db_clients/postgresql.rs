@@ -1,7 +1,7 @@
 use crate::connection::database_type::DatabaseType;
 use crate::connection::db_connector::DbConnection;
 use crate::mapper::RowMapper;
-use crate::rows::{FromSql, FromSqlOwnedValue};
+use crate::rows::FromSqlOwnedValue;
 use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
 use std::fmt::Display;
@@ -28,7 +28,7 @@ impl DbConnection for PostgreSqlConnection {
     fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
@@ -70,6 +70,7 @@ impl DbConnection for PostgreSqlConnection {
 
 #[cfg(feature = "postgres")]
 pub(crate) mod postgres_query_launcher {
+
     use super::*;
     use crate::rows::FromSqlOwnedValue;
     use tokio_postgres::types::ToSql;
@@ -106,6 +107,8 @@ pub(crate) mod postgres_query_launcher {
         Ok(CanyonRows::Postgres(r))
     }
 
+    /// *NOTE*: implementation details of `query_one` when handling errors are
+    /// discussed [here](https://github.com/sfackler/rust-postgres/issues/790#issuecomment-2095729043)
     #[inline(always)]
     pub(crate) async fn query_one<'a, T: RowMapper<T>>(
         stmt: &str,
@@ -116,8 +119,15 @@ pub(crate) mod postgres_query_launcher {
             .iter()
             .map(|param| param.as_postgres_param())
             .collect();
-        let r = conn.client.query_one(stmt, m_params.as_slice()).await?;
-        Ok(Some(T::deserialize_postgresql(&r)))
+        let result = conn.client.query_one(stmt, m_params.as_slice()).await;
+        
+        match result {
+            Ok(row) => { Ok(Some(T::deserialize_postgresql(&row))) },
+            Err(e) => match e.to_string().contains("unexpected number of rows") {
+                true => { Ok(None) },
+                _ => Err(e)?,
+            }
+        }
     }
 
     #[inline(always)]

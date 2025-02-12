@@ -27,7 +27,7 @@ pub trait DbConnection {
     fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send;
@@ -78,7 +78,7 @@ impl DbConnection for &str {
     async fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
@@ -148,7 +148,7 @@ impl DbConnection for DatabaseConnection {
     async fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
@@ -222,7 +222,7 @@ impl DbConnection for &mut DatabaseConnection {
     async fn query<'a, S, R: RowMapper<R>>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'_>)],
+        params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
