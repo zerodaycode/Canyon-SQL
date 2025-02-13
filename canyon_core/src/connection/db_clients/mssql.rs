@@ -32,7 +32,8 @@ impl DbConnection for SqlServerConnection {
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper<Output = R>,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         sqlserver_query_launcher::query(stmt, params, self)
     }
@@ -84,7 +85,8 @@ pub(crate) mod sqlserver_query_launcher {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper<Output = R>,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         Ok(execute_query(stmt.as_ref(), params, conn)
             .await?

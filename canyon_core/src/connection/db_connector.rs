@@ -31,14 +31,15 @@ pub trait DbConnection {
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>;
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>;
 
     fn query_one<'a, R>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send
-        where R: RowMapper<Output = R>;
+        where R: RowMapper;
 
     /// Flexible and general method that queries the target database for a concrete instance
     /// of some type T.
@@ -84,7 +85,7 @@ impl DbConnection for &str {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper
     {
         let conn = get_database_connection_by_ds(Some(self)).await?;
         conn.query(stmt, params).await
@@ -95,7 +96,7 @@ impl DbConnection for &str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper<Output = R>
+        where R: RowMapper
     {
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
@@ -157,7 +158,8 @@ impl DbConnection for DatabaseConnection {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         match self {
             #[cfg(feature = "postgres")]
@@ -176,7 +178,7 @@ impl DbConnection for DatabaseConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper<Output = R>
+        where R: RowMapper
     {
         db_conn_query_one_impl(self, stmt, params).await
     }
@@ -234,7 +236,8 @@ impl DbConnection for &mut DatabaseConnection {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         match self {
             #[cfg(feature = "postgres")]
@@ -253,7 +256,7 @@ impl DbConnection for &mut DatabaseConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper<Output = R>
+        where R: RowMapper
     {
         db_conn_query_one_impl(self, stmt, params).await
     }
@@ -466,7 +469,7 @@ mod connection_helpers {
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'a> + 'a)],
     ) -> Result<Option<R>, Box<dyn Error + Send + Sync>> 
-        where R: RowMapper<Output = R>
+        where R: RowMapper
     {
         match c {
             #[cfg(feature = "postgres")]

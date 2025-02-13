@@ -150,13 +150,17 @@ fn generate_find_by_reverse_foreign_key_tokens(
                 proc_macro2::Span::call_site(),
             );
             let quoted_method_signature: TokenStream = quote! {
-                async fn #method_name_ident<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send>(value: &F) ->
-                    Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+                async fn #method_name_ident<'a, R, F>(value: &F)
+                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+                where R: RowMapper<Output = R>,
+                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send
             };
             let quoted_with_method_signature: TokenStream = quote! {
-                async fn #method_name_ident_with<'a, F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send, I> (value: &F, input: I)
+                async fn #method_name_ident_with<'a, R, F, I> (value: &F, input: I)
                     -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
-                where I: canyon_sql::core::DbConnection + Send + 'a
+                where R: RowMapper<Output = R>,
+                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send,
+                    I: canyon_sql::core::DbConnection + Send + 'a
             };
 
             let f_ident = field_ident.to_string();

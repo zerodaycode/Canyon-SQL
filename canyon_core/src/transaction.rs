@@ -13,7 +13,8 @@ pub trait Transaction {
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         async move { input.query(stmt, params).await }
     }
@@ -26,7 +27,7 @@ pub trait Transaction {
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
-        R: RowMapper<Output = R>
+        R: RowMapper
     {
         async move { input.query_one(stmt.as_ref(), params.as_ref()).await }
     }

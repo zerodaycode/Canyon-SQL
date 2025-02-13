@@ -422,7 +422,7 @@ fn generate_multiple_insert_tokens(
         /// ).await
         ///.ok();
         /// ```
-         async fn multi_insert<'a>(instances: &'a mut [&'a mut #ty]) -> (
+         async fn multi_insert<'a, T>(instances: &'a mut [&'a mut T]) -> (
              Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
          ) {
              use canyon_sql::core::QueryParameter;
@@ -479,7 +479,7 @@ fn generate_multiple_insert_tokens(
         /// ).await
         /// .ok();
         /// ```
-        async fn multi_insert_with<'a, I>(instances: &'a mut [&'a mut #ty], input: I) ->
+        async fn multi_insert_with<'a, T, I>(instances: &'a mut [&'a mut T], input: I) ->
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
             where
                 I: canyon_sql::core::DbConnection + Send + 'a

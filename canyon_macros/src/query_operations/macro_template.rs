@@ -28,6 +28,7 @@ pub struct MacroOperationBuilder {
     user_type: Option<Ident>,
     lifetime: bool,
     self_as_ref: bool,
+    type_is_row_mapper: bool,
     input_param: Option<TokenStream>,
     input_fwd_arg: Option<TokenStream>,
     return_type: Option<Ident>,
@@ -61,6 +62,7 @@ impl MacroOperationBuilder {
             user_type: None,
             lifetime: false,
             self_as_ref: false,
+            type_is_row_mapper: false,
             input_param: None,
             input_fwd_arg: None,
             return_type: None,
@@ -109,13 +111,23 @@ impl MacroOperationBuilder {
     }
 
     fn compose_fn_signature_generics(&self) -> TokenStream {
-        if !&self.lifetime && self.input_param.is_none() {
-            quote! {}
-        } else if self.lifetime && self.input_param.is_none() {
-            quote! { <'a> }
-        } else {
-            quote! { <'a, I> }
+        if !&self.lifetime && self.input_param.is_none() && !self.type_is_row_mapper {
+            return quote! {};
         }
+
+        let mut generics = quote!{ < };
+
+        if self.lifetime {
+            generics.extend(quote! { 'a, });
+        }
+        if self.type_is_row_mapper {
+            generics.extend(quote! { R, });
+        }
+        if self.input_param.is_some() {
+            generics.extend(quote! { I });
+        }
+        generics.extend(quote!{ > });
+        generics
     }
 
     fn compose_self_params_separator(&self) -> TokenStream {
@@ -173,19 +185,34 @@ impl MacroOperationBuilder {
         self.input_fwd_arg = Some(quote! { input });
         self.lifetime = true;
         self.where_clause_bounds.push(quote! {
-            I: canyon_sql::core::DbConnection + Send + 'a,
+            I: canyon_sql::core::DbConnection + Send + 'a
         });
         self
     }
 
-    fn get_return_type(&self) -> TokenStream {
-        let organic_ret_type = if let Some(return_ty_ts) = &self.return_type_ts {
+    pub fn type_is_row_mapper(mut self) -> Self {
+        self.type_is_row_mapper = true;
+        let ret_ty = self.get_organic_ret_ty();
+        self.where_clause_bounds.push(quote!{
+            R: RowMapper<Output = #ret_ty>
+        });
+        self
+    }
+    
+    fn get_organic_ret_ty(&self) -> TokenStream {
+        if let Some(return_ty_ts) = &self.return_type_ts {
             let rt_ts = return_ty_ts;
             quote! { #rt_ts }
+        } else if self.type_is_row_mapper {
+            quote! { R }
         } else {
             let rt = &self.return_type;
             quote! { #rt }
-        };
+        }
+    }
+
+    fn get_return_type(&self) -> TokenStream {
+        let organic_ret_type = self.get_organic_ret_ty();
 
         let container_ret_type = if self.single_result {
             quote! { Option }

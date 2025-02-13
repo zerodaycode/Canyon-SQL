@@ -34,7 +34,8 @@ impl DbConnection for MysqlConnection {
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         mysql_query_launcher::query(stmt, params, self)
     }
@@ -93,7 +94,8 @@ pub(crate) mod mysql_query_launcher {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
     {
         Ok(execute_query(stmt, params, conn)
             .await?

@@ -123,7 +123,7 @@ pub mod ops {
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, R: RowMapper<Output = R>>{
+pub struct QueryBuilder<'a, R: RowMapper>{
     // query: Query<'a>,
     sql: String,
     params: Vec<&'a dyn QueryParameter<'a>>,
@@ -131,9 +131,9 @@ pub struct QueryBuilder<'a, R: RowMapper<Output = R>>{
     pd: PhantomData<R>,
 }
 
-unsafe impl<'a, R: RowMapper<Output = R>> Sync for QueryBuilder<'a, R> {}
+unsafe impl<'a, R: RowMapper> Sync for QueryBuilder<'a, R> {}
 
-impl<'a, R: RowMapper<Output = R>> QueryBuilder<'a, R> {
+impl<'a, R: RowMapper> QueryBuilder<'a, R> {
     pub fn new(sql: String, database_type: DatabaseType) -> Self {
         Self {
             sql,
@@ -262,12 +262,12 @@ impl<'a, R: RowMapper<Output = R>> QueryBuilder<'a, R> {
     }
 }
 
-pub struct SelectQueryBuilder<'a, R: RowMapper<Output = R>>
+pub struct SelectQueryBuilder<'a, R: RowMapper>
 {
     _inner: QueryBuilder<'a, R>,
 }
 
-impl<'a, R: RowMapper<Output = R>> SelectQueryBuilder<'a, R> {
+impl<'a, R: RowMapper> SelectQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
     pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {

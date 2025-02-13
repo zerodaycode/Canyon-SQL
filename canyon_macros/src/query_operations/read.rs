@@ -58,7 +58,7 @@ fn generate_find_all_query_tokens(
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+        fn select_query<'a, R: RowMapper<Output = #ty>>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default())
         }
 
@@ -73,7 +73,7 @@ fn generate_find_all_query_tokens(
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
-        fn select_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
+        fn select_query_with<'a, R: RowMapper<Output = #ty>>(database_type: canyon_sql::connection::DatabaseType)
             -> canyon_sql::query::SelectQueryBuilder<'a, #ty> 
         {
             canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, database_type)
@@ -95,8 +95,8 @@ fn generate_find_by_pk_tokens(
     // Disabled if there's no `primary_key` annotation
     if pk.is_empty() {
         return quote! {
-            async fn find_by_pk<'a>(value: &'a dyn canyon_sql::core::QueryParameter<'a>)
-                -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+            async fn find_by_pk<'a, R: RowMapper<Output = R>>(value: &'a dyn canyon_sql::core::QueryParameter<'a>)
+                -> Result<Option<R>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
             {
                 Err(
                     std::io::Error::new(
@@ -108,11 +108,13 @@ fn generate_find_by_pk_tokens(
                 )
             }
 
-            async fn find_by_pk_with<'a, I>(
+            async fn find_by_pk_with<'a, R, I>(
                 value: &'a dyn canyon_sql::core::QueryParameter<'a>,
                 input: I
             ) -> Result<Option<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                    where I: canyon_sql::core::DbConnection + Send + 'a,
+                where 
+                    I: canyon_sql::core::DbConnection + Send + 'a,
+                    R: RowMapper<Output = R>
             {
                 Err(
                     std::io::Error::new(
@@ -147,6 +149,7 @@ mod __details {
         pub fn create_find_all_macro(ty: &syn::Ident, stmt: &str) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_all")
+                .type_is_row_mapper()
                 .user_type(ty)
                 .return_type(ty)
                 .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
@@ -157,6 +160,7 @@ mod __details {
         pub fn create_find_all_with_macro(ty: &syn::Ident, stmt: &str) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_all_with")
+                .type_is_row_mapper()
                 .with_input_param()
                 .user_type(ty)
                 .return_type(ty)
@@ -171,6 +175,7 @@ mod __details {
         ) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_all_unchecked")
+                .type_is_row_mapper()
                 .user_type(ty)
                 .return_type(ty)
                 .add_doc_comment("Executes a 'SELECT * FROM <user_type>'")
@@ -185,6 +190,7 @@ mod __details {
         ) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_all_unchecked_with")
+                .type_is_row_mapper()
                 .user_type(ty)
                 .return_type(ty)
                 .with_input_param()
@@ -282,6 +288,7 @@ mod __details {
             MacroOperationBuilder::new()
                 .fn_name("find_by_pk")
                 .with_lifetime()
+                .type_is_row_mapper()
                 .user_type(ty)
                 .return_type(ty)
                 .add_doc_comment(doc_comments::FIND_BY_PK)
@@ -295,6 +302,7 @@ mod __details {
         pub fn create_find_by_pk_with(ty: &Ident, stmt: &str) -> MacroOperationBuilder {
             MacroOperationBuilder::new()
                 .fn_name("find_by_pk_with")
+                .type_is_row_mapper()
                 .with_input_param()
                 .user_type(ty)
                 .return_type(ty)
