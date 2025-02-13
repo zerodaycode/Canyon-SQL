@@ -50,7 +50,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
             let stmt = format!("{} RETURNING {}", #stmt , #primary_key);
 
-            self.#pk_ident = <#ty as canyon_sql::core::Transaction<#ty>>::query_one_for::<
+            self.#pk_ident = <#ty as canyon_sql::core::Transaction>::query_one_for::<
                 String,
                 Vec<&'_ dyn QueryParameter<'_>>,
                 #pk_type
@@ -64,7 +64,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         }
     } else {
         quote! {
-            <#ty as canyon_sql::core::Transaction<#ty>>::query_rows( // TODO: this should be execute
+            <#ty as canyon_sql::core::Transaction>::query_rows( // TODO: this should be execute
                 #stmt,
                 values,
                 input
@@ -279,7 +279,7 @@ fn generate_multiple_insert_tokens(
                 }
             }
 
-            let multi_insert_result = <#ty as canyon_sql::core::Transaction<#ty>>::query_rows(
+            let multi_insert_result = <#ty as canyon_sql::core::Transaction>::query_rows(
                 stmt,
                 v_arr,
                 input
@@ -378,7 +378,7 @@ fn generate_multiple_insert_tokens(
                 }
             }
 
-            <#ty as canyon_sql::core::Transaction<#ty>>::query_rows(
+            <#ty as canyon_sql::core::Transaction>::query_rows(
                 stmt,
                 v_arr,
                 input

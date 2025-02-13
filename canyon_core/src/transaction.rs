@@ -5,19 +5,20 @@ use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
 use std::{fmt::Display, future::Future};
 
-pub trait Transaction<T> {
-    fn query<'a, S, R: RowMapper<R>>(
+pub trait Transaction {
+    fn query<'a, S, R>(
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
         input: impl DbConnection + Send,
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>>
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         async move { input.query(stmt, params).await }
     }
 
-    fn query_one<'a, S, Z, R: RowMapper<R>>(
+    fn query_one<'a, S, Z, R>(
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
@@ -25,6 +26,7 @@ pub trait Transaction<T> {
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+        R: RowMapper<Output = R>
     {
         async move { input.query_one(stmt.as_ref(), params.as_ref()).await }
     }

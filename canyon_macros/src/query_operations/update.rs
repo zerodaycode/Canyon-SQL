@@ -39,7 +39,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 );
                 let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values),*];
 
-                <#ty as canyon_sql::core::Transaction<#ty>>::execute(stmt, update_values, "").await
+                <#ty as canyon_sql::core::Transaction>::execute(stmt, update_values, "").await
             }
             /// Updates a database record that matches
             /// the current instance of a T type, returning a result
@@ -55,7 +55,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
                 );
                 let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values_cloned),*];
 
-                <#ty as canyon_sql::core::Transaction<#ty>>::execute(stmt, update_values, input).await
+                <#ty as canyon_sql::core::Transaction>::execute(stmt, update_values, input).await
             }
         });
     } else {
@@ -70,8 +70,8 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         });
     }
 
-    let querybuilder_update_tokens = generate_update_query_tokens(ty, table_schema_data);
-    update_ops_tokens.extend(querybuilder_update_tokens);
+    // let querybuilder_update_tokens = generate_update_query_tokens(ty, table_schema_data);
+    // update_ops_tokens.extend(querybuilder_update_tokens);
 
     update_ops_tokens
 }

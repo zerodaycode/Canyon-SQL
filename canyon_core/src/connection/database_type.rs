@@ -1,5 +1,5 @@
 use serde::Deserialize;
-
+use crate::connection::DEFAULT_DATASOURCE;
 use super::datasources::Auth;
 
 /// Holds the current supported databases by Canyon-SQL
@@ -19,5 +19,13 @@ pub enum DatabaseType {
 impl From<&Auth> for DatabaseType {
     fn from(value: &Auth) -> Self {
         value.get_db_type()
+    }
+}
+
+/// The default implementation for [`DatabaseType`] returns the database type for the first
+/// datasource configured
+impl Default for DatabaseType {
+    fn default() -> Self {
+        DEFAULT_DATASOURCE.get_db_type()
     }
 }

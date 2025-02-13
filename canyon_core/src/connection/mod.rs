@@ -37,11 +37,14 @@ lazy_static! {
             .expect("Failed initializing the Canyon-SQL Tokio Runtime");
 
     static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(&fs::read_to_string(find_canyon_config_file())
-        .expect("Error opening or reading the Canyon configuration file"))
+        .expect("Error opening or reading the Canyon configuration file")) // unwrap or default, to allow the builder to later configure manually data
         .expect("Error generating the configuration for Canyon-SQL");
 
     pub static ref DATASOURCES: Vec<DatasourceConfig> =
         CONFIG_FILE.canyon_sql.datasources.clone();
+    
+    pub static ref DEFAULT_DATASOURCE: &'static DatasourceConfig = DATASOURCES.first()
+        .expect("No datasource configured");
 
     pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
         Mutex::new(IndexMap::new());

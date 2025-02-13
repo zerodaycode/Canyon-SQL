@@ -48,7 +48,7 @@ pub fn generate_find_by_fk_ops(
         where #ty:
             std::fmt::Debug +
             canyon_sql::crud::CrudOperations<#ty> +
-            canyon_sql::core::RowMapper<#ty>
+            canyon_sql::core::RowMapper
             {
                 #(#fk_method_implementations)*
                 #(#rev_fk_method_implementations)*
@@ -100,7 +100,7 @@ fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
-                        <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
+                        <#fk_ty as canyon_sql::core::Transaction>::query_one(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
                             ""
@@ -114,7 +114,7 @@ fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type with the specified datasource
                     #quoted_with_method_signature {
-                        <#fk_ty as canyon_sql::core::Transaction<#fk_ty>>::query_one(
+                        <#fk_ty as canyon_sql::core::Transaction>::query_one(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
                             input
@@ -180,7 +180,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
                             format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        <#ty as canyon_sql::core::Transaction<#ty>>::query(
+                        <#ty as canyon_sql::core::Transaction>::query(
                             stmt,
                             &[lookage_value],
                             ""
@@ -208,7 +208,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
                             format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        <#ty as canyon_sql::core::Transaction<#ty>>::query(
+                        <#ty as canyon_sql::core::Transaction>::query(
                             stmt,
                             &[lookage_value],
                             input

@@ -21,7 +21,7 @@ use crate::{
 #[derive(PartialDebug)]
 pub struct Migrations;
 // Makes this structure able to make queries to the database
-impl Transaction<Self> for Migrations {}
+impl Transaction for Migrations {}
 
 impl Migrations {
     /// Launches the mechanism to parse the Database schema, the Canyon register

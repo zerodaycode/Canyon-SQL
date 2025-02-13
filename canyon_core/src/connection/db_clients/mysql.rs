@@ -27,22 +27,25 @@ impl DbConnection for MysqlConnection {
         mysql_query_launcher::query_rows(stmt, params, self)
     }
 
-    fn query<'a, S, R: RowMapper<R>>(
+    fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         mysql_query_launcher::query(stmt, params, self)
     }
 
-    fn query_one<'a, R: RowMapper<R>>(
+    fn query_one<'a, R>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send {
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send 
+        where R: RowMapper<Output = R>
+    {
         mysql_query_launcher::query_one(stmt, params, self)
     }
 
@@ -83,13 +86,14 @@ pub(crate) mod mysql_query_launcher {
     use std::sync::Arc;
 
     #[inline(always)]
-    pub async fn query<S, R: RowMapper<R>>(
+    pub async fn query<S, R>(
         stmt: S,
         params: &[&'_ dyn QueryParameter<'_>],
         conn: &MysqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         Ok(execute_query(stmt, params, conn)
             .await?
@@ -108,11 +112,13 @@ pub(crate) mod mysql_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_one<'a, R: RowMapper<R>>(
+    pub(crate) async fn query_one<'a, R>(
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+        where R: RowMapper<Output = R>
+    {
         let result = execute_query(stmt, params, conn).await?;
 
         match result.first() {

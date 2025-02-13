@@ -24,24 +24,26 @@ pub trait DbConnection {
         params: &[&'a dyn QueryParameter<'a>],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
 
-    fn query<'a, S, R: RowMapper<R>>(
+    fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
-        S: AsRef<str> + Display + Send;
+        S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>;
 
-    fn query_one<'a, R: RowMapper<R>>(
+    fn query_one<'a, R>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send;
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send
+        where R: RowMapper<Output = R>;
 
     /// Flexible and general method that queries the target database for a concrete instance
     /// of some type T.
     ///
-    /// This is useful on statements that won't be mapped to user types (impl RowMapper<T>) but
+    /// This is useful on statements that won't be mapped to user types (impl RowMapper) but
     /// there's a need for more flexibility on the return type. Ex: SELECT COUNT(*) from <table_name>,
     /// where there will be a single result of some numerical type
     fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -75,23 +77,26 @@ impl DbConnection for &str {
         conn.query_rows(stmt, params).await
     }
 
-    async fn query<'a, S, R: RowMapper<R>>(
+    async fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         let conn = get_database_connection_by_ds(Some(self)).await?;
         conn.query(stmt, params).await
     }
 
-    async fn query_one<'a, R: RowMapper<R>>(
+    async fn query_one<'a, R>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+        where R: RowMapper<Output = R>
+    {
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
         conn.query_one(stmt, params).await
@@ -145,13 +150,14 @@ impl DbConnection for DatabaseConnection {
         db_conn_launch_impl(self, stmt, params).await
     }
 
-    async fn query<'a, S, R: RowMapper<R>>(
+    async fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         match self {
             #[cfg(feature = "postgres")]
@@ -165,11 +171,13 @@ impl DbConnection for DatabaseConnection {
         }
     }
 
-    async fn query_one<'a, R: RowMapper<R>>(
+    async fn query_one<'a, R>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+        where R: RowMapper<Output = R>
+    {
         db_conn_query_one_impl(self, stmt, params).await
     }
 
@@ -219,13 +227,14 @@ impl DbConnection for &mut DatabaseConnection {
     ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
         db_conn_launch_impl(self, stmt, params).await
     }
-    async fn query<'a, S, R: RowMapper<R>>(
+    async fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         match self {
             #[cfg(feature = "postgres")]
@@ -239,11 +248,13 @@ impl DbConnection for &mut DatabaseConnection {
         }
     }
 
-    async fn query_one<'a, R: RowMapper<R>>(
+    async fn query_one<'a, R>(
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
+        where R: RowMapper<Output = R>
+    {
         db_conn_query_one_impl(self, stmt, params).await
     }
 
@@ -450,11 +461,13 @@ mod connection_helpers {
         }
     }
 
-    pub(crate) async fn db_conn_query_one_impl<'a, T: RowMapper<T>>(
+    pub(crate) async fn db_conn_query_one_impl<'a, R>(
         c: &DatabaseConnection,
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'a> + 'a)],
-    ) -> Result<Option<T>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Option<R>, Box<dyn Error + Send + Sync>> 
+        where R: RowMapper<Output = R>
+    {
         match c {
             #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(client) => client.query_one(stmt, params).await,

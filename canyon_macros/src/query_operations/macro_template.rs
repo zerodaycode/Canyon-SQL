@@ -43,7 +43,6 @@ pub struct MacroOperationBuilder {
     with_no_result_value: bool, // Ok(())
     transaction_as_variable: bool,
     direct_error_return: Option<String>,
-    enable_mapping: bool,
     raw_return: bool,
     propagate_transaction_result: bool,
     post_body: Option<TokenStream>,
@@ -77,7 +76,6 @@ impl MacroOperationBuilder {
             with_no_result_value: false,
             transaction_as_variable: false,
             direct_error_return: None,
-            enable_mapping: false,
             raw_return: false,
             propagate_transaction_result: false,
             post_body: None,
@@ -351,7 +349,7 @@ impl MacroOperationBuilder {
         let unwrap = self.get_unwrap();
 
         let mut base_body_tokens = quote! {
-            <#ty as canyon_sql::core::Transaction<#ty>>::#transaction_method(
+            <#ty as canyon_sql::core::Transaction>::#transaction_method(
                 #query_string,
                 #forwarded_parameters,
                 #input_fwd_arg
@@ -361,9 +359,7 @@ impl MacroOperationBuilder {
         if self.propagate_transaction_result {
             base_body_tokens.extend(quote! { ? })
         };
-        if self.enable_mapping {
-            base_body_tokens.extend(quote! { .into_results::<#ty>() })
-        };
+
         if self.with_no_result_value {
             // TODO: should we validate some combinations? in the future, some of them can be hard to reason about
             // like transaction_as_variable and with_no_result_value, they can't coexist

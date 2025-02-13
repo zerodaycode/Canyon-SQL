@@ -54,7 +54,7 @@ pub struct CanyonMemory {
 }
 
 // Makes this structure able to make queries to the database
-impl Transaction<Self> for CanyonMemory {}
+impl Transaction for CanyonMemory {}
 
 impl CanyonMemory {
     /// Queries the database to retrieve internal data about the structures

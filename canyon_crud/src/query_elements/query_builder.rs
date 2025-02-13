@@ -50,16 +50,13 @@ pub mod ops {
     /// of the `SET` clause on a [`super::UpdateQueryBuilder`],
     /// without mixing types or polluting everything into
     /// just one type.
-    pub trait QueryBuilder<'a, T>
-    where
-        T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    {
+    pub trait QueryBuilder<'a> {
         /// Returns a read-only reference to the underlying SQL sentence,
         /// with the same lifetime as self
         fn read_sql(&'a self) -> &'a str;
 
         /// Public interface for append the content of an slice to the end of
-        /// the underlying SQL sentece.
+        /// the underlying SQL sentence.
         ///
         /// This mutator will allow the user to wire SQL code to the already
         /// generated one
@@ -73,9 +70,7 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn r#where<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator) -> Self
-        where
-            T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T>;
+        fn r#where<Z: FieldValueIdentifier<'a>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates an `AND` SQL clause for constraint the query.
         ///
@@ -83,7 +78,7 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn and<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator) -> Self;
+        fn and<Z: FieldValueIdentifier<'a>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates an `AND` SQL clause for constraint the query that will create
         /// the filter in conjunction with an `IN` operator that will ac
@@ -95,7 +90,7 @@ pub mod ops {
         ///     inside the `IN` operator
         fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> Self
         where
-            Z: FieldIdentifier<T>,
+            Z: FieldIdentifier,
             Q: QueryParameter<'a>;
 
         /// Generates an `OR` SQL clause for constraint the query that will create
@@ -108,7 +103,7 @@ pub mod ops {
         ///     inside the `IN` operator
         fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> Self
         where
-            Z: FieldIdentifier<T>,
+            Z: FieldIdentifier,
             Q: QueryParameter<'a>;
 
         /// Generates an `OR` SQL clause for constraint the query.
@@ -117,167 +112,147 @@ pub mod ops {
         ///     column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
         ///     or equality binary operator
-        fn or<Z: FieldValueIdentifier<'a, T>>(self, column: Z, op: impl Operator) -> Self;
+        fn or<Z: FieldValueIdentifier<'a>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates a `ORDER BY` SQL clause for constraint the query.
         ///
         /// * `order_by` - A [`FieldIdentifier`] that will provide the target  column name
         /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be in ascending or descending order
-        fn order_by<Z: FieldIdentifier<T>>(self, order_by: Z, desc: bool) -> Self;
+        fn order_by<Z: FieldIdentifier>(self, order_by: Z, desc: bool) -> Self;
     }
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection,
-{
-    query: Query<'a>,
-    input: I,
-    datasource_type: DatabaseType,
-    pd: PhantomData<T>, // TODO: provisional while reworking the bounds
+pub struct QueryBuilder<'a, R: RowMapper<Output = R>>{
+    // query: Query<'a>,
+    sql: String,
+    params: Vec<&'a dyn QueryParameter<'a>>,
+    database_type: DatabaseType,
+    pd: PhantomData<R>,
 }
 
-unsafe impl<'a, T, I> Send for QueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
-}
-unsafe impl<'a, T, I> Sync for QueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
-}
+unsafe impl<'a, R: RowMapper<Output = R>> Sync for QueryBuilder<'a, R> {}
 
-impl<'a, T, I> QueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
-    /// Returns a new instance of the [`QueryBuilder`]
-    pub fn new(query: Query<'a>, input: I) -> Self {
-        let db_type = input
-            .get_database_type()
-            .expect("QueryBuilder::<T>::get_database_type(). Querybuilder new must return Result on it's public API, refactor it"); // TODO:
+impl<'a, R: RowMapper<Output = R>> QueryBuilder<'a, R> {
+    pub fn new(sql: String, database_type: DatabaseType) -> Self {
         Self {
-            query,
-            input,
-            datasource_type: db_type,
+            sql,
+            params: vec![],
+            database_type,
             pd: Default::default(),
         }
     }
 
     /// Launches the generated query against the database targeted
     /// by the selected datasource
-    pub async fn query(
+    /// /// TODO: this is not definitive => QueryBuilder -> Query -> Transaction -> RowMapper
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
         mut self,
-    ) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
-        self.query.sql.push(';');
+        input: I
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
+        self.sql.push(';');
 
-        T::query(&self.query.sql, &self.query.params, self.input).await
+        T::query(&self.sql, &self.params, input).await
     }
 
-    pub fn r#where<Z: FieldValueIdentifier<'a, T>>(&mut self, r#where: Z, op: impl Operator) {
+    pub fn r#where<Z: FieldValueIdentifier<'a>>(&mut self, r#where: Z, op: impl Operator) {
         let (column_name, value) = r#where.value();
 
         let where_ = String::from(" WHERE ")
             + column_name
-            + &op.as_str(self.query.params.len() + 1, &self.datasource_type);
+            + &op.as_str(self.params.len() + 1, &self.database_type);
 
-        self.query.sql.push_str(&where_);
-        self.query.params.push(value);
+        self.sql.push_str(&where_);
+        self.params.push(value);
     }
 
-    pub fn and<Z: FieldValueIdentifier<'a, T>>(&mut self, r#and: Z, op: impl Operator) {
+    pub fn and<Z: FieldValueIdentifier<'a>>(&mut self, r#and: Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
         let and_ = String::from(" AND ")
             + column_name
-            + &op.as_str(self.query.params.len() + 1, &self.datasource_type);
+            + &op.as_str(self.params.len() + 1, &self.database_type);
 
-        self.query.sql.push_str(&and_);
-        self.query.params.push(value);
+        self.sql.push_str(&and_);
+        self.params.push(value);
     }
 
-    pub fn or<Z: FieldValueIdentifier<'a, T>>(&mut self, r#and: Z, op: impl Operator) {
+    pub fn or<Z: FieldValueIdentifier<'a>>(&mut self, r#and: Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
         let and_ = String::from(" OR ")
             + column_name
-            + &op.as_str(self.query.params.len() + 1, &self.datasource_type);
+            + &op.as_str(self.params.len() + 1, &self.database_type);
 
-        self.query.sql.push_str(&and_);
-        self.query.params.push(value);
+        self.sql.push_str(&and_);
+        self.params.push(value);
     }
 
     pub fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q])
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         if values.is_empty() {
             return;
         }
 
-        self.query
+        self
             .sql
             .push_str(&format!(" AND {} IN (", r#and.as_str()));
 
         let mut counter = 1;
         values.iter().for_each(|qp| {
             if values.len() != counter {
-                self.query
+                self
                     .sql
-                    .push_str(&format!("${}, ", self.query.params.len()));
+                    .push_str(&format!("${}, ", self.params.len()));
                 counter += 1;
             } else {
-                self.query
+                self
                     .sql
-                    .push_str(&format!("${}", self.query.params.len()));
+                    .push_str(&format!("${}", self.params.len()));
             }
-            self.query.params.push(qp)
+            self.params.push(qp)
         });
 
-        self.query.sql.push(')')
+        self.sql.push(')')
     }
 
     fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         if values.is_empty() {
             return;
         }
 
-        self.query
+        self
             .sql
             .push_str(&format!(" OR {} IN (", r#or.as_str()));
 
         let mut counter = 1;
         values.iter().for_each(|qp| {
             if values.len() != counter {
-                self.query
+                self
                     .sql
-                    .push_str(&format!("${}, ", self.query.params.len()));
+                    .push_str(&format!("${}, ", self.params.len()));
                 counter += 1;
             } else {
-                self.query
+                self
                     .sql
-                    .push_str(&format!("${}", self.query.params.len()));
+                    .push_str(&format!("${}", self.params.len()));
             }
-            self.query.params.push(qp)
+            self.params.push(qp)
         });
 
-        self.query.sql.push(')')
+        self.sql.push(')')
     }
 
     #[inline]
-    pub fn order_by<Z: FieldIdentifier<T>>(&mut self, order_by: Z, desc: bool) {
-        self.query.sql.push_str(
+    pub fn order_by<Z: FieldIdentifier>(&mut self, order_by: Z, desc: bool) {
+        self.sql.push_str(
             &(format!(
                 " ORDER BY {}{}",
                 order_by.as_str(),
@@ -287,25 +262,18 @@ where
     }
 }
 
-pub struct SelectQueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
+pub struct SelectQueryBuilder<'a, R: RowMapper<Output = R>>
 {
-    _inner: QueryBuilder<'a, T, I>,
+    _inner: QueryBuilder<'a, R>,
 }
 
-impl<'a, T, I> SelectQueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
+impl<'a, R: RowMapper<Output = R>> SelectQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
-    pub fn new(table_schema_data: &str, input: I) -> Self {
+    pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {
-            _inner: QueryBuilder::<T, I>::new(
-                Query::new(format!("SELECT * FROM {table_schema_data}")),
-                input,
+            _inner: QueryBuilder::new(
+                format!("SELECT * FROM {table_schema_data}"),
+                database_type,
             ),
         }
     }
@@ -313,8 +281,10 @@ where
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query(self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
-        self._inner.query().await
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(self, input: I)
+        -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    {
+        self._inner.query::<T, I>(input).await
     }
 
     /// Adds a *LEFT JOIN* SQL statement to the underlying
@@ -327,7 +297,6 @@ where
     /// > Note: The order on the column parameters is irrelevant
     pub fn left_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
-            .query
             .sql
             .push_str(&format!(" LEFT JOIN {join_table} ON {col1} = {col2}"));
         self
@@ -343,7 +312,6 @@ where
     /// > Note: The order on the column parameters is irrelevant
     pub fn inner_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
-            .query
             .sql
             .push_str(&format!(" INNER JOIN {join_table} ON {col1} = {col2}"));
         self
@@ -359,7 +327,6 @@ where
     /// > Note: The order on the column parameters is irrelevant
     pub fn right_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
-            .query
             .sql
             .push_str(&format!(" RIGHT JOIN {join_table} ON {col1} = {col2}"));
         self
@@ -375,36 +342,31 @@ where
     /// > Note: The order on the column parameters is irrelevant
     pub fn full_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
-            .query
             .sql
             .push_str(&format!(" FULL JOIN {join_table} ON {col1} = {col2}"));
         self
     }
 }
 
-impl<'a, T, I> ops::QueryBuilder<'a, T> for SelectQueryBuilder<'a, T, I>
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: DbConnection + Send + 'a,
-{
+impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for SelectQueryBuilder<'a, R> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
-        self._inner.query.sql.as_str()
+        self._inner.sql.as_str()
     }
 
     #[inline(always)]
     fn push_sql(mut self, sql: &str) {
-        self._inner.query.sql.push_str(sql);
+        self._inner.sql.push_str(sql);
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, op: impl Operator) -> Self {
+    fn r#where<Z: FieldValueIdentifier<'a>>(mut self, r#where: Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
+    fn and<Z: FieldValueIdentifier<'a>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
@@ -412,7 +374,7 @@ where
     #[inline]
     fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         self._inner.and_values_in(and, values);
@@ -422,7 +384,7 @@ where
     #[inline]
     fn or_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(and, values);
@@ -430,13 +392,13 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
+    fn or<Z: FieldValueIdentifier<'a>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }
 
     #[inline]
-    fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
+    fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
         self._inner.order_by(order_by, desc);
         self
     }
@@ -446,25 +408,17 @@ where
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///     update with the provided values
-pub struct UpdateQueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
-    _inner: QueryBuilder<'a, T, I>,
+pub struct UpdateQueryBuilder<'a, R: RowMapper<Output = R>> {
+    _inner: QueryBuilder<'a, R>,
 }
 
-impl<'a, T, I> UpdateQueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
+impl<'a, R: RowMapper<Output = R>> UpdateQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
-    pub fn new(table_schema_data: &str, input: I) -> Self {
+    pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {
-            _inner: QueryBuilder::<T, I>::new(
-                Query::new(format!("UPDATE {table_schema_data}")),
-                input,
+            _inner: QueryBuilder::new(
+                format!("UPDATE {table_schema_data}"),
+                database_type
             ),
         }
     }
@@ -472,20 +426,22 @@ where
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query(self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
-        self._inner.query().await
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(self, input: I)
+     -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    {
+        self._inner.query::<T, I>(input).await
     }
 
     /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
     pub fn set<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Self
     where
-        Z: FieldIdentifier<T> + Clone,
+        Z: FieldIdentifier + Clone,
         Q: QueryParameter<'a>,
     {
         if columns.is_empty() {
             return self;
         }
-        if self._inner.query.sql.contains("SET") {
+        if self._inner.sql.contains("SET") {
             panic!(
                 // TODO: this should return an Err and not panic!
                 "\n{}",
@@ -502,43 +458,39 @@ where
             set_clause.push_str(&format!(
                 "{} = ${}",
                 column.0.as_str(),
-                self._inner.query.params.len() + 1
+                self._inner.params.len() + 1
             ));
 
             if idx < columns.len() - 1 {
                 set_clause.push_str(", ");
             }
-            self._inner.query.params.push(&column.1);
+            self._inner.params.push(&column.1);
         }
 
-        self._inner.query.sql.push_str(&set_clause);
+        self._inner.sql.push_str(&set_clause);
         self
     }
 }
 
-impl<'a, T, I> ops::QueryBuilder<'a, T> for UpdateQueryBuilder<'a, T, I>
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: DbConnection + Send + 'a,
-{
+impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for UpdateQueryBuilder<'a, R> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
-        self._inner.query.sql.as_str()
+        self._inner.sql.as_str()
     }
 
     #[inline(always)]
     fn push_sql(mut self, sql: &str) {
-        self._inner.query.sql.push_str(sql);
+        self._inner.sql.push_str(sql);
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, op: impl Operator) -> Self {
+    fn r#where<Z: FieldValueIdentifier<'a>>(mut self, r#where: Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
+    fn and<Z: FieldValueIdentifier<'a>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
@@ -546,7 +498,7 @@ where
     #[inline]
     fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         self._inner.and_values_in(and, values);
@@ -556,7 +508,7 @@ where
     #[inline]
     fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Self
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(or, values);
@@ -564,13 +516,13 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
+    fn or<Z: FieldValueIdentifier<'a>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }
 
     #[inline]
-    fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
+    fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
         self._inner.order_by(order_by, desc);
         self
     }
@@ -581,25 +533,17 @@ where
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///     update with the provided values
-pub struct DeleteQueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
-    _inner: QueryBuilder<'a, T, I>,
+pub struct DeleteQueryBuilder<'a, R: RowMapper<Output = R>> {
+    _inner: QueryBuilder<'a, R>,
 }
 
-impl<'a, T, I> DeleteQueryBuilder<'a, T, I>
-where
-    T: CrudOperations<T> + Transaction<T> + RowMapper<T>,
-    I: DbConnection + Send + 'a,
-{
+impl<'a, R: RowMapper<Output = R>> DeleteQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
-    pub fn new(table_schema_data: &str, input: I) -> Self {
+    pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {
-            _inner: QueryBuilder::<T, I>::new(
-                Query::new(format!("DELETE FROM {table_schema_data}")),
-                input,
+            _inner: QueryBuilder::new(
+                format!("DELETE FROM {table_schema_data}"),
+                database_type
             ),
         }
     }
@@ -607,34 +551,32 @@ where
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query(self) -> Result<Vec<T>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
-        self._inner.query().await
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(self, input: I)
+        -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    {
+        self._inner.query::<T, I>(input).await
     }
 }
 
-impl<'a, T, I> ops::QueryBuilder<'a, T> for DeleteQueryBuilder<'a, T, I>
-where
-    T: Debug + CrudOperations<T> + Transaction<T> + RowMapper<T> + Send,
-    I: DbConnection + Send + 'a,
-{
+impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for DeleteQueryBuilder<'a, R> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
-        self._inner.query.sql.as_str()
+        self._inner.sql.as_str()
     }
 
     #[inline(always)]
     fn push_sql(mut self, sql: &str) {
-        self._inner.query.sql.push_str(sql);
+        self._inner.sql.push_str(sql);
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a, T>>(mut self, r#where: Z, op: impl Operator) -> Self {
+    fn r#where<Z: FieldValueIdentifier<'a>>(mut self, r#where: Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
+    fn and<Z: FieldValueIdentifier<'a>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
@@ -642,7 +584,7 @@ where
     #[inline]
     fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(and, values);
@@ -652,7 +594,7 @@ where
     #[inline]
     fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Self
     where
-        Z: FieldIdentifier<T>,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         self._inner.or_values_in(or, values);
@@ -660,13 +602,13 @@ where
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a, T>>(mut self, column: Z, op: impl Operator) -> Self {
+    fn or<Z: FieldValueIdentifier<'a>>(mut self, column: Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }
 
     #[inline]
-    fn order_by<Z: FieldIdentifier<T>>(mut self, order_by: Z, desc: bool) -> Self {
+    fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
         self._inner.order_by(order_by, desc);
         self
     }

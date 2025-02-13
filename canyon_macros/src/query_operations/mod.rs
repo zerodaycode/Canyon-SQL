@@ -37,15 +37,17 @@ pub fn impl_crud_operations_trait_for_struct(
     };
 
     crud_ops_tokens.extend(quote! {
-        use canyon_sql::core::IntoResults;
+        // use canyon_sql::core::IntoResults; // TODO: isn't being used anymore
+        use canyon_sql::core::RowMapper;
 
         impl canyon_sql::crud::CrudOperations<#ty> for #ty {
             #crud_operations_tokens
         }
 
-        impl canyon_sql::core::Transaction<#ty> for #ty {}
+        impl canyon_sql::core::Transaction for #ty {}
     });
 
+    // NOTE: this extends should be documented WHY is needed to be after the base impl of CrudOperations
     let foreign_key_ops_tokens = generate_find_by_fk_ops(macro_data, &table_schema_data);
     crud_ops_tokens.extend(quote! { #foreign_key_ops_tokens });
 

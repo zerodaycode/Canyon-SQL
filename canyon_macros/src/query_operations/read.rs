@@ -58,8 +58,8 @@ fn generate_find_all_query_tokens(
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty, &'a str> {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, "")
+        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #ty> {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default())
         }
 
         /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
@@ -73,10 +73,10 @@ fn generate_find_all_query_tokens(
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
-        fn select_query_with<'a, I>(input: I) -> canyon_sql::query::SelectQueryBuilder<'a, #ty, I>
-            where I: canyon_sql::core::DbConnection + Send + 'a
+        fn select_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
+            -> canyon_sql::query::SelectQueryBuilder<'a, #ty> 
         {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, input)
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, database_type)
         }
     }
 }
@@ -125,14 +125,6 @@ fn generate_find_by_pk_tokens(
             }
         };
     }
-
-    // // TODO: this can be functionally handled, instead of this impl
-    // let result_handling = quote! {
-    //     n if n.len() == 0 => Ok(None),
-    //     _ => Ok(
-    //         Some(transaction_result.into_results::<#ty>().remove(0))
-    //     )
-    // };
 
     let find_by_pk = create_find_by_pk_macro(ty, &stmt);
     let find_by_pk_with = create_find_by_pk_with(ty, &stmt);

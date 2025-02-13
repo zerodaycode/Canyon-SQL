@@ -25,13 +25,14 @@ impl DbConnection for SqlServerConnection {
         sqlserver_query_launcher::query_rows(stmt, params, self)
     }
 
-    fn query<'a, S, R: RowMapper<R>>(
+    fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         sqlserver_query_launcher::query(stmt, params, self)
     }
@@ -42,7 +43,7 @@ impl DbConnection for SqlServerConnection {
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        R: RowMapper<R>,
+        R: RowMapper<Output = R>
     {
         sqlserver_query_launcher::query_one(stmt, params, self)
     }
@@ -76,13 +77,14 @@ pub(crate) mod sqlserver_query_launcher {
     use tiberius::QueryStream;
 
     #[inline(always)]
-    pub(crate) async fn query<'a, S, R: RowMapper<R>>(
+    pub(crate) async fn query<'a, S, R>(
         stmt: S,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &SqlServerConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
+        R: RowMapper<Output = R>
     {
         Ok(execute_query(stmt.as_ref(), params, conn)
             .await?
@@ -117,7 +119,7 @@ pub(crate) mod sqlserver_query_launcher {
         conn: &SqlServerConnection,
     ) -> Result<Option<R>, Box<(dyn Error + Send + Sync)>>
     where
-        R: RowMapper<R>,
+        R: RowMapper<Output = R>,
     {
         let result = execute_query(stmt, params, conn).await?.into_row().await?;
 

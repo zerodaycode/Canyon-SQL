@@ -32,7 +32,7 @@ pub struct MigrationsProcessor {
     constraints_column_operations: Vec<ColumnOperation>,
     constraints_sequence_operations: Vec<SequenceOperation>,
 }
-impl Transaction<Self> for MigrationsProcessor {}
+impl Transaction for MigrationsProcessor {}
 
 impl MigrationsProcessor {
     pub async fn process<'a>(
@@ -776,7 +776,7 @@ enum TableOperation {
     DeleteTablePrimaryKey(String, String),
 }
 
-impl<T: Debug> Transaction<T> for TableOperation {}
+impl Transaction for TableOperation {}
 
 impl DatabaseOperation for TableOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig) {
@@ -928,7 +928,7 @@ enum ColumnOperation {
     AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
 
-impl Transaction<Self> for ColumnOperation {}
+impl Transaction for ColumnOperation {}
 
 impl DatabaseOperation for ColumnOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig) {
@@ -1033,7 +1033,7 @@ enum SequenceOperation {
     ModifySequence(String, CanyonRegisterEntityField),
 }
 #[cfg(feature = "postgres")]
-impl Transaction<Self> for SequenceOperation {}
+impl Transaction for SequenceOperation {}
 
 #[cfg(feature = "postgres")]
 impl DatabaseOperation for SequenceOperation {

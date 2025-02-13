@@ -119,7 +119,6 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
     let ast: DeriveInput =
         syn::parse(input).expect("Error parsing `Canyon Entity for generate the CRUD methods");
     let macro_data = MacroTokens::new(&ast);
-
     let table_name_res = helpers::table_schema_parser(&macro_data);
 
     let table_schema_data = if let Err(err) = table_name_res {

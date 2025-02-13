@@ -24,10 +24,10 @@ use crate::crud::CrudOperations;
 ///
 /// // Something like:
 /// `let struct_field_name_from_variant = StructField::some_field.field_name_as_str();`
-pub trait FieldIdentifier<T>
-where
-    // TODO: maybe just QueryParameter?
-    T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
+pub trait FieldIdentifier
+// where
+//     // TODO: maybe just QueryParameter?
+//     T: QueryParameter<'a>,
 {
     fn as_str(&self) -> &'static str;
 }
@@ -52,9 +52,7 @@ where
 ///     IntVariant(i32)
 /// }
 /// ```
-pub trait FieldValueIdentifier<'a, T>
-where
-    T: Transaction<T> + CrudOperations<T> + RowMapper<T>,
+pub trait FieldValueIdentifier<'a>
 {
     fn value(self) -> (&'static str, &'a dyn QueryParameter<'a>);
 }

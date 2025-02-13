@@ -10,6 +10,7 @@ use crate::row::Row;
 use std::error::Error;
 
 use cfg_if::cfg_if;
+use mysql_common::prelude::FromRow;
 
 // Helper macro to conditionally add trait bounds
 // these are the hacky intermediate traits
@@ -60,11 +61,10 @@ pub enum CanyonRows {
 }
 
 impl IntoResults for Result<CanyonRows, CanyonError> {
-    fn into_results<T>(self) -> Result<Vec<T>, CanyonError>
-    where
-        T: RowMapper<T>,
+    fn into_results<R>(self) -> Result<Vec<R>, CanyonError>
+        where R: RowMapper<Output = R>,
     {
-        self.map(move |rows| rows.into_results::<T>())
+        self.map(move |rows| rows.into_results::<R>())
     }
 }
 
@@ -94,14 +94,14 @@ impl CanyonRows {
     }
 
     /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of T
-    pub fn into_results<Z: RowMapper<Z>>(self) -> Vec<Z> {
+    pub fn into_results<R: RowMapper<Output = R>>(self) -> Vec<R> {
         match self {
             #[cfg(feature = "postgres")]
-            Self::Postgres(v) => v.iter().map(|row| Z::deserialize_postgresql(row)).collect(),
+            Self::Postgres(v) => v.iter().map(|row| R::deserialize_postgresql(row)).collect(),
             #[cfg(feature = "mssql")]
-            Self::Tiberius(v) => v.iter().map(|row| Z::deserialize_sqlserver(row)).collect(),
+            Self::Tiberius(v) => v.iter().map(|row| R::deserialize_sqlserver(row)).collect(),
             #[cfg(feature = "mysql")]
-            Self::MySQL(v) => v.iter().map(|row| Z::deserialize_mysql(row)).collect(),
+            Self::MySQL(v) => v.iter().map(|row| R::deserialize_mysql(row)).collect(),
         }
     }
 
@@ -119,7 +119,7 @@ impl CanyonRows {
         }
     }
 
-    pub fn first_row<T: RowMapper<T>>(&self) -> Option<T> {
+    pub fn first_row<T: RowMapper<Output = T>>(&self) -> Option<T> {
         match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.first().map(|r| T::deserialize_postgresql(r)),
@@ -155,8 +155,8 @@ impl CanyonRows {
                 .get::<C, &str>(column_name)
                 .ok_or_else(|| {
                     format!(
-                        "{:?} - Failed to obtain the RETURNING value for an insert operation",
-                        self
+                        "{:?} - Failure getting the row: {} at index: {}",
+                        self, column_name, index
                     )
                     .into()
                 }),
@@ -167,8 +167,8 @@ impl CanyonRows {
                 .get::<C, usize>(0)
                 .ok_or_else(|| {
                     format!(
-                        "{:?} - Failed to obtain the RETURNING value for an insert operation",
-                        self
+                        "{:?} - Failure getting the row: {} at index: {}",
+                        self, column_name, index
                     )
                     .into()
                 }),
