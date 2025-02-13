@@ -47,7 +47,6 @@ pub fn generate_find_by_fk_ops(
         impl #fk_trait_ident<#ty> for #ty
         where #ty:
             std::fmt::Debug +
-            canyon_sql::crud::CrudOperations<#ty> +
             canyon_sql::core::RowMapper
             {
                 #(#fk_method_implementations)*
