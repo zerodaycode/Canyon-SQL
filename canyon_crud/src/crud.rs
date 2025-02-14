@@ -1,12 +1,12 @@
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
+use canyon_core::connection::database_type::DatabaseType;
 use canyon_core::connection::db_connector::DbConnection;
+use canyon_core::mapper::RowMapper;
 use canyon_core::query_parameters::QueryParameter;
 use std::error::Error;
 use std::future::Future;
-use canyon_core::connection::database_type::DatabaseType;
-use canyon_core::mapper::RowMapper;
 
 /// *CrudOperations* it's the core part of Canyon-SQL.
 ///
@@ -24,27 +24,33 @@ use canyon_core::mapper::RowMapper;
 /// Also, you can find the written macro-code that performs the auto-mapping
 /// in the *canyon_sql_root::canyon_macros* crates, on the root of this project.
 pub trait CrudOperations: Send + Sync {
-    fn find_all<R>() 
-        -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
-    where R: RowMapper;
+    fn find_all<R>() -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    where
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>;
 
     fn find_all_with<'a, R, I>(
         input: I,
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
+        R: RowMapper,
         I: DbConnection + Send + 'a,
-        R: RowMapper;
+        Vec<R>: FromIterator<<R as RowMapper>::Output>;
 
-    fn find_all_unchecked<R: RowMapper>() -> impl Future<Output = Vec<R>> + Send;
+    fn find_all_unchecked<R>() -> impl Future<Output = Vec<R>> + Send
+    where
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>;
 
     fn find_all_unchecked_with<'a, R, I>(input: I) -> impl Future<Output = Vec<R>> + Send
     where
         I: DbConnection + Send + 'a,
-        R: RowMapper;
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>;
 
-    fn select_query<'a, R: RowMapper>() -> SelectQueryBuilder<'a, R>;
-
-    fn select_query_with<'a, R: RowMapper>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;
+    // fn select_query<'a, R: RowMapper>() -> SelectQueryBuilder<'a, R>;
+    //
+    // fn select_query_with<'a, R: RowMapper>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;
 
     fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send)>>> + Send;
 
@@ -54,17 +60,17 @@ pub trait CrudOperations: Send + Sync {
     where
         I: DbConnection + Send + 'a;
 
-    fn find_by_pk<'a, R: RowMapper>(
-        value: &'a dyn QueryParameter<'a>,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-
-    fn find_by_pk_with<'a, R, I>(
-        value: &'a dyn QueryParameter<'a>,
-        input: I,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    where
-        I: DbConnection + Send + 'a,
-        R: RowMapper;
+    // fn find_by_pk<'a, R: RowMapper>(
+    //     value: &'a dyn QueryParameter<'a>,
+    // ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    //
+    // fn find_by_pk_with<'a, R, I>(
+    //     value: &'a dyn QueryParameter<'a>,
+    //     input: I,
+    // ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    // where
+    //     I: DbConnection + Send + 'a,
+    //     R: RowMapper;
 
     fn insert<'a>(
         &'a mut self,
@@ -77,16 +83,16 @@ pub trait CrudOperations: Send + Sync {
     where
         I: DbConnection + Send + 'a;
 
-    fn multi_insert<'a, T>(
-        instances: &'a mut [&'a mut T],
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-
-    fn multi_insert_with<'a, T, I>(
-        instances: &'a mut [&'a mut T],
-        input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    where
-        I: DbConnection + Send + 'a;
+    // fn multi_insert<'a, T>(
+    //     instances: &'a mut [&'a mut T],
+    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    //
+    // fn multi_insert_with<'a, T, I>(
+    //     instances: &'a mut [&'a mut T],
+    //     input: I,
+    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    // where
+    //     I: DbConnection + Send + 'a;
 
     fn update(&self) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send;
 
@@ -98,7 +104,7 @@ pub trait CrudOperations: Send + Sync {
         I: DbConnection + Send + 'a;
 
     // fn update_query<'a>() -> UpdateQueryBuilder<'a>;
-    // 
+    //
     // fn update_query_with<'a, I>(input: I) -> UpdateQueryBuilder<'a>
     // where
     //     I: DbConnection + Send + 'a;
@@ -111,9 +117,9 @@ pub trait CrudOperations: Send + Sync {
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
-    
+
     // fn delete_query<'a>() -> DeleteQueryBuilder<'a>;
-    // 
+    //
     // fn delete_query_with<'a, I>(input: I) -> DeleteQueryBuilder<'a>
     // where
     //     I: DbConnection + Send + 'a;

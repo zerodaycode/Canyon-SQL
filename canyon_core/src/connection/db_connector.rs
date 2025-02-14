@@ -38,8 +38,9 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send
-        where R: RowMapper;
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
+    where
+        R: RowMapper;
 
     /// Flexible and general method that queries the target database for a concrete instance
     /// of some type T.
@@ -85,7 +86,8 @@ impl DbConnection for &str {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         let conn = get_database_connection_by_ds(Some(self)).await?;
         conn.query(stmt, params).await
@@ -95,12 +97,13 @@ impl DbConnection for &str {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    where
+        R: RowMapper,
     {
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
-        conn.query_one(stmt, params).await
+        conn.query_one::<R>(stmt, params).await
     }
 
     async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -159,7 +162,7 @@ impl DbConnection for DatabaseConnection {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         match self {
             #[cfg(feature = "postgres")]
@@ -177,10 +180,11 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    where
+        R: RowMapper,
     {
-        db_conn_query_one_impl(self, stmt, params).await
+        db_conn_query_one_impl::<R>(self, stmt, params).await
     }
 
     async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -237,7 +241,7 @@ impl DbConnection for &mut DatabaseConnection {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         match self {
             #[cfg(feature = "postgres")]
@@ -255,10 +259,11 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    where
+        R: RowMapper,
     {
-        db_conn_query_one_impl(self, stmt, params).await
+        db_conn_query_one_impl::<R>(self, stmt, params).await
     }
 
     async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -468,18 +473,19 @@ mod connection_helpers {
         c: &DatabaseConnection,
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'a> + 'a)],
-    ) -> Result<Option<R>, Box<dyn Error + Send + Sync>> 
-        where R: RowMapper
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
+    where
+        R: RowMapper,
     {
         match c {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(client) => client.query_one(stmt, params).await,
+            DatabaseConnection::Postgres(client) => client.query_one::<R>(stmt, params).await,
 
             #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(client) => client.query_one(stmt, params).await,
+            DatabaseConnection::SqlServer(client) => client.query_one::<R>(stmt, params).await,
 
             #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(client) => client.query_one(stmt, params).await,
+            DatabaseConnection::MySQL(client) => client.query_one::<R>(stmt, params).await,
         }
     }
 }

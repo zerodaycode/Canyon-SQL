@@ -99,7 +99,11 @@ fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
-                        <#fk_ty as canyon_sql::core::Transaction>::query_one(
+                        <#fk_ty as canyon_sql::core::Transaction>::query_one::<
+                            &str,
+                            &[&dyn canyon_sql::core::QueryParameter<'_>],
+                            #fk_ty
+                        >(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
                             ""
@@ -113,10 +117,9 @@ fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type with the specified datasource
                     #quoted_with_method_signature {
-                        <#fk_ty as canyon_sql::core::Transaction>::query_one(
+                        input.query_one::<#fk_ty>(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
-                            input
+                            &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>]
                         ).await
                     }
                 },
@@ -152,13 +155,13 @@ fn generate_find_by_reverse_foreign_key_tokens(
             let quoted_method_signature: TokenStream = quote! {
                 async fn #method_name_ident<'a, R, F>(value: &F)
                     -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
-                where R: RowMapper<Output = R>,
+                where R: RowMapper,
                     F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send
             };
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, R, F, I> (value: &F, input: I)
                     -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
-                where R: RowMapper<Output = R>,
+                where R: RowMapper,
                     F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send,
                     I: canyon_sql::core::DbConnection + Send + 'a
             };

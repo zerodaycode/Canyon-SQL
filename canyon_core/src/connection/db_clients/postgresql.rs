@@ -33,7 +33,7 @@ impl DbConnection for PostgreSqlConnection {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         postgres_query_launcher::query(stmt, params, self)
     }
@@ -42,10 +42,11 @@ impl DbConnection for PostgreSqlConnection {
         &self,
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync)>>> + Send
-        where R: RowMapper<Output = R>
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
+    where
+        R: RowMapper,
     {
-        postgres_query_launcher::query_one(stmt, params, self)
+        postgres_query_launcher::query_one::<R>(stmt, params, self)
     }
 
     fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -85,7 +86,7 @@ pub(crate) mod postgres_query_launcher {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         Ok(conn
             .client
@@ -117,21 +118,22 @@ pub(crate) mod postgres_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &PostgreSqlConnection,
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>> 
-        where R: RowMapper<Output = R>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    where
+        R: RowMapper,
     {
         let m_params: Vec<_> = params
             .iter()
             .map(|param| param.as_postgres_param())
             .collect();
         let result = conn.client.query_one(stmt, m_params.as_slice()).await;
-        
+
         match result {
-            Ok(row) => { Ok(Some(R::deserialize_postgresql(&row))) },
+            Ok(row) => Ok(Some(R::deserialize_postgresql(&row))),
             Err(e) => match e.to_string().contains("unexpected number of rows") {
-                true => { Ok(None) },
+                true => Ok(None),
                 _ => Err(e)?,
-            }
+            },
         }
     }
 

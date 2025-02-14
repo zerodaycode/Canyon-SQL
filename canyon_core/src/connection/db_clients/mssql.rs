@@ -32,8 +32,8 @@ impl DbConnection for SqlServerConnection {
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         sqlserver_query_launcher::query(stmt, params, self)
     }
@@ -42,11 +42,11 @@ impl DbConnection for SqlServerConnection {
         &self,
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync)>>> + Send
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        R: RowMapper<Output = R>
+        R: RowMapper,
     {
-        sqlserver_query_launcher::query_one(stmt, params, self)
+        sqlserver_query_launcher::query_one::<R>(stmt, params, self)
     }
 
     fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -85,8 +85,8 @@ pub(crate) mod sqlserver_query_launcher {
     ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
     where
         S: AsRef<str> + Display + Send,
-        R: RowMapper<Output = R>,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         Ok(execute_query(stmt.as_ref(), params, conn)
             .await?
@@ -119,9 +119,9 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &SqlServerConnection,
-    ) -> Result<Option<R>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
-        R: RowMapper<Output = R>,
+        R: RowMapper,
     {
         let result = execute_query(stmt, params, conn).await?.into_row().await?;
 
@@ -202,8 +202,10 @@ pub(crate) mod sqlserver_query_launcher {
 
         // TODO: We must address the query generation
         let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
-        params.iter().for_each(|param| { mssql_query.bind(*param); });
-       
+        params.iter().for_each(|param| {
+            mssql_query.bind(*param);
+        });
+
         mssql_query
     }
 }

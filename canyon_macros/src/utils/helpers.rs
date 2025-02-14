@@ -121,33 +121,6 @@ pub fn _database_table_name_from_struct(ty: &Ident) -> String {
     table_name
 }
 
-/// Parses a syn::Identifier to create a defaulted snake case database table name
-#[test]
-#[cfg(not(target_env = "msvc"))]
-fn test_entity_database_name_defaulter() {
-    assert_eq!(
-        default_database_table_name_from_entity_name("League"),
-        "league".to_owned()
-    );
-    assert_eq!(
-        default_database_table_name_from_entity_name("MajorLeague"),
-        "major_league".to_owned()
-    );
-    assert_eq!(
-        default_database_table_name_from_entity_name("MajorLeagueTournament"),
-        "major_league_tournament".to_owned()
-    );
-
-    assert_ne!(
-        default_database_table_name_from_entity_name("MajorLeague"),
-        "majorleague".to_owned()
-    );
-    assert_ne!(
-        default_database_table_name_from_entity_name("MajorLeague"),
-        "MajorLeague".to_owned()
-    );
-}
-
 /// Autogenerates a default table name for an entity given their struct name
 pub fn default_database_table_name_from_entity_name(ty: &str) -> String {
     let struct_name: String = ty.to_string();
@@ -201,4 +174,31 @@ pub fn database_table_name_to_struct_ident(name: &str) -> Ident {
     }
 
     Ident::new(&struct_name, proc_macro2::Span::call_site())
+}
+
+/// Parses a syn::Identifier to create a defaulted snake case database table name
+#[test]
+#[cfg(not(target_env = "msvc"))]
+fn test_entity_database_name_defaulter() {
+    assert_eq!(
+        default_database_table_name_from_entity_name("League"),
+        "league".to_owned()
+    );
+    assert_eq!(
+        default_database_table_name_from_entity_name("MajorLeague"),
+        "major_league".to_owned()
+    );
+    assert_eq!(
+        default_database_table_name_from_entity_name("MajorLeagueTournament"),
+        "major_league_tournament".to_owned()
+    );
+
+    assert_ne!(
+        default_database_table_name_from_entity_name("MajorLeague"),
+        "majorleague".to_owned()
+    );
+    assert_ne!(
+        default_database_table_name_from_entity_name("MajorLeague"),
+        "MajorLeague".to_owned()
+    );
 }

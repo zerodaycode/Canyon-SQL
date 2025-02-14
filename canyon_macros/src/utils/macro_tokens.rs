@@ -2,7 +2,7 @@ use std::convert::TryFrom;
 
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::Ident;
-use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
+use syn::{Attribute, DeriveInput, Fields, GenericParam, Generics, Type, TypeParam, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -28,6 +28,12 @@ impl<'a> MacroTokens<'a> {
             },
         }
     }
+
+    // pub fn retrieve_row_mapper_implementor(&self) -> Ident {
+    //     let caller = self.ty;
+    //     let row_mapper_type_parameter = self.generics.type_params()
+    //     caller.clone()
+    // }
 
     /// Gives a Vec of tuples that contains the visibility, the name and
     /// the type of every field on a Struct

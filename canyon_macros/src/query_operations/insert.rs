@@ -170,8 +170,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     });
 
-    let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
-    insert_ops_tokens.extend(multi_insert_tokens);
+    // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
+    // insert_ops_tokens.extend(multi_insert_tokens);
 
     insert_ops_tokens
 }

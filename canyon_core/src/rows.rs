@@ -62,7 +62,9 @@ pub enum CanyonRows {
 
 impl IntoResults for Result<CanyonRows, CanyonError> {
     fn into_results<R>(self) -> Result<Vec<R>, CanyonError>
-        where R: RowMapper<Output = R>,
+    where
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         self.map(move |rows| rows.into_results::<R>())
     }
@@ -93,8 +95,12 @@ impl CanyonRows {
         }
     }
 
-    /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of T
-    pub fn into_results<R: RowMapper<Output = R>>(self) -> Vec<R> {
+    /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of R
+    pub fn into_results<R>(self) -> Vec<R>
+    where
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
+    {
         match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.iter().map(|row| R::deserialize_postgresql(row)).collect(),

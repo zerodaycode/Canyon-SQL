@@ -123,7 +123,7 @@ pub mod ops {
 }
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, R: RowMapper>{
+pub struct QueryBuilder<'a, R: RowMapper> {
     // query: Query<'a>,
     sql: String,
     params: Vec<&'a dyn QueryParameter<'a>>,
@@ -148,8 +148,11 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
     /// /// TODO: this is not definitive => QueryBuilder -> Query -> Transaction -> RowMapper
     pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
         mut self,
-        input: I
-    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>> {
+        input: I,
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    where
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
+    {
         self.sql.push(';');
 
         T::query(&self.sql, &self.params, input).await
@@ -197,21 +200,15 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
             return;
         }
 
-        self
-            .sql
-            .push_str(&format!(" AND {} IN (", r#and.as_str()));
+        self.sql.push_str(&format!(" AND {} IN (", r#and.as_str()));
 
         let mut counter = 1;
         values.iter().for_each(|qp| {
             if values.len() != counter {
-                self
-                    .sql
-                    .push_str(&format!("${}, ", self.params.len()));
+                self.sql.push_str(&format!("${}, ", self.params.len()));
                 counter += 1;
             } else {
-                self
-                    .sql
-                    .push_str(&format!("${}", self.params.len()));
+                self.sql.push_str(&format!("${}", self.params.len()));
             }
             self.params.push(qp)
         });
@@ -228,21 +225,15 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
             return;
         }
 
-        self
-            .sql
-            .push_str(&format!(" OR {} IN (", r#or.as_str()));
+        self.sql.push_str(&format!(" OR {} IN (", r#or.as_str()));
 
         let mut counter = 1;
         values.iter().for_each(|qp| {
             if values.len() != counter {
-                self
-                    .sql
-                    .push_str(&format!("${}, ", self.params.len()));
+                self.sql.push_str(&format!("${}, ", self.params.len()));
                 counter += 1;
             } else {
-                self
-                    .sql
-                    .push_str(&format!("${}", self.params.len()));
+                self.sql.push_str(&format!("${}", self.params.len()));
             }
             self.params.push(qp)
         });
@@ -262,8 +253,7 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
     }
 }
 
-pub struct SelectQueryBuilder<'a, R: RowMapper>
-{
+pub struct SelectQueryBuilder<'a, R: RowMapper> {
     _inner: QueryBuilder<'a, R>,
 }
 
@@ -271,18 +261,19 @@ impl<'a, R: RowMapper> SelectQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`SelectQueryBuilder`]
     pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {
-            _inner: QueryBuilder::new(
-                format!("SELECT * FROM {table_schema_data}"),
-                database_type,
-            ),
+            _inner: QueryBuilder::new(format!("SELECT * FROM {table_schema_data}"), database_type),
         }
     }
 
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(self, input: I)
-        -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+        self,
+        input: I,
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    where
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         self._inner.query::<T, I>(input).await
     }
@@ -348,7 +339,7 @@ impl<'a, R: RowMapper> SelectQueryBuilder<'a, R> {
     }
 }
 
-impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for SelectQueryBuilder<'a, R> {
+impl<'a, R: RowMapper> ops::QueryBuilder<'a> for SelectQueryBuilder<'a, R> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()
@@ -408,26 +399,27 @@ impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for SelectQueryBuilder<
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///     update with the provided values
-pub struct UpdateQueryBuilder<'a, R: RowMapper<Output = R>> {
+pub struct UpdateQueryBuilder<'a, R: RowMapper> {
     _inner: QueryBuilder<'a, R>,
 }
 
-impl<'a, R: RowMapper<Output = R>> UpdateQueryBuilder<'a, R> {
+impl<'a, R: RowMapper> UpdateQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {
-            _inner: QueryBuilder::new(
-                format!("UPDATE {table_schema_data}"),
-                database_type
-            ),
+            _inner: QueryBuilder::new(format!("UPDATE {table_schema_data}"), database_type),
         }
     }
 
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(self, input: I)
-     -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+        self,
+        input: I,
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    where
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         self._inner.query::<T, I>(input).await
     }
@@ -472,7 +464,7 @@ impl<'a, R: RowMapper<Output = R>> UpdateQueryBuilder<'a, R> {
     }
 }
 
-impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for UpdateQueryBuilder<'a, R> {
+impl<'a, R: RowMapper> ops::QueryBuilder<'a> for UpdateQueryBuilder<'a, R> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()
@@ -533,32 +525,33 @@ impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for UpdateQueryBuilder<
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///     update with the provided values
-pub struct DeleteQueryBuilder<'a, R: RowMapper<Output = R>> {
+pub struct DeleteQueryBuilder<'a, R: RowMapper> {
     _inner: QueryBuilder<'a, R>,
 }
 
-impl<'a, R: RowMapper<Output = R>> DeleteQueryBuilder<'a, R> {
+impl<'a, R: RowMapper> DeleteQueryBuilder<'a, R> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(table_schema_data: &str, database_type: DatabaseType) -> Self {
         Self {
-            _inner: QueryBuilder::new(
-                format!("DELETE FROM {table_schema_data}"),
-                database_type
-            ),
+            _inner: QueryBuilder::new(format!("DELETE FROM {table_schema_data}"), database_type),
         }
     }
 
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(self, input: I)
-        -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+        self,
+        input: I,
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    where
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         self._inner.query::<T, I>(input).await
     }
 }
 
-impl<'a, R: RowMapper<Output = R>> ops::QueryBuilder<'a> for DeleteQueryBuilder<'a, R> {
+impl<'a, R: RowMapper> ops::QueryBuilder<'a> for DeleteQueryBuilder<'a, R> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()

@@ -14,7 +14,7 @@ pub trait Transaction {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         async move { input.query(stmt, params).await }
     }
@@ -23,13 +23,13 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
-        R: RowMapper
+        R: RowMapper,
     {
-        async move { input.query_one(stmt.as_ref(), params.as_ref()).await }
+        async move { input.query_one::<R>(stmt.as_ref(), params.as_ref()).await }
     }
 
     fn query_one_for<'a, S, Z, F: FromSqlOwnedValue<F>>(

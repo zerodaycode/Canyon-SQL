@@ -5,7 +5,7 @@ pub trait RowMapper: Sized {
     type Output;
 
     #[cfg(feature = "postgres")]
-    fn deserialize_postgresql(row: &tokio_postgres::Row) -> Self::Output;
+    fn deserialize_postgresql(row: &tokio_postgres::Row) -> <Self as RowMapper>::Output;
     #[cfg(feature = "mssql")]
     fn deserialize_sqlserver(row: &tiberius::Row) -> Self::Output;
     #[cfg(feature = "mysql")]
@@ -16,5 +16,7 @@ pub type CanyonError = Box<(dyn std::error::Error + Send + Sync)>; // TODO: conv
                                                                    // real error
 pub trait IntoResults {
     fn into_results<R>(self) -> Result<Vec<R>, CanyonError>
-        where R: RowMapper<Output = R>;
+    where
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>;
 }

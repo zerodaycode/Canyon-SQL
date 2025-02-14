@@ -35,7 +35,7 @@ impl DbConnection for MysqlConnection {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         mysql_query_launcher::query(stmt, params, self)
     }
@@ -44,10 +44,11 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send)>>> + Send 
-        where R: RowMapper<Output = R>
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
+    where
+        R: RowMapper,
     {
-        mysql_query_launcher::query_one(stmt, params, self)
+        mysql_query_launcher::query_one::<R>(stmt, params, self)
     }
 
     fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
@@ -95,7 +96,7 @@ pub(crate) mod mysql_query_launcher {
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         Ok(execute_query(stmt, params, conn)
             .await?
@@ -118,8 +119,9 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<Option<R>, Box<(dyn Error + Sync + Send)>>
-        where R: RowMapper<Output = R>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    where
+        R: RowMapper,
     {
         let result = execute_query(stmt, params, conn).await?;
 
