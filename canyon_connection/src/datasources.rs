@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::collections::HashMap;
 
 use crate::canyon_database_connector::DatabaseType;
 
@@ -119,18 +120,16 @@ pub struct CanyonSqlConfig {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Datasources {
     pub datasources: Vec<DatasourceConfig>,
-    #[cfg(feature = "test_containers")]
     pub containers: Vec<ContainerConfig>,
 }
 
-#[cfg(feature = "test_containers")]
 #[derive(Deserialize, Debug, Clone)]
 pub struct ContainerConfig {
     pub name: String,
     pub database_type: DatabaseType,
     pub image_tag: String,
     pub port: u16,
-    //TODO other properties example migrations
+    pub env: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]

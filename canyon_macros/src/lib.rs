@@ -101,6 +101,10 @@ pub fn canyon_tokio_test(
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                     .handle()
                     .block_on( async {
+                        #[cfg(feature = "test_containers")]
+                        {
+                            canyon_sql::runtime::init_containers().await;
+                        }
                         canyon_sql::runtime::init_connections_cache().await;
                         #(#body)*
                     });
