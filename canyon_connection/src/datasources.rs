@@ -92,6 +92,24 @@ fn load_ds_config_from_array() {
         assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
     }
 }
+#[test]
+#[cfg(feature = "test_containers")]
+fn load_container_config_from_array() {
+    const CONFIG_FILE_MOCK_ALT_CONTAINER: &str = r#"
+        [canyon_sql]
+        containers = [
+            { name = 'MysqlDS', database_type = 'mysql', image_tag = 'latest', port = 3306 },
+        ]
+        "#;
+
+    let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_CONTAINER)
+        .expect("A failure happened retrieving the [canyon_sql] section");
+    let container_0 = &config.canyon_sql.containers[0];
+    assert_eq!(container_0.name, "MysqlDS");
+    assert_eq!(container_0.database_type, DatabaseType::MySQL);
+    assert_eq!(container_0.image_tag, "latest");
+    assert_eq!(container_0.port, 3306);
+}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig {
@@ -101,6 +119,18 @@ pub struct CanyonSqlConfig {
 #[derive(Deserialize, Debug, Clone)]
 pub struct Datasources {
     pub datasources: Vec<DatasourceConfig>,
+    #[cfg(feature = "test_containers")]
+    pub containers: Vec<ContainerConfig>,
+}
+
+#[cfg(feature = "test_containers")]
+#[derive(Deserialize, Debug, Clone)]
+pub struct ContainerConfig {
+    pub name: String,
+    pub database_type: DatabaseType,
+    pub image_tag: String,
+    pub port: u16,
+    //TODO other properties example migrations
 }
 
 #[derive(Deserialize, Debug, Clone)]

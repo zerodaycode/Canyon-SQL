@@ -17,7 +17,7 @@ pub mod datasources;
 use std::fs;
 use std::path::PathBuf;
 
-use crate::datasources::{CanyonSqlConfig, DatasourceConfig};
+use crate::datasources::{CanyonSqlConfig, ContainerConfig, DatasourceConfig};
 use canyon_database_connector::DatabaseConnection;
 use indexmap::IndexMap;
 use lazy_static::lazy_static;
@@ -37,8 +37,11 @@ lazy_static! {
     pub static ref DATASOURCES: Vec<DatasourceConfig> =
         CONFIG_FILE.canyon_sql.datasources.clone();
 
+    pub static ref CONTAINERS: Vec<ContainerConfig> = CONFIG_FILE.canyon_sql.containers.clone();
+
     pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
         Mutex::new(IndexMap::new());
+
 }
 
 fn find_canyon_config_file() -> PathBuf {

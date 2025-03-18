@@ -34,6 +34,7 @@ impl From<&Auth> for DatabaseType {
             crate::datasources::Auth::SqlServer(_) => DatabaseType::SqlServer,
             #[cfg(feature = "mysql")]
             crate::datasources::Auth::MySQL(_) => DatabaseType::MySQL,
+            _ => panic!("Invalid Datasource type"),
         }
     }
 }
@@ -268,6 +269,10 @@ mod database_connection_handler {
                 config.canyon_sql.datasources[2].get_db_type(),
                 DatabaseType::MySQL
             );
+            assert_eq!(
+                config.canyon_sql.containers[0].database_type,
+                DatabaseType::MySQL
+            )
         }
 
         #[cfg(feature = "postgres")]
@@ -315,6 +320,87 @@ mod database_connection_handler {
                 .expect("A failure happened retrieving the [canyon_sql] section");
             assert_eq!(
                 config.canyon_sql.datasources[0].get_db_type(),
+                DatabaseType::MySQL
+            );
+        }
+    }
+
+    #[test]
+    fn check_from_container() {
+        #[cfg(all(
+            feature = "postgres",
+            feature = "mssql",
+            feature = "mysql",
+            feature = "test_containers"
+        ))]
+        {
+            const CONFIG_FILE_MOCK_ALT_ALL: &str = r#"
+                [canyon_sql]
+                containers = [
+                    { name = 'MysqlDS', database_type = 'mysql', image_tag = 'latest', port = 3306 },
+                    { name = 'SqlServerDS', database_type = 'sqlserver', image_tag = 'latest', port = 3306 },
+                    { name = 'PostgresDS', database_type = 'postgres', image_tag = 'latest', port = 3306 },
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_ALL)
+                .expect("A failure happened retrieving the [canyon_sql] section, check the container configuration");
+            assert_eq!(
+                config.canyon_sql.containers[0].database_type,
+                DatabaseType::MySQL
+            );
+            assert_eq!(
+                config.canyon_sql.containers[1].database_type,
+                DatabaseType::SqlServer
+            );
+            assert_eq!(
+                config.canyon_sql.containers[2].database_type,
+                DatabaseType::PostgreSql
+            );
+        }
+        #[cfg(all(feature = "postgres", feature = "test_containers"))]
+        {
+            const CONFIG_FILE_MOCK_POSTGRES: &str = r#"
+                [canyon_sql]
+                containers = [
+                    { name = 'PostgresDS', database_type = 'postgres', image_tag = 'latest', port = 3306 },
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_POSTGRES)
+                .expect("A failure happened retrieving the [canyon_sql] section, check the container configuration");
+            assert_eq!(
+                config.canyon_sql.containers[0].database_type,
+                DatabaseType::SqlServer
+            );    
+        }
+        
+        #[cfg(all(feature = "mssql", feature = "test_containers"))]
+        {
+            const CONFIG_FILE_MOCK_MSSQL: &str = r#"
+                [canyon_sql]
+                containers = [
+                    { name = 'SqlServerDS', database_type = 'sqlserver', image_tag = 'latest', port = 3306 },
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_MSSQL)
+                .expect("A failure happened retrieving the [canyon_sql] section, check the container configuration");
+            assert_eq!(
+                config.canyon_sql.containers[0].database_type,
+                DatabaseType::SqlServer
+            );
+        }
+
+        #[cfg(all(feature = "mysql", feature = "test_containers"))]
+        {
+            const CONFIG_FILE_MOCK_MYSQL: &str = r#"
+                [canyon_sql]
+                containers = [
+                    { name = 'MysqlDS', database_type = 'mysql', image_tag = 'latest', port = 3306 },
+                ]
+            "#;
+            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_MYSQL)
+                .expect("A failure happened retrieving the [canyon_sql] section, check the container configuration");
+            assert_eq!(
+                config.canyon_sql.containers[0].database_type,
                 DatabaseType::MySQL
             );
         }
