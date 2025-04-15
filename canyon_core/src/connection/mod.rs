@@ -81,16 +81,15 @@ fn find_canyon_config_file() -> PathBuf {
 /// job done.
 pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
+        let db_conn = DatabaseConnection::new(datasource).await;
+        
+        if let Err(e) = db_conn {
+            panic!("Error opening database connection for {}. Err: {}", datasource.name, e);
+        }
+        
         CACHED_DATABASE_CONN.lock().await.insert(
             &datasource.name,
-            DatabaseConnection::new(datasource)
-                .await
-                .unwrap_or_else(|_| {
-                    panic!(
-                        "Error pooling a new connection for the datasource: {:?}",
-                        datasource.name
-                    )
-                }),
+            DatabaseConnection::new(datasource).await.unwrap(),
         );
     }
 }

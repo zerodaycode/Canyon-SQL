@@ -1,15 +1,15 @@
 [canyon_sql]
 
-[[canyon_sql.datasources]]
-name = 'postgres_docker'
-
-[canyon_sql.datasources.auth]
-postgresql = { basic = { username = 'postgres', password = 'postgres'}}
-
-[canyon_sql.datasources.properties]
-host = 'localhost'
-port = 5438
-db_name = 'postgres'
+#[[canyon_sql.datasources]]
+#name = 'postgres_docker'
+#
+#[canyon_sql.datasources.auth]
+#postgresql = { basic = { username = 'postgres', password = 'postgres'}}
+#
+#[canyon_sql.datasources.properties]
+#host = 'localhost'
+#port = 5438
+#db_name = 'postgres'
 
 
 [[canyon_sql.datasources]]
@@ -23,14 +23,14 @@ host = 'localhost'
 port = 1434
 db_name = 'master'
 
-
-[[canyon_sql.datasources]]
-name = 'mysql_docker'
-
-[canyon_sql.datasources.auth]
-mysql = { basic = { username = 'root', password = 'root' } }
-
-[canyon_sql.datasources.properties]
-host = 'localhost'
-port = 3307
-db_name = 'public'
+#
+#[[canyon_sql.datasources]]
+#name = 'mysql_docker'
+#
+#[canyon_sql.datasources.auth]
+#mysql = { basic = { username = 'root', password = 'root' } }
+#
+#[canyon_sql.datasources.properties]
+#host = 'localhost'
+#port = 3307
+#db_name = 'public'

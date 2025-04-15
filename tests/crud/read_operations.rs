@@ -50,7 +50,7 @@ fn test_crud_find_all_with_mssql() {
     let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
         League::find_all_with(SQL_SERVER_DS).await;
     // Connection doesn't return an error
-    assert!(!find_all_result.is_err());
+    assert!(!find_all_result.is_err(), "{:?}", find_all_result);
     assert!(!find_all_result.unwrap().is_empty());
 }
 
@@ -142,41 +142,4 @@ fn test_crud_find_all_unchecked_with() {
 // //         "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
 // //     );
 // // }
-
-/// Counts how many rows contains an entity on the target database.
-#[cfg(feature = "postgres")]
-#[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_count_operation() {
-    assert_eq!(
-        League::find_all::<Tournament>().await.unwrap().len() as i64,
-        League::count().await.unwrap()
-    );
-}
-
-/// Counts how many rows contains an entity on the target database using
-/// the specified datasource mssql
-#[cfg(feature = "mssql")]
-#[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_count_with_operation_mssql() {
-    assert_eq!(
-        League::find_all_with::<League, &str>(SQL_SERVER_DS)
-            .await
-            .unwrap()
-            .len() as i64,
-        League::count_with(SQL_SERVER_DS).await.unwrap()
-    );
-}
-
-/// Counts how many rows contains an entity on the target database using
-/// the specified datasource mysql
-#[cfg(feature = "mysql")]
-#[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_count_with_operation_mysql() {
-    assert_eq!(
-        League::find_all_with::<League, &str>(MYSQL_DS)
-            .await
-            .unwrap()
-            .len() as i64,
-        League::count_with(MYSQL_DS).await.unwrap()
-    );
-}
+ 

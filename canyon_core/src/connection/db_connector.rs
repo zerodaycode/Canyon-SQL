@@ -369,7 +369,6 @@ impl DatabaseConnection {
 
 mod connection_helpers {
     use super::*;
-    use tokio_postgres::NoTls;
 
     #[cfg(feature = "postgres")]
     pub async fn create_postgres_connection(
@@ -378,7 +377,7 @@ mod connection_helpers {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
         let url = connection_string(user, password, datasource);
 
-        let (client, connection) = tokio_postgres::connect(&url, NoTls).await?;
+        let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls).await?;
 
         tokio::spawn(async move {
             if let Err(e) = connection.await {
@@ -398,7 +397,6 @@ mod connection_helpers {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
         use async_std::net::TcpStream;
-
         let mut tiberius_config = tiberius::Config::new();
 
         tiberius_config.host(&datasource.properties.host);
@@ -408,10 +406,13 @@ mod connection_helpers {
         let auth_config = auth::extract_mssql_auth(&datasource.auth)?;
         tiberius_config.authentication(auth_config);
         tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
-
+        tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
+        // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
+        // https://github.com/prisma/tiberius/issues/364
+        
         let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
         tcp.set_nodelay(true)?;
-
+        
         let client = tiberius::Client::connect(tiberius_config, tcp).await?;
 
         Ok(DatabaseConnection::SqlServer(SqlServerConnection {
@@ -442,7 +443,8 @@ mod connection_helpers {
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => "mysql",
             #[cfg(feature = "mssql")]
-            DatabaseType::SqlServer => todo!("Connection string for MSSQL should never be reached"),
+            DatabaseType::SqlServer => ""
+                // # todo!("Connection string for MSSQL should never be reached"),
         };
         format!(
             "{server}://{user}:{pswd}@{host}:{port}/{db}",

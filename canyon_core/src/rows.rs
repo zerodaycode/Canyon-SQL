@@ -10,7 +10,6 @@ use crate::row::Row;
 use std::error::Error;
 
 use cfg_if::cfg_if;
-use mysql_common::prelude::FromRow;
 
 // Helper macro to conditionally add trait bounds
 // these are the hacky intermediate traits
@@ -22,7 +21,9 @@ cfg_if! {
   // } else if #[cfg(feature = "mysql")] {
   //   trait FromSql<'a, T> where T: mysql_async::types::FromSql<'a> { }
   // }
-    if #[cfg(feature = "postgres")]  {
+
+    // } else if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
+    if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
       pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>
         + tiberius::FromSql<'a>
         + mysql_async::prelude::FromValue {}
@@ -40,6 +41,20 @@ cfg_if! {
         + tiberius::FromSqlOwned
         + mysql_async::prelude::FromValue
         {}
+    } else if #[cfg(feature = "postgres")] {
+      pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a> {}
+      impl<'a, T> FromSql<'a, T> for T where T:
+        tokio_postgres::types::FromSql<'a> {}
+
+      pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned {}
+      impl<T> FromSqlOwnedValue<T> for T where T:
+        tokio_postgres::types::FromSqlOwned {}
+    } else if #[cfg(feature = "mssql")] {
+      pub trait FromSql<'a, T>: tiberius::FromSqlOwned {}
+      impl<'a, T> FromSql<'a, T> for T where T: tiberius::FromSqlOwned {}
+
+      pub trait FromSqlOwnedValue<T>: tiberius::FromSqlOwned {}
+      impl<T> FromSqlOwnedValue<T> for T where T: tiberius::FromSqlOwned {}
     }
     // TODO: missing combinations else
 }
@@ -57,7 +72,7 @@ pub enum CanyonRows {
     #[cfg(feature = "mssql")]
     Tiberius(Vec<tiberius::Row>),
     #[cfg(feature = "mysql")]
-    MySQL(Vec<mysql_async::Row>),
+    MySQL(Vec<mysql_async::Row>)
 }
 
 impl IntoResults for Result<CanyonRows, CanyonError> {
@@ -136,50 +151,50 @@ impl CanyonRows {
         }
     }
 
-    pub fn get_column_at_row<'a, C: FromSql<'a, C>>(
-        &'a self,
-        column_name: &str,
-        index: usize,
-    ) -> Result<C, Box<dyn Error + Send + Sync>> {
-        let row_extraction_failure = || {
-            format!(
-                "{:?} - Failure getting the row: {} at index: {}",
-                self, column_name, index
-            )
-        };
-
-        match self {
-            #[cfg(feature = "postgres")]
-            Self::Postgres(v) => Ok(v
-                .get(index)
-                .ok_or_else(row_extraction_failure)?
-                .get::<&str, C>(column_name)),
-            #[cfg(feature = "mssql")]
-            Self::Tiberius(ref v) => v
-                .get(index)
-                .ok_or_else(row_extraction_failure)?
-                .get::<C, &str>(column_name)
-                .ok_or_else(|| {
-                    format!(
-                        "{:?} - Failure getting the row: {} at index: {}",
-                        self, column_name, index
-                    )
-                    .into()
-                }),
-            #[cfg(feature = "mysql")]
-            Self::MySQL(ref v) => v
-                .get(index)
-                .ok_or_else(row_extraction_failure)?
-                .get::<C, usize>(0)
-                .ok_or_else(|| {
-                    format!(
-                        "{:?} - Failure getting the row: {} at index: {}",
-                        self, column_name, index
-                    )
-                    .into()
-                }),
-        }
-    }
+    // pub fn get_column_at_row<'a, C: FromSql<'a, C>>(
+    //     &'a self,
+    //     column_name: &str,
+    //     index: usize,
+    // ) -> Result<C, Box<dyn Error + Send + Sync>> {
+    //     let row_extraction_failure = || {
+    //         format!(
+    //             "{:?} - Failure getting the row: {} at index: {}",
+    //             self, column_name, index
+    //         )
+    //     };
+    //
+    //     match self {
+    //         #[cfg(feature = "postgres")]
+    //         Self::Postgres(v) => Ok(v
+    //             .get(index)
+    //             .ok_or_else(row_extraction_failure)?
+    //             .get::<&str, C>(column_name)),
+    //         #[cfg(feature = "mssql")]
+    //         Self::Tiberius(ref v) => v
+    //             .get(index)
+    //             .ok_or_else(row_extraction_failure)?
+    //             .get::<C, &str>(column_name)
+    //             .ok_or_else(|| {
+    //                 format!(
+    //                     "{:?} - Failure getting the row: {} at index: {}",
+    //                     self, column_name, index
+    //                 )
+    //                 .into()
+    //             }),
+    //         #[cfg(feature = "mysql")]
+    //         Self::MySQL(ref v) => v
+    //             .get(index)
+    //             .ok_or_else(row_extraction_failure)?
+    //             .get::<C, usize>(0)
+    //             .ok_or_else(|| {
+    //                 format!(
+    //                     "{:?} - Failure getting the row: {} at index: {}",
+    //                     self, column_name, index
+    //                 )
+    //                 .into()
+    //             }),
+    //     }
+    // }
 
     /// Returns the number of elements present on the wrapped collection
     pub fn len(&self) -> usize {

@@ -30,6 +30,7 @@ pub struct MigrationsProcessor {
     drop_primary_key_operations: Vec<TableOperation>,
     constraints_table_operations: Vec<TableOperation>,
     constraints_column_operations: Vec<ColumnOperation>,
+    #[cfg(feature = "postgres")]
     constraints_sequence_operations: Vec<SequenceOperation>,
 }
 impl Transaction for MigrationsProcessor {}
@@ -128,8 +129,12 @@ impl MigrationsProcessor {
         for operation in &self.constraints_column_operations {
             operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
-        for operation in &self.constraints_sequence_operations {
-            operation.generate_sql(datasource).await; // This should be moved again to runtime
+
+        #[cfg(feature = "postgres")]
+        {
+            for operation in &self.constraints_sequence_operations {
+                operation.generate_sql(datasource).await; // This should be moved again to runtime
+            }
         }
         // TODO Still pending to decouple de executions of cargo check to skip the process if this
         // code is not processed by cargo build or cargo run
