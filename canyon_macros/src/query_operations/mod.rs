@@ -22,7 +22,11 @@ pub fn impl_crud_operations_trait_for_struct(
     table_schema_data: String,
 ) -> proc_macro::TokenStream {
     let mut crud_ops_tokens = TokenStream::new();
+    
     let ty = macro_data.ty;
+    let mapper_ty = macro_data
+        .retrieve_mapping_target_type()
+        .unwrap_or_else(|| ty.clone());
 
     let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
     let insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
@@ -40,7 +44,7 @@ pub fn impl_crud_operations_trait_for_struct(
         use canyon_sql::core::IntoResults;
         use canyon_sql::core::RowMapper;
 
-        impl canyon_sql::crud::CrudOperations for #ty {
+        impl canyon_sql::crud::CrudOperations<#mapper_ty> for #ty {
             #crud_operations_tokens
         }
 

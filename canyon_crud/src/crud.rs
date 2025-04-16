@@ -23,30 +23,29 @@ use std::future::Future;
 /// See it's definition and docs to see the implementations.
 /// Also, you can find the written macro-code that performs the auto-mapping
 /// in the *canyon_sql_root::canyon_macros* crates, on the root of this project.
-pub trait CrudOperations: Send + Sync {
-    fn find_all<R>() -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+pub trait CrudOperations<R>: Send + Sync
     where
         R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>;
+        Vec<R>: FromIterator<<R as RowMapper>::Output>
+{
+    fn find_all() -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send;
 
-    fn find_all_with<'a, R, I>(
+    fn find_all_with<'a, I>(
         input: I,
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
     where
-        R: RowMapper,
-        I: DbConnection + Send + 'a,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>;
+        I: DbConnection + Send + 'a;
 
-    fn find_all_unchecked<R>() -> impl Future<Output = Vec<R>> + Send
-    where
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>;
-
-    fn find_all_unchecked_with<'a, R, I>(input: I) -> impl Future<Output = Vec<R>> + Send
-    where
-        I: DbConnection + Send + 'a,
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>;
+    // fn find_all_unchecked() -> impl Future<Output = Vec<R>> + Send
+    // where
+    //     R: RowMapper,
+    //     Vec<R>: FromIterator<<R as RowMapper>::Output>;
+    // 
+    // fn find_all_unchecked_with<'a, I>(input: I) -> impl Future<Output = Vec<R>> + Send
+    // where
+    //     I: DbConnection + Send + 'a,
+    //     R: RowMapper,
+    //     Vec<R>: FromIterator<<R as RowMapper>::Output>;
 
     // fn select_query<'a, R: RowMapper>() -> SelectQueryBuilder<'a, R>;
     //

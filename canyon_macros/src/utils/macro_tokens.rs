@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
 
 use canyon_entities::field_annotation::EntityFieldAnnotation;
-use proc_macro2::Ident;
-use syn::{Attribute, DeriveInput, Fields, GenericParam, Generics, Type, TypeParam, Visibility};
+use proc_macro2::{Ident, Span};
+use syn::{Attribute, DeriveInput, Fields, Generics, Lit, Meta, MetaNameValue, NestedMeta, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -29,11 +29,26 @@ impl<'a> MacroTokens<'a> {
         }
     }
 
-    // pub fn retrieve_row_mapper_implementor(&self) -> Ident {
-    //     let caller = self.ty;
-    //     let row_mapper_type_parameter = self.generics.type_params()
-    //     caller.clone()
-    // }
+    pub fn retrieve_mapping_target_type(&self) -> Option<Ident> {
+        for attr in self.attrs {
+            if attr.path.is_ident("canyon_crud") {
+                let Ok(Meta::List(meta_list)) = attr.parse_meta() else {
+                    continue;
+                };
+
+                for nested in meta_list.nested.iter() {
+                    if let NestedMeta::Meta(Meta::NameValue(MetaNameValue { path, lit, .. })) = nested {
+                        if path.is_ident("maps_to") {
+                            if let Lit::Str(ref lit_str) = lit {
+                                return Some(Ident::new(&lit_str.value(), Span::call_site()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
 
     /// Gives a Vec of tuples that contains the visibility, the name and
     /// the type of every field on a Struct

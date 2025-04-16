@@ -114,7 +114,7 @@ pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> C
 /// Allows the implementors to auto-derive the `CrudOperations` trait, which defines the methods
 /// that will perform the database communication and the implementation of the queries for every
 /// type, as defined in the `CrudOperations` + `Transaction` traits.
-#[proc_macro_derive(CanyonCrud)]
+#[proc_macro_derive(CanyonCrud, attributes(canyon_crud))]
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: DeriveInput =
         syn::parse(input).expect("Error parsing `Canyon Entity for generate the CRUD methods");

@@ -12,6 +12,18 @@ pub trait RowMapper: Sized {
     fn deserialize_mysql(row: &mysql_async::Row) -> Self::Output;
 }
 
+pub trait DefaultRowMapper {
+    type Mapper: RowMapper;
+}
+
+// Blanket impl to make `Mapper = Self` for any `T: RowMapper`
+impl<T> DefaultRowMapper for T
+where
+    T: RowMapper,
+{
+    type Mapper = T;
+}
+
 pub type CanyonError = Box<(dyn std::error::Error + Send + Sync)>; // TODO: convert this into a
                                                                    // real error
 pub trait IntoResults {

@@ -32,15 +32,6 @@ fn test_crud_find_all() {
     assert!(!find_all_players.unwrap().is_empty());
 }
 
-/// Same as the `find_all()`, but with the unchecked variant, which directly returns `Vec<T>` not
-/// `Result` wrapped
-#[cfg(feature = "postgres")]
-#[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_all_unchecked() {
-    let find_all_result: Vec<League> = League::find_all_unchecked().await;
-    assert!(!find_all_result.is_empty());
-}
-
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
 /// and using the specified datasource
@@ -65,14 +56,6 @@ fn test_crud_find_all_with_mysql() {
     assert!(!find_all_result.unwrap().is_empty());
 }
 
-/// Same as the `find_all_with()`, but with the unchecked variant and the specified dataosource,
-/// returning directly `Vec<T>` and not `Result<Vec<T>, Err>`
-#[cfg(feature = "mssql")]
-#[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_all_unchecked_with() {
-    let find_all_result: Vec<League> = League::find_all_unchecked_with(SQL_SERVER_DS).await;
-    assert!(!find_all_result.is_empty());
-}
 
 // // /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
 // // /// defined with the #[primary_key] attribute over some field of the type.
@@ -142,4 +125,43 @@ fn test_crud_find_all_unchecked_with() {
 // //         "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
 // //     );
 // // }
- 
+
+// /// Counts how many rows contains an entity on the target database.
+// #[cfg(feature = "postgres")]
+// #[canyon_sql::macros::canyon_tokio_test]
+// fn test_crud_count_operation() {
+//     assert_eq!(
+//         League::find_all::<Tournament>().await.unwrap().len() as i64,
+//         League::count().await.unwrap()
+//     );
+// }
+// 
+// /// Counts how many rows contains an entity on the target database using
+// /// the specified datasource mssql
+// #[cfg(feature = "mssql")]
+// #[canyon_sql::macros::canyon_tokio_test]
+// fn test_crud_count_with_operation_mssql() {
+//     assert_eq!(
+//         League::find_all_with::<League, &str>(SQL_SERVER_DS)
+//             .await
+//             .unwrap()
+//             .len() as i64,
+//         League::count_with(SQL_SERVER_DS).await.unwrap()
+//     );
+// }
+// 
+// /// Counts how many rows contains an entity on the target database using
+// /// the specified datasource mysql
+// #[cfg(feature = "mysql")]
+// #[canyon_sql::macros::canyon_tokio_test]
+// fn test_crud_count_with_operation_mysql() {
+//     assert_eq!(
+//         League::find_all_with::<League, &str>(MYSQL_DS)
+//             .await
+//             .unwrap()
+//             .len() as i64,
+//         League::count_with(MYSQL_DS).await.unwrap()
+//     );
+// }
+// 
+//  
