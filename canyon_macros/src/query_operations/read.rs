@@ -13,6 +13,7 @@ pub fn generate_read_operations_tokens(
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
+        .expect("Expected mapping target <maps_to>")// TODO: return Err(...)
         .unwrap_or_else(|| ty.clone());
 
     let fa_stmt = format!("SELECT * FROM {table_schema_data}");

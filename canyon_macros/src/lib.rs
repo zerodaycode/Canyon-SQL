@@ -68,9 +68,9 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
     .into()
 }
 
-#[proc_macro_attribute]
 /// Wraps the [`test`] proc macro in a convenient way to run tests within
 /// the tokio's current reactor
+#[proc_macro_attribute]
 pub fn canyon_tokio_test(
     _meta: CompilerTokenStream,
     input: CompilerTokenStream,

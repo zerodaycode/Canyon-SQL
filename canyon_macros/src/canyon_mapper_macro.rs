@@ -185,6 +185,7 @@ fn get_field_type_as_string(typ: &Type) -> String {
 }
 
 #[cfg(test)]
+#[cfg(feature = "mssql")]
 mod mapper_macro_tests {
     use crate::canyon_mapper_macro::get_deserializing_type;
 
