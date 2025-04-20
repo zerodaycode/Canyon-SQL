@@ -1,8 +1,9 @@
 use std::convert::TryFrom;
 
 use canyon_entities::field_annotation::EntityFieldAnnotation;
-use proc_macro2::{Ident, Span};
-use syn::{Attribute, DeriveInput, Fields, Generics, Lit, Meta, MetaNameValue, NestedMeta, Type, Visibility};
+use proc_macro2::{Ident, Span, TokenStream};
+use quote::ToTokens;
+use syn::{punctuated::Punctuated, token::Comma, Attribute, DeriveInput, Fields, Generics, Lit, Meta, MetaNameValue, NestedMeta, Token, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -28,27 +29,56 @@ impl<'a> MacroTokens<'a> {
             },
         }
     }
+/**
+syn::attr
+pub type AttributeArgs = Vec<NestedMeta>
 
-    pub fn retrieve_mapping_target_type(&self) -> Option<Ident> {
-        for attr in self.attrs {
-            if attr.path.is_ident("canyon_crud") {
-                let Ok(Meta::List(meta_list)) = attr.parse_meta() else {
-                    continue;
-                };
+Conventional argument type associated with an invocation of an attribute macro.
+For example if we are developing an attribute macro that is intended to be invoked on function items as follows:
+#[my_attribute(path = "/v1/refresh")]
+pub fn refresh() {
+    /* ... */
+}
 
-                for nested in meta_list.nested.iter() {
-                    if let NestedMeta::Meta(Meta::NameValue(MetaNameValue { path, lit, .. })) = nested {
-                        if path.is_ident("maps_to") {
-                            if let Lit::Str(ref lit_str) = lit {
+The implementation of this macro would want to parse its attribute arguments as type AttributeArgs.
+use proc_macro::TokenStream;
+use syn::{parse_macro_input, AttributeArgs, ItemFn};
+
+#[proc_macro_attribute]
+pub fn my_attribute(args: TokenStream, input: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as AttributeArgs);
+    let input = parse_macro_input!(input as ItemFn);
+
+    /* ... */
+}
+*/
+pub fn retrieve_mapping_target_type(&self) -> Option<Ident> {
+    for attr in self.attrs {
+        if attr.path.is_ident("canyon_crud") {
+            
+            let name_values: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> =
+                attr.parse_args_with(Punctuated::parse_terminated);
+
+            println!("Primo 1 'maps to' for: {:?}", self.ty);
+            match name_values {
+                Ok(values) => {
+                    for nv in values {
+                        if nv.path.is_ident("maps_to") {
+                            if let Lit::Str(lit_str) = nv.lit {
+                                println!("Parsea-ditto for: {:?}", self.ty);
                                 return Some(Ident::new(&lit_str.value(), Span::call_site()));
                             }
                         }
                     }
                 }
-            }
+                Err(e) => {
+                    println!("Nope. Unable to  parse attribute 'maps to' for: {:?}. Err: {:?}", self.ty, e);
+                }
+            };
         }
-        None
     }
+    None
+}
 
     /// Gives a Vec of tuples that contains the visibility, the name and
     /// the type of every field on a Struct

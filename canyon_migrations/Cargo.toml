@@ -23,9 +23,6 @@ mysql_common = { workspace = true, optional = true }
 regex = { workspace = true }
 partialdebug = { workspace = true }
 walkdir = { workspace = true }
-proc-macro2 = { workspace = true }
-quote = { workspace = true }
-syn = { version = "1.0.86", features = ["full", "parsing"] } # TODO Pending to refactor and upgrade
 
 [features]
 postgres = ["tokio-postgres", "canyon_core/postgres", "canyon_crud/postgres"]
