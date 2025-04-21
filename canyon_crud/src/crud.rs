@@ -36,17 +36,6 @@ pub trait CrudOperations<R>: Send + Sync
     where
         I: DbConnection + Send + 'a;
 
-    // fn find_all_unchecked() -> impl Future<Output = Vec<R>> + Send
-    // where
-    //     R: RowMapper,
-    //     Vec<R>: FromIterator<<R as RowMapper>::Output>;
-    // 
-    // fn find_all_unchecked_with<'a, I>(input: I) -> impl Future<Output = Vec<R>> + Send
-    // where
-    //     I: DbConnection + Send + 'a,
-    //     R: RowMapper,
-    //     Vec<R>: FromIterator<<R as RowMapper>::Output>;
-
     // fn select_query<'a, R: RowMapper>() -> SelectQueryBuilder<'a, R>;
     //
     // fn select_query_with<'a, R: RowMapper>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;

@@ -1,12 +1,9 @@
-use syn::parse_quote::ParseQuote;
 use std::convert::TryFrom;
 
-use canyon_entities::field_annotation::EntityFieldAnnotation;
-use proc_macro2::{Ident, Span, TokenStream};
-use quote::ToTokens;
-use syn::{punctuated::Punctuated, token::Comma, Attribute, DeriveInput, Expr, ExprPath, Fields, Generics, Lit, Meta, MetaNameValue, NestedMeta, Token, Type, Visibility};
-use syn::parse::{Parse, ParseStream, Parser};
 use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
+use canyon_entities::field_annotation::EntityFieldAnnotation;
+use proc_macro2::Ident;
+use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -192,7 +189,7 @@ impl<'a> MacroTokens<'a> {
         })
     }
 
-    /// Returns an String ready to be inserted on the VALUES Sql clause
+    /// Returns a String ready to be inserted on the VALUES Sql clause
     /// representing generic query parameters ($x).
     ///
     /// Already returns the correct number of placeholders, skipping one

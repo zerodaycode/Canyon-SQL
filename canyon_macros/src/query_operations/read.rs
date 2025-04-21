@@ -22,8 +22,6 @@ pub fn generate_read_operations_tokens(
 
     let find_all = create_find_all_macro(ty, &mapper_ty, &fa_stmt);
     let find_all_with = create_find_all_with_macro(&fa_stmt, &mapper_ty);
-    // let find_all_unchecked = create_find_all_unchecked_macro(ty, &fa_stmt);
-    // let find_all_unchecked_with = create_find_all_unchecked_with_macro(ty, &fa_stmt);
 
     // let count_stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
     // let count = create_count_macro(ty, &count_stmt);
@@ -36,8 +34,6 @@ pub fn generate_read_operations_tokens(
     quote! {
         #find_all
         #find_all_with
-        // #find_all_unchecked
-        // #find_all_unchecked_with
 
         // #count
         // #count_with
@@ -175,35 +171,6 @@ mod __details {
                 }
             }
         }
-        //
-        // pub fn create_find_all_unchecked_macro(ty: &syn::Ident, stmt: &str) -> TokenStream {
-        //     let expect_msg = format!("Failed to execute find all query for: {:?}", ty.to_string());
-        //     quote! {
-        //         async fn find_all_unchecked<R>() -> Vec<R>
-        //             where R: RowMapper,
-        //                   Vec<R>: FromIterator<<R as RowMapper>::Output>
-        //         {
-        //             <#ty as canyon_sql::core::Transaction>::query(#stmt, &[], "")
-        //                 .await
-        //                 .expect(#expect_msg)
-        //         }
-        //     }
-        // }
-        //
-        // pub fn create_find_all_unchecked_with_macro(ty: &syn::Ident, stmt: &str) -> TokenStream {
-        //     let expect_msg = format!("Failed to execute find all query for: {:?}", ty.to_string());
-        //     quote! {
-        //         async fn find_all_unchecked_with<'a, R, I>(input: I) -> Vec<R>
-        //             where
-        //                 R: RowMapper,
-        //                 I: canyon_sql::core::DbConnection + Send + 'a,
-        //                 Vec<R>: FromIterator<<R as RowMapper>::Output>
-        //         {
-        //             input.query(#stmt, &[]).await
-        //                 .expect(#expect_msg)
-        //         }
-        //     }
-        // }
     }
 
     pub mod count_generators {
@@ -336,33 +303,6 @@ mod macro_builder_read_ops_tests {
     //     assert!(find_all_with.contains(RES_RET_TY_LT));
     //     assert!(find_all_with.contains(LT_CONSTRAINT));
     //     assert!(find_all_with.contains(WITH_WHERE_BOUNDS));
-    // }
-    //
-    // #[test]
-    // fn test_macro_builder_find_all_unchecked() {
-    //     let find_all_unc_builder = create_find_all_unchecked_macro(
-    //         &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-    //         SELECT_ALL_STMT,
-    //     );
-    //     let find_all_unc = find_all_unc_builder.to_string();
-    //
-    //     assert!(find_all_unc.contains("async fn find_all_unchecked"));
-    //     assert!(find_all_unc.contains(RAW_RET_TY));
-    // }
-    //
-    // #[test]
-    // fn test_macro_builder_find_all_unchecked_with() {
-    //     let find_all_unc_with_builder = create_find_all_unchecked_with_macro(
-    //         &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-    //         &USER_MOCK_TY.with(|user_mock_ty| user_mock_ty.borrow().clone()),
-    //         SELECT_ALL_STMT,
-    //     );
-    //     let find_all_unc_with = find_all_unc_with_builder.to_string();
-    //
-    //     assert!(find_all_unc_with.contains("async fn find_all_unchecked_with"));
-    //     assert!(find_all_unc_with.contains(RAW_RET_TY));
-    //     assert!(find_all_unc_with.contains(LT_CONSTRAINT));
-    //     assert!(find_all_unc_with.contains(INPUT_PARAM));
     // }
 
     #[test]
