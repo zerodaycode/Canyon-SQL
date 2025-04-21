@@ -36,29 +36,28 @@ pub trait CrudOperations<R>: Send + Sync
     where
         I: DbConnection + Send + 'a;
 
-    // fn select_query<'a, R: RowMapper>() -> SelectQueryBuilder<'a, R>;
-    //
-    // fn select_query_with<'a, R: RowMapper>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;
+    fn select_query<'a>() -> SelectQueryBuilder<'a, R>;
+    
+    fn select_query_with<'a>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;
 
-    /*fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send)>>> + Send;
+    fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send)>>> + Send;
     
     fn count_with<'a, I>(
         input: I,
     ) -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send + 'a)>>> + Send
     where
-        I: DbConnection + Send + 'a;*/
+        I: DbConnection + Send + 'a;
 
-    // fn find_by_pk<'a, R: RowMapper>(
-    //     value: &'a dyn QueryParameter<'a>,
-    // ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-    //
-    // fn find_by_pk_with<'a, R, I>(
-    //     value: &'a dyn QueryParameter<'a>,
-    //     input: I,
-    // ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a,
-    //     R: RowMapper;
+    fn find_by_pk<'a>(
+        value: &'a dyn QueryParameter<'a>,
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    
+    fn find_by_pk_with<'a, I>(
+        value: &'a dyn QueryParameter<'a>,
+        input: I,
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    where
+        I: DbConnection + Send + 'a;
 
     fn insert<'a>(
         &'a mut self,

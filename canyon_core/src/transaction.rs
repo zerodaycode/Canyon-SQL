@@ -26,7 +26,7 @@ pub trait Transaction {
     ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
     where
         S: AsRef<str> + Display + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send,
         R: RowMapper,
     {
         async move { input.query_one::<R>(stmt.as_ref(), params.as_ref()).await }

@@ -1,13 +1,10 @@
 use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier},
-    crud::CrudOperations,
-    query_elements::query::Query,
     Operator,
 };
 use canyon_core::connection::database_type::DatabaseType;
 use canyon_core::connection::db_connector::DbConnection;
 use canyon_core::{mapper::RowMapper, query_parameters::QueryParameter, transaction::Transaction};
-use std::fmt::Debug;
 use std::marker::PhantomData;
 
 /// Contains the elements that makes part of the formal declaration
@@ -146,7 +143,7 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
     /// Launches the generated query against the database targeted
     /// by the selected datasource
     /// /// TODO: this is not definitive => QueryBuilder -> Query -> Transaction -> RowMapper
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+    pub async fn query<I: DbConnection + Send + 'a>(
         mut self,
         input: I,
     ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
@@ -155,7 +152,8 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
     {
         self.sql.push(';');
 
-        T::query(&self.sql, &self.params, input).await
+        // T::query(&self.sql, &self.params, input).await
+        input.query(&self.sql, &self.params).await
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a>>(&mut self, r#where: Z, op: impl Operator) {
@@ -268,14 +266,14 @@ impl<'a, R: RowMapper> SelectQueryBuilder<'a, R> {
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+    pub async fn query<I: DbConnection + Send + 'a>(
         self,
         input: I,
     ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        self._inner.query::<T, I>(input).await
+        self._inner.query::<I>(input).await
     }
 
     /// Adds a *LEFT JOIN* SQL statement to the underlying
@@ -414,14 +412,14 @@ impl<'a, R: RowMapper> UpdateQueryBuilder<'a, R> {
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+    pub async fn query<I: DbConnection + Send + 'a>(
         self,
         input: I,
     ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        self._inner.query::<T, I>(input).await
+        self._inner.query::<I>(input).await
     }
 
     /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
@@ -540,14 +538,14 @@ impl<'a, R: RowMapper> DeleteQueryBuilder<'a, R> {
     /// Launches the generated query to the database pointed by the
     /// selected datasource
     #[inline]
-    pub async fn query<T: Transaction, I: DbConnection + Send + 'a>(
+    pub async fn query<I: DbConnection + Send + 'a>(
         self,
         input: I,
     ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        self._inner.query::<T, I>(input).await
+        self._inner.query::<I>(input).await
     }
 }
 

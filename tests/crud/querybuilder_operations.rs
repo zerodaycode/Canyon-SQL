@@ -22,59 +22,59 @@ use crate::tests_models::tournament::*;
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_generated_sql_by_the_select_querybuilder() {
-    // let select_with_joins = League::select_query()
-    //     .inner_join("tournament", "league.id", "tournament.league_id")
-    //     .left_join("team", "tournament.id", "player.tournament_id")
-    //     .r#where(LeagueFieldValue::id(&7), Comp::Gt)
-    //     .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
-    //     .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
-    // // .query()
-    // // .await;
-    // // NOTE: We don't have in the docker the generated relationships
-    // // with the joins, so for now, we are just going to check that the
-    // // generated SQL by the SelectQueryBuilder<T> is the expected
-    // assert_eq!(
-    //     select_with_joins.read_sql(),
-    //     "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
-    // )
+    let select_with_joins = League::select_query()
+        .inner_join("tournament", "league.id", "tournament.league_id")
+        .left_join("team", "tournament.id", "player.tournament_id")
+        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
+        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+        .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
+    // .query()
+    // .await;
+    // NOTE: We don't have in the docker the generated relationships
+    // with the joins, so for now, we are just going to check that the
+    // generated SQL by the SelectQueryBuilder<T> is the expected
+    assert_eq!(
+        select_with_joins.read_sql(),
+        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
+    )
 }
 
-// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-// with the parameters that modifies the base SQL to SELECT * FROM <entity>
-// #[cfg(feature = "postgres")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_with_querybuilder() {
-//     // Find all the leagues with ID less or equals that 7
-//     // and where it's region column value is equals to 'Korea'
-//     let filtered_leagues_result: Result<Vec<League>, _> = League::select_query()
-//         .r#where(LeagueFieldValue::id(&50), Comp::LtEq)
-//         .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
-//         .query::<League, &str>(MYSQL_DS)
-//         .await;
-//
-//     let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
-//     assert!(!filtered_leagues.is_empty());
-//
-//     let league_idx_0 = filtered_leagues.first().unwrap();
-//     assert_eq!(league_idx_0.id, 34);
-//     assert_eq!(league_idx_0.region, "KOREA");
-// }
-//
-// /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-// /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
-// #[cfg(feature = "postgres")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_with_querybuilder_and_fulllike() {
-//     // Find all the leagues with "LC" in their name
-//     let filtered_leagues_result =
-//         League::select_query().r#where(LeagueFieldValue::name(&"LC"), Like::Full);
-//
-//     assert_eq!(
-//         filtered_leagues_result.read_sql(),
-//         "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
-//     )
-// }
-//
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder() {
+    // Find all the leagues with ID less or equals that 7
+    // and where it's region column value is equals to 'Korea'
+    let filtered_leagues_result: Result<Vec<League>, _> = League::select_query()
+        .r#where(LeagueFieldValue::id(&50), Comp::LtEq)
+        .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
+        .query(MYSQL_DS)
+        .await;
+
+    let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
+    assert!(!filtered_leagues.is_empty());
+
+    let league_idx_0 = filtered_leagues.first().unwrap();
+    assert_eq!(league_idx_0.id, 34);
+    assert_eq!(league_idx_0.region, "KOREA");
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_fulllike() {
+    // Find all the leagues with "LC" in their name
+    let filtered_leagues_result =
+        League::select_query().r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+
+    assert_eq!(
+        filtered_leagues_result.read_sql(),
+        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
+    )
+}
+
 // /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 // /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 // #[cfg(feature = "mssql")]
@@ -83,13 +83,13 @@ fn test_generated_sql_by_the_select_querybuilder() {
 //     // Find all the leagues with "LC" in their name
 //     let filtered_leagues_result =
 //         League::select_query_with(SQL_SERVER_DS).r#where(LeagueFieldValue::name(&"LC"), Like::Full);
-//
+// 
 //     assert_eq!(
 //         filtered_leagues_result.read_sql(),
 //         "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
 //     )
 // }
-//
+
 // /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 // /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 // #[cfg(feature = "mysql")]
