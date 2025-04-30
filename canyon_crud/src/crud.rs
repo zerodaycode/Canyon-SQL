@@ -36,9 +36,14 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn select_query<'a>() -> SelectQueryBuilder<'a, R>;
+    fn select_query<'a>(
+    ) -> Result<SelectQueryBuilder<'a, str, R>, Box<(dyn Error + Send + Sync + 'a)>>;
 
-    fn select_query_with<'a>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;
+    fn select_query_with<'a, I>(
+        input: &'a I,
+    ) -> Result<SelectQueryBuilder<'a, I, R>, Box<(dyn Error + Send + Sync + 'a)>>
+    where
+        I: DbConnection + Send + 'a + ?Sized;
 
     fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Send + Sync)>>> + Send;
 

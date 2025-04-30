@@ -59,8 +59,13 @@ fn generate_select_querybuilder_tokens(
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn select_query<'a>() -> canyon_sql::query::SelectQueryBuilder<'a, #mapper_ty> {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default())
+        fn select_query<'a>()
+            -> Result<
+                canyon_sql::query::SelectQueryBuilder<'a, str, #mapper_ty>,
+                Box<(dyn std::error::Error + Send + Sync + 'a)>
+            >
+        {
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, &"")
         }
 
         /// Generates a [`canyon_sql::query::SelectQueryBuilder`]
@@ -74,10 +79,13 @@ fn generate_select_querybuilder_tokens(
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the [`&str`]
         /// passed as parameter.
-        fn select_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
-            -> canyon_sql::query::SelectQueryBuilder<'a, #mapper_ty>
+        fn select_query_with<'a, I>(input: &'a I)
+            -> Result<
+                canyon_sql::query::SelectQueryBuilder<'a, I, #mapper_ty>,
+                Box<(dyn std::error::Error + Send + Sync + 'a)>
+            > where I: canyon_sql::core::DbConnection + Send + 'a + ?Sized
         {
-            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, database_type)
+            canyon_sql::query::SelectQueryBuilder::new(#table_schema_data, input)
         }
     }
 }
