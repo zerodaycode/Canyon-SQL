@@ -24,69 +24,69 @@ use std::future::Future;
 /// Also, you can find the written macro-code that performs the auto-mapping
 /// in the *canyon_sql_root::canyon_macros* crates, on the root of this project.
 pub trait CrudOperations<R>: Send + Sync
-    where
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>
+where
+    R: RowMapper,
+    Vec<R>: FromIterator<<R as RowMapper>::Output>,
 {
-    fn find_all() -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send;
+    fn find_all() -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send;
 
     fn find_all_with<'a, I>(
         input: I,
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn select_query<'a>() -> SelectQueryBuilder<'a, R>;
-    
+
     fn select_query_with<'a>(database_type: DatabaseType) -> SelectQueryBuilder<'a, R>;
 
-    fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send)>>> + Send;
-    
+    fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Send + Sync)>>> + Send;
+
     fn count_with<'a, I>(
         input: I,
-    ) -> impl Future<Output = Result<i64, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<i64, Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn find_by_pk<'a>(
         value: &'a dyn QueryParameter<'a>,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send;
-    
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'a)>>> + Send;
+
     fn find_by_pk_with<'a, I>(
         value: &'a dyn QueryParameter<'a>,
         input: I,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn insert<'a>(
         &'a mut self,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send;
 
     fn insert_with<'a, I>(
         &mut self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     // fn multi_insert<'a, T>(
     //     instances: &'a mut [&'a mut T],
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send;
+    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send;
     //
     // fn multi_insert_with<'a, T, I>(
     //     instances: &'a mut [&'a mut T],
     //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
     // where
     //     I: DbConnection + Send + 'a;
 
-    fn update(&self) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send;
+    fn update(&self) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send;
 
     fn update_with<'a, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
@@ -96,12 +96,12 @@ pub trait CrudOperations<R>: Send + Sync
     // where
     //     I: DbConnection + Send + 'a;
 
-    fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send)>>> + Send;
+    fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync)>>> + Send;
 
     fn delete_with<'a, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Sync + Send + 'a)>>> + Send
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
         I: DbConnection + Send + 'a;
 

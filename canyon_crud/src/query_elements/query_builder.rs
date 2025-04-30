@@ -146,7 +146,7 @@ impl<'a, R: RowMapper> QueryBuilder<'a, R> {
     pub async fn query<I: DbConnection + Send + 'a>(
         mut self,
         input: I,
-    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -269,7 +269,7 @@ impl<'a, R: RowMapper> SelectQueryBuilder<'a, R> {
     pub async fn query<I: DbConnection + Send + 'a>(
         self,
         input: I,
-    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -415,7 +415,7 @@ impl<'a, R: RowMapper> UpdateQueryBuilder<'a, R> {
     pub async fn query<I: DbConnection + Send + 'a>(
         self,
         input: I,
-    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -541,7 +541,7 @@ impl<'a, R: RowMapper> DeleteQueryBuilder<'a, R> {
     pub async fn query<I: DbConnection + Send + 'a>(
         self,
         input: I,
-    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+    ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {

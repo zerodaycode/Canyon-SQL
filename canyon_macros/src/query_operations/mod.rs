@@ -22,7 +22,7 @@ pub fn impl_crud_operations_trait_for_struct(
     table_schema_data: String,
 ) -> proc_macro::TokenStream {
     let mut crud_ops_tokens = TokenStream::new();
-    
+
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()

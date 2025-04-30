@@ -1,6 +1,6 @@
-use serde::Deserialize;
-use crate::connection::DEFAULT_DATASOURCE;
 use super::datasources::Auth;
+use crate::connection::DEFAULT_DATASOURCE;
+use serde::Deserialize;
 
 /// Holds the current supported databases by Canyon-SQL
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]

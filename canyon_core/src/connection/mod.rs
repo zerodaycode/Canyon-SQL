@@ -42,7 +42,7 @@ lazy_static! {
 
     pub static ref DATASOURCES: Vec<DatasourceConfig> =
         CONFIG_FILE.canyon_sql.datasources.clone();
-    
+
     pub static ref DEFAULT_DATASOURCE: &'static DatasourceConfig = DATASOURCES.first()
         .expect("No datasource configured");
 
@@ -82,11 +82,14 @@ fn find_canyon_config_file() -> PathBuf {
 pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
         let db_conn = DatabaseConnection::new(datasource).await;
-        
+
         if let Err(e) = db_conn {
-            panic!("Error opening database connection for {}. Err: {}", datasource.name, e);
+            panic!(
+                "Error opening database connection for {}. Err: {}",
+                datasource.name, e
+            );
         }
-        
+
         CACHED_DATABASE_CONN.lock().await.insert(
             &datasource.name,
             DatabaseConnection::new(datasource).await.unwrap(),

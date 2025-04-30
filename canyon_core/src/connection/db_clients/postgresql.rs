@@ -21,7 +21,7 @@ impl DbConnection for PostgreSqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send {
         postgres_query_launcher::query_rows(stmt, params, self)
     }
 
@@ -29,7 +29,7 @@ impl DbConnection for PostgreSqlConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -65,7 +65,7 @@ impl DbConnection for PostgreSqlConnection {
         postgres_query_launcher::execute(stmt, params, self)
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
         Ok(DatabaseType::PostgreSql)
     }
 }
@@ -82,7 +82,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: S,
         params: &[&'_ (dyn QueryParameter<'_>)],
         conn: &PostgreSqlConnection,
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -102,7 +102,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &PostgreSqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         let m_params: Vec<_> = params
             .iter()
             .map(|param| param.as_postgres_param())
@@ -118,7 +118,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &PostgreSqlConnection,
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
         R: RowMapper,
     {
@@ -142,7 +142,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &PostgreSqlConnection,
-    ) -> Result<T, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
         let m_params: Vec<_> = params
             .iter()
             .map(|param| param.as_postgres_param())
@@ -156,7 +156,7 @@ pub(crate) mod postgres_query_launcher {
         stmt: S,
         params: &[&'_ (dyn QueryParameter<'_>)],
         conn: &PostgreSqlConnection,
-    ) -> Result<u64, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<u64, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
     {

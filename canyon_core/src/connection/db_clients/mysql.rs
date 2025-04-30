@@ -23,7 +23,7 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send {
         mysql_query_launcher::query_rows(stmt, params, self)
     }
 
@@ -31,7 +31,7 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -44,7 +44,7 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         R: RowMapper,
     {
@@ -55,7 +55,7 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<T, Box<(dyn Error + Sync + Send)>>> + Send {
+    ) -> impl Future<Output = Result<T, Box<(dyn Error + Send + Sync)>>> + Send {
         mysql_query_launcher::query_one_for(stmt, params, self)
     }
 
@@ -63,11 +63,11 @@ impl DbConnection for MysqlConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send {
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send {
         mysql_query_launcher::execute(stmt, params, self)
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
         Ok(DatabaseType::MySQL)
     }
 }
@@ -92,7 +92,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter<'_>],
         conn: &MysqlConnection,
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -110,7 +110,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
     }
 
@@ -119,7 +119,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
         R: RowMapper,
     {
@@ -136,7 +136,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &MysqlConnection,
-    ) -> Result<T, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
         Ok(execute_query(stmt, params, conn)
             .await?
             .first()
@@ -151,7 +151,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter<'_>],
         conn: &MysqlConnection,
-    ) -> Result<Vec<Row>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<Row>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
     {
@@ -181,7 +181,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter<'_>],
         conn: &MysqlConnection,
-    ) -> Result<u64, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<u64, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
     {

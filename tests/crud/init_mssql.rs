@@ -26,13 +26,14 @@ fn initialize_sql_server_docker_instance() {
         "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true;Encrypt=true";
 
     canyon_sql::runtime::futures::executor::block_on(async {
-        let mut config = Config::from_ado_string(CONN_STR)
-            .expect("could not parse ado string");
+        let mut config = Config::from_ado_string(CONN_STR).expect("could not parse ado string");
 
         config.encryption(EncryptionLevel::NotSupported);
-        let tcp = TcpStream::connect(config.get_addr()).await
+        let tcp = TcpStream::connect(config.get_addr())
+            .await
             .expect("could not connect to stream 1");
-        let tcp2 = TcpStream::connect(config.get_addr()).await
+        let tcp2 = TcpStream::connect(config.get_addr())
+            .await
             .expect("could not connect to stream 2");
         tcp.set_nodelay(true).ok();
 

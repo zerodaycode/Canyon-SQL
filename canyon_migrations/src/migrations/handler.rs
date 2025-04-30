@@ -38,16 +38,23 @@ impl Migrations {
             );
 
             let mut migrations_processor = MigrationsProcessor::default();
-            let mut db_conn = canyon_core::connection::get_database_connection_by_ds(Some(&datasource.name))
-                .await
-                .unwrap_or_else(|_| panic!("Unable to get a database connection on the migrations processor for: {:?}", datasource.name));
+            let mut db_conn =
+                canyon_core::connection::get_database_connection_by_ds(Some(&datasource.name))
+                    .await
+                    .unwrap_or_else(|_| {
+                        panic!(
+                    "Unable to get a database connection on the migrations processor for: {:?}",
+                    datasource.name
+                )
+                    });
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;
 
             // Tracked entities that must be migrated whenever Canyon starts
             let schema_status =
-                Self::fetch_database(&datasource.name, &mut db_conn, datasource.get_db_type()).await;
+                Self::fetch_database(&datasource.name, &mut db_conn, datasource.get_db_type())
+                    .await;
             let database_tables_schema_info =
                 Self::map_rows(schema_status, datasource.get_db_type());
 

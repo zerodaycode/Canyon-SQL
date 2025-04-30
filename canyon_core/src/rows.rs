@@ -72,7 +72,7 @@ pub enum CanyonRows {
     #[cfg(feature = "mssql")]
     Tiberius(Vec<tiberius::Row>),
     #[cfg(feature = "mysql")]
-    MySQL(Vec<mysql_async::Row>)
+    MySQL(Vec<mysql_async::Row>),
 }
 
 impl IntoResults for Result<CanyonRows, CanyonError> {

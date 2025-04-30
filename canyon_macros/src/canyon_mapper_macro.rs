@@ -78,7 +78,8 @@ fn create_postgres_fields_mapping(
 }
 
 #[cfg(feature = "mysql")]
-#[allow(clippy::type_complexity)]fn create_mysql_fields_mapping(
+#[allow(clippy::type_complexity)]
+fn create_mysql_fields_mapping(
     fields: &[(Visibility, Ident, Type)],
 ) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
     fields.iter().map(|(_vis, ident, _ty)| {
@@ -156,8 +157,12 @@ fn get_deserializing_type(target_type: &str) -> TokenStream {
                 quote! { #tt }
             }
         })
-        .unwrap_or_else(|| panic!("Unable to process type: {} on the given struct for SqlServer",
-            target_type))
+        .unwrap_or_else(|| {
+            panic!(
+                "Unable to process type: {} on the given struct for SqlServer",
+                target_type
+            )
+        })
 }
 
 #[cfg(feature = "mssql")]

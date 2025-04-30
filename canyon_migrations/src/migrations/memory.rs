@@ -66,9 +66,14 @@ impl CanyonMemory {
     ) -> Self {
         let datasource_name = &datasource.name;
         let mut db_conn =
-            canyon_core::connection::get_database_connection_by_ds(Some(datasource_name)).await
-                .unwrap_or_else(|_| panic!("Unable to get a database connection on the migrations processor for: {:?}", datasource_name));
-
+            canyon_core::connection::get_database_connection_by_ds(Some(datasource_name))
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "Unable to get a database connection on the migrations processor for: {:?}",
+                        datasource_name
+                    )
+                });
 
         // Creates the memory table if not exists
         Self::create_memory(&datasource.name, &mut db_conn, &datasource.get_db_type()).await;

@@ -8,7 +8,7 @@ pub enum TransactionMethod {
     QueryOne,
     QueryOneFor,
     QueryRows,
-    Execute
+    Execute,
 }
 
 impl ToTokens for TransactionMethod {
@@ -115,7 +115,7 @@ impl MacroOperationBuilder {
             return quote! {};
         }
 
-        let mut generics = quote!{ < };
+        let mut generics = quote! { < };
 
         if self.lifetime {
             generics.extend(quote! { 'a, });
@@ -126,7 +126,7 @@ impl MacroOperationBuilder {
         if self.input_param.is_some() {
             generics.extend(quote! { I });
         }
-        generics.extend(quote!{ > });
+        generics.extend(quote! { > });
         generics
     }
 
@@ -193,12 +193,12 @@ impl MacroOperationBuilder {
     pub fn type_is_row_mapper(mut self) -> Self {
         self.type_is_row_mapper = true;
         let ret_ty = self.get_organic_ret_ty();
-        self.where_clause_bounds.push(quote!{
+        self.where_clause_bounds.push(quote! {
             R: RowMapper<Output = #ret_ty>
         });
         self
     }
-    
+
     fn get_organic_ret_ty(&self) -> TokenStream {
         if let Some(return_ty_ts) = &self.return_type_ts {
             let rt_ts = return_ty_ts;

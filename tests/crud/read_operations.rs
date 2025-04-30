@@ -56,7 +56,6 @@ fn test_crud_find_all_with_mysql() {
     assert!(!find_all_result.unwrap().is_empty());
 }
 
-
 /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
 /// defined with the #[primary_key] attribute over some field of the type.
 ///
@@ -142,10 +141,7 @@ fn test_crud_count_operation() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_count_with_operation_mssql() {
     assert_eq!(
-        League::find_all_with(SQL_SERVER_DS)
-            .await
-            .unwrap()
-            .len() as i64,
+        League::find_all_with(SQL_SERVER_DS).await.unwrap().len() as i64,
         League::count_with(SQL_SERVER_DS).await.unwrap()
     );
 }
@@ -156,10 +152,7 @@ fn test_crud_count_with_operation_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_count_with_operation_mysql() {
     assert_eq!(
-        League::find_all_with(MYSQL_DS)
-            .await
-            .unwrap()
-            .len() as i64,
+        League::find_all_with(MYSQL_DS).await.unwrap().len() as i64,
         League::count_with(MYSQL_DS).await.unwrap()
     );
 }

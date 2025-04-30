@@ -25,6 +25,8 @@ impl Parse for CanyonCrudAttribute {
         // Parse the argument value
         let name = input.parse()?;
 
-        Ok(Self { maps_to: Some(name) })
+        Ok(Self {
+            maps_to: Some(name),
+        })
     }
 }

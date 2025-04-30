@@ -29,7 +29,7 @@ impl<'a> MacroTokens<'a> {
             },
         }
     }
-    
+
     // TODO: this must be refactored in order to avoid to make the operation everytime that
     // this method is queried. The trick w'd be to have a map to relate the entries.
     pub fn retrieve_mapping_target_type(&self) -> Result<Option<Ident>, syn::Error> {

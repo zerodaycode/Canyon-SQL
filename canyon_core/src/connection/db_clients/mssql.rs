@@ -21,7 +21,7 @@ impl DbConnection for SqlServerConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send {
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send {
         sqlserver_query_launcher::query_rows(stmt, params, self)
     }
 
@@ -29,7 +29,7 @@ impl DbConnection for SqlServerConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -65,7 +65,7 @@ impl DbConnection for SqlServerConnection {
         sqlserver_query_launcher::execute(stmt, params, self)
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
         Ok(DatabaseType::SqlServer)
     }
 }
@@ -82,7 +82,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: S,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &SqlServerConnection,
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -103,7 +103,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
         conn: &SqlServerConnection,
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         let result = execute_query(stmt, params, conn)
             .await?
             .into_results()

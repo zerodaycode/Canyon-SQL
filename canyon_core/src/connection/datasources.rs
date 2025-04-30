@@ -114,11 +114,13 @@ impl DatasourceConfig {
     pub fn get_db_type(&self) -> DatabaseType {
         self.auth.get_db_type()
     }
-    
+
     pub fn has_migrations_enabled(&self) -> bool {
         if let Some(migrations) = self.properties.migrations {
             migrations.has_migrations_enabled()
-        } else { false }
+        } else {
+            false
+        }
     }
 }
 

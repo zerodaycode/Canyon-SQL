@@ -52,8 +52,7 @@ pub trait FieldIdentifier
 ///     IntVariant(i32)
 /// }
 /// ```
-pub trait FieldValueIdentifier<'a>
-{
+pub trait FieldValueIdentifier<'a> {
     fn value(self) -> (&'static str, &'a dyn QueryParameter<'a>);
 }
 

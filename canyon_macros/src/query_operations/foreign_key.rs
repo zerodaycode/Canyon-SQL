@@ -81,11 +81,11 @@ fn generate_find_by_foreign_key_tokens(
             );
             let quoted_method_signature: TokenStream = quote! {
                 async fn #method_name_ident<'a>(&self) ->
-                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
             };
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, I>(&self, input: I) ->
-                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where I: canyon_sql::core::DbConnection + Send + 'a
             };
 
@@ -154,15 +154,15 @@ fn generate_find_by_reverse_foreign_key_tokens(
             );
             let quoted_method_signature: TokenStream = quote! {
                 async fn #method_name_ident<'a, R, F>(value: &F)
-                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where R: RowMapper,
-                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send
+                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Send + Sync
             };
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, R, F, I> (value: &F, input: I)
-                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Sync + Send + 'a)>>
+                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where R: RowMapper,
-                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Sync + Send,
+                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Send + Sync,
                     I: canyon_sql::core::DbConnection + Send + 'a
             };
 

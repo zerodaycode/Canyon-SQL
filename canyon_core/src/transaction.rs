@@ -10,7 +10,7 @@ pub trait Transaction {
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
         input: impl DbConnection + Send,
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>>
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -23,7 +23,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send,
@@ -36,7 +36,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<F, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<F, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
@@ -51,7 +51,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
@@ -63,7 +63,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,

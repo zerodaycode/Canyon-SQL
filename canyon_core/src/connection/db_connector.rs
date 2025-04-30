@@ -22,13 +22,13 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Sync + Send)>>> + Send;
+    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send;
 
     fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -38,7 +38,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>> + Send
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         R: RowMapper;
 
@@ -52,7 +52,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<T, Box<(dyn Error + Sync + Send)>>> + Send;
+    ) -> impl Future<Output = Result<T, Box<(dyn Error + Send + Sync)>>> + Send;
 
     /// Executes the given SQL statement against the target database, being any implementor of self,
     /// returning only a numerical positive integer number reflecting the number of affected rows
@@ -60,9 +60,9 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Sync + Send)>>> + Send;
+    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send;
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>>;
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>>;
 }
 
 /// This impl of [` DbConnection` ] for [`&str`] allows the client to use the exposed input types
@@ -74,7 +74,7 @@ impl DbConnection for &str {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         let conn = get_database_connection_by_ds(Some(self)).await?;
         conn.query_rows(stmt, params).await
     }
@@ -83,7 +83,7 @@ impl DbConnection for &str {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -97,7 +97,7 @@ impl DbConnection for &str {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
         R: RowMapper,
     {
@@ -110,7 +110,7 @@ impl DbConnection for &str {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<T, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
         conn.query_one_for(stmt, params).await
@@ -120,13 +120,13 @@ impl DbConnection for &str {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<u64, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
         let sane_ds_name = if !self.is_empty() { Some(*self) } else { None };
         let conn = get_database_connection_by_ds(sane_ds_name).await?;
         conn.execute(stmt, params).await
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
         Ok(find_datasource_by_name_or_try_default(Some(*self))?.get_db_type())
     }
 }
@@ -150,7 +150,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         db_conn_launch_impl(self, stmt, params).await
     }
 
@@ -158,7 +158,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -180,7 +180,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
         R: RowMapper,
     {
@@ -191,7 +191,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<T, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
         match self {
             #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(client) => client.query_one_for(stmt, params).await,
@@ -207,7 +207,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<u64, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
         match self {
             #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(client) => client.execute(stmt, params).await,
@@ -220,7 +220,7 @@ impl DbConnection for DatabaseConnection {
         }
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
         Ok(self.get_db_type())
     }
 }
@@ -230,14 +230,14 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         db_conn_launch_impl(self, stmt, params).await
     }
     async fn query<'a, S, R>(
         &self,
         stmt: S,
         params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Display + Send,
         R: RowMapper,
@@ -259,7 +259,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Sync + Send)>>
+    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
         R: RowMapper,
     {
@@ -270,7 +270,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<T, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
         match self {
             #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(client) => client.query_one_for(stmt, params).await,
@@ -287,7 +287,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<u64, Box<(dyn Error + Sync + Send)>> {
+    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
         match self {
             #[cfg(feature = "postgres")]
             DatabaseConnection::Postgres(client) => client.execute(stmt, params).await,
@@ -300,7 +300,7 @@ impl DbConnection for &mut DatabaseConnection {
         }
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Sync + Send)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
         Ok(self.get_db_type())
     }
 }
@@ -407,12 +407,12 @@ mod connection_helpers {
         tiberius_config.authentication(auth_config);
         tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
         tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
-        // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
-        // https://github.com/prisma/tiberius/issues/364
-        
+                                                                             // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
+                                                                             // https://github.com/prisma/tiberius/issues/364
+
         let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
         tcp.set_nodelay(true)?;
-        
+
         let client = tiberius::Client::connect(tiberius_config, tcp).await?;
 
         Ok(DatabaseConnection::SqlServer(SqlServerConnection {
@@ -443,8 +443,7 @@ mod connection_helpers {
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => "mysql",
             #[cfg(feature = "mssql")]
-            DatabaseType::SqlServer => ""
-                // # todo!("Connection string for MSSQL should never be reached"),
+            DatabaseType::SqlServer => "", // # todo!("Connection string for MSSQL should never be reached"),
         };
         format!(
             "{server}://{user}:{pswd}@{host}:{port}/{db}",

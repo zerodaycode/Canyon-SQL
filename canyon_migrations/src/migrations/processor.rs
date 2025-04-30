@@ -585,9 +585,15 @@ impl MigrationsProcessor {
             for query_to_execute in datasource.1 {
                 let datasource_name = datasource.0;
 
-                let db_conn = canyon_core::connection::get_database_connection_by_ds(Some(datasource_name))
-                    .await
-                    .unwrap_or_else(|_| panic!("Unable to get a database connection on the migrations processor for: {:?}", datasource_name));
+                let db_conn =
+                    canyon_core::connection::get_database_connection_by_ds(Some(datasource_name))
+                        .await
+                        .unwrap_or_else(|_| {
+                            panic!(
+                        "Unable to get a database connection on the migrations processor for: {:?}",
+                        datasource_name
+                    )
+                        });
 
                 let res = Self::query_rows(query_to_execute, [], db_conn).await;
 

@@ -10,7 +10,7 @@ use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
-pub trait QueryParameter<'a>: std::fmt::Debug + Sync + Send {
+pub trait QueryParameter<'a>: std::fmt::Debug + Send + Sync {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     #[cfg(feature = "mssql")]
