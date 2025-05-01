@@ -1,6 +1,6 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-
+use crate::query_operations::doc_comments;
 use crate::query_operations::update::__details::*;
 use crate::utils::macro_tokens::MacroTokens;
 
@@ -23,50 +23,54 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let update_values = fields.iter().map(|ident| {
         quote! { &self.#ident }
     });
-    let update_values_cloned = update_values.clone();
+    
+    let update_signature = quote! {
+        /// Updates a database record that matches the current instance of a T type, returning a
+        /// result indicating a possible failure querying the database.
+        async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>> 
+    };
+    let update_with_signature = quote! { 
+        async fn update_with<'a, I>(&self, input: I)
+            -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
+        where I: canyon_sql::core::DbConnection + Send + 'a
+    };
 
     if let Some(primary_key) = macro_data.get_primary_key_annotation() {
         let pk_ident = Ident::new(&primary_key, Span::call_site());
+        let stmt = quote!{format!(
+            "UPDATE {} SET {} WHERE {} = ${:?}",
+            #table_schema_data, #str_columns_values, #primary_key, &self.#pk_ident
+        )};
+        let update_values = quote! {
+            &[#(#update_values),*]
+        };
 
         update_ops_tokens.extend(quote! {
-            /// Updates a database record that matches
-            /// the current instance of a T type, returning a result
-            /// indicating a possible failure querying the database.
-            async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>> {
-                let stmt = format!(
-                    "UPDATE {} SET {} WHERE {} = ${:?}",
-                    #table_schema_data, #str_columns_values, #primary_key, &self.#pk_ident
-                );
-                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values),*];
-
-                <#ty as canyon_sql::core::Transaction>::execute(stmt, update_values, "").await
+            #update_signature {
+                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = #update_values;
+                <#ty as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
             }
-            /// Updates a database record that matches
-            /// the current instance of a T type, returning a result
-            /// indicating a possible failure querying the database with the
-            /// specified datasource
-            async fn update_with<'a, I>(&self, input: I)
-                -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
-            where I: canyon_sql::core::DbConnection + Send + 'a
-            {
-                let stmt = format!(
-                    "UPDATE {} SET {} WHERE {} = ${:?}",
-                    #table_schema_data, #str_columns_values, #primary_key, &self.#pk_ident
-                );
-                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = &[#(#update_values_cloned),*];
-
-                <#ty as canyon_sql::core::Transaction>::execute(stmt, update_values, input).await
+            #update_with_signature {
+                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = #update_values;
+                <#ty as canyon_sql::core::Transaction>::execute(#stmt, update_values, input).await
             }
         });
     } else {
         // If there's no primary key, update method over self won't be available.
         // Use instead the update associated function of the querybuilder
-        let update_err_tokens = create_update_err_macro(ty);
-        let update_err_with_tokens = create_update_err_with_macro(ty);
+        let err_msg = doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE; // TODO: not on doc comments pls
+        let no_pk_err = quote! {
+            Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    #err_msg
+                ).into_inner().unwrap()
+            )
+        }; // TODO: waiting for creating our custom error types
 
         update_ops_tokens.extend(quote! {
-            #update_err_tokens
-            #update_err_with_tokens
+            #update_signature { #no_pk_err }
+            #update_with_signature{ #no_pk_err }
         });
     }
 
@@ -78,7 +82,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
 /// Generates the TokenStream for the __update() CRUD operation
 /// being the query generated with the [`QueryBuilder`]
-fn generate_update_query_tokens(ty: &Ident, table_schema_data: &String) -> TokenStream {
+fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -112,17 +116,19 @@ fn generate_update_query_tokens(ty: &Ident, table_schema_data: &String) -> Token
 mod __details {
     use crate::query_operations::doc_comments;
     use crate::query_operations::macro_template::MacroOperationBuilder;
-    use proc_macro2::{Ident, Span};
+    use proc_macro2::{Ident, Span, TokenStream};
+    use quote::quote;
 
-    pub fn create_update_err_macro(ty: &syn::Ident) -> MacroOperationBuilder {
-        MacroOperationBuilder::new()
-            .fn_name("update")
-            .with_self_as_ref()
-            .user_type(ty)
-            .return_type(&Ident::new("u64", Span::call_site()))
-            .raw_return()
-            .add_doc_comment(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
-            .with_direct_error_return(doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE)
+    pub fn create_update_err_macro(ty: &syn::Ident) -> TokenStream {
+        let err_msg = doc_comments::UNAVAILABLE_CRUD_OP_ON_INSTANCE; // TODO: not on doc comments pls
+        quote! {
+            Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    #err_msg
+                )
+            ).into_inner().unwrap()
+        } // TODO: waiting for creating our custom error types
     }
 
     pub fn create_update_err_with_macro(ty: &syn::Ident) -> MacroOperationBuilder {

@@ -75,6 +75,7 @@ where
     where
         I: DbConnection + Send + 'a;
 
+    // TODO: the horripilant multi_insert MUST be replaced with a batch insert
     // fn multi_insert<'a, T>(
     //     instances: &'a mut [&'a mut T],
     // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send;

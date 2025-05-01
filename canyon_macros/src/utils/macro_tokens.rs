@@ -16,6 +16,11 @@ pub struct MacroTokens<'a> {
     pub fields: &'a Fields,
 }
 
+// TODO: this struct, as is, is not really useful. There's tons of methods that must be called and
+// process data everytime a Crud Operation needs them. W'd be much more efficient to have a struct
+// that holds most of the data already processed, for example, the pk annotations,
+// the fk operations, the mapping target type...
+
 impl<'a> MacroTokens<'a> {
     pub fn new(ast: &'a DeriveInput) -> Self {
         Self {

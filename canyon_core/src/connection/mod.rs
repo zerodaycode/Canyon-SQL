@@ -31,6 +31,13 @@ use lazy_static::lazy_static;
 use tokio::sync::Mutex;
 use walkdir::WalkDir;
 
+// TODO's: DatabaseConnection and DataSource can implement default, so there's no need to use str and &str
+// as defaults anymore, since the can load as the default the first one defined in the config file, or have more
+// complex workflows that are deferred to initialization time
+// NOTE: There's some way to read the cfg at compile time, an if there's no datasource defined, for the ops that
+// handle the db connection (the _with ones) to just look for a datasource -> runtime in the cfg file?
+// TODO: Crud Operations should be split into two different derives, splitting the automagic from the _with ones
+// TODO: T
 lazy_static! {
     pub static ref CANYON_TOKIO_RUNTIME: tokio::runtime::Runtime =
         tokio::runtime::Runtime::new()  // TODO Make the config with the builder
