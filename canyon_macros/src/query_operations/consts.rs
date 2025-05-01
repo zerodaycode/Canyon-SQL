@@ -6,6 +6,11 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, Type};
 
+pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str =
+    "Operation is unavailable. T doesn't contain a #[primary_key]\
+    annotation. You must construct the query with the QueryBuilder type\
+    (<op_type>_query method for the CrudOperations implementors";
+
 thread_local! {
     pub static USER_MOCK_TY: RefCell<Ident> = RefCell::new(Ident::new("User", Span::call_site()));
     pub static USER_MOCK_MAPPER_TY: RefCell<Ident> = RefCell::new(Ident::new("User", Span::call_site()));

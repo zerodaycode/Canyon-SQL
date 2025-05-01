@@ -116,7 +116,7 @@ impl<'a> MacroTokens<'a> {
     }
 
     /// Retrieves the fields of the Struct as continuous String, comma separated
-    pub fn get_struct_fields_as_strings(&self) -> String {
+    pub fn _get_struct_fields_as_strings(&self) -> String {
         let column_names: String = self
             .get_struct_fields()
             .iter()

@@ -31,7 +31,6 @@ pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 /// will be called though macro code to obtain the &str representation
 /// of the field name.
 pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
-    let ty = &canyon_entity.struct_name;
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new((struct_name + "Field").as_str(), Span::call_site());
 
@@ -93,7 +92,6 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
 /// The type of the inner value `(Enum::Variant(SomeType))` is the same
 /// that the field that the variant represents
 pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenStream {
-    let ty = &canyon_entity.struct_name;
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new((struct_name + "FieldValue").as_str(), Span::call_site());
 

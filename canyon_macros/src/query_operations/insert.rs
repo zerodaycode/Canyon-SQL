@@ -182,14 +182,14 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 ///
 /// This, also lets the user have the option to be able to insert multiple
 /// [`T`] objects in only one query
-fn generate_multiple_insert_tokens(
+fn _generate_multiple_insert_tokens(
     macro_data: &MacroTokens,
     table_schema_data: &String,
 ) -> TokenStream {
     let ty = macro_data.ty;
 
     // Retrieves the fields of the Struct as continuous String
-    let column_names = macro_data.get_struct_fields_as_strings();
+    let column_names = macro_data._get_struct_fields_as_strings();
 
     // Retrieves the fields of the Struct
     let fields = macro_data.get_struct_fields();

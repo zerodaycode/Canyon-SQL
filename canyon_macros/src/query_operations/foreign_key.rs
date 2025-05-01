@@ -140,6 +140,10 @@ fn generate_find_by_reverse_foreign_key_tokens(
 ) -> Vec<(TokenStream, TokenStream)> {
     let mut rev_fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
     let ty = macro_data.ty;
+    let mapper_ty = macro_data
+        .retrieve_mapping_target_type()
+        .expect("Expected mapping target <maps_to>")
+        .unwrap_or_else(|| ty.clone());
 
     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
@@ -153,15 +157,15 @@ fn generate_find_by_reverse_foreign_key_tokens(
                 proc_macro2::Span::call_site(),
             );
             let quoted_method_signature: TokenStream = quote! {
-                async fn #method_name_ident<'a, R, F>(value: &F)
-                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                where R: RowMapper,
+                async fn #method_name_ident<'a, F>(value: &F)
+                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                where
                     F: canyon_sql::crud::bounds::ForeignKeyable<F> + Send + Sync
             };
             let quoted_with_method_signature: TokenStream = quote! {
-                async fn #method_name_ident_with<'a, R, F, I> (value: &F, input: I)
-                    -> Result<Vec<#ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                where R: RowMapper,
+                async fn #method_name_ident_with<'a, F, I> (value: &F, input: I)
+                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                where
                     F: canyon_sql::crud::bounds::ForeignKeyable<F> + Send + Sync,
                     I: canyon_sql::core::DbConnection + Send + 'a
             };
@@ -180,13 +184,13 @@ fn generate_find_by_reverse_foreign_key_tokens(
                                 "Column: {:?} not found in type: {:?}", #column, #table
                             ).as_str());
 
-                        let stmt = format!(
+                        let stmt = &format!(
                             "SELECT * FROM {} WHERE {} = $1",
                             #table_schema_data,
                             format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        <#ty as canyon_sql::core::Transaction>::query(
+                        <#ty as canyon_sql::core::Transaction>::query::<&str, #mapper_ty>(
                             stmt,
                             &[lookage_value],
                             ""
@@ -208,17 +212,13 @@ fn generate_find_by_reverse_foreign_key_tokens(
                                 "Column: {:?} not found in type: {:?}", #column, #table
                             ).as_str());
 
-                        let stmt = format!(
+                        let stmt = &format!(
                             "SELECT * FROM {} WHERE {} = $1",
                             #table_schema_data,
                             format!("\"{}\"", #f_ident).as_str()
                         );
 
-                        <#ty as canyon_sql::core::Transaction>::query(
-                            stmt,
-                            &[lookage_value],
-                            input
-                        ).await
+                        input.query::<&str, #mapper_ty>(stmt, &[lookage_value]).await
                     }
                 },
             ));

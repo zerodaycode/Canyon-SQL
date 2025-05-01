@@ -7,22 +7,12 @@ use tokio_postgres::{self};
 
 use crate::mapper::{CanyonError, IntoResults, RowMapper};
 use crate::row::Row;
-use std::error::Error;
 
 use cfg_if::cfg_if;
 
 // Helper macro to conditionally add trait bounds
 // these are the hacky intermediate traits
 cfg_if! {
-  // if #[cfg(feature = "postgres")] {
-  //   trait FromSql<'a, T> where T: tokio_postgres::types::FromSql<'a> { }
-  // } else if #[cfg(feature = "mssql")] {
-  //   trait FromSql<'a, T> where T: tiberius::FromSql<'a> { }
-  // } else if #[cfg(feature = "mysql")] {
-  //   trait FromSql<'a, T> where T: mysql_async::types::FromSql<'a> { }
-  // }
-
-    // } else if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
     if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
       pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>
         + tiberius::FromSql<'a>

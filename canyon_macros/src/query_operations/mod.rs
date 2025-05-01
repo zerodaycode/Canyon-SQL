@@ -15,7 +15,6 @@ pub mod update;
 
 mod consts;
 mod doc_comments;
-mod macro_template;
 
 pub fn impl_crud_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,

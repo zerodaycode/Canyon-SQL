@@ -120,7 +120,7 @@ fn test_crud_insert_with_mysql_operation() {
 
     assert_eq!(new_league.id, inserted_league.id);
 }
-// 
+//
 // /// The multi insert operation is a shorthand for insert multiple instances of *T*
 // /// in the database at once.
 // ///
@@ -158,7 +158,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         region: "The dark side of the moon".to_string(),
 //         image_url: "https://interplanetary-league.io".to_string(),
 //     };
-// 
+//
 //     // Insert the instance as database entities
 //     new_league_mi
 //         .insert()
@@ -172,7 +172,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         .insert()
 //         .await
 //         .expect("Failed insert datasource operation");
-// 
+//
 //     // Recover the inserted data by primary key
 //     let inserted_league = League::find_by_pk(&new_league_mi.id)
 //         .await
@@ -186,12 +186,12 @@ fn test_crud_insert_with_mysql_operation() {
 //         .await
 //         .expect("[3] - Failed the query to the database")
 //         .expect("[3] - No entity found for the primary key value passed in");
-// 
+//
 //     assert_eq!(new_league_mi.id, inserted_league.id);
 //     assert_eq!(new_league_mi_2.id, inserted_league_2.id);
 //     assert_eq!(new_league_mi_3.id, inserted_league_3.id);
 // }
-// 
+//
 // /// Same as the multi insert above, but with the specified datasource
 // #[cfg(feature = "mssql")]
 // #[canyon_sql::macros::canyon_tokio_test]
@@ -220,7 +220,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         region: "The dark side of the moon".to_string(),
 //         image_url: "https://interplanetary-league.io".to_string(),
 //     };
-// 
+//
 //     // Insert the instance as database entities
 //     new_league_mi
 //         .insert_with(SQL_SERVER_DS)
@@ -234,7 +234,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         .insert_with(SQL_SERVER_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
-// 
+//
 //     // Recover the inserted data by primary key
 //     let inserted_league = League::find_by_pk_with(&new_league_mi.id, SQL_SERVER_DS)
 //         .await
@@ -248,12 +248,12 @@ fn test_crud_insert_with_mysql_operation() {
 //         .await
 //         .expect("[3] - Failed the query to the database")
 //         .expect("[3] - No entity found for the primary key value passed in");
-// 
+//
 //     assert_eq!(new_league_mi.id, inserted_league.id);
 //     assert_eq!(new_league_mi_2.id, inserted_league_2.id);
 //     assert_eq!(new_league_mi_3.id, inserted_league_3.id);
 // }
-// 
+//
 // /// Same as the multi insert above, but with the specified datasource
 // #[cfg(feature = "mysql")]
 // #[canyon_sql::macros::canyon_tokio_test]
@@ -282,7 +282,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         region: "The dark side of the moon".to_string(),
 //         image_url: "https://interplanetary-league.io".to_string(),
 //     };
-// 
+//
 //     // Insert the instance as database entities
 //     new_league_mi
 //         .insert_with(MYSQL_DS)
@@ -296,7 +296,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         .insert_with(MYSQL_DS)
 //         .await
 //         .expect("Failed insert datasource operation");
-// 
+//
 //     // Recover the inserted data by primary key
 //     let inserted_league = League::find_by_pk_with(&new_league_mi.id, MYSQL_DS)
 //         .await
@@ -310,7 +310,7 @@ fn test_crud_insert_with_mysql_operation() {
 //         .await
 //         .expect("[3] - Failed the query to the database")
 //         .expect("[3] - No entity found for the primary key value passed in");
-// 
+//
 //     assert_eq!(new_league_mi.id, inserted_league.id);
 //     assert_eq!(new_league_mi_2.id, inserted_league_2.id);
 //     assert_eq!(new_league_mi_3.id, inserted_league_3.id);

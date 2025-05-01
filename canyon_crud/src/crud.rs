@@ -1,7 +1,6 @@
 use crate::query_elements::query_builder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
-use canyon_core::connection::database_type::DatabaseType;
 use canyon_core::connection::db_connector::DbConnection;
 use canyon_core::mapper::RowMapper;
 use canyon_core::query_parameters::QueryParameter;
@@ -96,11 +95,14 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // fn update_query<'a>() -> UpdateQueryBuilder<'a>;
-    //
-    // fn update_query_with<'a, I>(input: I) -> UpdateQueryBuilder<'a>
-    // where
-    //     I: DbConnection + Send + 'a;
+    fn update_query<'a>(
+    ) -> Result<UpdateQueryBuilder<'a, str, R>, Box<(dyn Error + Send + Sync + 'a)>>;
+
+    fn update_query_with<'a, I>(
+        input: &'a I,
+    ) -> Result<UpdateQueryBuilder<'a, I, R>, Box<(dyn Error + Send + Sync + 'a)>>
+    where
+        I: DbConnection + Send + 'a + ?Sized;
 
     fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync)>>> + Send;
 
@@ -111,9 +113,12 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    // fn delete_query<'a>() -> DeleteQueryBuilder<'a>;
-    //
-    // fn delete_query_with<'a, I>(input: I) -> DeleteQueryBuilder<'a>
-    // where
-    //     I: DbConnection + Send + 'a;
+    fn delete_query<'a>(
+    ) -> Result<DeleteQueryBuilder<'a, str, R>, Box<(dyn Error + Send + Sync + 'a)>>;
+
+    fn delete_query_with<'a, I>(
+        input: &'a I,
+    ) -> Result<DeleteQueryBuilder<'a, I, R>, Box<(dyn Error + Send + Sync + 'a)>>
+    where
+        I: DbConnection + Send + 'a + ?Sized;
 }

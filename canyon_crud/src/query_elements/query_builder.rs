@@ -61,27 +61,27 @@ pub mod ops {
         /// Generates a `WHERE` SQL clause for constraint the query.
         ///
         /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-        ///     column name and the value for the filter
+        ///   column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
-        ///     or equality binary operator
+        ///   or equality binary operator
         fn r#where<Z: FieldValueIdentifier<'a>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates an `AND` SQL clause for constraint the query.
         ///
         /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-        ///     column name and the value for the filter
+        ///   column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
-        ///     or equality binary operator
+        ///   or equality binary operator
         fn and<Z: FieldValueIdentifier<'a>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates an `AND` SQL clause for constraint the query that will create
         /// the filter in conjunction with an `IN` operator that will ac
         ///
         /// * `column` - A [`FieldIdentifier`] that will provide the target
-        ///     column name for the filter, based on the variant that represents
-        ///     the field name that maps the targeted column name
+        ///   column name for the filter, based on the variant that represents
+        ///   the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameter`] with the values to filter
-        ///     inside the `IN` operator
+        ///   inside the `IN` operator
         fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> Self
         where
             Z: FieldIdentifier,
@@ -91,10 +91,10 @@ pub mod ops {
         /// the filter in conjunction with an `IN` operator that will ac
         ///
         /// * `column` - A [`FieldIdentifier`] that will provide the target
-        ///     column name for the filter, based on the variant that represents
-        ///     the field name that maps the targeted column name
+        ///   column name for the filter, based on the variant that represents
+        ///   the field name that maps the targeted column name
         /// * `values` - An array of [`QueryParameter`] with the values to filter
-        ///     inside the `IN` operator
+        ///   inside the `IN` operator
         fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> Self
         where
             Z: FieldIdentifier,
@@ -103,9 +103,9 @@ pub mod ops {
         /// Generates an `OR` SQL clause for constraint the query.
         ///
         /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-        ///     column name and the value for the filter
+        ///   column name and the value for the filter
         /// * `op` - Any element that implements [`Operator`] for create the comparison
-        ///     or equality binary operator
+        ///   or equality binary operator
         fn or<Z: FieldValueIdentifier<'a>>(self, column: Z, op: impl Operator) -> Self;
 
         /// Generates a `ORDER BY` SQL clause for constraint the query.
@@ -126,7 +126,7 @@ pub struct QueryBuilder<'a, I: DbConnection + ?Sized, R: RowMapper> {
     pd: PhantomData<R>,
 }
 
-unsafe impl<'a, I: DbConnection + ?Sized, R: RowMapper> Sync for QueryBuilder<'a, I, R> {}
+unsafe impl<I: DbConnection + ?Sized, R: RowMapper> Sync for QueryBuilder<'_, I, R> {}
 
 impl<'a, I: DbConnection + ?Sized, R: RowMapper> QueryBuilder<'a, I, R> {
     pub fn new(sql: String, input: &'a I) -> Result<Self, Box<(dyn Error + Send + Sync + 'a)>> {
@@ -390,12 +390,12 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> ops::QueryBuilder<'a>
 /// Contains the specific database operations of the *UPDATE* SQL statements.
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
-///     update with the provided values
-pub struct UpdateQueryBuilder<'a, I: DbConnection, R: RowMapper> {
+///   update with the provided values
+pub struct UpdateQueryBuilder<'a, I: DbConnection + ?Sized, R: RowMapper> {
     _inner: QueryBuilder<'a, I, R>,
 }
 
-impl<'a, I: DbConnection, R: RowMapper> UpdateQueryBuilder<'a, I, R> {
+impl<'a, I: DbConnection + ?Sized, R: RowMapper> UpdateQueryBuilder<'a, I, R> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(
         table_schema_data: &str,
@@ -408,7 +408,7 @@ impl<'a, I: DbConnection, R: RowMapper> UpdateQueryBuilder<'a, I, R> {
 
     /// Launches the generated query to the database pointed by the selected datasource
     #[inline]
-    pub async fn query(self, input: I) -> Result<Vec<R>, Box<(dyn Error + Send + Sync + 'a)>>
+    pub async fn query(self) -> Result<Vec<R>, Box<(dyn Error + Send + Sync + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -455,7 +455,9 @@ impl<'a, I: DbConnection, R: RowMapper> UpdateQueryBuilder<'a, I, R> {
     }
 }
 
-impl<'a, I: DbConnection, R: RowMapper> ops::QueryBuilder<'a> for UpdateQueryBuilder<'a, I, R> {
+impl<'a, I: DbConnection + ?Sized, R: RowMapper> ops::QueryBuilder<'a>
+    for UpdateQueryBuilder<'a, I, R>
+{
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()
@@ -515,12 +517,12 @@ impl<'a, I: DbConnection, R: RowMapper> ops::QueryBuilder<'a> for UpdateQueryBui
 /// *DELETE* SQL statements.
 ///
 /// * `set` - To construct a new `SET` clause to determine the columns to
-///     update with the provided values
-pub struct DeleteQueryBuilder<'a, I: DbConnection, R: RowMapper> {
+///   update with the provided values
+pub struct DeleteQueryBuilder<'a, I: DbConnection + ?Sized, R: RowMapper> {
     _inner: QueryBuilder<'a, I, R>,
 }
 
-impl<'a, I: DbConnection, R: RowMapper> DeleteQueryBuilder<'a, I, R> {
+impl<'a, I: DbConnection + ?Sized, R: RowMapper> DeleteQueryBuilder<'a, I, R> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(
         table_schema_data: &str,
@@ -533,7 +535,7 @@ impl<'a, I: DbConnection, R: RowMapper> DeleteQueryBuilder<'a, I, R> {
 
     /// Launches the generated query to the database pointed by the selected datasource
     #[inline]
-    pub async fn query(self, input: I) -> Result<Vec<R>, Box<(dyn Error + Send + Sync + 'a)>>
+    pub async fn query(self) -> Result<Vec<R>, Box<(dyn Error + Send + Sync + 'a)>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -541,7 +543,9 @@ impl<'a, I: DbConnection, R: RowMapper> DeleteQueryBuilder<'a, I, R> {
     }
 }
 
-impl<'a, I: DbConnection, R: RowMapper> ops::QueryBuilder<'a> for DeleteQueryBuilder<'a, I, R> {
+impl<'a, I: DbConnection + ?Sized, R: RowMapper> ops::QueryBuilder<'a>
+    for DeleteQueryBuilder<'a, I, R>
+{
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()

@@ -117,11 +117,11 @@ fn generate_find_by_pk_operations_tokens(
         let err_msg = consts::FIND_BY_PK_ERR_NO_PK;
         Some(quote! {
             Err(
-                    std::io::Error::new(
-                        std::io::ErrorKind::Unsupported,
-                        #err_msg,
-                    ).into_inner().unwrap()
-                )
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    #err_msg,
+                ).into_inner().unwrap()
+            )
         })
     };
     let stmt = format!(
@@ -339,7 +339,6 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_count_macro() {
         let ty = syn::parse_str::<Ident>("User").unwrap();
-        let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
         let tokens = create_count_macro(&ty, COUNT_STMT);
         let generated = tokens.to_string();
 
