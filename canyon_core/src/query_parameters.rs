@@ -19,11 +19,11 @@ pub trait QueryParameter<'a>: std::fmt::Debug + Send + Sync {
     fn as_mysql_param(&self) -> &dyn ToValue;
 }
 
-/// The implementation of the [`canyon_core::connection::tiberius`] [`IntoSql`] for the
+/// The implementation of the [`crate::connection::tiberius`] [`IntoSql`] for the
 /// query parameters.
 ///
 /// This implementation is necessary because of the generic amplitude
-/// of the arguments of the [`Transaction::query`], that should work with
+/// of the arguments of the [`crate::transaction::Transaction::query`], that should work with
 /// a collection of [`QueryParameter<'a>`], in order to allow a workflow
 /// that is not dependent of the specific type of the argument that holds
 /// the query parameters of the database connectors

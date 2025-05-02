@@ -62,7 +62,7 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
     quote! { // The final code wired in main()
         #(#attrs)*
         #vis #sign {
-            canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+            canyon_sql::runtime::get_canyon_tokio_runtime()
                 .handle()
                 .block_on( async {
                     canyon_sql::runtime::init_connections_cache().await
@@ -97,7 +97,7 @@ pub fn canyon_tokio_test(
             #[test]
             #(#attrs)*
             #vis #sign {
-                canyon_sql::runtime::CANYON_TOKIO_RUNTIME
+                canyon_sql::runtime::get_canyon_tokio_runtime()
                     .handle()
                     .block_on( async {
                         canyon_sql::runtime::init_connections_cache().await

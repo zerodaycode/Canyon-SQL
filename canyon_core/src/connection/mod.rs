@@ -10,7 +10,6 @@ pub extern crate tiberius;
 pub extern crate mysql_async;
 
 pub extern crate futures;
-pub extern crate lazy_static;
 pub extern crate tokio;
 pub extern crate tokio_util;
 
@@ -23,11 +22,11 @@ pub mod db_connector;
 use conn_errors::DatasourceNotFound;
 use datasources::{CanyonSqlConfig, DatasourceConfig};
 use db_connector::DatabaseConnection;
-use lazy_static::lazy_static;
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 use std::{error::Error, fs};
+use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use walkdir::WalkDir;
 
@@ -37,11 +36,15 @@ use walkdir::WalkDir;
 
 // TODO: Crud Operations should be split into two different derives, splitting the automagic from the _with ones
 
-lazy_static! {
-    pub static ref CANYON_TOKIO_RUNTIME: tokio::runtime::Runtime =
-        tokio::runtime::Runtime::new()  // TODO Make the config with the builder
-            .expect("Failed initializing the Canyon-SQL Tokio Runtime");
+// Use OnceLock for the Tokio runtime
+static CANYON_TOKIO_RUNTIME: OnceLock<Runtime> = OnceLock::new();
+
+// Function to get the runtime (lazy initialization)
+pub fn get_canyon_tokio_runtime() -> &'static Runtime {
+    CANYON_TOKIO_RUNTIME
+        .get_or_init(|| Runtime::new().expect("Failed initializing the Canyon-SQL Tokio Runtime"))
 }
+
 static CONFIG_FILE_PATH: OnceLock<PathBuf> = OnceLock::new();
 static CONFIG: OnceLock<CanyonSqlConfig> = OnceLock::new();
 static DATASOURCES: OnceLock<Vec<DatasourceConfig>> = OnceLock::new();

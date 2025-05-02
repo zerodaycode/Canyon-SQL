@@ -67,10 +67,10 @@ pub mod db_clients {
 /// Reexport the needed runtime dependencies
 pub mod runtime {
     pub use canyon_core::connection::futures;
+    pub use canyon_core::connection::get_canyon_tokio_runtime;
     pub use canyon_core::connection::init_connections_cache;
     pub use canyon_core::connection::tokio;
     pub use canyon_core::connection::tokio_util;
-    pub use canyon_core::connection::CANYON_TOKIO_RUNTIME;
 }
 
 /// Module for reexport the `chrono` crate with the allowed public and available types in Canyon

@@ -187,7 +187,7 @@ impl DbConnection for &str {
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
-        Ok(find_datasource_by_name_or_try_default(*self)?.get_db_type())
+        Ok(find_datasource_by_name_or_try_default(self)?.get_db_type())
     }
 }
 

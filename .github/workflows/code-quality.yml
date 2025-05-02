@@ -56,7 +56,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        crate: [canyon_connection, canyon_crud, canyon_macros, canyon_migrations]
+        crate: [canyon_core, canyon_crud, canyon_macros, canyon_entities, canyon_migrations]
     steps:
       - uses: actions/checkout@v3
 

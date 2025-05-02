@@ -118,7 +118,7 @@ impl CanyonRows {
 
     /// Returns the entity at the given index for the returned rows
     ///
-    /// This is just a wrapper get operation over the [Vec::get] operation
+    /// This is just a wrapper get operation over the [Vec] get operation
     pub fn get_row_at(&self, index: usize) -> Option<&dyn Row> {
         match self {
             #[cfg(feature = "postgres")]
@@ -140,51 +140,6 @@ impl CanyonRows {
             Self::MySQL(v) => v.first().map(|r| T::deserialize_mysql(r)),
         }
     }
-
-    // pub fn get_column_at_row<'a, C: FromSql<'a, C>>(
-    //     &'a self,
-    //     column_name: &str,
-    //     index: usize,
-    // ) -> Result<C, Box<dyn Error + Send + Sync>> {
-    //     let row_extraction_failure = || {
-    //         format!(
-    //             "{:?} - Failure getting the row: {} at index: {}",
-    //             self, column_name, index
-    //         )
-    //     };
-    //
-    //     match self {
-    //         #[cfg(feature = "postgres")]
-    //         Self::Postgres(v) => Ok(v
-    //             .get(index)
-    //             .ok_or_else(row_extraction_failure)?
-    //             .get::<&str, C>(column_name)),
-    //         #[cfg(feature = "mssql")]
-    //         Self::Tiberius(ref v) => v
-    //             .get(index)
-    //             .ok_or_else(row_extraction_failure)?
-    //             .get::<C, &str>(column_name)
-    //             .ok_or_else(|| {
-    //                 format!(
-    //                     "{:?} - Failure getting the row: {} at index: {}",
-    //                     self, column_name, index
-    //                 )
-    //                 .into()
-    //             }),
-    //         #[cfg(feature = "mysql")]
-    //         Self::MySQL(ref v) => v
-    //             .get(index)
-    //             .ok_or_else(row_extraction_failure)?
-    //             .get::<C, usize>(0)
-    //             .ok_or_else(|| {
-    //                 format!(
-    //                     "{:?} - Failure getting the row: {} at index: {}",
-    //                     self, column_name, index
-    //                 )
-    //                 .into()
-    //             }),
-    //     }
-    // }
 
     /// Returns the number of elements present on the wrapped collection
     pub fn len(&self) -> usize {

@@ -5,6 +5,7 @@ use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
+use std::sync::Mutex;
 use walkdir::WalkDir;
 
 use canyon_entities::register_types::CanyonRegisterEntity;
@@ -275,19 +276,10 @@ impl CanyonMemory {
 fn save_canyon_memory_query(stmt: String, ds_name: &str) {
     use crate::CM_QUERIES_TO_EXECUTE;
 
-    if CM_QUERIES_TO_EXECUTE.lock().unwrap().contains_key(ds_name) {
-        CM_QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .get_mut(ds_name)
-            .unwrap()
-            .push(stmt);
-    } else {
-        CM_QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .insert(ds_name.to_owned(), vec![stmt]);
-    }
+    let mutex = CM_QUERIES_TO_EXECUTE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut queries = mutex.lock().expect("Mutex poisoned");
+
+    queries.entry(ds_name.to_owned()).or_default().push(stmt);
 }
 
 /// Represents a single row from the `canyon_memory` table

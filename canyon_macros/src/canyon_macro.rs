@@ -1,7 +1,7 @@
 //! Provides helpers to build the `#[canyon_macros::canyon]` procedural like attribute macro
 #![cfg(feature = "migrations")]
 
-use canyon_core::connection::CANYON_TOKIO_RUNTIME;
+use canyon_core::connection::get_canyon_tokio_runtime;
 use canyon_migrations::migrations::handler::Migrations;
 use canyon_migrations::{CM_QUERIES_TO_EXECUTE, QUERIES_TO_EXECUTE};
 use proc_macro2::TokenStream;
@@ -9,7 +9,7 @@ use quote::quote;
 
 pub fn main_with_queries() -> TokenStream {
     // TODO: migrations on main instead of main_with_queries
-    CANYON_TOKIO_RUNTIME.block_on(async {
+    get_canyon_tokio_runtime().block_on(async {
         canyon_core::connection::init_connections_cache()
             .await
             .expect("Error initializing the connections POOL");
@@ -29,15 +29,29 @@ pub fn main_with_queries() -> TokenStream {
 /// Creates a TokenScream that is used to load the data generated at compile-time
 /// by the `CanyonManaged` macros again on the queries register
 fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
-    let cm_data = CM_QUERIES_TO_EXECUTE.lock().unwrap();
-    let data = QUERIES_TO_EXECUTE.lock().unwrap();
+    let data_to_wire = if let Some(mutex) = QUERIES_TO_EXECUTE.get() {
+        let queries = mutex.lock().expect("QUERIES_TO_EXECUTE poisoned");
+        queries
+            .iter()
+            .map(|(key, value)| {
+                quote! { hm.insert(#key, vec![#(#value),*]); }
+            })
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
 
-    let cm_data_to_wire = cm_data.iter().map(|(key, value)| {
-        quote! { cm_hm.insert(#key, vec![#(#value),*]); }
-    });
-    let data_to_wire = data.iter().map(|(key, value)| {
-        quote! { hm.insert(#key, vec![#(#value),*]); }
-    });
+    let cm_data_to_wire = if let Some(mutex) = CM_QUERIES_TO_EXECUTE.get() {
+        let cm_queries = mutex.lock().expect("CM_QUERIES_TO_EXECUTE poisoned");
+        cm_queries
+            .iter()
+            .map(|(key, value)| {
+                quote! { cm_hm.insert(#key, vec![#(#value),*]); }
+            })
+            .collect::<Vec<_>>()
+    } else {
+        vec![]
+    };
 
     let tokens = quote! {
         use std::collections::HashMap;
@@ -53,5 +67,5 @@ fn wire_queries_to_execute(canyon_manager_tokens: &mut Vec<TokenStream>) {
         MigrationsProcessor::from_query_register(&hm).await;
     };
 
-    canyon_manager_tokens.push(tokens)
+    canyon_manager_tokens.push(tokens);
 }

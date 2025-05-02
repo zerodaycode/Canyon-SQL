@@ -14,6 +14,10 @@ alias DockerDown='docker-compose -f ./docker/docker-compose.yml down'
 # Cleans the generated cache folder for the postgres in the docker
 alias CleanPostgres='rm -rf ./docker/postgres-data'
 
+# Code Quality
+alias Clippy='cargo clippy --all-targets --all-features --workspace -- -D warnings'
+alias Fmt='cargo fmt --all -- --check'
+
 # Build the project for Windows targets
 alias BuildCanyonWin='cargo build --all-features --target=x86_64-pc-windows-msvc'
 alias BuildCanyonWinFull='cargo clean && cargo build --all-features --target=x86_64-pc-windows-msvc'
@@ -37,10 +41,11 @@ alias IntegrationTestsLinux='cargo test --all-features --no-fail-fast -p tests -
 alias ITIncludeIgnoredLinux='cargo test --all-features --no-fail-fast -p tests --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
 alias SqlServerInitializationLinux='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture --include-ignored'
 
-
+-----
 # Publish Canyon-SQL to the registry with its dependencies
 alias PublishCanyon='cargo publish -p canyon_connection && cargo publish -p canyon_crud && cargo publish -p canyon_migrations && cargo publish -p canyon_macros && cargo publish -p canyon_sql_root'
 
+-----
 # Collects the code coverage for the project (tests must run before this)
 alias CcEnvVars='export CARGO_INCREMENTAL=0
 export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"

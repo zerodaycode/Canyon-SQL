@@ -1,6 +1,6 @@
 //! Defines the Canyon-SQL custom connection error types
 
-/// Raised when a [`crate::datasources::DatasourceConfig`] isn't found given a user input
+/// Raised when a [`crate::connection::datasources::DatasourceConfig`] isn't found given a user input
 #[derive(Debug, Clone)]
 pub struct DatasourceNotFound {
     pub datasource_name: String,

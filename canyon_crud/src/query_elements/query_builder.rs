@@ -269,7 +269,7 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> SelectQueryBuilder<'a, I, R> {
     }
 
     /// Adds a *LEFT JOIN* SQL statement to the underlying
-    /// [`Query`] held by the [`QueryBuilder`], where:
+    /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -284,7 +284,7 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> SelectQueryBuilder<'a, I, R> {
     }
 
     /// Adds a *INNER JOIN* SQL statement to the underlying
-    /// [`Query`] held by the [`QueryBuilder`], where:
+    /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -299,7 +299,7 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> SelectQueryBuilder<'a, I, R> {
     }
 
     /// Adds a *RIGHT JOIN* SQL statement to the underlying
-    /// [`Query`] held by the [`QueryBuilder`], where:
+    /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join
@@ -314,7 +314,7 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> SelectQueryBuilder<'a, I, R> {
     }
 
     /// Adds a *FULL JOIN* SQL statement to the underlying
-    /// [`Query`] held by the [`QueryBuilder`], where:
+    /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
     /// * `join_table` - The table target of the join operation
     /// * `col1` - The left side of the ON operator for the join

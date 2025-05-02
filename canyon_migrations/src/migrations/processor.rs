@@ -733,36 +733,6 @@ impl MigrationsHelper {
     }
 }
 
-#[cfg(test)]
-mod migrations_helper_tests {
-    use super::*;
-    use crate::constants;
-
-    const MOCKED_ENTITY_NAME: &str = "league";
-
-    #[test]
-    fn test_entity_already_on_database() {
-        let parse_result_empty_db_tables =
-            MigrationsHelper::entity_already_on_database(MOCKED_ENTITY_NAME, &[]);
-        // Always should be false
-        assert!(!parse_result_empty_db_tables);
-
-        // Rust has a League entity. Database has a `league` entity. Case should be normalized
-        // and a match must raise
-        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
-            MOCKED_ENTITY_NAME,
-            &[&constants::mocked_data::TABLE_METADATA_LEAGUE_EX],
-        );
-        assert!(mocked_league_entity_on_database);
-
-        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
-            MOCKED_ENTITY_NAME,
-            &[&constants::mocked_data::NON_MATCHING_TABLE_METADATA],
-        );
-        assert!(!mocked_league_entity_on_database)
-    }
-}
-
 trait DatabaseOperation: Debug {
     fn generate_sql(&self, datasource: &DatasourceConfig) -> impl Future<Output = ()>;
 }
@@ -1055,5 +1025,134 @@ impl DatabaseOperation for SequenceOperation {
             }
         };
         save_migrations_query_to_execute(stmt, &datasource.name);
+    }
+}
+
+#[cfg(test)]
+mod migrations_helper_tests {
+    use super::*;
+    const MOCKED_ENTITY_NAME: &str = "league";
+
+    #[test]
+    fn test_entity_already_on_database() {
+        mocked_data::init_mocked_data();
+
+        let parse_result_empty_db_tables =
+            MigrationsHelper::entity_already_on_database(MOCKED_ENTITY_NAME, &[]);
+        // Always should be false
+        assert!(!parse_result_empty_db_tables);
+
+        // Rust has a League entity. Database has a `league` entity. Case should be normalized
+        // and a match must raise
+        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME,
+            &[mocked_data::TABLE_METADATA_LEAGUE_EX.get().unwrap()],
+        );
+        assert!(mocked_league_entity_on_database);
+
+        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME,
+            &[mocked_data::NON_MATCHING_TABLE_METADATA.get().unwrap()],
+        );
+        assert!(!mocked_league_entity_on_database)
+    }
+
+    pub mod mocked_data {
+        use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
+        use std::sync::OnceLock;
+
+        pub static TABLE_METADATA_LEAGUE_EX: OnceLock<TableMetadata> = OnceLock::new();
+        pub static NON_MATCHING_TABLE_METADATA: OnceLock<TableMetadata> = OnceLock::new();
+
+        pub fn init_mocked_data() {
+            TABLE_METADATA_LEAGUE_EX.get_or_init(|| TableMetadata {
+                table_name: "league".to_string(),
+                columns: vec![
+                    ColumnMetadata {
+                        column_name: "id".to_owned(),
+                        datatype: "int".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: Some("PK__league__3213E83FBDA92571".to_owned()),
+                        primary_key_name: Some("PK__league__3213E83FBDA92571".to_owned()),
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "ext_id".to_owned(),
+                        datatype: "bigint".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "slug".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "name".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "region".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "image_url".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                ],
+            });
+
+            NON_MATCHING_TABLE_METADATA.get_or_init(|| TableMetadata {
+                table_name: "random_name_to_assert_false".to_string(),
+                columns: vec![],
+            });
+        }
     }
 }
