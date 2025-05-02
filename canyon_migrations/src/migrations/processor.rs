@@ -583,7 +583,9 @@ impl MigrationsProcessor {
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
             let datasource_name = datasource.0;
-            let db_conn = canyon_core::connection::get_cached_connection(datasource_name)
+            let db_conn = canyon_core::connection::Canyon::instance()
+                .expect("Error getting db connection on `from_query_register`")
+                .get_connection(datasource_name)
                 .await
                 .unwrap_or_else(|_| {
                     panic!(

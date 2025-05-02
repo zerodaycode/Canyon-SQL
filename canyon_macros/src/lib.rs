@@ -65,7 +65,7 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
             canyon_sql::runtime::get_canyon_tokio_runtime()
                 .handle()
                 .block_on( async {
-                    canyon_sql::runtime::init_connections_cache().await
+                    canyon_sql::core::Canyon::init().await
                         .expect("Error initializing the connections POOL");
                     #migrations_tokens
                     #(#body)*
@@ -100,7 +100,7 @@ pub fn canyon_tokio_test(
                 canyon_sql::runtime::get_canyon_tokio_runtime()
                     .handle()
                     .block_on( async {
-                        canyon_sql::runtime::init_connections_cache().await
+                        canyon_sql::core::Canyon::init().await
                             .expect("Error initializing the connections POOL");
                         #(#body)*
                     });

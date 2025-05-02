@@ -7,7 +7,7 @@ use crate::{
         processor::MigrationsProcessor,
     },
 };
-use canyon_core::connection::get_datasources;
+use canyon_core::connection::Canyon;
 use canyon_core::{
     column::Column,
     connection::db_connector::DatabaseConnection,
@@ -28,7 +28,10 @@ impl Migrations {
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
     pub async fn migrate() {
-        for datasource in get_datasources() {
+        for datasource in Canyon::instance()
+            .expect("Failure getting datasources on migrations")
+            .datasources()
+        {
             if !datasource.has_migrations_enabled() {
                 continue;
             }
@@ -38,7 +41,12 @@ impl Migrations {
             );
 
             let mut migrations_processor = MigrationsProcessor::default();
-            let mut db_conn = canyon_core::connection::get_cached_connection(&datasource.name)
+            let mut db_conn = Canyon::instance()
+                .expect(&format!(
+                    "Failure getting db connection: {}",
+                    &datasource.name
+                ))
+                .get_connection(&datasource.name)
                 .await
                 .unwrap_or_else(|_| {
                     panic!(

@@ -9,7 +9,7 @@ use crate::connection::db_clients::postgresql::PostgreSqlConnection;
 use crate::connection::db_connector::connection_helpers::{
     db_conn_launch_impl, db_conn_query_one_impl,
 };
-use crate::connection::{find_datasource_by_name_or_try_default, get_cached_connection};
+use crate::connection::Canyon;
 use crate::mapper::RowMapper;
 use crate::query_parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
@@ -75,7 +75,7 @@ impl DbConnection for str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query_rows(stmt, params).await
     }
 
@@ -89,7 +89,7 @@ impl DbConnection for str {
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query(stmt, params).await
     }
 
@@ -101,7 +101,7 @@ impl DbConnection for str {
     where
         R: RowMapper,
     {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query_one::<R>(stmt, params).await
     }
 
@@ -110,7 +110,7 @@ impl DbConnection for str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query_one_for(stmt, params).await
     }
 
@@ -119,12 +119,14 @@ impl DbConnection for str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.execute(stmt, params).await
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
-        Ok(find_datasource_by_name_or_try_default(self)?.get_db_type())
+        Ok(Canyon::instance()?
+            .find_datasource_by_name_or_default(self)?
+            .get_db_type())
     }
 }
 
@@ -138,7 +140,7 @@ impl DbConnection for &str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query_rows(stmt, params).await
     }
 
@@ -152,7 +154,7 @@ impl DbConnection for &str {
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query(stmt, params).await
     }
 
@@ -164,7 +166,7 @@ impl DbConnection for &str {
     where
         R: RowMapper,
     {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query_one::<R>(stmt, params).await
     }
 
@@ -173,7 +175,7 @@ impl DbConnection for &str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.query_one_for(stmt, params).await
     }
 
@@ -182,12 +184,14 @@ impl DbConnection for &str {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
-        let conn = get_cached_connection(self).await?;
+        let conn = Canyon::instance()?.get_connection(self).await?;
         conn.execute(stmt, params).await
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
-        Ok(find_datasource_by_name_or_try_default(self)?.get_db_type())
+        Ok(Canyon::instance()?
+            .find_datasource_by_name_or_default(self)?
+            .get_db_type())
     }
 }
 

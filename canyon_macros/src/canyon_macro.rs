@@ -10,7 +10,7 @@ use quote::quote;
 pub fn main_with_queries() -> TokenStream {
     // TODO: migrations on main instead of main_with_queries
     get_canyon_tokio_runtime().block_on(async {
-        canyon_core::connection::init_connections_cache()
+        canyon_core::connection::Canyon::init()
             .await
             .expect("Error initializing the connections POOL");
         Migrations::migrate().await;

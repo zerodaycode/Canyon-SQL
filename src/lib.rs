@@ -29,12 +29,12 @@ pub mod macros {
 pub mod connection {
     pub use canyon_core::connection::database_type::DatabaseType;
     pub use canyon_core::connection::db_connector::DatabaseConnection;
-    pub use canyon_core::connection::find_datasource_by_name_or_try_default;
-    pub use canyon_core::connection::get_cached_connection;
+    pub use canyon_core::connection::Canyon;
 }
 
 pub mod core {
     pub use canyon_core::connection::db_connector::DbConnection;
+    pub use canyon_core::connection::Canyon;
     pub use canyon_core::mapper::*;
     pub use canyon_core::query_parameters::QueryParameter;
     pub use canyon_core::rows::CanyonRows;
@@ -68,7 +68,6 @@ pub mod db_clients {
 pub mod runtime {
     pub use canyon_core::connection::futures;
     pub use canyon_core::connection::get_canyon_tokio_runtime;
-    pub use canyon_core::connection::init_connections_cache;
     pub use canyon_core::connection::tokio;
     pub use canyon_core::connection::tokio_util;
 }
