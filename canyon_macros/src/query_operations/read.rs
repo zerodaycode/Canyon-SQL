@@ -256,7 +256,7 @@ mod __details {
                         &str,
                         &[&'a (dyn QueryParameter<'a>)],
                         #mapper_ty
-                    >(#stmt, &vec![value], "").await
+                    >(#stmt, &[value], "").await
                 }
             } else {
                 quote! { #pk_runtime_error }
@@ -278,7 +278,7 @@ mod __details {
         ) -> TokenStream {
             let body = if pk_runtime_error.is_none() {
                 quote! {
-                    input.query_one::<#mapper_ty>(#stmt, &vec![value]).await
+                    input.query_one::<#mapper_ty>(#stmt, &[value]).await
                 }
             } else {
                 quote! { #pk_runtime_error }
