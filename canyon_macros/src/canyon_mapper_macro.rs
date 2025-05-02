@@ -166,6 +166,15 @@ fn get_deserializing_type(target_type: &str) -> TokenStream {
 }
 
 #[cfg(feature = "mssql")]
+fn __get_deserializing_type_str(target_type: &str) -> String {
+    let tt = get_deserializing_type(target_type);
+    tt.to_string()
+        .chars()
+        .filter(|c| !c.is_whitespace())
+        .collect::<String>()
+}
+
+#[cfg(feature = "mssql")]
 use quote::ToTokens;
 #[cfg(feature = "mssql")]
 fn get_field_type_as_string(typ: &Type) -> String {
@@ -192,21 +201,21 @@ fn get_field_type_as_string(typ: &Type) -> String {
 #[cfg(test)]
 #[cfg(feature = "mssql")]
 mod mapper_macro_tests {
-    use crate::canyon_mapper_macro::get_deserializing_type;
+    use crate::canyon_mapper_macro::__get_deserializing_type_str;
 
     #[test]
     fn test_regex_extraction_for_the_tiberius_target_types() {
-        assert_eq!("& str", get_deserializing_type("String").to_string());
-        assert_eq!("& str", get_deserializing_type("Option<String>").to_string());
-        assert_eq!("i64", get_deserializing_type("i64").to_string());
+        assert_eq!("&str", __get_deserializing_type_str("String"));
+        assert_eq!("&str", __get_deserializing_type_str("Option<String>"));
+        assert_eq!("i64", __get_deserializing_type_str("i64"));
 
         assert_eq!(
             "canyon_sql::date_time::DateTime",
-            get_deserializing_type("DateTime").to_string()
+            __get_deserializing_type_str("DateTime")
         );
         assert_eq!(
             "canyon_sql::date_time::NaiveDateTime",
-            get_deserializing_type("NaiveDateTime").to_string()
+            __get_deserializing_type_str("NaiveDateTime")
         );
     }
 }
