@@ -1,11 +1,7 @@
-use syn::{
-    parse::{Parse, ParseBuffer},
-    Attribute, Block, ItemFn, Signature, Visibility,
-};
+use syn::{parse::{Parse, ParseBuffer}, Attribute, Block, ItemFn, Signature, Visibility};
 
 /// Implementation of syn::Parse for the `#[canyon]` proc-macro
 #[derive(Clone)]
-#[allow(dead_code)]
 pub struct FunctionParser {
     pub attrs: Vec<Attribute>,
     pub vis: Visibility,
@@ -15,21 +11,13 @@ pub struct FunctionParser {
 
 impl Parse for FunctionParser {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
-        let func = input.parse::<ItemFn>();
+        let func = input.parse::<ItemFn>()?;
 
-        if func.is_err() {
-            return Err(syn::Error::new(
-                input.cursor().span(),
-                "Error on `fn main()`",
-            ));
-        }
-
-        let func_ok = func.ok().unwrap();
         Ok(Self {
-            attrs: func_ok.attrs,
-            vis: func_ok.vis,
-            sig: func_ok.sig,
-            block: func_ok.block,
+            attrs: func.attrs,
+            vis: func.vis,
+            sig: func.sig,
+            block: func.block,
         })
     }
 }

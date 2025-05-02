@@ -13,7 +13,7 @@ mod utils;
 
 use proc_macro::TokenStream as CompilerTokenStream;
 use quote::quote;
-use syn::DeriveInput;
+use syn::{parse_macro_input, DeriveInput, Error};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
 use crate::canyon_entity_macro::generate_canyon_entity_tokens;
@@ -35,26 +35,28 @@ use canyon_entities::{
 /// the necessary operations for the migrations
 #[proc_macro_attribute]
 pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    let func_res = syn::parse::<FunctionParser>(input);
-    if func_res.is_err() {
-        return quote! { fn main() {} }.into();
+    let func = parse_macro_input!(input as FunctionParser);
+    
+    if func.sig.ident != "main" { // Ensure the function is literally named "main"
+        return Error::new(
+            func.sig.ident.span(),
+            "The #[canyon::main] macro can only be applied to `fn main()`",
+        ).to_compile_error().into();
     }
 
-    // TODO check if the `canyon` macro it's attached only to main?
-    let func = func_res.ok().unwrap();
-    let sign = func.sig;
+    let vis = func.sig;
+    let sign = func.vis;
+    let attrs = func.attrs;
     let body = func.block.stmts;
 
     #[allow(unused_mut, unused_assignments)]
     let mut migrations_tokens = quote! {};
     #[cfg(feature = "migrations")]
-    {
-        migrations_tokens = main_with_queries();
-    }
-
-    // The final code wired in main()
-    quote! {
-        #sign {
+    { migrations_tokens = main_with_queries(); }
+    
+    quote! { // The final code wired in main()
+        #(#attrs)*
+        #vis #sign {
             canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                 .handle()
                 .block_on( async {
@@ -80,6 +82,7 @@ pub fn canyon_tokio_test(
         quote! { fn non_valid_test_fn() {} }.into()
     } else {
         let func = func_res.ok().unwrap();
+        let vis = func.vis;
         let sign = func.sig;
         let body = func.block.stmts;
         let attrs = func.attrs;
@@ -87,7 +90,7 @@ pub fn canyon_tokio_test(
         quote! {
             #[test]
             #(#attrs)*
-            #sign {
+            #vis #sign {
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                     .handle()
                     .block_on( async {

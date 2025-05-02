@@ -22,7 +22,7 @@ pub mod db_connector;
 
 use std::path::PathBuf;
 use std::{error::Error, fs};
-
+use std::sync::OnceLock;
 use conn_errors::DatasourceNotFound;
 use datasources::{CanyonSqlConfig, DatasourceConfig};
 use db_connector::DatabaseConnection;
@@ -88,24 +88,16 @@ fn find_canyon_config_file() -> PathBuf {
 /// job done.
 pub async fn init_connections_cache() {
     for datasource in DATASOURCES.iter() {
-        let db_conn = DatabaseConnection::new(datasource).await;
-
-        if let Err(e) = db_conn {
-            panic!(
-                "Error opening database connection for {}. Err: {}",
-                datasource.name, e
-            );
+        match DatabaseConnection::new(datasource).await {
+            Ok(conn) => {
+                CACHED_DATABASE_CONN.lock().await.insert(&datasource.name, conn);
+            }
+            Err(e) => {
+                panic!("Error opening database connection for {}: {}", datasource.name, e);
+            }
         }
-
-        CACHED_DATABASE_CONN.lock().await.insert(
-            &datasource.name,
-            DatabaseConnection::new(datasource).await.unwrap(),
-        );
     }
 }
-
-// TODO: idea. Should we leak the datasources config pull to the user, so we can be more flexible and let the
-// user code determine whenever you can find a valid datasource via a concrete type instead of an string?
 
 // TODO: doc (main way for the user to obtain a db connection given a datasource identifier)
 pub async fn get_database_connection_by_ds(
