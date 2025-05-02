@@ -196,8 +196,8 @@ mod mapper_macro_tests {
 
     #[test]
     fn test_regex_extraction_for_the_tiberius_target_types() {
-        assert_eq!("&str", get_deserializing_type("String").to_string());
-        assert_eq!("&str", get_deserializing_type("Option<String>").to_string());
+        assert_eq!("& str", get_deserializing_type("String").to_string());
+        assert_eq!("& str", get_deserializing_type("Option<String>").to_string());
         assert_eq!("i64", get_deserializing_type("i64").to_string());
 
         assert_eq!(
