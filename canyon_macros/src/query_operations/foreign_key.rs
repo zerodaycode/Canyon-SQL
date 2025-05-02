@@ -171,6 +171,18 @@ fn generate_find_by_reverse_foreign_key_tokens(
             };
 
             let f_ident = field_ident.to_string();
+            let lookup_value = quote! {
+                value.get_fk_column(#column)
+                    .ok_or_else(|| format!(
+                        "Column: {:?} not found in type: {:?}", #column, #table
+                    ))?;
+            };
+
+            let stmt = quote!{&format!(
+                "SELECT * FROM {} WHERE {} = $1",
+                #table_schema_data,
+                format!("\"{}\"", #f_ident).as_str()
+            )};
 
             rev_fk_quotes.push((
                 quote! { #quoted_method_signature; },
@@ -179,20 +191,10 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     /// performs a search to find the children that belong to that concrete parent.
                     #quoted_method_signature
                     {
-                        let lookage_value = value.get_fk_column(#column)
-                            .expect(format!(
-                                "Column: {:?} not found in type: {:?}", #column, #table
-                            ).as_str());
-
-                        let stmt = &format!(
-                            "SELECT * FROM {} WHERE {} = $1",
-                            #table_schema_data,
-                            format!("\"{}\"", #f_ident).as_str()
-                        );
-
+                        let lookup_value = #lookup_value;
                         <#ty as canyon_sql::core::Transaction>::query::<&str, #mapper_ty>(
-                            stmt,
-                            &[lookage_value],
+                            #stmt,
+                            &[lookup_value],
                             ""
                         ).await
                     }
@@ -207,18 +209,8 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     /// with the specified datasource.
                     #quoted_with_method_signature
                     {
-                        let lookage_value = value.get_fk_column(#column)
-                            .expect(format!(
-                                "Column: {:?} not found in type: {:?}", #column, #table
-                            ).as_str());
-
-                        let stmt = &format!(
-                            "SELECT * FROM {} WHERE {} = $1",
-                            #table_schema_data,
-                            format!("\"{}\"", #f_ident).as_str()
-                        );
-
-                        input.query::<&str, #mapper_ty>(stmt, &[lookage_value]).await
+                        let lookup_value = #lookup_value;
+                        input.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
                     }
                 },
             ));
