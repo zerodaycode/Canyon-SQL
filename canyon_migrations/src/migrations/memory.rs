@@ -66,10 +66,8 @@ impl CanyonMemory {
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
         let mut db_conn = canyon_core::connection::Canyon::instance()
-            .expect(&format!(
-                "Failure getting db connection: {} on Canyon Memory",
-                &datasource.name
-            ))
+            .unwrap_or_else(|_| panic!("Failure getting db connection: {} on Canyon Memory",
+                &datasource.name))
             .get_connection(&datasource.name)
             .await
             .unwrap_or_else(|_| {
