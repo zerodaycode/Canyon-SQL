@@ -1,4 +1,7 @@
-use syn::{parse::{Parse, ParseBuffer}, Attribute, Block, ItemFn, Signature, Visibility};
+use syn::{
+    parse::{Parse, ParseBuffer},
+    Attribute, Block, ItemFn, Signature, Visibility,
+};
 
 /// Implementation of syn::Parse for the `#[canyon]` proc-macro
 #[derive(Clone)]

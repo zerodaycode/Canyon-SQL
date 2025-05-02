@@ -20,102 +20,172 @@ pub mod datasources;
 pub mod db_clients;
 pub mod db_connector;
 
-use std::path::PathBuf;
-use std::{error::Error, fs};
-use std::sync::OnceLock;
 use conn_errors::DatasourceNotFound;
 use datasources::{CanyonSqlConfig, DatasourceConfig};
 use db_connector::DatabaseConnection;
-use indexmap::IndexMap;
 use lazy_static::lazy_static;
+use std::collections::HashMap;
+use std::path::PathBuf;
+use std::sync::{Arc, OnceLock};
+use std::{error::Error, fs};
 use tokio::sync::Mutex;
 use walkdir::WalkDir;
 
 // TODO's: DatabaseConnection and DataSource can implement default, so there's no need to use str and &str
 // as defaults anymore, since the can load as the default the first one defined in the config file, or have more
 // complex workflows that are deferred to initialization time
-// NOTE: There's some way to read the cfg at compile time, an if there's no datasource defined, for the ops that
-// handle the db connection (the _with ones) to just look for a datasource -> runtime in the cfg file?
+
 // TODO: Crud Operations should be split into two different derives, splitting the automagic from the _with ones
-// TODO: T
+
 lazy_static! {
     pub static ref CANYON_TOKIO_RUNTIME: tokio::runtime::Runtime =
         tokio::runtime::Runtime::new()  // TODO Make the config with the builder
             .expect("Failed initializing the Canyon-SQL Tokio Runtime");
-
-    static ref CONFIG_FILE: CanyonSqlConfig = toml::from_str(&fs::read_to_string(find_canyon_config_file())
-        .expect("Error opening or reading the Canyon configuration file")) // unwrap or default, to allow the builder to later configure manually data
-        .expect("Error generating the configuration for Canyon-SQL");
-
-    pub static ref DATASOURCES: Vec<DatasourceConfig> =
-        CONFIG_FILE.canyon_sql.datasources.clone();
-
-    pub static ref DEFAULT_DATASOURCE: &'static DatasourceConfig = DATASOURCES.first()
-        .expect("No datasource configured");
-
-    pub static ref CACHED_DATABASE_CONN: Mutex<IndexMap<&'static str, DatabaseConnection>> =
-        Mutex::new(IndexMap::new());
 }
+static CONFIG_FILE_PATH: OnceLock<PathBuf> = OnceLock::new();
+static CONFIG: OnceLock<CanyonSqlConfig> = OnceLock::new();
+static DATASOURCES: OnceLock<Vec<DatasourceConfig>> = OnceLock::new();
 
-fn find_canyon_config_file() -> PathBuf {
-    for e in WalkDir::new(".")
+// Safer connection wrapper: each conn has its own async mutex
+pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
+
+static CACHED_DATABASE_CONN: OnceLock<HashMap<&'static str, SharedConnection>> = OnceLock::new();
+static DEFAULT_CONNECTION: OnceLock<SharedConnection> = OnceLock::new();
+
+/// Attempts to locate a canyon config file.
+/// Returns Ok(None) if not found, or Ok(Some(PathBuf)) if found.
+pub fn find_canyon_config_file() -> Result<Option<PathBuf>, std::io::Error> {
+    let result = WalkDir::new(".")
         .max_depth(2)
         .into_iter()
-        .filter_map(|e| e.ok())
-    {
-        let filename = e.file_name().to_str().unwrap(); // TODO: remove the .unwrap(). Use
-                                                        // lowercase to allow Canyon.toml
-        if e.metadata().unwrap().is_file()
-            && filename.starts_with("canyon")
-            && filename.ends_with(".toml")
-        {
-            return e.path().to_path_buf();
-        }
+        .filter_map(Result::ok)
+        .find_map(|e| {
+            let filename = e.file_name().to_string_lossy().to_lowercase();
+            if e.metadata().ok()?.is_file()
+                && filename.starts_with("canyon")
+                && filename.ends_with(".toml")
+            {
+                Some(e.path().to_path_buf())
+            } else {
+                None
+            }
+        });
+
+    Ok(result)
+}
+
+/// Initializes shared config state by loading the config file if found.
+///
+/// - Used by macro/automatic path to enforce config presence.
+/// - Can be used optionally in manual mode.
+///
+/// Returns:
+/// - `Ok(Some(()))` => config loaded
+/// - `Ok(None)` => config not found
+/// - `Err` => parsing or IO error
+pub fn try_init_config() -> Result<Option<()>, Box<dyn Error + Send + Sync + 'static>> {
+    let Some(path) = find_canyon_config_file()? else {
+        return Ok(None); // Not an error!
+    };
+
+    let content = fs::read_to_string(&path)?;
+    let config: CanyonSqlConfig = toml::from_str(&content)?;
+
+    CONFIG_FILE_PATH.set(path).ok();
+    CONFIG.set(config).ok();
+
+    let datasources = CONFIG
+        .get()
+        .map(|cfg| cfg.canyon_sql.datasources.clone())
+        .unwrap_or_default();
+
+    DATASOURCES.set(datasources).ok();
+
+    Ok(Some(()))
+}
+
+/// Required in macro mode only: forcefully load or panic
+pub fn force_init_config() {
+    match try_init_config() {
+        Ok(Some(())) => {}
+        Ok(None) => panic!("Canyon config file not found but required in macro mode."),
+        Err(e) => panic!("Failed to load Canyon config: {}", e),
+    }
+}
+
+/// Public accessor for datasources, safe even if uninitialized
+pub fn get_datasources() -> &'static [DatasourceConfig] {
+    DATASOURCES.get().map(Vec::as_slice).unwrap_or_default()
+}
+
+pub async fn init_connections_cache() -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+    try_init_config()?;
+
+    let datasources = get_datasources();
+    if datasources.is_empty() {
+        return Err("No datasources found for connection pool".into());
     }
 
-    panic!() // TODO: get rid out of this panic and return Err instead
-}
+    let mut cache = HashMap::new();
+    for ds in datasources {
+        let conn = DatabaseConnection::new(ds).await?;
+        let name: &'static str = Box::leak(ds.name.clone().into_boxed_str());
+        let conn_arc = Arc::new(Mutex::new(conn));
 
-/// Convenient free function to initialize a kind of connection pool based on the datasources present defined
-/// in the configuration file.
-///
-/// This avoids Canyon to create a new connection to the database on every query, potentially avoiding bottlenecks
-/// coming from the instantiation of that new conn every time.
-///
-/// Note: We noticed with the integration tests that the [`tokio_postgres`] crate (PostgreSQL) is able to work in an async environment
-/// with a new connection per query without no problem, but the [`tiberius`] crate (MSSQL) suffers a lot when it has continuous
-/// statements with multiple queries, like and insert followed by a find by id to check if the insert query has done its
-/// job done.
-pub async fn init_connections_cache() {
-    for datasource in DATASOURCES.iter() {
-        match DatabaseConnection::new(datasource).await {
-            Ok(conn) => {
-                CACHED_DATABASE_CONN.lock().await.insert(&datasource.name, conn);
-            }
-            Err(e) => {
-                panic!("Error opening database connection for {}: {}", datasource.name, e);
-            }
+        if cache.is_empty() {
+            DEFAULT_CONNECTION.set(conn_arc.clone()).ok(); // Store direct ref
         }
+
+        cache.insert(name, conn_arc);
     }
+
+    CACHED_DATABASE_CONN.set(cache).ok();
+    Ok(())
 }
 
-// TODO: doc (main way for the user to obtain a db connection given a datasource identifier)
-pub async fn get_database_connection_by_ds(
-    datasource_name: Option<&str>,
-) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
-    let ds = find_datasource_by_name_or_try_default(datasource_name)?;
-    DatabaseConnection::new(ds).await
+/// Borrow a connection for read-only use (if immutable suffices)
+pub async fn get_cached_connection(
+    name: &str,
+) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
+    if name.is_empty() {
+        let default = DEFAULT_CONNECTION
+            .get()
+            .ok_or_else(|| DatasourceNotFound::from(None))?;
+        return Ok(default.lock().await);
+    }
+
+    let cache = CACHED_DATABASE_CONN
+        .get()
+        .expect("Connection cache not initialized");
+
+    let conn = cache
+        .get(name)
+        .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
+
+    Ok(conn.lock().await)
 }
 
+/// Mutable access — same as above (just aliasing for clarity)
+pub async fn get_mut_cached_connection(
+    name: &str,
+) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
+    get_cached_connection(name).await
+}
 pub fn find_datasource_by_name_or_try_default(
-    datasource_name: Option<&str>, // TODO: with the new inputs, we don't want anymore this as Option
+    name: &str,
 ) -> Result<&DatasourceConfig, DatasourceNotFound> {
-    let datasource_name = datasource_name.filter(|&ds_name| !ds_name.is_empty());
+    let configs = DATASOURCES
+        .get()
+        .expect("Datasources cache not initialized");
 
-    datasource_name
-        .map_or_else(
-            || DATASOURCES.first(),
-            |ds_name| DATASOURCES.iter().find(|ds| ds.name.eq(ds_name)),
-        )
-        .ok_or_else(|| DatasourceNotFound::from(datasource_name))
+    if name.is_empty() {
+        return configs
+            .first()
+            .ok_or_else(|| DatasourceNotFound::from(None));
+    }
+
+    configs
+        .iter()
+        .find(|ds| ds.name == name)
+        .ok_or_else(|| DatasourceNotFound::from(Some(name)))
 }

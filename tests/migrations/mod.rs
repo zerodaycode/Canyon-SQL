@@ -1,5 +1,8 @@
 #![allow(unused_imports)]
+
 use crate::constants;
+use canyon_sql::connection::{find_datasource_by_name_or_try_default, get_cached_connection};
+use canyon_sql::core::DbConnection;
 /// Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::core::Transaction;
 #[cfg(feature = "migrations")]
@@ -9,12 +12,21 @@ use canyon_sql::migrations::handler::Migrations;
 #[cfg(all(feature = "postgres", feature = "migrations"))]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_migrations_postgresql_status_query() {
-    let conn_res =
-        canyon_sql::connection::get_database_connection_by_ds(Some(constants::PSQL_DS)).await;
-    assert!(conn_res.is_ok());
+    let ds = find_datasource_by_name_or_try_default(constants::PSQL_DS);
+    assert!(ds.is_ok());
+    let ds = ds.unwrap();
+    let ds_name = &ds.name;
 
-    let db_conn = &mut conn_res.unwrap();
-    let results = Migrations::query_rows(constants::FETCH_PUBLIC_SCHEMA, [], db_conn).await;
+    let db_conn = get_cached_connection(ds_name).await.unwrap_or_else(|_| {
+        panic!(
+            "Unable to get a database connection on Canyon Memory: {:?}",
+            ds_name
+        )
+    });
+
+    let results = db_conn
+        .query_rows(constants::FETCH_PUBLIC_SCHEMA, &[])
+        .await;
     assert!(results.is_ok());
 
     let res = results.unwrap();

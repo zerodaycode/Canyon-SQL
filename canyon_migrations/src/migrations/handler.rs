@@ -1,13 +1,3 @@
-use canyon_core::{
-    column::Column,
-    connection::{db_connector::DatabaseConnection, DATASOURCES},
-    row::{Row, RowOperations},
-    rows::CanyonRows,
-    transaction::Transaction,
-};
-use canyon_entities::CANYON_REGISTER_ENTITIES;
-use partialdebug::placeholder::PartialDebug;
-
 use crate::{
     canyon_crud::DatabaseType,
     constants,
@@ -17,6 +7,16 @@ use crate::{
         processor::MigrationsProcessor,
     },
 };
+use canyon_core::connection::get_datasources;
+use canyon_core::{
+    column::Column,
+    connection::db_connector::DatabaseConnection,
+    row::{Row, RowOperations},
+    rows::CanyonRows,
+    transaction::Transaction,
+};
+use canyon_entities::CANYON_REGISTER_ENTITIES;
+use partialdebug::placeholder::PartialDebug;
 
 #[derive(PartialDebug)]
 pub struct Migrations;
@@ -28,7 +28,7 @@ impl Migrations {
     /// and the database table with the memory of Canyon to perform the
     /// migrations over the targeted database
     pub async fn migrate() {
-        for datasource in DATASOURCES.iter() {
+        for datasource in get_datasources() {
             if !datasource.has_migrations_enabled() {
                 continue;
             }
@@ -38,15 +38,14 @@ impl Migrations {
             );
 
             let mut migrations_processor = MigrationsProcessor::default();
-            let mut db_conn =
-                canyon_core::connection::get_database_connection_by_ds(Some(&datasource.name))
-                    .await
-                    .unwrap_or_else(|_| {
-                        panic!(
-                    "Unable to get a database connection on the migrations processor for: {:?}",
-                    datasource.name
-                )
-                    });
+            let mut db_conn = canyon_core::connection::get_cached_connection(&datasource.name)
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "Unable to get a database connection on the migrations processor for: {:?}",
+                        datasource.name
+                    )
+                });
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;

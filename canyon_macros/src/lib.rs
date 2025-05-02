@@ -36,12 +36,15 @@ use canyon_entities::{
 #[proc_macro_attribute]
 pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let func = parse_macro_input!(input as FunctionParser);
-    
-    if func.sig.ident != "main" { // Ensure the function is literally named "main"
+
+    if func.sig.ident != "main" {
+        // Ensure the function is literally named "main"
         return Error::new(
             func.sig.ident.span(),
             "The #[canyon::main] macro can only be applied to `fn main()`",
-        ).to_compile_error().into();
+        )
+        .to_compile_error()
+        .into();
     }
 
     let vis = func.sig;
@@ -52,15 +55,18 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
     #[allow(unused_mut, unused_assignments)]
     let mut migrations_tokens = quote! {};
     #[cfg(feature = "migrations")]
-    { migrations_tokens = main_with_queries(); }
-    
+    {
+        migrations_tokens = main_with_queries();
+    }
+
     quote! { // The final code wired in main()
         #(#attrs)*
         #vis #sign {
             canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                 .handle()
                 .block_on( async {
-                    canyon_sql::runtime::init_connections_cache().await;
+                    canyon_sql::runtime::init_connections_cache().await
+                        .expect("Error initializing the connections POOL");
                     #migrations_tokens
                     #(#body)*
                 }
@@ -94,7 +100,8 @@ pub fn canyon_tokio_test(
                 canyon_sql::runtime::CANYON_TOKIO_RUNTIME
                     .handle()
                     .block_on( async {
-                        canyon_sql::runtime::init_connections_cache().await;
+                        canyon_sql::runtime::init_connections_cache().await
+                            .expect("Error initializing the connections POOL");
                         #(#body)*
                     });
             }

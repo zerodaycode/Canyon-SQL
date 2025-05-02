@@ -178,7 +178,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     ))?;
             };
 
-            let stmt = quote!{&format!(
+            let stmt = quote! {&format!(
                 "SELECT * FROM {} WHERE {} = $1",
                 #table_schema_data,
                 format!("\"{}\"", #f_ident).as_str()

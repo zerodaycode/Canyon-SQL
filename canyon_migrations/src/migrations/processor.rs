@@ -1,5 +1,9 @@
 //! File that contains all the datatypes and logic to perform the migrations
 //! over a target database
+use crate::canyon_crud::DatasourceConfig;
+use crate::constants::regex_patterns;
+use crate::save_migrations_query_to_execute;
+use canyon_core::connection::db_connector::DbConnection;
 use canyon_core::transaction::Transaction;
 use canyon_crud::DatabaseType;
 use regex::Regex;
@@ -7,10 +11,6 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::future::Future;
 use std::ops::Not;
-
-use crate::canyon_crud::DatasourceConfig;
-use crate::constants::regex_patterns;
-use crate::save_migrations_query_to_execute;
 
 use super::information_schema::{ColumnMetadata, TableMetadata};
 use super::memory::CanyonMemory;
@@ -582,21 +582,18 @@ impl MigrationsProcessor {
     /// Make the detected migrations for the next Canyon-SQL run
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
-            for query_to_execute in datasource.1 {
-                let datasource_name = datasource.0;
-
-                let db_conn =
-                    canyon_core::connection::get_database_connection_by_ds(Some(datasource_name))
-                        .await
-                        .unwrap_or_else(|_| {
-                            panic!(
-                        "Unable to get a database connection on the migrations processor for: {:?}",
+            let datasource_name = datasource.0;
+            let db_conn = canyon_core::connection::get_cached_connection(datasource_name)
+                .await
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "Unable to get a database connection on Canyon Memory: {:?}",
                         datasource_name
                     )
-                        });
+                });
 
-                let res = Self::query_rows(query_to_execute, [], db_conn).await;
-
+            for query_to_execute in datasource.1 {
+                let res = db_conn.query_rows(query_to_execute, &[]).await;
                 match res {
                     Ok(_) => println!(
                         "\t[OK] - {:?} - Query: {:?}",

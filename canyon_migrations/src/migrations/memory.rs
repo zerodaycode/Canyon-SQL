@@ -1,5 +1,5 @@
 use crate::constants;
-use canyon_core::connection::db_connector::DatabaseConnection;
+use canyon_core::connection::db_connector::{DatabaseConnection, DbConnection};
 use canyon_core::transaction::Transaction;
 use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
@@ -64,22 +64,21 @@ impl CanyonMemory {
         datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
-        let datasource_name = &datasource.name;
-        let mut db_conn =
-            canyon_core::connection::get_database_connection_by_ds(Some(datasource_name))
-                .await
-                .unwrap_or_else(|_| {
-                    panic!(
-                        "Unable to get a database connection on the migrations processor for: {:?}",
-                        datasource_name
-                    )
-                });
+        let mut db_conn = canyon_core::connection::get_cached_connection(&datasource.name)
+            .await
+            .unwrap_or_else(|_| {
+                panic!(
+                    "Unable to get a database connection on Canyon Memory: {:?}",
+                    datasource.name
+                )
+            });
 
         // Creates the memory table if not exists
         Self::create_memory(&datasource.name, &mut db_conn, &datasource.get_db_type()).await;
 
         // Retrieve the last status data from the `canyon_memory` table
-        let res = Self::query_rows("SELECT * FROM canyon_memory", [], &mut db_conn)
+        let res = db_conn
+            .query_rows("SELECT * FROM canyon_memory", &[])
             .await
             .expect("Error querying Canyon Memory");
 
