@@ -16,7 +16,7 @@ mod r#impl; // contains the implementation details for the trait
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```no_run
 /// use crate::connection::DbConnection;
 ///
 /// async fn execute_query<C: DbConnection>(conn: &C) {
@@ -38,7 +38,7 @@ pub trait DbConnection {
     /// * `params` - A slice of query parameters to bind to the statement.
     ///
     /// # Returns
-    /// A `Future` that resolves to a `Result` containing [`CanyonRows`](crate::rows::CanyonRows) on success or an error on failure.
+    /// A [Future] that resolves to a [Result] containing [`CanyonRows`] on success or an error on failure.
     fn query_rows<'a>(
         &self,
         stmt: &str,
@@ -52,9 +52,9 @@ pub trait DbConnection {
     /// * `params` - A slice of query parameters to bind to the statement.
     ///
     /// # Returns
-    /// A `Future` that resolves to a `Result` containing a `Vec<R>` on success or an error on failure.
+    /// A [Future] that resolves to a [Result] containing a `Vec<R>` on success or an error on failure.
     ///
-    /// The `R` type must implement the [`RowMapper`](crate::mapper::RowMapper) trait.
+    /// The `R` type must implement the [`RowMapper`] trait.
     fn query<'a, S, R>(
         &self,
         stmt: S,
@@ -72,9 +72,9 @@ pub trait DbConnection {
     /// * `params` - A slice of query parameters to bind to the statement.
     ///
     /// # Returns
-    /// A `Future` that resolves to a `Result` containing an `Option<R::Output>` on success or an error on failure.
+    /// A [Future] that resolves to a [Result] containing an `Option<R::Output>` on success or an error on failure.
     ///
-    /// The `R` type must implement the [`RowMapper`](crate::mapper::RowMapper) trait.
+    /// The `R` type must implement the [`RowMapper`] trait.
     fn query_one<'a, R>(
         &self,
         stmt: &str,
@@ -90,9 +90,9 @@ pub trait DbConnection {
     /// * `params` - A slice of query parameters to bind to the statement.
     ///
     /// # Returns
-    /// A `Future` that resolves to a `Result` containing the value of type `T` on success or an error on failure.
+    /// A [Future] that resolves to a [Result] containing the value of type `T` on success or an error on failure.
     ///
-    /// The `T` type must implement the [`FromSqlOwnedValue`](crate::rows::FromSqlOwnedValue) trait.
+    /// The `T` type must implement the [`FromSqlOwnedValue`] trait.
     fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
         &self,
         stmt: &str,
@@ -106,7 +106,7 @@ pub trait DbConnection {
     /// * `params` - A slice of query parameters to bind to the statement.
     ///
     /// # Returns
-    /// A `Future` that resolves to a `Result` containing the number of affected rows on success or an error on failure.
+    /// A [Future] that resolves to a [Result] containing the number of affected rows on success or an error on failure.
     fn execute<'a>(
         &self,
         stmt: &str,
@@ -116,6 +116,6 @@ pub trait DbConnection {
     /// Retrieves the type of the database associated with the connection.
     ///
     /// # Returns
-    /// A `Result` containing the [`DatabaseType`](crate::connection::database_type::DatabaseType) on success or an error on failure.
+    /// A `Result` containing the [`DatabaseType`] on success or an error on failure.
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>>;
 }

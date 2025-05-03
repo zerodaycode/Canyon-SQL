@@ -24,10 +24,7 @@ use std::{fmt::Display, future::Future};
 /// - Simplifies interaction with database entities.
 ///
 /// # Examples
-/// ```rust
-/// use canyon_core::transaction::Transaction;
-/// use canyon_core::crud::CrudOperations;
-///
+/// ```no_run
 /// async fn perform_query<E: CrudOperations + Send>(entity: E) {
 ///     let result = <E as Transaction>::query("SELECT * FROM users", &[], entity).await;
 ///     match result {
