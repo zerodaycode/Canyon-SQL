@@ -7,7 +7,7 @@ use crate::connection::db_clients::mysql::MysqlConnection;
 #[cfg(feature = "postgres")]
 use crate::connection::db_clients::postgresql::PostgreSqlConnection;
 use crate::connection::db_connector::connection_helpers::{
-    db_conn_launch_impl, db_conn_query_one_impl,
+    db_conn_query_one_impl, db_conn_query_rows_impl,
 };
 use crate::connection::Canyon;
 use crate::mapper::RowMapper;
@@ -65,135 +65,74 @@ pub trait DbConnection {
     fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>>;
 }
 
-/// This impl of [` DbConnection` ] for [`&str`] allows the client to use the exposed input types
-/// on the public API that works with a generic parameter to refer to a database connection
-/// directly with an [`&str`] that must match one of the datasources defined
-/// within the user config file
-impl DbConnection for str {
-    async fn query_rows<'a>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query_rows(stmt, params).await
-    }
+macro_rules! impl_db_connection {
+    ($type:ty) => {
+        impl DbConnection for $type {
+            async fn query_rows<'a>(
+                &self,
+                stmt: &str,
+                params: &[&'a dyn QueryParameter<'a>],
+            ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
+                let conn = Canyon::instance()?.get_connection(self).await?;
+                conn.query_rows(stmt, params).await
+            }
 
-    async fn query<'a, S, R>(
-        &self,
-        stmt: S,
-        params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
-    where
-        S: AsRef<str> + Display + Send,
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query(stmt, params).await
-    }
+            async fn query<'a, S, R>(
+                &self,
+                stmt: S,
+                params: &[&'a (dyn QueryParameter<'a>)],
+            ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+            where
+                S: AsRef<str> + Display + Send,
+                R: RowMapper,
+                Vec<R>: FromIterator<<R as RowMapper>::Output>,
+            {
+                let conn = Canyon::instance()?.get_connection(self).await?;
+                conn.query(stmt, params).await
+            }
 
-    async fn query_one<'a, R>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
-    where
-        R: RowMapper,
-    {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query_one::<R>(stmt, params).await
-    }
+            async fn query_one<'a, R>(
+                &self,
+                stmt: &str,
+                params: &[&'a dyn QueryParameter<'a>],
+            ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
+            where
+                R: RowMapper,
+            {
+                let conn = Canyon::instance()?.get_connection(self).await?;
+                conn.query_one::<R>(stmt, params).await
+            }
 
-    async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query_one_for(stmt, params).await
-    }
+            async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+                &self,
+                stmt: &str,
+                params: &[&'a dyn QueryParameter<'a>],
+            ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
+                let conn = Canyon::instance()?.get_connection(self).await?;
+                conn.query_one_for(stmt, params).await
+            }
 
-    async fn execute<'a>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.execute(stmt, params).await
-    }
+            async fn execute<'a>(
+                &self,
+                stmt: &str,
+                params: &[&'a dyn QueryParameter<'a>],
+            ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+                let conn = Canyon::instance()?.get_connection(self).await?;
+                conn.execute(stmt, params).await
+            }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
-        Ok(Canyon::instance()?
-            .find_datasource_by_name_or_default(self)?
-            .get_db_type())
-    }
+            fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
+                Ok(Canyon::instance()?
+                    .find_datasource_by_name_or_default(self)?
+                    .get_db_type())
+            }
+        }
+    };
 }
 
-/// This impl of [` DbConnection` ] for [`&str`] allows the client to use the exposed input types
-/// on the public API that works with a generic parameter to refer to a database connection
-/// directly with an [`&str`] that must match one of the datasources defined
-/// within the user config file
-impl DbConnection for &str {
-    async fn query_rows<'a>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query_rows(stmt, params).await
-    }
-
-    async fn query<'a, S, R>(
-        &self,
-        stmt: S,
-        params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
-    where
-        S: AsRef<str> + Display + Send,
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query(stmt, params).await
-    }
-
-    async fn query_one<'a, R>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
-    where
-        R: RowMapper,
-    {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query_one::<R>(stmt, params).await
-    }
-
-    async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.query_one_for(stmt, params).await
-    }
-
-    async fn execute<'a>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
-        let conn = Canyon::instance()?.get_connection(self).await?;
-        conn.execute(stmt, params).await
-    }
-
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
-        Ok(Canyon::instance()?
-            .find_datasource_by_name_or_default(self)?
-            .get_db_type())
-    }
-}
+// Apply the macro to implement DbConnection for &str and str
+impl_db_connection!(str);
+impl_db_connection!(&str);
 
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
@@ -215,7 +154,7 @@ impl DbConnection for DatabaseConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
-        db_conn_launch_impl(self, stmt, params).await
+        db_conn_query_rows_impl(self, stmt, params).await
     }
 
     async fn query<'a, S, R>(
@@ -295,7 +234,7 @@ impl DbConnection for &mut DatabaseConnection {
         stmt: &str,
         params: &[&'a dyn QueryParameter<'a>],
     ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
-        db_conn_launch_impl(self, stmt, params).await
+        db_conn_query_rows_impl(self, stmt, params).await
     }
     async fn query<'a, S, R>(
         &self,
@@ -517,7 +456,7 @@ mod connection_helpers {
         )
     }
 
-    pub(crate) async fn db_conn_launch_impl<'a>(
+    pub(crate) async fn db_conn_query_rows_impl<'a>(
         c: &DatabaseConnection,
         stmt: &str,
         params: &[&'a (dyn QueryParameter<'a> + 'a)],

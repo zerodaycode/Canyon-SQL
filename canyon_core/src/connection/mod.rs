@@ -31,7 +31,6 @@ use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use walkdir::WalkDir;
 
-
 //
 // // TODO's: DatabaseConnection and DataSource can implement default, so there's no need to use str and &str
 // // as defaults anymore, since the can load as the default the first one defined in the config file, or have more
