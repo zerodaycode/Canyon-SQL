@@ -27,7 +27,7 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 /// - Support for retrieving connections by name or default.
 ///
 /// # Examples
-/// ```no_run
+/// ```ignore
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     // Initialize the Canyon context

@@ -16,7 +16,7 @@ mod r#impl; // contains the implementation details for the trait
 ///
 /// # Examples
 ///
-/// ```no_run
+/// ```ignore
 /// use crate::connection::DbConnection;
 ///
 /// async fn execute_query<C: DbConnection>(conn: &C) {

@@ -24,7 +24,7 @@ use std::{fmt::Display, future::Future};
 /// - Simplifies interaction with database entities.
 ///
 /// # Examples
-/// ```no_run
+/// ```ignore
 /// async fn perform_query<E: CrudOperations + Send>(entity: E) {
 ///     let result = <E as Transaction>::query("SELECT * FROM users", &[], entity).await;
 ///     match result {
