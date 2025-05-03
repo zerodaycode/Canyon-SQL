@@ -1,73 +1,14 @@
-use crate::connection::database_type::DatabaseType;
-use crate::connection::db_connector::DbConnection;
-use crate::mapper::RowMapper;
-use crate::rows::FromSqlOwnedValue;
 use crate::{query_parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 use std::error::Error;
 use std::fmt::Display;
-use std::future::Future;
 use tiberius::Query;
 
 /// A connection with a `SqlServer` database
 #[cfg(feature = "mssql")]
 pub struct SqlServerConnection {
     pub client: &'static mut tiberius::Client<TcpStream>,
-}
-
-impl DbConnection for SqlServerConnection {
-    fn query_rows<'a>(
-        &self,
-        stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send {
-        sqlserver_query_launcher::query_rows(stmt, params, self)
-    }
-
-    fn query<'a, S, R>(
-        &self,
-        stmt: S,
-        params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
-    where
-        S: AsRef<str> + Display + Send,
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
-        sqlserver_query_launcher::query(stmt, params, self)
-    }
-
-    fn query_one<'a, R>(
-        &self,
-        stmt: &str,
-        params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
-    where
-        R: RowMapper,
-    {
-        sqlserver_query_launcher::query_one::<R>(stmt, params, self)
-    }
-
-    fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
-        &self,
-        stmt: &str,
-        params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<T, Box<(dyn Error + Send + Sync)>>> + Send {
-        sqlserver_query_launcher::query_one_for(stmt, params, self)
-    }
-
-    fn execute<'a>(
-        &self,
-        stmt: &str,
-        params: &[&'a (dyn QueryParameter<'a>)],
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send {
-        sqlserver_query_launcher::execute(stmt, params, self)
-    }
-
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
-        Ok(DatabaseType::SqlServer)
-    }
 }
 
 #[cfg(feature = "mssql")]

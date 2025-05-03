@@ -2,8 +2,8 @@ use crate::{
     bounds::{FieldIdentifier, FieldValueIdentifier},
     Operator,
 };
+use canyon_core::connection::contracts::DbConnection;
 use canyon_core::connection::database_type::DatabaseType;
-use canyon_core::connection::db_connector::DbConnection;
 use canyon_core::{mapper::RowMapper, query_parameters::QueryParameter};
 use std::error::Error;
 use std::marker::PhantomData;

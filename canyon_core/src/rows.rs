@@ -1,3 +1,8 @@
+//! The rows module of Canyon-SQL.
+//!
+//! This module defines the `CanyonRows` enum, which wraps database query results for supported
+//! databases. It also provides traits and utilities for mapping rows to user-defined types.
+
 #[cfg(feature = "mysql")]
 use mysql_async::{self};
 #[cfg(feature = "mssql")]

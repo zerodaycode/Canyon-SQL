@@ -3,7 +3,8 @@
 use crate::canyon_crud::DatasourceConfig;
 use crate::constants::regex_patterns;
 use crate::save_migrations_query_to_execute;
-use canyon_core::connection::db_connector::DbConnection;
+use canyon_core::canyon::Canyon;
+use canyon_core::connection::contracts::DbConnection;
 use canyon_core::transaction::Transaction;
 use canyon_crud::DatabaseType;
 use regex::Regex;
@@ -583,7 +584,7 @@ impl MigrationsProcessor {
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
             let datasource_name = datasource.0;
-            let db_conn = canyon_core::connection::Canyon::instance()
+            let db_conn = Canyon::instance()
                 .expect("Error getting db connection on `from_query_register`")
                 .get_connection(datasource_name)
                 .await

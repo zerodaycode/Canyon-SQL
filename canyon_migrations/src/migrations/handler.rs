@@ -7,7 +7,7 @@ use crate::{
         processor::MigrationsProcessor,
     },
 };
-use canyon_core::connection::Canyon;
+use canyon_core::canyon::Canyon;
 use canyon_core::{
     column::Column,
     connection::db_connector::DatabaseConnection,

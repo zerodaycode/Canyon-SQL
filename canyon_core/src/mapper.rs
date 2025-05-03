@@ -1,3 +1,8 @@
+//! The mapper module of Canyon-SQL.
+//!
+//! This module defines traits and utilities for mapping database query results to user-defined
+//! types. It includes the `RowMapper` trait and related functionality for deserialization.
+
 /// Declares functions that takes care to deserialize data incoming
 /// from some supported database in Canyon-SQL into a user's defined
 /// type `T`

@@ -1,3 +1,9 @@
+//! The datasources module of Canyon-SQL.
+//!
+//! This module defines the configuration and authentication mechanisms for database datasources.
+//! It includes support for multiple database backends and provides utilities for managing
+//! datasource properties.
+
 use serde::Deserialize;
 
 use super::database_type::DatabaseType;

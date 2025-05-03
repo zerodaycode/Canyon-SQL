@@ -1,5 +1,7 @@
 use crate::constants;
-use canyon_core::connection::db_connector::{DatabaseConnection, DbConnection};
+use canyon_core::canyon::Canyon;
+use canyon_core::connection::contracts::DbConnection;
+use canyon_core::connection::db_connector::DatabaseConnection;
 use canyon_core::transaction::Transaction;
 use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
@@ -65,7 +67,7 @@ impl CanyonMemory {
         datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
-        let mut db_conn = canyon_core::connection::Canyon::instance()
+        let mut db_conn = Canyon::instance()
             .unwrap_or_else(|_| {
                 panic!(
                     "Failure getting db connection: {} on Canyon Memory",

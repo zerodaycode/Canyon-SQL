@@ -29,12 +29,11 @@ pub mod macros {
 pub mod connection {
     pub use canyon_core::connection::database_type::DatabaseType;
     pub use canyon_core::connection::db_connector::DatabaseConnection;
-    pub use canyon_core::connection::Canyon;
 }
 
 pub mod core {
-    pub use canyon_core::connection::db_connector::DbConnection;
-    pub use canyon_core::connection::Canyon;
+    pub use canyon_core::canyon::Canyon;
+    pub use canyon_core::connection::contracts::DbConnection;
     pub use canyon_core::mapper::*;
     pub use canyon_core::query_parameters::QueryParameter;
     pub use canyon_core::rows::CanyonRows;
