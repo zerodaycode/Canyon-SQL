@@ -3,7 +3,7 @@ use crate::{
         contracts::DbConnection, database_type::DatabaseType, db_connector::DatabaseConnection,
     },
     mapper::RowMapper,
-    query_parameters::QueryParameter,
+    query::parameters::QueryParameter,
     rows::{CanyonRows, FromSqlOwnedValue},
 };
 use std::{error::Error, fmt::Display};

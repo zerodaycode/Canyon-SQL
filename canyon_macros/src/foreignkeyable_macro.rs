@@ -26,7 +26,7 @@ pub fn foreignkeyable_impl_tokens(ast: DeriveInput) -> TokenStream {
     quote! {
         /// Implementation of the trait `ForeignKeyable` for the type
         /// calling this derive proc macro
-        impl canyon_sql::crud::bounds::ForeignKeyable<Self> for #ty {
+        impl canyon_sql::query::bounds::ForeignKeyable<Self> for #ty {
             fn get_fk_column(&self, column: &str) -> Option<&dyn canyon_sql::core::QueryParameter<'_>> {
                 match column {
                     #(#field_idents),*,
@@ -36,7 +36,7 @@ pub fn foreignkeyable_impl_tokens(ast: DeriveInput) -> TokenStream {
         }
         /// Implementation of the trait `ForeignKeyable` for a reference of this type
         /// calling this derive proc macro
-        impl canyon_sql::crud::bounds::ForeignKeyable<&Self> for &#ty {
+        impl canyon_sql::query::bounds::ForeignKeyable<&Self> for &#ty {
             fn get_fk_column<'a>(&self, column: &'a str) -> Option<&dyn canyon_sql::core::QueryParameter<'_>> {
                 match column {
                     #(#field_idents_cloned),*,

@@ -33,9 +33,9 @@ pub mod connection {
 
 pub mod core {
     pub use canyon_core::canyon::Canyon;
-    pub use canyon_core::connection::contracts::DbConnection;
+    pub use canyon_core::connection::contracts::DbConnection; // TODO: Available only via connection?
     pub use canyon_core::mapper::*;
-    pub use canyon_core::query_parameters::QueryParameter;
+    pub use canyon_core::query::parameters::QueryParameter; // TODO: this re-export must be only available on pub mod query
     pub use canyon_core::rows::CanyonRows;
     pub use canyon_core::transaction::Transaction;
 }
@@ -43,14 +43,14 @@ pub mod core {
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,
 /// exposing them through the public API
 pub mod crud {
-    pub use canyon_crud::bounds;
     pub use canyon_crud::crud::*;
 }
 
 /// Re-exports the query elements from the `crud`crate
 pub mod query {
-    pub use canyon_crud::query_elements::operators;
-    pub use canyon_crud::query_elements::{query::*, query_builder::*};
+    pub use canyon_core::query::bounds;
+    pub use canyon_core::query::operators;
+    pub use canyon_core::query::*;
 }
 
 /// Reexport the available database clients within Canyon

@@ -22,7 +22,7 @@ pub mod canyon;
 pub mod column;
 pub mod connection;
 pub mod mapper;
-pub mod query_parameters;
+pub mod query;
 pub mod row;
 pub mod rows;
 pub mod transaction;

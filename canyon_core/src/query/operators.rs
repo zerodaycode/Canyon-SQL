@@ -1,4 +1,4 @@
-use canyon_core::connection::database_type::DatabaseType;
+use crate::connection::database_type::DatabaseType;
 
 pub trait Operator {
     fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String;

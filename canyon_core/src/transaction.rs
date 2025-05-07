@@ -1,7 +1,7 @@
 use crate::connection::contracts::DbConnection;
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
-use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
 use std::{fmt::Display, future::Future};
 

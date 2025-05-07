@@ -7,7 +7,7 @@ pub const SELECT_ALL_BASE_DOC_COMMENT: &str =
         with snake_case identifiers.";
 
 pub const SELECT_QUERYBUILDER_DOC_COMMENT: &str =
-    "Generates a [`canyon_sql::query::SelectQueryBuilder`] \
+    "Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`] \
         that allows you to customize the query by adding parameters and constrains dynamically. \
         \
         It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your \

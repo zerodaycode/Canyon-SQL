@@ -83,7 +83,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 /// being the query generated with the [`QueryBuilder`]
 fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -> TokenStream {
     quote! {
-        /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
+        /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
         /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
@@ -91,12 +91,12 @@ fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn update_query<'a>() -> Result<
-                canyon_sql::query::UpdateQueryBuilder<'a, str, #ty>,
+                canyon_sql::query::querybuilder::UpdateQueryBuilder<'a, str, #ty>,
                 Box<(dyn std::error::Error + Send + Sync + 'a)>> {
-            canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, "")
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, "")
         }
 
-        /// Generates a [`canyon_sql::query::UpdateQueryBuilder`]
+        /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
         ///
         /// It performs an `UPDATE table_name`, where `table_name` it's the name of your
@@ -107,11 +107,11 @@ fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the input parameter
         fn update_query_with<'a, I>(input: &'a I) -> Result<
-                canyon_sql::query::UpdateQueryBuilder<'a, I, #ty>,
+                canyon_sql::query::querybuilder::UpdateQueryBuilder<'a, I, #ty>,
                 Box<(dyn std::error::Error + Send + Sync + 'a)>
             > where I: canyon_sql::core::DbConnection + Send + 'a + ?Sized
         {
-            canyon_sql::query::UpdateQueryBuilder::new(#table_schema_data, input)
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, input)
         }
     }
 }

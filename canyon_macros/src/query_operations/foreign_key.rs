@@ -160,13 +160,13 @@ fn generate_find_by_reverse_foreign_key_tokens(
                 async fn #method_name_ident<'a, F>(value: &F)
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where
-                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Send + Sync
+                    F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync
             };
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, F, I> (value: &F, input: I)
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where
-                    F: canyon_sql::crud::bounds::ForeignKeyable<F> + Send + Sync,
+                    F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync,
                     I: canyon_sql::core::DbConnection + Send + 'a
             };
 

@@ -1,4 +1,4 @@
-use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 use std::error::Error;

@@ -1,6 +1,6 @@
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
-use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 use mysql_async::Row;

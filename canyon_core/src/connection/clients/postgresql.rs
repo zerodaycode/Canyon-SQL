@@ -1,5 +1,5 @@
 use crate::mapper::RowMapper;
-use crate::{query_parameters::QueryParameter, rows::CanyonRows};
+use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
 use std::fmt::Display;
 #[cfg(feature = "postgres")]
