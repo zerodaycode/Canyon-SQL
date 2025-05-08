@@ -73,7 +73,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         });
     }
 
-    let querybuilder_update_tokens = generate_update_querybuilder_tokens(ty, table_schema_data);
+    let querybuilder_update_tokens = generate_update_querybuilder_tokens(table_schema_data);
     update_ops_tokens.extend(querybuilder_update_tokens);
 
     update_ops_tokens
@@ -81,7 +81,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
 /// Generates the TokenStream for the __update() CRUD operation
 /// being the query generated with the [`QueryBuilder`]
-fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -> TokenStream {
+fn generate_update_querybuilder_tokens(table_schema_data: &String) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -91,9 +91,10 @@ fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn update_query<'a>() -> Result<
-                canyon_sql::query::querybuilder::UpdateQueryBuilder<'a, str, #ty>,
-                Box<(dyn std::error::Error + Send + Sync + 'a)>> {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, "")
+            canyon_sql::query::querybuilder::UpdateQueryBuilder<'a>,
+            Box<(dyn std::error::Error + Send + Sync + 'a)>
+        > {
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
         }
 
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
@@ -106,12 +107,11 @@ fn generate_update_querybuilder_tokens(ty: &Ident, table_schema_data: &String) -
         ///
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, and selected with the input parameter
-        fn update_query_with<'a, I>(input: &'a I) -> Result<
-                canyon_sql::query::querybuilder::UpdateQueryBuilder<'a, I, #ty>,
-                Box<(dyn std::error::Error + Send + Sync + 'a)>
-            > where I: canyon_sql::core::DbConnection + Send + 'a + ?Sized
-        {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, input)
+        fn update_query_with<'a>(database_type: canyon_sql::connection::DatabaseType) -> Result<
+            canyon_sql::query::querybuilder::UpdateQueryBuilder<'a>,
+            Box<(dyn std::error::Error + Send + Sync + 'a)>
+        > {
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, database_type)
         }
     }
 }

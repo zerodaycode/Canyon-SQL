@@ -26,7 +26,7 @@ pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 /// of the type identifier + Field
 ///
 /// The idea it's to have a representation of the field name as an enum
-/// variant, avoiding to let the user passing around Strings and instead,
+/// variant, letting the user passing around Strings and instead,
 /// passing variants of a concrete enumeration type, that when required,
 /// will be called though macro code to obtain the &str representation
 /// of the field name.
@@ -119,7 +119,7 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         /// #[allow(non_camel_case_types)]
         /// pub enum LeagueFieldValue {
         ///     id(i32),
-        ///     name(String)
+        ///     name(String),
         ///     opt(Option<String>)
         /// }
         /// ```

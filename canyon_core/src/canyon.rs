@@ -1,6 +1,5 @@
-// ...existing code...
-
 use crate::connection::conn_errors::DatasourceNotFound;
+use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
 use crate::connection::{db_connector, get_canyon_tokio_runtime, CANYON_INSTANCE};
 use db_connector::DatabaseConnection;
@@ -58,6 +57,7 @@ pub struct Canyon {
     config: Datasources,
     connections: HashMap<&'static str, SharedConnection>,
     default: Option<SharedConnection>,
+    default_db_type: Option<DatabaseType>,
 }
 
 impl Canyon {
@@ -83,23 +83,23 @@ impl Canyon {
 
         let mut connections = HashMap::new();
         let mut default = None;
+        let mut default_db_type = None;
 
         for ds in config.datasources.iter() {
-            let conn = DatabaseConnection::new(ds).await?;
-            let name: &'static str = Box::leak(ds.name.clone().into_boxed_str());
-            let conn = Arc::new(Mutex::new(conn));
-
-            if default.is_none() {
-                default = Some(conn.clone()); // Only cloning the smart pointer
-            }
-
-            connections.insert(name, conn);
+            __impl::process_new_conn_by_datasource(
+                ds,
+                &mut connections,
+                &mut default,
+                &mut default_db_type,
+            )
+            .await?;
         }
 
         let canyon = Canyon {
             config,
             connections,
             default,
+            default_db_type,
         };
 
         get_canyon_tokio_runtime(); // Just ensuring that is initialized in manual-mode
@@ -152,18 +152,30 @@ impl Canyon {
         }
     }
 
+    pub fn get_default_db_type(&self) -> Result<DatabaseType, DatasourceNotFound> {
+        self.default_db_type
+            .ok_or_else(|| DatasourceNotFound::from(None))
+    }
+
+    // Retrieve a read-only connection from the cache
+    pub async fn get_default_connection(
+        &self,
+    ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
+        Ok(self
+            .default
+            .as_ref()
+            .ok_or_else(|| DatasourceNotFound::from(None))?
+            .lock()
+            .await)
+    }
+
     // Retrieve a read-only connection from the cache
     pub async fn get_connection(
         &self,
         name: &str,
     ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
         if name.is_empty() {
-            return Ok(self
-                .default
-                .as_ref()
-                .ok_or_else(|| DatasourceNotFound::from(None))?
-                .lock()
-                .await);
+            return self.get_default_connection().await;
         }
 
         let conn = self
@@ -180,5 +192,40 @@ impl Canyon {
         name: &str,
     ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
         self.get_connection(name).await
+    }
+}
+
+mod __impl {
+    use crate::canyon::SharedConnection;
+    use crate::connection::database_type::DatabaseType;
+    use crate::connection::datasources::DatasourceConfig;
+    use crate::connection::db_connector::DatabaseConnection;
+    use std::collections::HashMap;
+    use std::error::Error;
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    pub(crate) async fn process_new_conn_by_datasource(
+        ds: &DatasourceConfig,
+        connections: &mut HashMap<&str, SharedConnection>,
+        default: &mut Option<SharedConnection>,
+        default_db_type: &mut Option<DatabaseType>,
+    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let conn = DatabaseConnection::new(ds).await?;
+        let name: &'static str = Box::leak(ds.name.clone().into_boxed_str());
+
+        if default_db_type.is_none() {
+            *default_db_type = Some(conn.get_db_type());
+        }
+
+        let connection_sp = Arc::new(Mutex::new(conn));
+
+        if default.is_none() {
+            *default = Some(connection_sp.clone()); // Only cloning the smart pointer
+        }
+
+        connections.insert(name, connection_sp);
+
+        Ok(())
     }
 }

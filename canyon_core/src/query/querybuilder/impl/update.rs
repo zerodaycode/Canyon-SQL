@@ -1,14 +1,10 @@
-use crate::connection::contracts::DbConnection;
-use crate::mapper::RowMapper;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::contracts::{QueryBuilderOps, UpdateQueryBuilderOps};
 use crate::query::querybuilder::types::update::UpdateQueryBuilder;
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> UpdateQueryBuilderOps<'a>
-    for UpdateQueryBuilder<'a, I, R>
-{
+impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
     fn set<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Self
     where
@@ -50,9 +46,7 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> UpdateQueryBuilderOps<'a>
     }
 }
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> QueryBuilderOps<'a>
-    for UpdateQueryBuilder<'a, I, R>
-{
+impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()

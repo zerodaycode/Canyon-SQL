@@ -3,44 +3,135 @@ pub mod select;
 pub mod update;
 
 pub use self::{delete::*, select::*, update::*};
-use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
-use crate::mapper::RowMapper;
+use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
+use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
+use crate::query::query::Query;
 use std::error::Error;
-use std::marker::PhantomData;
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, I: DbConnection + ?Sized, R: RowMapper> {
-    // query: Query<'a>,
+pub struct QueryBuilder<'a> {
     pub(crate) sql: String,
     pub(crate) params: Vec<&'a dyn QueryParameter<'a>>,
     pub(crate) database_type: DatabaseType,
-    pub(crate) input: &'a I,
-    pd: PhantomData<R>,
 }
 
-unsafe impl<I: DbConnection + ?Sized, R: RowMapper> Send for QueryBuilder<'_, I, R> {}
-unsafe impl<I: DbConnection + ?Sized, R: RowMapper> Sync for QueryBuilder<'_, I, R> {}
+unsafe impl Send for QueryBuilder<'_> {}
+unsafe impl Sync for QueryBuilder<'_> {}
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> QueryBuilder<'a, I, R> {
-    pub fn new(sql: String, input: &'a I) -> Result<Self, Box<(dyn Error + Send + Sync + 'a)>> {
+impl<'a> QueryBuilder<'a> {
+    pub fn new(
+        sql: String,
+        database_type: DatabaseType,
+    ) -> Result<Self, Box<(dyn Error + Send + Sync + 'a)>> {
         Ok(Self {
             sql,
-            params: vec![],
-            database_type: input.get_database_type()?,
-            input,
-            pd: Default::default(),
+            params: vec![], // TODO: as option? and then match it for emptyness and pass &[] if possible?
+            database_type,
         })
     }
 
-    /// Launches the generated query against the database targeted
-    /// by the selected datasource
-    pub async fn query(mut self) -> Result<Vec<R>, Box<(dyn Error + Send + Sync + 'a)>>
-    where
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
+    pub fn build(mut self) -> Result<Query<'a>, Box<(dyn Error + Send + Sync)>> {
+        // TODO: here we should check for our invariants
         self.sql.push(';');
-        self.input.query(&self.sql, &self.params).await
+        Ok(Query {
+            sql: self.sql,
+            params: self.params,
+        })
+    }
+
+    pub fn r#where<Z: FieldValueIdentifier<'a>>(&mut self, r#where: Z, op: impl Operator) {
+        let (column_name, value) = r#where.value();
+
+        let where_ = String::from(" WHERE ")
+            + column_name
+            + &op.as_str(self.params.len() + 1, &self.database_type);
+
+        self.sql.push_str(&where_);
+        self.params.push(value);
+    }
+
+    pub fn and<Z: FieldValueIdentifier<'a>>(&mut self, r#and: Z, op: impl Operator) {
+        let (column_name, value) = r#and.value();
+
+        let and_ = String::from(" AND ")
+            + column_name
+            + &op.as_str(self.params.len() + 1, &self.database_type);
+
+        self.sql.push_str(&and_);
+        self.params.push(value);
+    }
+
+    pub fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q])
+    where
+        Z: FieldIdentifier,
+        Q: QueryParameter<'a>,
+    {
+        if values.is_empty() {
+            return;
+        }
+
+        self.sql.push_str(&format!(" AND {} IN (", r#and.as_str()));
+
+        let mut counter = 1;
+        values.iter().for_each(|qp| {
+            if values.len() != counter {
+                self.sql.push_str(&format!("${}, ", self.params.len()));
+                counter += 1;
+            } else {
+                self.sql.push_str(&format!("${}", self.params.len()));
+            }
+            self.params.push(qp)
+        });
+
+        self.sql.push(')');
+    }
+
+    pub fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
+    where
+        Z: FieldIdentifier,
+        Q: QueryParameter<'a>,
+    {
+        if values.is_empty() {
+            return;
+        }
+
+        self.sql.push_str(&format!(" OR {} IN (", r#or.as_str()));
+
+        let mut counter = 1;
+        values.iter().for_each(|qp| {
+            if values.len() != counter {
+                self.sql.push_str(&format!("${}, ", self.params.len()));
+                counter += 1;
+            } else {
+                self.sql.push_str(&format!("${}", self.params.len()));
+            }
+            self.params.push(qp)
+        });
+
+        self.sql.push(')');
+    }
+
+    pub fn or<Z: FieldValueIdentifier<'a>>(&mut self, r#and: Z, op: impl Operator) {
+        let (column_name, value) = r#and.value();
+
+        let and_ = String::from(" OR ")
+            + column_name
+            + &op.as_str(self.params.len() + 1, &self.database_type);
+
+        self.sql.push_str(&and_);
+        self.params.push(value);
+    }
+
+    #[inline]
+    pub fn order_by<Z: FieldIdentifier>(&mut self, order_by: Z, desc: bool) {
+        self.sql.push_str(
+            &(format!(
+                " ORDER BY {}{}",
+                order_by.as_str(),
+                if desc { " DESC " } else { "" }
+            )),
+        );
     }
 }

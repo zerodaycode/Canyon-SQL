@@ -1,14 +1,10 @@
-use crate::connection::contracts::DbConnection;
-use crate::mapper::RowMapper;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::contracts::{QueryBuilderOps, SelectQueryBuilderOps};
 use crate::query::querybuilder::types::select::SelectQueryBuilder;
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> SelectQueryBuilderOps<'a>
-    for SelectQueryBuilder<'a, I, R>
-{
+impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     fn left_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
         self._inner
             .sql
@@ -38,9 +34,7 @@ impl<'a, I: DbConnection + ?Sized, R: RowMapper> SelectQueryBuilderOps<'a>
     }
 }
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> QueryBuilderOps<'a>
-    for SelectQueryBuilder<'a, I, R>
-{
+impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()

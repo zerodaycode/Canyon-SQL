@@ -1,19 +1,12 @@
-use crate::connection::contracts::DbConnection;
-use crate::mapper::RowMapper;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::contracts::{DeleteQueryBuilderOps, QueryBuilderOps};
 use crate::query::querybuilder::types::delete::DeleteQueryBuilder;
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> DeleteQueryBuilderOps<'a>
-    for DeleteQueryBuilder<'a, I, R>
-{
-} // NOTE: for now, this is just a type formalism
+impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
 
-impl<'a, I: DbConnection + ?Sized, R: RowMapper> QueryBuilderOps<'a>
-    for DeleteQueryBuilder<'a, I, R>
-{
+impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline]
     fn read_sql(&'a self) -> &'a str {
         self._inner.sql.as_str()

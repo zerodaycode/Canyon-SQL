@@ -1,4 +1,5 @@
 use canyon_core::connection::contracts::DbConnection;
+use canyon_core::connection::database_type::DatabaseType;
 use canyon_core::mapper::RowMapper;
 use canyon_core::query::parameters::QueryParameter;
 use canyon_core::query::querybuilder::{
@@ -35,14 +36,11 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn select_query<'a>(
-    ) -> Result<SelectQueryBuilder<'a, str, R>, Box<(dyn Error + Send + Sync + 'a)>>;
+    fn select_query<'a>() -> Result<SelectQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 
-    fn select_query_with<'a, I>(
-        input: &'a I,
-    ) -> Result<SelectQueryBuilder<'a, I, R>, Box<(dyn Error + Send + Sync + 'a)>>
-    where
-        I: DbConnection + Send + 'a + ?Sized;
+    fn select_query_with<'a>(
+        database_type: DatabaseType,
+    ) -> Result<SelectQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 
     fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Send + Sync)>>> + Send;
 
@@ -95,14 +93,11 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn update_query<'a>(
-    ) -> Result<UpdateQueryBuilder<'a, str, R>, Box<(dyn Error + Send + Sync + 'a)>>;
+    fn update_query<'a>() -> Result<UpdateQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 
-    fn update_query_with<'a, I>(
-        input: &'a I,
-    ) -> Result<UpdateQueryBuilder<'a, I, R>, Box<(dyn Error + Send + Sync + 'a)>>
-    where
-        I: DbConnection + Send + 'a + ?Sized;
+    fn update_query_with<'a>(
+        database_type: DatabaseType,
+    ) -> Result<UpdateQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 
     fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync)>>> + Send;
 
@@ -113,12 +108,9 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn delete_query<'a>(
-    ) -> Result<DeleteQueryBuilder<'a, str, R>, Box<(dyn Error + Send + Sync + 'a)>>;
+    fn delete_query<'a>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 
-    fn delete_query_with<'a, I>(
-        input: &'a I,
-    ) -> Result<DeleteQueryBuilder<'a, I, R>, Box<(dyn Error + Send + Sync + 'a)>>
-    where
-        I: DbConnection + Send + 'a + ?Sized;
+    fn delete_query_with<'a>(
+        database_type: DatabaseType,
+    ) -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 }

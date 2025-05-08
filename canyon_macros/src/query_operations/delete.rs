@@ -62,7 +62,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         });
     }
 
-    let delete_with_querybuilder = generate_delete_querybuilder_tokens(ty, table_schema_data);
+    let delete_with_querybuilder = generate_delete_querybuilder_tokens(table_schema_data);
     delete_ops_tokens.extend(delete_with_querybuilder);
 
     delete_ops_tokens
@@ -70,7 +70,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
-fn generate_delete_querybuilder_tokens(ty: &Ident, table_schema_data: &str) -> TokenStream {
+fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::DeleteQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -80,9 +80,10 @@ fn generate_delete_querybuilder_tokens(ty: &Ident, table_schema_data: &str) -> T
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn delete_query<'a>() -> Result<
-                canyon_sql::query::querybuilder::DeleteQueryBuilder<'a, str, #ty>,
-                Box<(dyn std::error::Error + Send + Sync + 'a)>> {
-            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, "")
+            canyon_sql::query::querybuilder::DeleteQueryBuilder<'a>,
+            Box<(dyn std::error::Error + Send + Sync + 'a)>
+        > {
+            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
         }
 
         /// Generates a [`canyon_sql::query::querybuilder::DeleteQueryBuilder`]
@@ -95,12 +96,12 @@ fn generate_delete_querybuilder_tokens(ty: &Ident, table_schema_data: &str) -> T
         ///
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, selected with the input parameter
-        fn delete_query_with<'a, I>(input: &'a I) -> Result<
-                canyon_sql::query::querybuilder::DeleteQueryBuilder<'a, I, #ty>,
-                Box<(dyn std::error::Error + Send + Sync + 'a)>
-            > where I: canyon_sql::core::DbConnection + Send + 'a + ?Sized
-        {
-            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, input)
+        fn delete_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
+        -> Result<
+            canyon_sql::query::querybuilder::DeleteQueryBuilder<'a>,
+            Box<(dyn std::error::Error + Send + Sync + 'a)>
+        > {
+            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, database_type)
         }
     }
 }

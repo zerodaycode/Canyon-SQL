@@ -2,6 +2,8 @@
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
+use canyon_sql::connection::DatabaseType;
+
 /// Tests for the QueryBuilder available operations within Canyon.
 ///
 /// QueryBuilder are the way of obtain more flexibility that with
@@ -60,7 +62,9 @@ fn test_crud_find_with_querybuilder() {
         .unwrap()
         .r#where(LeagueFieldValue::id(&50), Comp::LtEq)
         .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
-        .query()
+        .build()
+        .unwrap()
+        .launch_default()
         .await;
 
     let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
@@ -93,7 +97,7 @@ fn test_crud_find_with_querybuilder_and_fulllike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
     // Find all the leagues with "LC" in their name
-    let filtered_leagues_result = League::select_query_with(SQL_SERVER_DS)
+    let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(LeagueFieldValue::name(&"LC"), Like::Full);
 
@@ -109,7 +113,7 @@ fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
     // Find all the leagues with "LC" in their name
-    let filtered_leagues_result = League::select_query_with(MYSQL_DS)
+    let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(LeagueFieldValue::name(&"LC"), Like::Full);
 
@@ -141,7 +145,7 @@ fn test_crud_find_with_querybuilder_and_leftlike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
     // Find all the leagues whose name ends with "CK"
-    let filtered_leagues_result = League::select_query()
+    let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(LeagueFieldValue::name(&"CK"), Like::Left);
 
@@ -157,7 +161,7 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
     // Find all the leagues whose name ends with "CK"
-    let filtered_leagues_result = League::select_query_with(MYSQL_DS)
+    let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(LeagueFieldValue::name(&"CK"), Like::Left);
 
@@ -189,7 +193,7 @@ fn test_crud_find_with_querybuilder_and_rightlike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike_with_mssql() {
     // Find all the leagues whose name starts with "LC"
-    let filtered_leagues_result = League::select_query_with(SQL_SERVER_DS)
+    let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(LeagueFieldValue::name(&"LC"), Like::Right);
 
@@ -205,7 +209,7 @@ fn test_crud_find_with_querybuilder_and_rightlike_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike_with_mysql() {
     // Find all the leagues whose name starts with "LC"
-    let filtered_leagues_result = League::select_query_with(MYSQL_DS)
+    let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(LeagueFieldValue::name(&"LC"), Like::Right);
 
@@ -220,10 +224,12 @@ fn test_crud_find_with_querybuilder_and_rightlike_with_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_with_mssql() {
     // Find all the players where its ID column value is greater than 50
-    let filtered_find_players = Player::select_query_with(SQL_SERVER_DS)
+    let filtered_find_players = Player::select_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(PlayerFieldValue::id(&50), Comp::Gt)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await;
 
     assert!(!filtered_find_players.unwrap().is_empty());
@@ -234,10 +240,12 @@ fn test_crud_find_with_querybuilder_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_with_mysql() {
     // Find all the players where its ID column value is greater than 50
-    let filtered_find_players = Player::select_query_with(MYSQL_DS)
+    let filtered_find_players = Player::select_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(PlayerFieldValue::id(&50), Comp::Gt)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await;
 
     assert!(!filtered_find_players.unwrap().is_empty());
@@ -259,19 +267,16 @@ fn test_crud_update_with_querybuilder() {
         .r#where(LeagueFieldValue::id(&1), Comp::Gt)
         .and(LeagueFieldValue::id(&8), Comp::Lt);
 
-    /*  NOTE: Family of QueryBuilders are clone, useful in case of need to read the generated SQL
-        let qpr = q.clone();
-        println!("PSQL: {:?}", qpr.read_sql());
-    */
-    q.query()
-        .await
+    q.build()
         .expect("Failed to update records with the querybuilder");
 
     let found_updated_values = League::select_query()
         .unwrap()
         .r#where(LeagueFieldValue::id(&1), Comp::Gt)
         .and(LeagueFieldValue::id(&7), Comp::Lt)
-        .query()
+        .build()
+        .unwrap()
+        .launch_default::<League>()
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
@@ -286,22 +291,26 @@ fn test_crud_update_with_querybuilder() {
 fn test_crud_update_with_querybuilder_with_mssql() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let q = Player::update_query_with(SQL_SERVER_DS).unwrap();
+    let q = Player::update_query_with(DatabaseType::SqlServer).unwrap();
     q.set(&[
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
     ])
     .r#where(PlayerFieldValue::id(&1), Comp::Gt)
     .and(PlayerFieldValue::id(&8), Comp::Lt)
-    .query()
+    .build()
+    .unwrap()
+    .launch_with::<&str, Player>(SQL_SERVER_DS)
     .await
     .expect("Failed to update records with the querybuilder");
 
-    let found_updated_values = Player::select_query_with(SQL_SERVER_DS)
+    let found_updated_values = Player::select_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(PlayerFieldValue::id(&1), Comp::Gt)
         .and(PlayerFieldValue::id(&7), Comp::LtEq)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
@@ -318,22 +327,26 @@ fn test_crud_update_with_querybuilder_with_mysql() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
 
-    let q = Player::update_query_with(MYSQL_DS).unwrap();
+    let q = Player::update_query_with(DatabaseType::MySQL).unwrap();
     q.set(&[
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
     ])
     .r#where(PlayerFieldValue::id(&1), Comp::Gt)
     .and(PlayerFieldValue::id(&8), Comp::Lt)
-    .query()
+    .build()
+    .unwrap()
+    .launch_with::<&str, Player>(MYSQL_DS)
     .await
     .expect("Failed to update records with the querybuilder");
 
-    let found_updated_values = Player::select_query_with(MYSQL_DS)
+    let found_updated_values = Player::select_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(PlayerFieldValue::id(&1), Comp::Gt)
         .and(PlayerFieldValue::id(&7), Comp::LtEq)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
@@ -348,7 +361,7 @@ fn test_crud_update_with_querybuilder_with_mysql() {
 ///
 /// Note if the database is persisted (not created and destroyed on every docker or
 /// GitHub Action wake up), it won't delete things that already have been deleted,
-/// but this isn't an error. They just don't exists.
+/// but this isn't an error. They just don't exist.
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder() {
@@ -356,7 +369,9 @@ fn test_crud_delete_with_querybuilder() {
         .unwrap()
         .r#where(TournamentFieldValue::id(&14), Comp::Gt)
         .and(TournamentFieldValue::id(&16), Comp::Lt)
-        .query()
+        .build()
+        .unwrap()
+        .launch_default::<Tournament>()
         .await
         .expect("Error connecting with the database on the delete operation");
 
@@ -367,18 +382,22 @@ fn test_crud_delete_with_querybuilder() {
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_with_mssql() {
-    Player::delete_query_with(SQL_SERVER_DS)
+    Player::delete_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(PlayerFieldValue::id(&120), Comp::Gt)
         .and(PlayerFieldValue::id(&130), Comp::Lt)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(Player::select_query_with(SQL_SERVER_DS)
+    assert!(Player::select_query_with(DatabaseType::SqlServer)
         .unwrap()
         .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await
         .unwrap()
         .is_empty());
@@ -388,18 +407,22 @@ fn test_crud_delete_with_querybuilder_with_mssql() {
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_with_mysql() {
-    Player::delete_query_with(MYSQL_DS)
+    Player::delete_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(PlayerFieldValue::id(&120), Comp::Gt)
         .and(PlayerFieldValue::id(&130), Comp::Lt)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(Player::select_query_with(MYSQL_DS)
+    assert!(Player::select_query_with(DatabaseType::MySQL)
         .unwrap()
         .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-        .query()
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await
         .unwrap()
         .is_empty());
