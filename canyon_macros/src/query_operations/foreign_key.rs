@@ -86,7 +86,7 @@ fn generate_find_by_foreign_key_tokens(
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, I>(&self, input: I) ->
                     Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                where I: canyon_sql::core::DbConnection + Send + 'a
+                where I: canyon_sql::connection::DbConnection + Send + 'a
             };
 
             let stmt = format!(
@@ -101,11 +101,11 @@ fn generate_find_by_foreign_key_tokens(
                     #quoted_method_signature {
                         <#fk_ty as canyon_sql::core::Transaction>::query_one::<
                             &str,
-                            &[&dyn canyon_sql::core::QueryParameter<'_>],
+                            &[&dyn canyon_sql::query::QueryParameter<'_>],
                             #fk_ty
                         >(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>],
+                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>],
                             ""
                         ).await
                     }
@@ -119,7 +119,7 @@ fn generate_find_by_foreign_key_tokens(
                     #quoted_with_method_signature {
                         input.query_one::<#fk_ty>(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::core::QueryParameter<'_>]
+                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>]
                         ).await
                     }
                 },
@@ -167,7 +167,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where
                     F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync,
-                    I: canyon_sql::core::DbConnection + Send + 'a
+                    I: canyon_sql::connection::DbConnection + Send + 'a
             };
 
             let f_ident = field_ident.to_string();

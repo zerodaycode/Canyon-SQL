@@ -50,7 +50,7 @@ impl CanyonEntity {
             .iter()
             .map(|f| {
                 let field_name = &f.name;
-                quote! { #field_name(&'a dyn canyon_sql::core::QueryParameter<'a>) }
+                quote! { #field_name(&'a dyn canyon_sql::query::QueryParameter<'a>) }
             })
             .collect::<Vec<_>>()
     }

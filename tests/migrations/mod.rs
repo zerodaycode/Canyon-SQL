@@ -2,7 +2,7 @@
 
 use crate::constants;
 use canyon_sql::core::Canyon;
-use canyon_sql::core::DbConnection;
+use canyon_sql::connection::DbConnection;
 /// Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::core::Transaction;
 #[cfg(feature = "migrations")]

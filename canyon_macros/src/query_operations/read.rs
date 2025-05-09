@@ -163,7 +163,7 @@ mod __details {
                 async fn find_all_with<'a, I>(input: I)
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 where
-                    I: canyon_sql::core::DbConnection + Send + 'a
+                    I: canyon_sql::connection::DbConnection + Send + 'a
                 {
                     input.query::<&str, #mapper_ty>(#stmt, &[]).await
                 }
@@ -221,7 +221,7 @@ mod __details {
 
             quote! {
                 async fn count_with<'a, I>(input: I) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>
-                    where I: canyon_sql::core::DbConnection + Send + 'a
+                    where I: canyon_sql::connection::DbConnection + Send + 'a
                 {
                     let res = input.query_rows(#stmt, &[]).await?;
 
@@ -256,7 +256,7 @@ mod __details {
             };
 
             quote! {
-                async fn find_by_pk<'a>(value: &'a dyn canyon_sql::core::QueryParameter<'a>)
+                async fn find_by_pk<'a>(value: &'a dyn canyon_sql::query::QueryParameter<'a>)
                     -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 {
                     #body
@@ -278,10 +278,10 @@ mod __details {
             };
 
             quote! {
-                async fn find_by_pk_with<'a, I>(value: &'a dyn canyon_sql::core::QueryParameter<'a>, input: I)
+                async fn find_by_pk_with<'a, I>(value: &'a dyn canyon_sql::query::QueryParameter<'a>, input: I)
                     -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                 where
-                    I: canyon_sql::core::DbConnection + Send + 'a
+                    I: canyon_sql::connection::DbConnection + Send + 'a
                 {
                     #body
                 }

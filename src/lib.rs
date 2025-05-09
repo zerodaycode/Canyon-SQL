@@ -6,6 +6,7 @@
 extern crate canyon_core;
 extern crate canyon_crud;
 extern crate canyon_macros;
+
 #[cfg(feature = "migrations")]
 extern crate canyon_migrations;
 
@@ -29,13 +30,12 @@ pub mod macros {
 pub mod connection {
     pub use canyon_core::connection::database_type::DatabaseType;
     pub use canyon_core::connection::db_connector::DatabaseConnection;
+    pub use canyon_core::connection::contracts::DbConnection;
 }
 
 pub mod core {
     pub use canyon_core::canyon::Canyon;
-    pub use canyon_core::connection::contracts::DbConnection; // TODO: Available only via connection?
     pub use canyon_core::mapper::*;
-    pub use canyon_core::query::parameters::QueryParameter; // TODO: this re-export must be only available on pub mod query
     pub use canyon_core::rows::CanyonRows;
     pub use canyon_core::transaction::Transaction;
 }
@@ -51,6 +51,7 @@ pub mod query {
     pub use canyon_core::query::bounds;
     pub use canyon_core::query::operators;
     pub use canyon_core::query::*;
+    pub use canyon_core::query::parameters::QueryParameter;
 }
 
 /// Reexport the available database clients within Canyon

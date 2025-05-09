@@ -21,13 +21,13 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// the current instance of a T type, returning a result
         /// indicating a possible failure querying the database with the specified datasource.
         async fn delete_with<'a, I>(&self, input: I) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>
-            where I: canyon_sql::core::DbConnection + Send + 'a
+            where I: canyon_sql::connection::DbConnection + Send + 'a
     };
 
     if let Some(primary_key) = pk {
         let pk_field = Ident::new(&primary_key, Span::call_site());
         let pk_field_value =
-            quote! { &self.#pk_field as &dyn canyon_sql::core::QueryParameter<'_> };
+            quote! { &self.#pk_field as &dyn canyon_sql::query::QueryParameter<'_> };
         let delete_stmt = format!(
             "DELETE FROM {} WHERE {:?} = $1",
             table_schema_data, primary_key

@@ -117,7 +117,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
         {
             let input = "";
-            let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values),*];
+            let mut values: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
 
@@ -162,9 +162,9 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         async fn insert_with<'a, I>(&mut self, input: I)
             -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
         where
-            I: canyon_sql::core::DbConnection + Send + 'a
+            I: canyon_sql::connection::DbConnection + Send + 'a
         {
-            let mut values: Vec<&dyn canyon_sql::core::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
+            let mut values: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
             #insert_transaction
         }
 
@@ -425,7 +425,7 @@ fn _generate_multiple_insert_tokens(
          async fn multi_insert<'a, T>(instances: &'a mut [&'a mut T]) -> (
              Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
          ) {
-             use canyon_sql::core::QueryParameter;
+             use canyon_sql::query::QueryParameter;
              let input = "";
 
               let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
@@ -482,9 +482,9 @@ fn _generate_multiple_insert_tokens(
         async fn multi_insert_with<'a, T, I>(instances: &'a mut [&'a mut T], input: I) ->
             Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
             where
-                I: canyon_sql::core::DbConnection + Send + 'a
+                I: canyon_sql::connection::DbConnection + Send + 'a
         {
-            use canyon_sql::core::QueryParameter;
+            use canyon_sql::query::QueryParameter;
 
             let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
             for instance in instances.iter() {

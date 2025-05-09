@@ -31,7 +31,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let update_with_signature = quote! {
         async fn update_with<'a, I>(&self, input: I)
             -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
-        where I: canyon_sql::core::DbConnection + Send + 'a
+        where I: canyon_sql::connection::DbConnection + Send + 'a
     };
 
     if let Some(primary_key) = macro_data.get_primary_key_annotation() {
@@ -46,11 +46,11 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
         update_ops_tokens.extend(quote! {
             #update_signature {
-                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = #update_values;
+                let update_values: &[&dyn canyon_sql::query::QueryParameter<'_>] = #update_values;
                 <#ty as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
             }
             #update_with_signature {
-                let update_values: &[&dyn canyon_sql::core::QueryParameter<'_>] = #update_values;
+                let update_values: &[&dyn canyon_sql::query::QueryParameter<'_>] = #update_values;
                 input.execute(#stmt, update_values).await
             }
         });
