@@ -15,45 +15,6 @@ use crate::row::Row;
 
 use cfg_if::cfg_if;
 
-// Helper macro to conditionally add trait bounds
-// these are the hacky intermediate traits
-cfg_if! {
-    if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
-      pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>
-        + tiberius::FromSql<'a>
-        + mysql_async::prelude::FromValue {}
-      impl<'a, T> FromSql<'a, T> for T where T:
-        tokio_postgres::types::FromSql<'a>
-        + tiberius::FromSql<'a>
-        + mysql_async::prelude::FromValue
-        {}
-
-      pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned
-        + tiberius::FromSqlOwned
-        + mysql_async::prelude::FromValue {}
-      impl<T> FromSqlOwnedValue<T> for T where T:
-        tokio_postgres::types::FromSqlOwned
-        + tiberius::FromSqlOwned
-        + mysql_async::prelude::FromValue
-        {}
-    } else if #[cfg(feature = "postgres")] {
-      pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a> {}
-      impl<'a, T> FromSql<'a, T> for T where T:
-        tokio_postgres::types::FromSql<'a> {}
-
-      pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned {}
-      impl<T> FromSqlOwnedValue<T> for T where T:
-        tokio_postgres::types::FromSqlOwned {}
-    } else if #[cfg(feature = "mssql")] {
-      pub trait FromSql<'a, T>: tiberius::FromSqlOwned {}
-      impl<'a, T> FromSql<'a, T> for T where T: tiberius::FromSqlOwned {}
-
-      pub trait FromSqlOwnedValue<T>: tiberius::FromSqlOwned {}
-      impl<T> FromSqlOwnedValue<T> for T where T: tiberius::FromSqlOwned {}
-    }
-    // TODO: missing combinations else
-}
-
 /// Lightweight wrapper over the collection of results of the different crates
 /// supported by Canyon-SQL.
 ///
@@ -168,5 +129,94 @@ impl CanyonRows {
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.is_empty(),
         }
+    }
+}
+
+
+cfg_if! {
+    if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
+        pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>
+            + tiberius::FromSql<'a>
+            + mysql_async::prelude::FromValue {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            tokio_postgres::types::FromSql<'a>
+            + tiberius::FromSql<'a>
+            + mysql_async::prelude::FromValue
+        {}
+
+        pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned
+            + tiberius::FromSqlOwned
+            + mysql_async::prelude::FromValue {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            tokio_postgres::types::FromSqlOwned
+            + tiberius::FromSqlOwned
+            + mysql_async::prelude::FromValue
+        {}
+    } else if #[cfg(all(feature = "postgres", feature = "mysql"))] {
+        pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>
+            + mysql_async::prelude::FromValue {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            tokio_postgres::types::FromSql<'a>
+            + mysql_async::prelude::FromValue
+        {}
+
+        pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned
+            + mysql_async::prelude::FromValue {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            tokio_postgres::types::FromSqlOwned
+            + mysql_async::prelude::FromValue
+        {}
+    } else if #[cfg(all(feature = "postgres", feature = "mssql"))] {
+        pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>
+            + tiberius::FromSql<'a> {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            tokio_postgres::types::FromSql<'a>
+            + tiberius::FromSql<'a>
+        {}
+
+        pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned
+            + tiberius::FromSqlOwned {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            tokio_postgres::types::FromSqlOwned
+            + tiberius::FromSqlOwned
+        {}
+    } else if #[cfg(all(feature = "mysql", feature = "mssql"))] {
+        pub trait FromSql<'a, T>: mysql_async::prelude::FromValue
+            + tiberius::FromSql<'a> {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            mysql_async::prelude::FromValue
+            + tiberius::FromSql<'a>
+        {}
+
+        pub trait FromSqlOwnedValue<T>: mysql_async::prelude::FromValue
+            + tiberius::FromSqlOwned {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            mysql_async::prelude::FromValue
+            + tiberius::FromSqlOwned
+        {}
+    } else if #[cfg(feature = "postgres")] {
+        pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a> {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            tokio_postgres::types::FromSql<'a> {}
+
+        pub trait FromSqlOwnedValue<T>: tokio_postgres::types::FromSqlOwned {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            tokio_postgres::types::FromSqlOwned {}
+    } else if #[cfg(feature = "mysql")] {
+        pub trait FromSql<'a, T>: mysql_async::prelude::FromValue {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            mysql_async::prelude::FromValue {}
+
+        pub trait FromSqlOwnedValue<T>: mysql_async::prelude::FromValue {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            mysql_async::prelude::FromValue {}
+    } else if #[cfg(feature = "mssql")] {
+        pub trait FromSql<'a, T>: tiberius::FromSql<'a> {}
+        impl<'a, T> FromSql<'a, T> for T where T:
+            tiberius::FromSql<'a> {}
+
+        pub trait FromSqlOwnedValue<T>: tiberius::FromSqlOwned {}
+        impl<T> FromSqlOwnedValue<T> for T where T:
+            tiberius::FromSqlOwned {}
     }
 }

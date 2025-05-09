@@ -5,7 +5,7 @@ use tiberius::{self, ColumnData, IntoSql};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self, types::ToSql};
 
-// TODO: cfg all
+// TODO: cfg feature for this re-exports, as date-time or something
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 /// Defines a trait for represent type bounds against the allowed

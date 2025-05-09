@@ -44,8 +44,6 @@ fn test_generated_sql_by_the_select_querybuilder() {
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
         .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
-    // .query()
-    // .await;
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the
     // generated SQL by the SelectQueryBuilder<T> is the expected
