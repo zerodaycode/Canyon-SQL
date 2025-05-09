@@ -12,8 +12,8 @@ pub fn generate_read_operations_tokens(
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
-        .expect("Expected mapping target <maps_to>") // TODO: return Err(...)
-        .unwrap_or_else(|| ty.clone());
+        .as_ref()
+        .unwrap_or(ty);
 
     let find_all_tokens = generate_find_all_operations_tokens(ty, &mapper_ty, table_schema_data);
     let count_tokens = generate_count_operations_tokens(ty, table_schema_data);
@@ -101,8 +101,8 @@ fn generate_find_by_pk_operations_tokens(
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
-        .expect("Expected mapping target <maps_to>")
-        .unwrap_or_else(|| ty.clone());
+        .as_ref()
+        .unwrap_or(ty);
     let pk = macro_data.get_primary_key_annotation();
     let no_pk_runtime_err = if pk.is_some() {
         None

@@ -25,8 +25,8 @@ pub fn impl_crud_operations_trait_for_struct(
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
-        .expect("Expected mapping macro data")
-        .unwrap_or_else(|| ty.clone());
+        .as_ref()
+        .unwrap_or(ty);
 
     let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
     let insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);

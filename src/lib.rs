@@ -28,9 +28,9 @@ pub mod macros {
 /// connection module serves to reexport the public elements of the `canyon_connection` crate,
 /// exposing them through the public API
 pub mod connection {
+    pub use canyon_core::connection::contracts::DbConnection;
     pub use canyon_core::connection::database_type::DatabaseType;
     pub use canyon_core::connection::db_connector::DatabaseConnection;
-    pub use canyon_core::connection::contracts::DbConnection;
 }
 
 pub mod core {
@@ -50,8 +50,8 @@ pub mod crud {
 pub mod query {
     pub use canyon_core::query::bounds;
     pub use canyon_core::query::operators;
-    pub use canyon_core::query::*;
     pub use canyon_core::query::parameters::QueryParameter;
+    pub use canyon_core::query::*;
 }
 
 /// Reexport the available database clients within Canyon

@@ -1,8 +1,8 @@
 #![allow(unused_imports)]
 
 use crate::constants;
-use canyon_sql::core::Canyon;
 use canyon_sql::connection::DbConnection;
+use canyon_sql::core::Canyon;
 /// Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::core::Transaction;
 #[cfg(feature = "migrations")]

@@ -132,7 +132,6 @@ impl CanyonRows {
     }
 }
 
-
 cfg_if! {
     if #[cfg(all(feature = "postgres", feature = "mysql", feature = "mssql"))] {
         pub trait FromSql<'a, T>: tokio_postgres::types::FromSql<'a>

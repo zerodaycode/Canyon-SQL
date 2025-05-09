@@ -142,8 +142,8 @@ fn generate_find_by_reverse_foreign_key_tokens(
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
-        .expect("Expected mapping target <maps_to>")
-        .unwrap_or_else(|| ty.clone());
+        .as_ref()
+        .unwrap_or(ty);
 
     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {

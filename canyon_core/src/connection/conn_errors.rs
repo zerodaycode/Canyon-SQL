@@ -10,7 +10,7 @@ impl From<Option<&str>> for DatasourceNotFound {
         DatasourceNotFound {
             datasource_name: value
                 .map(String::from)
-                .unwrap_or_else(|| String::from("No datasource name was provided"))
+                .unwrap_or_else(|| String::from("No datasource name was provided")),
         }
     }
 }

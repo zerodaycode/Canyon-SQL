@@ -128,9 +128,15 @@ pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> C
 #[proc_macro_derive(CanyonCrud, attributes(canyon_crud))]
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).expect("Error implementing CanyonCrud AST");
-    let macro_data = MacroTokens::new(&ast);
-    let table_name_res = helpers::table_schema_parser(&macro_data);
 
+    let macro_data = MacroTokens::new(&ast);
+    let macro_data = if let Err(err) = macro_data {
+        return err.to_compile_error().into();
+    } else {
+        macro_data.unwrap()
+    };
+
+    let table_name_res = helpers::table_schema_parser(&macro_data);
     let table_schema_data = if let Err(err) = table_name_res {
         return err.into();
     } else {

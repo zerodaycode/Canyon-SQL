@@ -1,8 +1,9 @@
 use std::convert::TryFrom;
+use std::fmt::Write;
 
 use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
-use proc_macro2::Ident;
+use proc_macro2::{Ident, Span};
 use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
@@ -14,6 +15,8 @@ pub struct MacroTokens<'a> {
     pub generics: &'a Generics,
     pub attrs: &'a Vec<Attribute>,
     pub fields: &'a Fields,
+    // -------- the new fields that must help to avoid recalculations every time that the user compiles
+    pub(crate) canyon_crud_attribute: Option<CanyonCrudAttribute>,
 }
 
 // TODO: this struct, as is, is not really useful. There's tons of methods that must be called and
@@ -22,29 +25,40 @@ pub struct MacroTokens<'a> {
 // the fk operations, the mapping target type...
 
 impl<'a> MacroTokens<'a> {
-    pub fn new(ast: &'a DeriveInput) -> Self {
-        Self {
-            vis: &ast.vis,
-            ty: &ast.ident,
-            generics: &ast.generics,
-            attrs: &ast.attrs,
-            fields: match &ast.data {
-                syn::Data::Struct(ref s) => &s.fields,
-                _ => panic!("This derive macro can only be automatically derived for structs"),
-            },
+    pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
+        if let syn::Data::Struct(ref s) = ast.data {
+            let attrs = &ast.attrs;
+            let mut canyon_crud_attribute = None;
+            for attr in attrs {
+                if attr.path.is_ident("canyon_crud") {
+                    canyon_crud_attribute = Some(attr.parse_args::<CanyonCrudAttribute>()?);
+                }
+            }
+
+            Ok(Self {
+                vis: &ast.vis,
+                ty: &ast.ident,
+                generics: &ast.generics,
+                attrs: &ast.attrs,
+                fields: &s.fields,
+                canyon_crud_attribute,
+            })
+        } else {
+            Err(syn::Error::new(
+                Span::call_site(),
+                "unsupported 'canyon_crud' attribute, expected `maps_to`",
+            ))
         }
     }
 
     // TODO: this must be refactored in order to avoid to make the operation everytime that
     // this method is queried. The trick w'd be to have a map to relate the entries.
-    pub fn retrieve_mapping_target_type(&self) -> Result<Option<Ident>, syn::Error> {
-        for attr in self.attrs {
-            if attr.path.is_ident("canyon_crud") {
-                let meta: CanyonCrudAttribute = attr.parse_args()?;
-                return Ok(meta.maps_to);
-            }
+    pub fn retrieve_mapping_target_type(&self) -> &Option<Ident> {
+        if let Some(canyon_crud_attribute) = &self.canyon_crud_attribute {
+            &canyon_crud_attribute.maps_to
+        } else {
+            &None
         }
-        Ok(None)
     }
 
     /// Gives a Vec of tuples that contains the visibility, the name and
@@ -202,23 +216,18 @@ impl<'a> MacroTokens<'a> {
     /// Already returns the correct number of placeholders, skipping one
     /// entry in the type contains a `#[primary_key]`
     pub fn placeholders_generator(&self) -> String {
-        let mut placeholders = String::new();
-        if self.type_has_primary_key() {
-            for num in 1..self.fields.len() {
-                if num < self.fields.len() - 1 {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string() + ", "));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string()));
-                }
-            }
+        let range_upper_bound = if self.type_has_primary_key() {
+            self.fields.len()
         } else {
-            for num in 1..self.fields.len() + 1 {
-                if num < self.fields.len() {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string() + ", "));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string()));
-                }
+            self.fields.len() + 1
+        };
+
+        let mut placeholders = String::new();
+        for (i, n) in (1..range_upper_bound).enumerate() {
+            if i > 0 {
+                placeholders.push_str(", ");
             }
+            write!(placeholders, "${}", n).unwrap();
         }
 
         placeholders
