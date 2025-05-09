@@ -4,6 +4,7 @@ use std::sync::Mutex;
 pub mod entity;
 pub mod entity_fields;
 pub mod field_annotation;
+mod helpers;
 pub mod manager_builder;
 pub mod register_types;
 

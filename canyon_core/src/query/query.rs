@@ -54,4 +54,3 @@ impl<'a> Query<'a> {
         input.query(&self.sql, &self.params).await
     }
 }
-

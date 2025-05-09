@@ -4,11 +4,9 @@ use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasour
 use crate::connection::{db_connector, get_canyon_tokio_runtime, CANYON_INSTANCE};
 use db_connector::DatabaseConnection;
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 use std::{error::Error, fs};
 use tokio::sync::Mutex;
-use walkdir::WalkDir;
 
 pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 
@@ -56,12 +54,21 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 pub struct Canyon {
     config: Datasources,
     connections: HashMap<&'static str, SharedConnection>,
-    default: Option<SharedConnection>,
+    default_connection: Option<SharedConnection>,
     default_db_type: Option<DatabaseType>,
 }
 
 impl Canyon {
-    // Singleton access
+    /// Returns the global singleton instance of `Canyon`.
+    ///
+    /// This function allows access to the singleton instance of the Canyon engine
+    /// after it has been initialized through [`Canyon::init`]. It returns a shared,
+    /// read-only reference to the internal `Canyon` state.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the `Canyon` instance has not yet been initialized.
+    /// In that case, the user must call [`Canyon::init`] before accessing the singleton.
     pub fn instance() -> Result<&'static Self, Box<dyn Error + Send + Sync>> {
         Ok(CANYON_INSTANCE.get().ok_or_else(|| {
             Box::new(std::io::Error::new(
@@ -71,25 +78,47 @@ impl Canyon {
         })?)
     }
 
-    // Initializes Canyon instance
+    /// Initializes the global `Canyon` instance from a configuration file.
+    ///
+    /// Loads the `Datasources` configuration from the expected `canyon.toml` file (or another
+    /// discoverable location), establishes one or more database connections, and sets up the default
+    /// connection and database type.
+    ///
+    /// This function is idempotent: calling it multiple times will reuse the already-initialized instance.
+    ///
+    /// # Errors
+    ///
+    /// - If the configuration file is missing or malformed.
+    /// - If deserialization into `CanyonSqlConfig` fails.
+    /// - If any configured datasource fails to initialize.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    ///     let canyon = Canyon::init().await?;
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn init() -> Result<&'static Self, Box<dyn Error + Send + Sync>> {
         if CANYON_INSTANCE.get().is_some() {
             return Canyon::instance(); // Already initialized, no need to do it again
         }
 
-        let path = Canyon::find_config_path()?;
+        let path = __impl::find_config_path()?;
         let config_content = fs::read_to_string(&path)?;
         let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
 
         let mut connections = HashMap::new();
-        let mut default = None;
+        let mut default_connection = None;
         let mut default_db_type = None;
 
         for ds in config.datasources.iter() {
             __impl::process_new_conn_by_datasource(
                 ds,
                 &mut connections,
-                &mut default,
+                &mut default_connection,
                 &mut default_db_type,
             )
             .await?;
@@ -98,7 +127,7 @@ impl Canyon {
         let canyon = Canyon {
             config,
             connections,
-            default,
+            default_connection,
             default_db_type,
         };
 
@@ -106,46 +135,35 @@ impl Canyon {
         Ok(CANYON_INSTANCE.get_or_init(|| canyon))
     }
 
-    // Internal helper to locate the config file
-    fn find_config_path() -> Result<PathBuf, std::io::Error> {
-        WalkDir::new(".")
-            .max_depth(2)
-            .into_iter()
-            .filter_map(Result::ok)
-            .find_map(|e| {
-                let filename = e.file_name().to_string_lossy().to_lowercase();
-                if e.metadata().ok()?.is_file()
-                    && filename.starts_with("canyon")
-                    && filename.ends_with(".toml")
-                {
-                    Some(e.path().to_path_buf())
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::NotFound, "No Canyon config found")
-            })
-    }
-
-    // Public accessor for datasources
+    /// Returns an immutable slice containing all configured datasources.
+    ///
+    /// This slice represents the datasources defined in your `canyon.toml` configuration.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use canyon_core::canyon::Canyon;
+    /// for ds in Canyon::instance()?.datasources() {
+    ///     println!("Datasource name: {}", ds.name);
+    /// }
+    /// ```
+    #[inline(always)]
     pub fn datasources(&self) -> &[DatasourceConfig] {
         &self.config.datasources
     }
 
-    // Retrieve a datasource by name or default to the first
+    // Retrieve a datasource by name or returns the first one declared in the configuration file
+    // or added by the user via the builder interface as the default one (if exists at least one)
     pub fn find_datasource_by_name_or_default(
         &self,
         name: &str,
     ) -> Result<&DatasourceConfig, DatasourceNotFound> {
         if name.is_empty() {
-            self.config
-                .datasources
+            self.datasources()
                 .first()
                 .ok_or_else(|| DatasourceNotFound::from(None))
         } else {
-            self.config
-                .datasources
+            self.datasources()
                 .iter()
                 .find(|ds| ds.name == name)
                 .ok_or_else(|| DatasourceNotFound::from(Some(name)))
@@ -162,7 +180,7 @@ impl Canyon {
         &self,
     ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
         Ok(self
-            .default
+            .default_connection
             .as_ref()
             .ok_or_else(|| DatasourceNotFound::from(None))?
             .lock()
@@ -202,8 +220,32 @@ mod __impl {
     use crate::connection::db_connector::DatabaseConnection;
     use std::collections::HashMap;
     use std::error::Error;
+    use std::path::PathBuf;
     use std::sync::Arc;
     use tokio::sync::Mutex;
+    use walkdir::WalkDir;
+
+    // Internal helper to locate the config file
+    pub(crate) fn find_config_path() -> Result<PathBuf, std::io::Error> {
+        WalkDir::new(".")
+            .max_depth(2)
+            .into_iter()
+            .filter_map(Result::ok)
+            .find_map(|e| {
+                let filename = e.file_name().to_string_lossy().to_lowercase();
+                if e.metadata().ok()?.is_file()
+                    && filename.starts_with("canyon")
+                    && filename.ends_with(".toml")
+                {
+                    Some(e.path().to_path_buf())
+                } else {
+                    None
+                }
+            })
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::NotFound, "No Canyon config found")
+            })
+    }
 
     pub(crate) async fn process_new_conn_by_datasource(
         ds: &DatasourceConfig,

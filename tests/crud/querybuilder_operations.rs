@@ -34,9 +34,9 @@ use crate::tests_models::tournament::*;
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_generated_sql_by_the_select_querybuilder() {
     let select_with_joins = League::select_query()
-        .unwrap()
-        .inner_join("tournament", "league.id", "tournament.league_id")
-        .left_join("team", "tournament.id", "player.tournament_id")
+        .unwrap() // TournamentTable::name --- //
+        .inner_join("tournament", LeagueField::id, TournamentField::league)
+        .left_join("team", TournamentField::id, PlayerField::id)
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
         .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
@@ -47,7 +47,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
     // generated SQL by the SelectQueryBuilder<T> is the expected
     assert_eq!(
         select_with_joins.read_sql(),
-        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
+        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league LEFT JOIN team ON tournament.id = player.id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
     )
 }
 

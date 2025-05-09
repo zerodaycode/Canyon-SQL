@@ -1,8 +1,8 @@
+use super::entity::CanyonEntity;
+use crate::helpers;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Attribute, Generics, Visibility};
-
-use super::entity::CanyonEntity;
 
 /// Builds the TokenStream that contains the user defined struct
 pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
@@ -32,6 +32,8 @@ pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 /// of the field name.
 pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     let struct_name = canyon_entity.struct_name.to_string();
+    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name);
+
     let enum_name = Ident::new((struct_name + "Field").as_str(), Span::call_site());
 
     let fields_names = &canyon_entity.get_fields_as_enum_variants();
@@ -76,7 +78,18 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
             #(#fields_names),*
         }
 
+        impl #generics std::fmt::Display for #enum_name #generics {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                write!(f, "{}", self.as_str())
+            }
+        }
+
         impl #generics canyon_sql::query::bounds::FieldIdentifier for #generics #enum_name #generics {
+            #[inline(always)]
+            fn table_and_column_name(&self) -> String {
+                format!("{}.{}", #db_target_table_name, self.as_str())
+            }
+
             fn as_str(&self) -> &'static str {
                 match *self {
                     #(#match_arms_str),*

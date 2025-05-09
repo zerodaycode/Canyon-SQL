@@ -22,12 +22,14 @@ use crate::query::parameters::QueryParameter;
 ///
 /// // Something like:
 /// `let struct_field_name_from_variant = StructField::some_field.field_name_as_str();`
-pub trait FieldIdentifier
-// where
-//     // TODO: maybe just QueryParameter?
-//     T: QueryParameter<'a>,
-{
+pub trait FieldIdentifier: std::fmt::Display {
     fn as_str(&self) -> &'static str;
+
+    /// Returns a formatted string as `{<table_name>.<column_name>}`.
+    ///
+    /// This is useful during queries generations for example, in join statements, when you
+    /// alias other defined names, etc.
+    fn table_and_column_name(&self) -> String;
 }
 
 /// Represents some kind of introspection to make the implementors

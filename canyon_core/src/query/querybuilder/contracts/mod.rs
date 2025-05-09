@@ -16,9 +16,6 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 }
 
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
-    // TODO: cols on the statement must be generics to use &str and fieldvalue (the enum)
-    // TODO: could we introduce const_format! for the construction of the components of the query?
-
     /// Adds a *LEFT JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
@@ -27,7 +24,12 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    fn left_join(self, join_table: &str, col1: &str, col2: &str) -> Self;
+    fn left_join(
+        self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self;
 
     /// Adds a *INNER JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
@@ -37,7 +39,12 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    fn inner_join(self, join_table: &str, col1: &str, col2: &str) -> Self;
+    fn inner_join(
+        self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self;
 
     /// Adds a *RIGHT JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
@@ -47,7 +54,12 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    fn right_join(self, join_table: &str, col1: &str, col2: &str) -> Self;
+    fn right_join(
+        self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self;
 
     /// Adds a *FULL JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
@@ -57,7 +69,12 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// * `col2` - The right side of the ON operator for the join
     ///
     /// > Note: The order on the column parameters is irrelevant
-    fn full_join(self, join_table: &str, col1: &str, col2: &str) -> Self;
+    fn full_join(
+        self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self;
 }
 
 /// The [`QueryBuilder`] trait is the root of a kind of hierarchy

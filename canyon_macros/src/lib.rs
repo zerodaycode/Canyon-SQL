@@ -126,8 +126,7 @@ pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> C
 /// type, as defined in the `CrudOperations` + `Transaction` traits.
 #[proc_macro_derive(CanyonCrud, attributes(canyon_crud))]
 pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let ast: DeriveInput =
-        syn::parse(input).expect("Error parsing `Canyon Entity for generate the CRUD methods");
+    let ast: DeriveInput = syn::parse(input).expect("Error implementing CanyonCrud AST");
     let macro_data = MacroTokens::new(&ast);
     let table_name_res = helpers::table_schema_parser(&macro_data);
 
@@ -179,6 +178,8 @@ pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
     quote! {
         use canyon_sql::core::QueryParameter;
+        use canyon_sql::query::bounds::FieldIdentifier;
+
         #_generated_enum_type_for_fields
         #_generated_enum_type_for_fields_values
     }

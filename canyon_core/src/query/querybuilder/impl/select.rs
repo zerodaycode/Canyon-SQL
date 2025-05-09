@@ -5,31 +5,59 @@ use crate::query::querybuilder::contracts::{QueryBuilderOps, SelectQueryBuilderO
 use crate::query::querybuilder::types::select::SelectQueryBuilder;
 
 impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
-    fn left_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
-        self._inner
-            .sql
-            .push_str(&format!(" LEFT JOIN {join_table} ON {col1} = {col2}"));
+    fn left_join(
+        mut self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self {
+        self._inner.sql.push_str(&format!(
+            " LEFT JOIN {join_table} ON {} = {}",
+            col1.table_and_column_name(),
+            col2.table_and_column_name()
+        ));
         self
     }
 
-    fn inner_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
-        self._inner
-            .sql
-            .push_str(&format!(" INNER JOIN {join_table} ON {col1} = {col2}"));
+    fn inner_join(
+        mut self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self {
+        self._inner.sql.push_str(&format!(
+            " INNER JOIN {join_table} ON {} = {}",
+            col1.table_and_column_name(),
+            col2.table_and_column_name()
+        ));
         self
     }
 
-    fn right_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
-        self._inner
-            .sql
-            .push_str(&format!(" RIGHT JOIN {join_table} ON {col1} = {col2}"));
+    fn right_join(
+        mut self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self {
+        self._inner.sql.push_str(&format!(
+            " RIGHT JOIN {join_table} ON {} = {}",
+            col1.table_and_column_name(),
+            col2.table_and_column_name()
+        ));
         self
     }
 
-    fn full_join(mut self, join_table: &str, col1: &str, col2: &str) -> Self {
-        self._inner
-            .sql
-            .push_str(&format!(" FULL JOIN {join_table} ON {col1} = {col2}"));
+    fn full_join(
+        mut self,
+        join_table: &str,
+        col1: impl FieldIdentifier,
+        col2: impl FieldIdentifier,
+    ) -> Self {
+        self._inner.sql.push_str(&format!(
+            " FULL JOIN {join_table} ON {} = {}",
+            col1.table_and_column_name(),
+            col2.table_and_column_name()
+        ));
         self
     }
 }

@@ -142,6 +142,7 @@ pub(crate) mod sqlserver_query_launcher {
         }
 
         // TODO: We must address the query generation
+        // NOTE: ready to apply the change now that the querybuilder knows what's the underlying db type
         let mut mssql_query = Query::new(stmt.to_owned().replace('$', "@P"));
         params.iter().for_each(|param| {
             mssql_query.bind(*param);
