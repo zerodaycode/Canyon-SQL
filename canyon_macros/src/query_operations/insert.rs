@@ -41,9 +41,9 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
 
-    let insert_transaction = if let Some(pk_data) = &pk_ident_type {
-        let pk_ident = &pk_data.0;
-        let pk_type = &pk_data.1;
+    let insert_transaction = if let Some(pk_data) = pk_ident_type {
+        let pk_ident = pk_data.0;
+        let pk_type = pk_data.1;
 
         quote! {
             #remove_pk_value_from_fn_entry;
@@ -202,7 +202,7 @@ fn _generate_multiple_insert_tokens(
     let pk_ident_type = macro_data
         .fields_with_types()
         .into_iter()
-        .find(|(i, _t)| *i == pk);
+        .find(|(i, _t)| *i == &pk);
 
     let multi_insert_transaction = if let Some(pk_data) = &pk_ident_type {
         let pk_ident = &pk_data.0;

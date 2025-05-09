@@ -19,11 +19,6 @@ pub struct MacroTokens<'a> {
     pub(crate) canyon_crud_attribute: Option<CanyonCrudAttribute>,
 }
 
-// TODO: this struct, as is, is not really useful. There's tons of methods that must be called and
-// process data everytime a Crud Operation needs them. W'd be much more efficient to have a struct
-// that holds most of the data already processed, for example, the pk annotations,
-// the fk operations, the mapping target type...
-
 impl<'a> MacroTokens<'a> {
     pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
         if let syn::Data::Struct(ref s) = ast.data {
@@ -61,27 +56,12 @@ impl<'a> MacroTokens<'a> {
         }
     }
 
-    /// Gives a Vec of tuples that contains the visibility, the name and
-    /// the type of every field on a Struct
-    pub fn _fields_with_visibility_and_types(&self) -> Vec<(Visibility, Ident, Type)> {
-        self.fields
-            .iter()
-            .map(|field| {
-                (
-                    field.vis.clone(),
-                    field.ident.as_ref().unwrap().clone(),
-                    field.ty.clone(),
-                )
-            })
-            .collect::<Vec<_>>()
-    }
-
     /// Gives a Vec of tuples that contains the name and
     /// the type of every field on a Struct
-    pub fn fields_with_types(&self) -> Vec<(Ident, Type)> {
+    pub fn fields_with_types(&self) -> Vec<(&Ident, &Type)> {
         self.fields
             .iter()
-            .map(|field| (field.ident.as_ref().unwrap().clone(), field.ty.clone()))
+            .map(|field| (field.ident.as_ref().unwrap(), &field.ty))
             .collect::<Vec<_>>()
     }
 
@@ -91,14 +71,6 @@ impl<'a> MacroTokens<'a> {
             .iter()
             .map(|field| field.ident.as_ref().unwrap().clone())
             .collect::<Vec<_>>()
-    }
-
-    /// Gives a Vec populated with the name of the fields of the struct
-    pub fn _get_struct_fields_as_collection_strings(&self) -> Vec<String> {
-        self.get_struct_fields()
-            .iter()
-            .map(|ident| ident.to_owned().to_string())
-            .collect::<Vec<String>>()
     }
 
     /// Returns a Vec populated with the name of the fields of the struct
