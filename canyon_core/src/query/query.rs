@@ -6,9 +6,6 @@ use crate::transaction::Transaction;
 use std::error::Error;
 use std::fmt::Debug;
 use std::ops::DerefMut;
-// TODO: all the query works here
-// TODO: exports things like Select::... where receives the table
-// name and prepares the raw query (maybe with const_format!) for improved performance
 
 // TODO: query should implement ToStatement (as the drivers underneath Canyon) or similar
 // to be usable directly in the input of Transaction and DbConnenction

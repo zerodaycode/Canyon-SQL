@@ -24,6 +24,7 @@ use canyon_entities::{
     entity::CanyonEntity,
     manager_builder::{generate_enum_with_fields, generate_enum_with_fields_values},
 };
+use canyon_entities::manager_builder::generated_enum_type_for_struct_data;
 
 /// Macro for handling the entry point to the program.
 ///
@@ -174,14 +175,18 @@ pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
 
     // No errors detected on the parsing, so we can safely unwrap the parse result
     let entity = entity_res.expect("Unexpected error parsing the struct");
-    let _generated_enum_type_for_fields = generate_enum_with_fields(&entity);
-    let _generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
+    let generated_enum_type_for_struct_data = generated_enum_type_for_struct_data(&entity);
+    let generated_enum_type_for_fields = generate_enum_with_fields(&entity);
+    let generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
+    
     quote! {
         use canyon_sql::core::QueryParameter;
+        use canyon_sql::query::bounds::TableMetadata;
         use canyon_sql::query::bounds::FieldIdentifier;
 
-        #_generated_enum_type_for_fields
-        #_generated_enum_type_for_fields_values
+        #generated_enum_type_for_struct_data
+        #generated_enum_type_for_fields
+        #generated_enum_type_for_fields_values
     }
     .into()
 }

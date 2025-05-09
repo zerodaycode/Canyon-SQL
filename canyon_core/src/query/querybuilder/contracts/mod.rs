@@ -1,7 +1,7 @@
 //! Contains the elements that makes part of the formal declaration
 //! of the behaviour of the Canyon-SQL QueryBuilder
 
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
+use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier, TableMetadata};
 use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 
@@ -26,7 +26,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn left_join(
         self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -41,7 +41,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn inner_join(
         self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -56,7 +56,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn right_join(
         self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -71,7 +71,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn full_join(
         self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;

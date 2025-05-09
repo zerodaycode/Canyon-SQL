@@ -1,4 +1,4 @@
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
+use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier, TableMetadata};
 use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::contracts::{QueryBuilderOps, SelectQueryBuilderOps};
@@ -7,7 +7,7 @@ use crate::query::querybuilder::types::select::SelectQueryBuilder;
 impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     fn left_join(
         mut self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self {
@@ -21,7 +21,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
     fn inner_join(
         mut self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self {
@@ -35,7 +35,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
     fn right_join(
         mut self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self {
@@ -49,7 +49,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
     fn full_join(
         mut self,
-        join_table: &str,
+        join_table: impl TableMetadata,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self {
