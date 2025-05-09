@@ -35,7 +35,11 @@ use crate::tests_models::tournament::*;
 fn test_generated_sql_by_the_select_querybuilder() {
     let select_with_joins = League::select_query()
         .unwrap()
-        .inner_join(TournamentTable::DbName, LeagueField::id, TournamentField::league)
+        .inner_join(
+            TournamentTable::DbName,
+            LeagueField::id,
+            TournamentField::league,
+        )
         .left_join(PlayerTable::DbName, TournamentField::id, PlayerField::id)
         .r#where(LeagueFieldValue::id(&7), Comp::Gt)
         .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)

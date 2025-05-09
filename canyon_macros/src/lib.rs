@@ -20,11 +20,11 @@ use crate::canyon_entity_macro::generate_canyon_entity_tokens;
 use crate::canyon_mapper_macro::canyon_mapper_impl_tokens;
 use crate::foreignkeyable_macro::foreignkeyable_impl_tokens;
 use crate::query_operations::impl_crud_operations_trait_for_struct;
+use canyon_entities::manager_builder::generated_enum_type_for_struct_data;
 use canyon_entities::{
     entity::CanyonEntity,
     manager_builder::{generate_enum_with_fields, generate_enum_with_fields_values},
 };
-use canyon_entities::manager_builder::generated_enum_type_for_struct_data;
 
 /// Macro for handling the entry point to the program.
 ///
@@ -178,7 +178,7 @@ pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let generated_enum_type_for_struct_data = generated_enum_type_for_struct_data(&entity);
     let generated_enum_type_for_fields = generate_enum_with_fields(&entity);
     let generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
-    
+
     quote! {
         use canyon_sql::core::QueryParameter;
         use canyon_sql::query::bounds::TableMetadata;
