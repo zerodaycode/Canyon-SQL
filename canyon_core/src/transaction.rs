@@ -3,7 +3,7 @@ use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
-use std::{fmt::Display, future::Future};
+use std::future::Future;
 
 /// The `Transaction` trait serves as a proxy for types implementing CRUD operations.
 ///
@@ -47,7 +47,7 @@ pub trait Transaction {
         input: impl DbConnection + Send,
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -60,7 +60,7 @@ pub trait Transaction {
         input: impl DbConnection + Send + 'a,
     ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        S: AsRef<str> + Display + Send + 'a,
+        S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send,
         R: RowMapper,
     {
@@ -73,7 +73,7 @@ pub trait Transaction {
         input: impl DbConnection + Send + 'a,
     ) -> impl Future<Output = Result<F, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        S: AsRef<str> + Display + Send + 'a,
+        S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
     {
         async move { input.query_one_for(stmt.as_ref(), params.as_ref()).await }
@@ -88,7 +88,7 @@ pub trait Transaction {
         input: impl DbConnection + Send + 'a,
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        S: AsRef<str> + Display + Send + 'a,
+        S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
     {
         async move { input.query_rows(stmt.as_ref(), params.as_ref()).await }
@@ -100,7 +100,7 @@ pub trait Transaction {
         input: impl DbConnection + Send + 'a,
     ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        S: AsRef<str> + Display + Send + 'a,
+        S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
     {
         async move { input.execute(stmt.as_ref(), params.as_ref()).await }

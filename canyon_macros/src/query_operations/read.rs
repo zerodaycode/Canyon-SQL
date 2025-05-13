@@ -15,7 +15,7 @@ pub fn generate_read_operations_tokens(
         .as_ref()
         .unwrap_or(ty);
 
-    let find_all_tokens = generate_find_all_operations_tokens(ty, &mapper_ty, table_schema_data);
+    let find_all_tokens = generate_find_all_operations_tokens(ty, mapper_ty, table_schema_data);
     let count_tokens = generate_count_operations_tokens(ty, table_schema_data);
     let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, table_schema_data);
     let read_querybuilder_ops = generate_select_querybuilder_tokens(table_schema_data);
@@ -86,7 +86,7 @@ fn generate_select_querybuilder_tokens(table_schema_data: &String) -> TokenStrea
 fn generate_count_operations_tokens(ty: &Ident, table_schema_data: &String) -> TokenStream {
     let count_stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
     let count = __details::count_generators::create_count_macro(ty, &count_stmt);
-    let count_with = __details::count_generators::create_count_with_macro(ty, &count_stmt);
+    let count_with = __details::count_generators::create_count_with_macro(&count_stmt);
 
     quote! {
         #count
@@ -175,59 +175,20 @@ mod __details {
         use super::*;
         use proc_macro2::TokenStream;
 
-        // NOTE: We can't use the QueryOneFor here due that the Tiberius `.get::<i64, usize>(0)` for
-        // some reason returns an I32(Some(v)), instead of I64, so we need to manually mapped the wrapped
-        // type as i64. Also, we don't have in the count macro datasource info to match it by database,
-        // so isn't worth to refactor for the other two drivers and then do some dirty magic on mssql,
-        // since we don't distinguish them as the returned type isn't a CanyonRows wrapped one
-        fn generate_count_manual_result_handling(ty: &Ident) -> TokenStream {
-            let ty_str = ty.to_string();
-
-            quote! {
-                #[cfg(feature="postgres")]
-                canyon_sql::core::CanyonRows::Postgres(mut v) => Ok(
-                    v.remove(0).get::<&str, i64>("count")
-                ),
-                #[cfg(feature="mssql")]
-                canyon_sql::core::CanyonRows::Tiberius(mut v) =>
-                    v.remove(0)
-                        .get::<i32, usize>(0)
-                        .map(|c| c as i64)
-                        .ok_or(format!("Failure in the COUNT query for MSSQL for: {}", #ty_str).into())
-                        .into(),
-                #[cfg(feature="mysql")]
-                canyon_sql::core::CanyonRows::MySQL(mut v) => v.remove(0)
-                    .get::<i64, usize>(0)
-                    .ok_or(format!("Failure in the COUNT query for MYSQL for: {}", #ty_str).into()),
-            }
-        }
-
         pub fn create_count_macro(ty: &syn::Ident, stmt: &str) -> TokenStream {
-            let result_handling = generate_count_manual_result_handling(ty);
-
             quote! {
                 async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>> {
-                    let res = <#ty as canyon_sql::core::Transaction>::query_rows(#stmt, &[], "")
-                        .await?;
-                    match res {
-                        #result_handling
-                    }
+                    Ok(<#ty as canyon_sql::core::Transaction>::query_one_for::<&str, &[&dyn canyon_sql::query::QueryParameter<'_>], i64>(#stmt, &[], "").await? as i64)
                 }
             }
         }
 
-        pub fn create_count_with_macro(ty: &syn::Ident, stmt: &str) -> TokenStream {
-            let result_handling = generate_count_manual_result_handling(ty);
-
+        pub fn create_count_with_macro(stmt: &str) -> TokenStream {
             quote! {
                 async fn count_with<'a, I>(input: I) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                     where I: canyon_sql::connection::DbConnection + Send + 'a
                 {
-                    let res = input.query_rows(#stmt, &[]).await?;
-
-                    match res {
-                        #result_handling
-                    }
+                    Ok(input.query_one_for::<i64>(#stmt, &[]).await? as i64)
                 }
             }
         }
@@ -343,7 +304,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_count_with_macro() {
         let ty = syn::parse_str::<Ident>("User").unwrap();
-        let tokens = create_count_with_macro(&ty, COUNT_STMT);
+        let tokens = create_count_with_macro(COUNT_STMT);
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count_with"));

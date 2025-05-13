@@ -7,7 +7,6 @@ use mysql_async::Row;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;
 use std::error::Error;
-use std::fmt::Display;
 
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
@@ -126,7 +125,7 @@ pub(crate) mod mysql_query_launcher {
         conn: &MysqlConnection,
     ) -> Result<u64, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
     {
         let mysql_connection = conn.client.get_conn().await?;
         let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;

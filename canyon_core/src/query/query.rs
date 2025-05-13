@@ -21,7 +21,9 @@ pub struct Query<'a> {
 }
 
 impl AsRef<str> for Query<'_> {
-    fn as_ref(&self) -> &str { self.sql.as_str() }
+    fn as_ref(&self) -> &str {
+        self.sql.as_str()
+    }
 }
 
 impl<'a> Query<'a> {

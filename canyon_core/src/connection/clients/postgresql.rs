@@ -1,7 +1,6 @@
 use crate::mapper::RowMapper;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
-use std::fmt::Display;
 #[cfg(feature = "postgres")]
 use tokio_postgres::Client;
 
@@ -100,7 +99,7 @@ pub(crate) mod postgres_query_launcher {
         conn: &PostgreSqlConnection,
     ) -> Result<u64, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
     {
         conn.client
             .execute(stmt.as_ref(), &get_psql_params(params))
