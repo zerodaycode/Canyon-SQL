@@ -115,13 +115,15 @@ impl Migrations {
     /// Handler for parse the result of query the information of some database schema,
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
+    #[allow(unreachable_patterns)]
     fn map_rows(db_results: CanyonRows, db_type: DatabaseType) -> Vec<TableMetadata> {
         match db_results {
             #[cfg(feature = "postgres")]
             CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
             #[cfg(feature = "mssql")]
             CanyonRows::Tiberius(v) => Self::process_tib_rows(v, db_type),
-            _ => panic!(),
+            #[cfg(feature = "mysql")]
+            CanyonRows::MySQL(v) => panic!("Not implemented fetch database in mysql"),
         }
     }
 

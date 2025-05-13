@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 use crate::utils::helpers::fields_with_types;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;

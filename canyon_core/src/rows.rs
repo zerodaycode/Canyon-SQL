@@ -1,3 +1,5 @@
+#![allow(unreachable_patterns)]
+
 //! The rows module of Canyon-SQL.
 //!
 //! This module defines the `CanyonRows` enum, which wraps database query results for supported

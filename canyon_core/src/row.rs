@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 #[cfg(feature = "mysql")]
 use mysql_async::{self};
 #[cfg(feature = "mssql")]
