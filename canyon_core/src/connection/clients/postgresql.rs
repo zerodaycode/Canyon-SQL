@@ -26,7 +26,7 @@ pub(crate) mod postgres_query_launcher {
         conn: &PostgreSqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {

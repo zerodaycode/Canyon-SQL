@@ -37,7 +37,7 @@ pub(crate) mod mysql_query_launcher {
         conn: &MysqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -96,7 +96,7 @@ pub(crate) mod mysql_query_launcher {
         conn: &MysqlConnection,
     ) -> Result<Vec<Row>, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
     {
         let mysql_connection = conn.client.get_conn().await?;
         let is_insert = stmt.as_ref().find(" RETURNING");

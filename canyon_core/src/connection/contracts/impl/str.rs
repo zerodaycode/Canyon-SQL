@@ -20,7 +20,7 @@ macro_rules! impl_db_connection {
                 params: &[&'a (dyn crate::query::parameters::QueryParameter<'a>)],
             ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync)>>
             where
-                S: AsRef<str> + std::fmt::Display + Send,
+                S: AsRef<str> + Send,
                 R: crate::mapper::RowMapper,
                 Vec<R>: std::iter::FromIterator<<R as crate::mapper::RowMapper>::Output>,
             {

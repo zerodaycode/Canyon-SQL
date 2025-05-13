@@ -3,7 +3,6 @@ use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
 use std::error::Error;
-use std::fmt::Display;
 use std::future::Future;
 
 mod r#impl;
@@ -62,7 +61,7 @@ pub trait DbConnection {
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>;
 

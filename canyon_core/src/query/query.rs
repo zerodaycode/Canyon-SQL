@@ -20,6 +20,10 @@ pub struct Query<'a> {
     pub params: Vec<&'a dyn QueryParameter<'a>>,
 }
 
+impl AsRef<str> for Query<'_> {
+    fn as_ref(&self) -> &str { self.sql.as_str() }
+}
+
 impl<'a> Query<'a> {
     pub fn new(sql: String) -> Query<'a> {
         Self {

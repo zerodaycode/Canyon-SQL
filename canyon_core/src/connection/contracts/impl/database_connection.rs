@@ -6,7 +6,7 @@ use crate::{
     query::parameters::QueryParameter,
     rows::{CanyonRows, FromSqlOwnedValue},
 };
-use std::{error::Error, fmt::Display};
+use std::error::Error;
 
 impl DbConnection for DatabaseConnection {
     async fn query_rows<'a>(
@@ -23,7 +23,7 @@ impl DbConnection for DatabaseConnection {
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -77,7 +77,7 @@ impl DbConnection for &mut DatabaseConnection {
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
@@ -159,7 +159,7 @@ pub(crate) async fn db_conn_query_impl<'a, S, R>(
     params: &[&'a (dyn QueryParameter<'a>)],
 ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
 where
-    S: AsRef<str> + Display + Send,
+    S: AsRef<str> + Send,
     R: RowMapper,
     Vec<R>: FromIterator<<R as RowMapper>::Output>,
 {

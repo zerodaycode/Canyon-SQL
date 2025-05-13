@@ -2,7 +2,6 @@ use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mssql")]
 use async_std::net::TcpStream;
 use std::error::Error;
-use std::fmt::Display;
 use tiberius::Query;
 
 /// A connection with a `SqlServer` database
@@ -25,7 +24,7 @@ pub(crate) mod sqlserver_query_launcher {
         conn: &SqlServerConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {

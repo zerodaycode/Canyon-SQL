@@ -7,7 +7,7 @@ use crate::{
     query::parameters::QueryParameter,
     rows::{CanyonRows, FromSqlOwnedValue},
 };
-use std::{error::Error, fmt::Display, future::Future};
+use std::{error::Error, future::Future};
 
 impl DbConnection for MysqlConnection {
     fn query_rows<'a>(
@@ -24,7 +24,7 @@ impl DbConnection for MysqlConnection {
         params: &[&'a (dyn QueryParameter<'a>)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
-        S: AsRef<str> + Display + Send,
+        S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
