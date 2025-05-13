@@ -27,6 +27,7 @@ pub fn impl_crud_operations_trait_for_struct(
         .retrieve_mapping_target_type()
         .as_ref()
         .unwrap_or(ty);
+    let generics = macro_data.generics;
 
     let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
     let insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
@@ -44,11 +45,11 @@ pub fn impl_crud_operations_trait_for_struct(
         use canyon_sql::core::IntoResults;
         use canyon_sql::core::RowMapper;
 
-        impl canyon_sql::crud::CrudOperations<#mapper_ty> for #ty {
+        impl #generics canyon_sql::crud::CrudOperations<#mapper_ty> for #ty #generics {
             #crud_operations_tokens
         }
 
-        impl canyon_sql::core::Transaction for #ty {}
+        impl #generics canyon_sql::core::Transaction for #ty #generics {}
     });
 
     // NOTE: this extends should be documented WHY is needed to be after the base impl of CrudOperations
