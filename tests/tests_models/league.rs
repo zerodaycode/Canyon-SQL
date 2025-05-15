@@ -1,12 +1,9 @@
 use canyon_sql::macros::*;
 
-// #[derive(Debug, Fields, CanyonCrud, CanyonMapper, ForeignKeyable, Eq, PartialEq)]
-// #[canyon_crud(maps_to = League)]
-// // canyon_crud mapping to Self is already the default behaviour
-// // just here for demonstration purposes
-// #[canyon_entity(table_name = "league", /* schema = "public"*/)]
+#[derive(Debug, Fields, CanyonCrud, CanyonMapper, ForeignKeyable, Eq, PartialEq)]
+#[canyon_entity(table_name = "league", /* schema = "public"*/)]
 pub struct League {
-    // #[primary_key]
+    #[primary_key]
     id: i32,
     ext_id: i64,
     slug: String,

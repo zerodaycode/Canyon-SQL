@@ -228,7 +228,7 @@ impl QueryParameter<'_> for Option<&f32> {
         ))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }

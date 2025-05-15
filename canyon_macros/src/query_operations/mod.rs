@@ -46,7 +46,6 @@ pub fn impl_crud_operations_trait_for_struct(
     crud_ops_tokens.extend(quote! {
         use canyon_sql::core::IntoResults;
         use canyon_sql::core::RowMapper;
-        use canyon_sql::query::QueryParameter;
 
         impl #impl_generics canyon_sql::crud::CrudOperations<#mapper_ty> for #ty #ty_generics #where_clause {
             #crud_operations_tokens

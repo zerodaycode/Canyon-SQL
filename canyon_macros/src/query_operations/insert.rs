@@ -19,33 +19,21 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let placeholders = macro_data.placeholders_generator();
 
     // Retrieves the fields of the Struct
-    let fields = macro_data.get_struct_fields();
+    let fields = macro_data.get_columns_pk_parsed();
 
-    let insert_values = fields.iter().map(|ident| {
-        quote! { &self.#ident }
+    let insert_values = fields.iter().map(|field| {
+        let field = field.ident.as_ref().unwrap();
+        quote! { &self.#field }
     });
 
     let primary_key = macro_data.get_primary_key_annotation();
-
-    let remove_pk_value_from_fn_entry = if let Some(pk_index) = macro_data.get_pk_index() {
-        quote! { values.remove(#pk_index) }
-    } else {
-        // TODO: this can be avoid just avoiding the field of the pk if exists on the macro_data.get_struct_fields(); creating a new method, not modifying that one
-        quote! {}
-    };
-
-    let stmt = format!(
-        "INSERT INTO {} ({}) VALUES ({})",
-        table_schema_data, insert_columns, placeholders
-    );
-
     let pk_ident_type = macro_data
         .fields_with_types()
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
 
-    let insert_values = quote! {
-        let mut values: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = vec![#(#insert_values),*];
+    let ins_values = quote! {
+        let values: &[&dyn canyon_sql::query::QueryParameter<'_>]  = &[#(#insert_values),*];
     };
 
     let insert_signature = quote! {
@@ -58,21 +46,24 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         where
             I: canyon_sql::connection::DbConnection + Send + 'a
     };
-    let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE; // if required :(
+
+    let stmt = format!(
+        "INSERT INTO {} ({}) VALUES ({})",
+        table_schema_data, insert_columns, placeholders
+    );
 
     let insert_body = if let Some(pk_data) = pk_ident_type {
         let pk_ident = pk_data.0;
         let pk_type = pk_data.1;
 
         quote! {
-            #insert_values
-            #remove_pk_value_from_fn_entry;
+            #ins_values
 
             let stmt = format!("{} RETURNING {}", #stmt , #primary_key);
 
             self.#pk_ident = <#ty #ty_generics as canyon_sql::core::Transaction>::query_one_for::<
                 String,
-                Vec<&'_ dyn QueryParameter<'_>>,
+                &[&dyn canyon_sql::query::QueryParameter<'_>],
                 #pk_type
             >(
                 stmt,
@@ -84,7 +75,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         }
     } else {
         quote! {
-            #insert_values
+            #ins_values
             <#ty #ty_generics as canyon_sql::core::Transaction>::query_rows( // TODO: this should be execute
                 #stmt,
                 values,
@@ -100,7 +91,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             Err(
                 std::io::Error::new(
                     std::io::ErrorKind::Unsupported,
-                    #err_msg
+                    "Can't use the 'Insert' family transactions if your T type in CrudOperations is the same type that implements RowMapper"
                 ).into_inner().unwrap()
             )
         }
@@ -449,14 +440,13 @@ fn _generate_multiple_insert_tokens(
          async fn multi_insert<'a, T>(instances: &'a mut [&'a mut T]) -> (
              Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
          ) {
-             use canyon_sql::query::QueryParameter;
              let input = "";
 
-              let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
+              let mut final_values: Vec<Vec<&dyn canyon_sql::query::QueryParameter<'_>>> = Vec::new();
               for instance in instances.iter() {
-                  let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields),*];
+                  let intermediate: &[&dyn canyon_sql::query::QueryParameter<'_>] = &[#(#macro_fields),*];
 
-                  let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
+                  let mut longer_lived: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = Vec::new();
                   for value in intermediate.into_iter() {
                       longer_lived.push(*value)
                   }
@@ -508,13 +498,11 @@ fn _generate_multiple_insert_tokens(
             where
                 I: canyon_sql::connection::DbConnection + Send + 'a
         {
-            use canyon_sql::query::QueryParameter;
-
-            let mut final_values: Vec<Vec<&dyn QueryParameter<'_>>> = Vec::new();
+            let mut final_values: Vec<Vec<&dyn canyon_sql::query::QueryParameter<'_>>> = Vec::new();
             for instance in instances.iter() {
-                let intermediate: &[&dyn QueryParameter<'_>] = &[#(#macro_fields_cloned),*];
+                let intermediate: &[&dyn canyon_sql::query::QueryParameter<'_>] = &[#(#macro_fields_cloned),*];
 
-                let mut longer_lived: Vec<&dyn QueryParameter<'_>> = Vec::new();
+                let mut longer_lived: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = Vec::new();
                 for value in intermediate.into_iter() {
                     longer_lived.push(*value)
                 }

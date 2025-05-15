@@ -4,7 +4,7 @@ use std::fmt::Write;
 use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, Span};
-use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
+use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -71,8 +71,7 @@ impl<'a> MacroTokens<'a> {
             .collect::<Vec<_>>()
     }
 
-    /// Returns a Vec populated with the name of the fields of the struct
-    /// already quote scaped for avoid the upper case column name mangling.
+    /// Returns a Vec populated with the fields of the struct
     ///
     /// If the type contains a `#[primary_key]` annotation (and), returns the
     /// name of the columns without the fields that maps against the column designed as
@@ -81,7 +80,7 @@ impl<'a> MacroTokens<'a> {
     /// to the same behaviour.
     ///
     /// Returns every field if there's no PK, or if it's present but autoincremental = false
-    pub fn get_column_names_pk_parsed(&self) -> Vec<String> {
+    pub fn get_columns_pk_parsed(&self) -> Vec<&Field> {
         self.fields
             .iter()
             .filter(|field| {
@@ -95,6 +94,22 @@ impl<'a> MacroTokens<'a> {
                     true
                 }
             })
+            .collect::<Vec<_>>()
+    }
+
+    /// Returns a Vec populated with the name of the fields of the struct
+    /// already quote scaped for avoid the upper case column name mangling.
+    ///
+    /// If the type contains a `#[primary_key]` annotation (and), returns the
+    /// name of the columns without the fields that maps against the column designed as
+    /// primary key (if its present and its autoincremental attribute is set to true)
+    /// (autoincremental = true) or its without the autoincremental attribute, which leads
+    /// to the same behaviour.
+    ///
+    /// Returns every field if there's no PK, or if it's present but autoincremental = false
+    pub fn get_column_names_pk_parsed(&self) -> Vec<String> {
+        self.get_columns_pk_parsed()
+            .iter()
             .map(|c| format!("\"{}\"", c.ident.as_ref().unwrap()))
             .collect::<Vec<String>>()
     }

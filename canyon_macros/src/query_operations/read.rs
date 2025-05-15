@@ -236,7 +236,7 @@ mod __details {
                 quote! {
                     <#ty #ty_generics as canyon_sql::core::Transaction>::query_one::<
                         &str,
-                        &[&'a (dyn QueryParameter<'a>)],
+                        &[&'a (dyn canyon_sql::query::QueryParameter<'a>)],
                         #mapper_ty
                     >(#stmt, &[value], "").await
                 }
