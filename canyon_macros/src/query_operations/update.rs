@@ -8,6 +8,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let mut update_ops_tokens = TokenStream::new();
 
     let ty = macro_data.ty;
+    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
     let update_columns = macro_data.get_column_names_pk_parsed();
     let fields = macro_data.get_struct_fields();
 
@@ -47,7 +48,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         update_ops_tokens.extend(quote! {
             #update_signature {
                 let update_values: &[&dyn canyon_sql::query::QueryParameter<'_>] = #update_values;
-                <#ty as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
             }
             #update_with_signature {
                 let update_values: &[&dyn canyon_sql::query::QueryParameter<'_>] = #update_values;

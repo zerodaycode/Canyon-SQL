@@ -1,3 +1,4 @@
+use crate::query_operations::consts;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -7,6 +8,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let mut insert_ops_tokens = TokenStream::new();
 
     let ty = macro_data.ty;
+    let is_mapper_ty_present = macro_data.retrieve_mapping_target_type().is_some();
+    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
     // Retrieves the fields of the Struct as a collection of Strings, already parsed
     // the condition of remove the primary key if it's present and it's autoincremental
@@ -21,13 +24,13 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let insert_values = fields.iter().map(|ident| {
         quote! { &self.#ident }
     });
-    let insert_values_cloned = insert_values.clone();
 
     let primary_key = macro_data.get_primary_key_annotation();
 
     let remove_pk_value_from_fn_entry = if let Some(pk_index) = macro_data.get_pk_index() {
         quote! { values.remove(#pk_index) }
     } else {
+        // TODO: this can be avoid just avoiding the field of the pk if exists on the macro_data.get_struct_fields(); creating a new method, not modifying that one
         quote! {}
     };
 
@@ -41,16 +44,33 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         .into_iter()
         .find(|(i, _t)| Some(i.to_string()) == primary_key);
 
-    let insert_transaction = if let Some(pk_data) = pk_ident_type {
+    let insert_values = quote! {
+        let mut values: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = vec![#(#insert_values),*];
+    };
+
+    let insert_signature = quote! {
+        async fn insert<'a>(&'a mut self)
+            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+    };
+    let insert_with_signature = quote! {
+        async fn insert_with<'a, I>(&mut self, input: I)
+            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+        where
+            I: canyon_sql::connection::DbConnection + Send + 'a
+    };
+    let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE; // if required :(
+
+    let insert_body = if let Some(pk_data) = pk_ident_type {
         let pk_ident = pk_data.0;
         let pk_type = pk_data.1;
 
         quote! {
+            #insert_values
             #remove_pk_value_from_fn_entry;
 
             let stmt = format!("{} RETURNING {}", #stmt , #primary_key);
 
-            self.#pk_ident = <#ty as canyon_sql::core::Transaction>::query_one_for::<
+            self.#pk_ident = <#ty #ty_generics as canyon_sql::core::Transaction>::query_one_for::<
                 String,
                 Vec<&'_ dyn QueryParameter<'_>>,
                 #pk_type
@@ -64,7 +84,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         }
     } else {
         quote! {
-            <#ty as canyon_sql::core::Transaction>::query_rows( // TODO: this should be execute
+            #insert_values
+            <#ty #ty_generics as canyon_sql::core::Transaction>::query_rows( // TODO: this should be execute
                 #stmt,
                 values,
                 input
@@ -72,6 +93,19 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
             Ok(())
         }
+    };
+
+    let insert_transaction = if is_mapper_ty_present {
+        quote! {
+            Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    #err_msg
+                ).into_inner().unwrap()
+            )
+        }
+    } else {
+        quote! { #insert_body }
     };
 
     insert_ops_tokens.extend(quote! {
@@ -113,11 +147,8 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// }
         /// ```
         ///
-        async fn insert<'a>(&'a mut self)
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
-        {
+        #insert_signature {
             let input = "";
-            let mut values: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = vec![#(#insert_values),*];
             #insert_transaction
         }
 
@@ -159,15 +190,7 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         /// }
         /// ```
         ///
-        async fn insert_with<'a, I>(&mut self, input: I)
-            -> Result<(), Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
-        where
-            I: canyon_sql::connection::DbConnection + Send + 'a
-        {
-            let mut values: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = vec![#(#insert_values_cloned),*];
-            #insert_transaction
-        }
-
+        #insert_with_signature { #insert_transaction }
     });
 
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
@@ -187,6 +210,7 @@ fn _generate_multiple_insert_tokens(
     table_schema_data: &String,
 ) -> TokenStream {
     let ty = macro_data.ty;
+    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
     // Retrieves the fields of the Struct as continuous String
     let column_names = macro_data._get_struct_fields_as_strings();
@@ -279,7 +303,7 @@ fn _generate_multiple_insert_tokens(
                 }
             }
 
-            let multi_insert_result = <#ty as canyon_sql::core::Transaction>::query_rows(
+            let multi_insert_result = <#ty #ty_generics as canyon_sql::core::Transaction>::query_rows(
                 stmt,
                 v_arr,
                 input
@@ -378,7 +402,7 @@ fn _generate_multiple_insert_tokens(
                 }
             }
 
-            <#ty as canyon_sql::core::Transaction>::query_rows(
+            <#ty #ty_generics as canyon_sql::core::Transaction>::query_rows(
                 stmt,
                 v_arr,
                 input

@@ -13,7 +13,7 @@ const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
 pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
     let ty = &ast.ident;
-    let generics = &ast.generics;
+    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
     let mut impl_methods = TokenStream::new();
 
     // Recovers the identifiers of the structs members
@@ -59,7 +59,7 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
     });
 
     quote! {
-        impl #generics canyon_sql::core::RowMapper for #ty #generics {
+        impl #impl_generics canyon_sql::core::RowMapper for #ty #ty_generics #where_clause {
             type Output = #ty;
             #impl_methods
         }

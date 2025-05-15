@@ -41,13 +41,11 @@ impl<'a> MacroTokens<'a> {
         } else {
             Err(syn::Error::new(
                 Span::call_site(),
-                "unsupported 'canyon_crud' attribute, expected `maps_to`",
+                "CanyonCrud may only be implemented for structs",
             ))
         }
     }
 
-    // TODO: this must be refactored in order to avoid to make the operation everytime that
-    // this method is queried. The trick w'd be to have a map to relate the entries.
     pub fn retrieve_mapping_target_type(&self) -> &Option<Ident> {
         if let Some(canyon_crud_attribute) = &self.canyon_crud_attribute {
             &canyon_crud_attribute.maps_to

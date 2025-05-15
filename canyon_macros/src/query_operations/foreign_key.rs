@@ -144,6 +144,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
         .retrieve_mapping_target_type()
         .as_ref()
         .unwrap_or(ty);
+    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
@@ -192,7 +193,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     #quoted_method_signature
                     {
                         let lookup_value = #lookup_value;
-                        <#ty as canyon_sql::core::Transaction>::query::<&str, #mapper_ty>(
+                        <#ty #ty_generics as canyon_sql::core::Transaction>::query::<&str, #mapper_ty>(
                             #stmt,
                             &[lookup_value],
                             ""

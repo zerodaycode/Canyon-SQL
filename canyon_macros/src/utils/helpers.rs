@@ -1,7 +1,24 @@
 use proc_macro2::{Ident, Span, TokenStream};
-use syn::{punctuated::Punctuated, Fields, MetaNameValue, Token, Type, Visibility};
+use quote::quote;
+use syn::{
+    punctuated::Punctuated, Attribute, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility,
+};
 
 use super::macro_tokens::MacroTokens;
+
+/// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
+/// returns a [`TokenStream`] with the final `RowMapper` implementor.
+pub fn compute_crud_ops_mapping_target_type_with_generics(
+    row_mapper_ty: &Ident,
+    row_mapper_ty_generics: &TypeGenerics,
+    crud_ops_ty: Option<&Ident>,
+) -> TokenStream {
+    if let Some(crud_ops_ty) = crud_ops_ty {
+        quote! { #crud_ops_ty }
+    } else {
+        quote! { #row_mapper_ty #row_mapper_ty_generics }
+    }
+}
 
 pub fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
     fields
@@ -32,78 +49,91 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
     let mut schema: Option<String> = None;
 
     for attr in macro_data.attrs {
-        if attr
-            .path
-            .segments
-            .iter()
-            .any(|seg| seg.ident == "canyon_macros" || seg.ident == "canyon_entity")
-        {
-            let name_values_result: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> =
-                attr.parse_args_with(Punctuated::parse_terminated);
+        let mut segments = attr.path.segments.iter();
+        if segments.any(|seg| seg.ident == "canyon_macros" || seg.ident == "canyon_entity") {
+            parse_canyon_entity_attr(attr, &mut schema, &mut table_name)?;
+        }
+        // TODO: if segments because we could parse here the canyon_crud proc_macro_attr
+        // TODO: create a custom struct for hold this pair of data
+    }
 
-            if let Ok(meta_name_values) = name_values_result {
-                for nv in meta_name_values {
-                    let ident = nv.path.get_ident();
-                    if let Some(i) = ident {
-                        let identifier = i;
-                        match &nv.lit {
-                            syn::Lit::Str(s) => {
-                                if identifier == "table_name" {
-                                    table_name = Some(s.value())
-                                } else if identifier == "schema" {
-                                    schema = Some(s.value())
-                                } else {
-                                    return Err(
-                                        syn::Error::new_spanned(
-                                            Ident::new(&identifier.to_string(), i.span()),
-                                            "Only string literals are valid values for the attribute arguments"
-                                        ).into_compile_error()
-                                    );
-                                }
+    let mut final_table_name = String::new();
+    if schema.is_some() {
+        final_table_name.push_str(format!("{}.", schema.unwrap()).as_str())
+    }
+
+    if let Some(t_name) = table_name {
+        final_table_name.push_str(t_name.as_str())
+    } else {
+        let defaulted = &default_database_table_name_from_entity_name(&macro_data.ty.to_string());
+        final_table_name.push_str(defaulted)
+    }
+
+    Ok(final_table_name)
+}
+
+fn parse_canyon_entity_attr(
+    attr: &Attribute,
+    schema: &mut Option<String>,
+    table_name: &mut Option<String>,
+) -> Result<(), TokenStream> {
+    if attr
+        .path
+        .segments
+        .iter()
+        .any(|seg| seg.ident == "canyon_macros" || seg.ident == "canyon_entity")
+    {
+        let name_values_result: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> =
+            attr.parse_args_with(Punctuated::parse_terminated);
+
+        if let Ok(meta_name_values) = name_values_result {
+            for nv in meta_name_values {
+                let ident = nv.path.get_ident();
+                if let Some(i) = ident {
+                    let identifier = i;
+                    match &nv.lit {
+                        syn::Lit::Str(s) => {
+                            if identifier == "table_name" {
+                                *table_name = Some(s.value());
+                            } else if identifier == "schema" {
+                                *schema = Some(s.value());
+                            } else {
+                                return Err(
+                                    syn::Error::new_spanned(
+                                        Ident::new(&identifier.to_string(), i.span()),
+                                        "Only string literals are valid values for the attribute arguments"
+                                    ).into_compile_error()
+                                );
                             }
-                            _ => return Err(syn::Error::new_spanned(
+                        }
+                        _ => {
+                            return Err(syn::Error::new_spanned(
                                 Ident::new(&identifier.to_string(), i.span()),
                                 "Only string literals are valid values for the attribute arguments",
                             )
-                            .into_compile_error()),
+                            .into_compile_error())
                         }
-                    } else {
-                        return Err(syn::Error::new(
-                            Span::call_site(),
-                            "Only string literals are valid values for the attribute arguments",
-                        )
-                        .into_compile_error());
                     }
+                } else {
+                    return Err(syn::Error::new(
+                        Span::call_site(),
+                        "Only string literals are valid values for the attribute arguments",
+                    )
+                    .into_compile_error());
                 }
             }
-
-            let mut final_table_name = String::new();
-            if schema.is_some() {
-                final_table_name.push_str(format!("{}.", schema.unwrap()).as_str())
-            }
-
-            if let Some(t_name) = table_name {
-                final_table_name.push_str(t_name.as_str())
-            } else {
-                let defaulted =
-                    &default_database_table_name_from_entity_name(&macro_data.ty.to_string());
-                final_table_name.push_str(defaulted)
-            }
-
-            return Ok(final_table_name);
         }
     }
 
-    Ok(macro_data.ty.to_string())
+    Ok(())
 }
 
 /// Autogenerates a default table name for an entity given their struct name
 pub fn default_database_table_name_from_entity_name(ty: &str) -> String {
-    let struct_name: String = ty.to_string();
     let mut table_name: String = String::new();
 
     let mut index = 0;
-    for char in struct_name.chars() {
+    for char in ty.chars() {
         if index < 1 {
             table_name.push(char.to_ascii_lowercase());
             index += 1;
@@ -149,7 +179,7 @@ pub fn database_table_name_to_struct_ident(name: &str) -> Ident {
         }
     }
 
-    Ident::new(&struct_name, proc_macro2::Span::call_site())
+    Ident::new(&struct_name, Span::call_site())
 }
 
 /// Parses a syn::Identifier to create a defaulted snake case database table name

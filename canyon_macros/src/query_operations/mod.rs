@@ -3,6 +3,7 @@ use crate::query_operations::foreign_key::generate_find_by_fk_ops;
 use crate::query_operations::insert::generate_insert_tokens;
 use crate::query_operations::read::generate_read_operations_tokens;
 use crate::query_operations::update::generate_update_tokens;
+use crate::utils::helpers::compute_crud_ops_mapping_target_type_with_generics;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -23,11 +24,12 @@ pub fn impl_crud_operations_trait_for_struct(
     let mut crud_ops_tokens = TokenStream::new();
 
     let ty = macro_data.ty;
-    let mapper_ty = macro_data
-        .retrieve_mapping_target_type()
-        .as_ref()
-        .unwrap_or(ty);
-    let generics = macro_data.generics;
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+    let mapper_ty = compute_crud_ops_mapping_target_type_with_generics(
+        ty,
+        &ty_generics,
+        macro_data.retrieve_mapping_target_type().as_ref(),
+    );
 
     let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
     let insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
@@ -44,12 +46,13 @@ pub fn impl_crud_operations_trait_for_struct(
     crud_ops_tokens.extend(quote! {
         use canyon_sql::core::IntoResults;
         use canyon_sql::core::RowMapper;
+        use canyon_sql::query::QueryParameter;
 
-        impl #generics canyon_sql::crud::CrudOperations<#mapper_ty> for #ty #generics {
+        impl #impl_generics canyon_sql::crud::CrudOperations<#mapper_ty> for #ty #ty_generics #where_clause {
             #crud_operations_tokens
         }
 
-        impl #generics canyon_sql::core::Transaction for #ty #generics {}
+        impl #impl_generics canyon_sql::core::Transaction for #ty #ty_generics #where_clause {}
     });
 
     // NOTE: this extends should be documented WHY is needed to be after the base impl of CrudOperations

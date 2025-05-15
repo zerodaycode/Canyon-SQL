@@ -8,6 +8,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let mut delete_ops_tokens = TokenStream::new();
 
     let ty = macro_data.ty;
+    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
     let pk = macro_data.get_primary_key_annotation();
 
     let delete_signature = quote! {
@@ -35,7 +36,7 @@ pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
         delete_ops_tokens.extend(quote! {
             #delete_signature {
-                <#ty as canyon_sql::core::Transaction>::execute(#delete_stmt, &[#pk_field_value], "").await?;
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#delete_stmt, &[#pk_field_value], "").await?;
                 Ok(())
             }
 
