@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
-use syn::parse::{Parse, ParseStream};
 use syn::Token;
+use syn::parse::{Parse, ParseStream};
 
 /// Type that helps to parse the: `#[canyon_crud(maps_to = Ident)]` proc macro attribute
 ///

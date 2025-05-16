@@ -23,9 +23,9 @@ pub(crate) mod mysql_query_launcher {
 
     use super::*;
 
-    use mysql_async::prelude::Query;
     use mysql_async::QueryWithParams;
     use mysql_async::Value;
+    use mysql_async::prelude::Query;
     use regex::Regex;
     use std::sync::Arc;
 

@@ -1,6 +1,6 @@
 use proc_macro2::Ident;
 use std::{collections::HashMap, convert::TryFrom};
-use syn::{punctuated::Punctuated, Attribute, MetaNameValue, Token};
+use syn::{Attribute, MetaNameValue, Token, punctuated::Punctuated};
 
 /// The available annotations for a field that belongs to any struct
 /// annotaded with `#[canyon_entity]`
@@ -46,7 +46,7 @@ impl EntityFieldAnnotation {
                                     "Only bool literals are supported for the `{}` attribute",
                                     &attr_value_ident
                                 ),
-                            ))
+                            ));
                         }
                     };
                     data.insert(attr_value_ident, attr_value);
@@ -87,12 +87,12 @@ impl EntityFieldAnnotation {
                         // TODO Implement the option (or change it to) to use a Rust Ident instead a Str Lit
                         syn::Lit::Str(v) => v.value(),
                         _ => {
-                            return Err(
-                                syn::Error::new_spanned(
-                                    nv.path.clone(),
-                                    format!("Only string literals are supported for the `{attr_value_ident}` attribute")
-                                )
-                            )
+                            return Err(syn::Error::new_spanned(
+                                nv.path.clone(),
+                                format!(
+                                    "Only string literals are supported for the `{attr_value_ident}` attribute"
+                                ),
+                            ));
                         }
                     };
                     data.insert(attr_value_ident, attr_value);
@@ -105,7 +105,7 @@ impl EntityFieldAnnotation {
                             return Err(syn::Error::new_spanned(
                                 ident,
                                 "Missed `table` argument on the Foreign Key annotation".to_string(),
-                            ))
+                            ));
                         }
                     },
                     match data.get("column") {
@@ -115,7 +115,7 @@ impl EntityFieldAnnotation {
                                 ident,
                                 "Missed `column` argument on the Foreign Key annotation"
                                     .to_string(),
-                            ))
+                            ));
                         }
                     },
                 ))
@@ -143,7 +143,7 @@ impl TryFrom<&&Attribute> for EntityFieldAnnotation {
                 return Err(syn::Error::new_spanned(
                     ident.clone(),
                     format!("Unknown attribute `{}`", &ident),
-                ))
+                ));
             }
         })
     }

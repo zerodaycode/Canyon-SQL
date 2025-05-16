@@ -3,8 +3,8 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::convert::TryFrom;
 use syn::{
-    parse::{Parse, ParseBuffer},
     Attribute, Generics, ItemStruct, Visibility,
+    parse::{Parse, ParseBuffer},
 };
 
 use super::entity_fields::EntityField;

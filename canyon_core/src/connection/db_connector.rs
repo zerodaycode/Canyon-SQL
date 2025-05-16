@@ -124,8 +124,8 @@ mod connection_helpers {
         tiberius_config.authentication(auth_config);
         tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
         tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
-                                                                             // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
-                                                                             // https://github.com/prisma/tiberius/issues/364
+        // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
+        // https://github.com/prisma/tiberius/issues/364
 
         let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
         tcp.set_nodelay(true)?;

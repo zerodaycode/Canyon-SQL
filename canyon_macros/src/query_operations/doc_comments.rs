@@ -1,13 +1,11 @@
 #![allow(dead_code)]
 
-pub const SELECT_ALL_BASE_DOC_COMMENT: &str =
-    "Performs a `SELECT * FROM table_name`, where `table_name` it's \
+pub const SELECT_ALL_BASE_DOC_COMMENT: &str = "Performs a `SELECT * FROM table_name`, where `table_name` it's \
         the name of your entity but converted to the corresponding \
         database convention. P.ej. PostgreSQL prefers table names declared \
         with snake_case identifiers.";
 
-pub const SELECT_QUERYBUILDER_DOC_COMMENT: &str =
-    "Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`] \
+pub const SELECT_QUERYBUILDER_DOC_COMMENT: &str = "Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`] \
         that allows you to customize the query by adding parameters and constrains dynamically. \
         \
         It performs a `SELECT * FROM  table_name`, where `table_name` it's the name of your \
@@ -28,8 +26,7 @@ pub const FIND_BY_PK: &str = "Finds an element on the queried table that matches
         and Option<T> with the data found wrapped in the Some(T) variant, \
         or None if the value isn't found on the table.";
 
-pub const DS_ADVERTISING: &str =
-    "The query it's made against the database with the configured datasource \
+pub const DS_ADVERTISING: &str = "The query it's made against the database with the configured datasource \
         described in the configuration file, and selected with the [`&str`] \
         passed as parameter.";
 

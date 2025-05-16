@@ -1,6 +1,6 @@
 use canyon_sql::connection::DbConnection;
 use canyon_sql::core::Canyon;
-use canyon_sql::macros::{canyon_entity, CanyonCrud, CanyonMapper};
+use canyon_sql::macros::{CanyonCrud, CanyonMapper, canyon_entity};
 use canyon_sql::query::querybuilder::SelectQueryBuilder;
 use std::error::Error;
 

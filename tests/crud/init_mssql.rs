@@ -22,8 +22,7 @@ use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;
 #[canyon_sql::macros::canyon_tokio_test]
 #[ignore]
 fn initialize_sql_server_docker_instance() {
-    static CONN_STR: &str =
-        "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true;Encrypt=true";
+    static CONN_STR: &str = "server=tcp:localhost,1434;User Id=SA;Password=SqlServer-10;TrustServerCertificate=true;Encrypt=true";
 
     canyon_sql::runtime::futures::executor::block_on(async {
         let mut config = Config::from_ado_string(CONN_STR).expect("could not parse ado string");

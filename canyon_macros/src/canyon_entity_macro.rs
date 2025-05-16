@@ -1,8 +1,8 @@
 use crate::utils::helpers;
+use canyon_entities::CANYON_REGISTER_ENTITIES;
 use canyon_entities::entity::CanyonEntity;
 use canyon_entities::manager_builder::generate_user_struct;
 use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
-use canyon_entities::CANYON_REGISTER_ENTITIES;
 use proc_macro::TokenStream as CompilerTokenStream;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;

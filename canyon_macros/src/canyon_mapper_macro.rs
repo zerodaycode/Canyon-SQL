@@ -22,7 +22,7 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
         syn::Data::Struct(ref s) => &s.fields,
         _ => {
             return syn::Error::new(ast.ident.span(), "CanyonMapper only works with Structs")
-                .to_compile_error()
+                .to_compile_error();
         }
     });
 

@@ -1,6 +1,6 @@
 use crate::{
     connection::{
-        clients::mssql::{sqlserver_query_launcher, SqlServerConnection},
+        clients::mssql::{SqlServerConnection, sqlserver_query_launcher},
         contracts::DbConnection,
         database_type::DatabaseType,
     },

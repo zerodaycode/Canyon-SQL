@@ -764,65 +764,68 @@ impl DatabaseOperation for TableOperation {
         let db_type = datasource.get_db_type();
 
         let stmt = match self {
-            TableOperation::CreateTable(table_name, table_fields) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql => {
-                        format!(
-                            "CREATE TABLE \"{table_name}\" ({});",
-                            table_fields
-                                .iter()
-                                .map(|entity_field| format!(
-                                    "\"{}\" {}",
-                                    entity_field.field_name,
-                                    to_postgres_syntax(entity_field)
-                                ))
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        )
-                    }
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer => {
-                        format!(
-                            "CREATE TABLE {:?} ({:?});",
-                            table_name,
-                            table_fields
-                                .iter()
-                                .map(|entity_field| format!(
-                                    "{} {}",
-                                    entity_field.field_name,
-                                    to_sqlserver_syntax(entity_field)
-                                ))
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        )
-                            .replace('"', "")
-                    },
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+            TableOperation::CreateTable(table_name, table_fields) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => {
+                    format!(
+                        "CREATE TABLE \"{table_name}\" ({});",
+                        table_fields
+                            .iter()
+                            .map(|entity_field| format!(
+                                "\"{}\" {}",
+                                entity_field.field_name,
+                                to_postgres_syntax(entity_field)
+                            ))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
                 }
-            }
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => format!(
+                    "CREATE TABLE {:?} ({:?});",
+                    table_name,
+                    table_fields
+                        .iter()
+                        .map(|entity_field| format!(
+                            "{} {}",
+                            entity_field.field_name,
+                            to_sqlserver_syntax(entity_field)
+                        ))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+                .replace('"', ""),
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
                 match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        /*
-                            Notes: Brackets around `old_table_name`, p.e.
-                                exec sp_rename ['league'], 'leagues'  // NOT VALID!
-                            is only allowed for compound names split by a dot.
-                                exec sp_rename ['random.league'], 'leagues'  // OK
+                    #[cfg(feature = "postgres")]
+                    DatabaseType::PostgreSql => {
+                        format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};")
+                    }
+                    #[cfg(feature = "mssql")]
+                    DatabaseType::SqlServer =>
+                    /*
+                        Notes: Brackets around `old_table_name`, p.e.
+                            exec sp_rename ['league'], 'leagues'  // NOT VALID!
+                        is only allowed for compound names split by a dot.
+                            exec sp_rename ['random.league'], 'leagues'  // OK
 
-                            CARE! This doesn't mean that we are including the schema.
-                                exec sp_rename ['dbo.random.league'], 'leagues' // OK
-                                exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
+                        CARE! This doesn't mean that we are including the schema.
+                            exec sp_rename ['dbo.random.league'], 'leagues' // OK
+                            exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
 
-                            Due to the automatic mapped name from Rust to DB and vice-versa, this won't
-                            be an allowed behaviour for now, only with the table_name parameter on the
-                            CanyonEntity annotation.
-                        */
-                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+                        Due to the automatic mapped name from Rust to DB and vice-versa, this won't
+                        be an allowed behaviour for now, only with the table_name parameter on the
+                        CanyonEntity annotation.
+                    */
+                    {
+                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';")
+                    }
+                    #[cfg(feature = "mysql")]
+                    DatabaseType::MySQL => todo!(),
                 }
             }
 
@@ -832,57 +835,61 @@ impl DatabaseOperation for TableOperation {
                 _column_foreign_key,
                 _table_to_reference,
                 _column_to_reference,
-            ) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "ALTER TABLE {_table_name} ADD CONSTRAINT {_foreign_key_name} \
+            ) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => format!(
+                    "ALTER TABLE {_table_name} ADD CONSTRAINT {_foreign_key_name} \
                             FOREIGN KEY ({_column_foreign_key}) REFERENCES {_table_to_reference} ({_column_to_reference});"
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+                ),
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => {
+                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
-            }
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
 
             TableOperation::DeleteTableForeignKey(_table_with_foreign_key, _constraint_name) => {
                 match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "ALTER TABLE {_table_with_foreign_key} DROP CONSTRAINT {_constraint_name};",
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+                    #[cfg(feature = "postgres")]
+                    DatabaseType::PostgreSql => format!(
+                        "ALTER TABLE {_table_with_foreign_key} DROP CONSTRAINT {_constraint_name};",
+                    ),
+                    #[cfg(feature = "mssql")]
+                    DatabaseType::SqlServer => todo!(
+                        "[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"
+                    ),
+                    #[cfg(feature = "mysql")]
+                    DatabaseType::MySQL => todo!(),
                 }
             }
 
-            TableOperation::AddTablePrimaryKey(_table_name, _entity_field) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "ALTER TABLE \"{_table_name}\" ADD PRIMARY KEY (\"{}\");",
-                            _entity_field.field_name
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+            TableOperation::AddTablePrimaryKey(_table_name, _entity_field) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => format!(
+                    "ALTER TABLE \"{_table_name}\" ADD PRIMARY KEY (\"{}\");",
+                    _entity_field.field_name
+                ),
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => {
+                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
-            }
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
 
-            TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+            TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => {
+                    format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
                 }
-            }
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => {
+                    format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
+                }
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
         };
 
         save_migrations_query_to_execute(stmt, &datasource.name);

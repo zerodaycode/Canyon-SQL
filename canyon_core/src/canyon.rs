@@ -1,7 +1,7 @@
 use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
-use crate::connection::{db_connector, get_canyon_tokio_runtime, CANYON_INSTANCE};
+use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
 use db_connector::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::Arc;

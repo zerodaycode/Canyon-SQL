@@ -1,7 +1,7 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{
-    punctuated::Punctuated, Attribute, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility,
+    Attribute, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility, punctuated::Punctuated,
 };
 
 use super::macro_tokens::MacroTokens;
@@ -111,7 +111,7 @@ fn parse_canyon_entity_attr(
                                 Ident::new(&identifier.to_string(), i.span()),
                                 "Only string literals are valid values for the attribute arguments",
                             )
-                            .into_compile_error())
+                            .into_compile_error());
                         }
                     }
                 } else {

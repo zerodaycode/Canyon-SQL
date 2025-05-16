@@ -394,15 +394,17 @@ fn test_crud_delete_with_querybuilder_with_mssql() {
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(Player::select_query_with(DatabaseType::SqlServer)
-        .unwrap()
-        .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-        .build()
-        .unwrap()
-        .launch_with::<&str, Player>(SQL_SERVER_DS)
-        .await
-        .unwrap()
-        .is_empty());
+    assert!(
+        Player::select_query_with(DatabaseType::SqlServer)
+            .unwrap()
+            .r#where(PlayerFieldValue::id(&122), Comp::Eq)
+            .build()
+            .unwrap()
+            .launch_with::<&str, Player>(SQL_SERVER_DS)
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
 /// Same as the above delete, but with the specified datasource
@@ -419,15 +421,17 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(Player::select_query_with(DatabaseType::MySQL)
-        .unwrap()
-        .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-        .build()
-        .unwrap()
-        .launch_with::<&str, Player>(MYSQL_DS)
-        .await
-        .unwrap()
-        .is_empty());
+    assert!(
+        Player::select_query_with(DatabaseType::MySQL)
+            .unwrap()
+            .r#where(PlayerFieldValue::id(&122), Comp::Eq)
+            .build()
+            .unwrap()
+            .launch_with::<&str, Player>(MYSQL_DS)
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
 /// Tests for the generated SQL query after use the

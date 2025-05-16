@@ -56,7 +56,9 @@ impl Operator for Like {
 
         match *self {
             Like::Full => {
-                format!(" LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')")
+                format!(
+                    " LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')"
+                )
             }
             Like::Left => format!(
                 " LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}))"
