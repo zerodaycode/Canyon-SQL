@@ -10,7 +10,7 @@
 /// For more info: TODO -> Link to the docs of the foreign key chapter
 use canyon_sql::crud::CrudOperations;
 
-#[cfg(feature = "mssql")]
+#[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;

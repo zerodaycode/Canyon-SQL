@@ -13,6 +13,7 @@ const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
 pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
     let ty = &ast.ident;
+    let ty_str = ty.to_string();
     let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
     let mut impl_methods = TokenStream::new();
 
@@ -26,35 +27,35 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
     });
 
     #[cfg(feature = "postgres")]
-    let pg_implementation = create_postgres_fields_mapping(&fields);
+    let pg_implementation = create_postgres_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "postgres")]
     impl_methods.extend(quote! {
-        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> Self::Output {
-            Self {
+        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> Result<Self::Output, Box<(dyn std::error::Error + Send + Sync)>> {
+            Ok(Self {
                 #(#pg_implementation),*
-            }
+            })
         }
     });
 
     #[cfg(feature = "mssql")]
-    let sqlserver_implementation = create_sqlserver_fields_mapping(&fields);
+    let sqlserver_implementation = create_sqlserver_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "mssql")]
     impl_methods.extend(quote! {
-        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> Self::Output {
-            Self {
+        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> Result<Self::Output, Box<(dyn std::error::Error + Send + Sync)>> {
+            Ok(Self {
                 #(#sqlserver_implementation),*
-            }
+            })
         }
     });
 
     #[cfg(feature = "mysql")]
-    let mysql_implementation = create_mysql_fields_mapping(&fields);
+    let mysql_implementation = create_mysql_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "mysql")]
     impl_methods.extend(quote! {
-        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> Self::Output {
-            Self {
+        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> Result<Self::Output, Box<(dyn std::error::Error + Send + Sync)>> {
+            Ok(Self {
                 #(#mysql_implementation),*
-            }
+            })
         }
     });
 
@@ -67,44 +68,45 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
 }
 
 #[cfg(feature = "postgres")]
-#[allow(clippy::type_complexity)]
-fn create_postgres_fields_mapping(
-    fields: &[(Visibility, Ident, Type)],
-) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
+fn create_postgres_fields_mapping<'a>(
+    ty: &'a str,
+    fields: &'a [(Visibility, Ident, Type)],
+) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
+        let err = create_row_mapper_error_extracting_row(ident, ty, DatabaseType::PostgreSql);
         quote! {
-            #ident: row.try_get(#ident_name) // TODO: can we wrap RowMapper in a Result and propagate errors with ?\?
-                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+            #ident: row.try_get::<&str, #_ty>(#ident_name).map_err(|_| #err)?
         }
     })
 }
 
 #[cfg(feature = "mysql")]
-#[allow(clippy::type_complexity)]
-fn create_mysql_fields_mapping(
-    fields: &[(Visibility, Ident, Type)],
-) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
+fn create_mysql_fields_mapping<'a>(
+    ty: &'a str,
+    fields: &'a [(Visibility, Ident, Type)],
+) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
+        let err = create_row_mapper_error_extracting_row(ident, ty, DatabaseType::MySQL);
         quote! {
-            #ident: row.get(#ident_name)
-                .expect(format!("Failed to retrieve the {} field", #ident_name).as_ref())
+            #ident: row.get_opt(#ident_name).ok_or_else(|| #err)??
         }
     })
 }
 
 #[cfg(feature = "mssql")]
-#[allow(clippy::type_complexity)]
-fn create_sqlserver_fields_mapping(
-    fields: &[(Visibility, Ident, Type)],
-) -> Map<Iter<'_, (Visibility, Ident, Type)>, fn(&'_ (Visibility, Ident, Type)) -> TokenStream> {
-    fields.iter().map(|(_vis, ident, ty)| {
+fn create_sqlserver_fields_mapping<'a>(
+    struct_ty: &'a str,
+    fields: &'a [(Visibility, Ident, Type)],
+) -> impl Iterator<Item = TokenStream> + use<'a> {
+    fields.iter().map(move |(_vis, ident, ty)| {
         let ident_name = ident.to_string();
+        let err = create_row_mapper_error_extracting_row(ident, struct_ty, DatabaseType::SqlServer);
 
         let target_field_type_str = get_field_type_as_string(ty);
         let field_deserialize_impl =
-            handle_stupid_tiberius_sql_conversions(&target_field_type_str, &ident_name);
+            handle_stupid_tiberius_sql_conversions(&target_field_type_str, &ident_name, err);
 
         quote! {
             #ident: #field_deserialize_impl
@@ -113,10 +115,14 @@ fn create_sqlserver_fields_mapping(
 }
 
 #[cfg(feature = "mssql")]
-fn handle_stupid_tiberius_sql_conversions(target_type: &str, ident_name: &str) -> TokenStream {
+fn handle_stupid_tiberius_sql_conversions(
+    target_type: &str,
+    ident_name: &str,
+    err: String,
+) -> TokenStream {
     let is_opt_type = target_type.contains("Option");
     let handle_opt = if !is_opt_type {
-        quote! { .expect(format!("Failed to retrieve the `{}` field", #ident_name).as_ref()) }
+        quote! { .ok_or_else(|| #err)? }
     } else {
         quote! {}
     };
@@ -177,8 +183,10 @@ fn __get_deserializing_type_str(target_type: &str) -> String {
         .collect::<String>()
 }
 
+use canyon_core::connection::database_type::DatabaseType;
 #[cfg(feature = "mssql")]
 use quote::ToTokens;
+
 #[cfg(feature = "mssql")]
 fn get_field_type_as_string(typ: &Type) -> String {
     match typ {
@@ -199,6 +207,21 @@ fn get_field_type_as_string(typ: &Type) -> String {
         Type::Verbatim(type_) => type_.to_token_stream().to_string(),
         _ => "".to_owned(),
     }
+}
+
+fn create_row_mapper_error_extracting_row(
+    field_ident: &Ident,
+    ty: &str,
+    db_ty: DatabaseType,
+) -> String {
+    std::io::Error::new(
+        std::io::ErrorKind::Other,
+        format!(
+            "Failed to retrieve the `{}` field for type: {} with {}",
+            field_ident, ty, db_ty
+        ),
+    )
+    .to_string()
 }
 
 #[cfg(test)]

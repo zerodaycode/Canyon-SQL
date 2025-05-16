@@ -10,11 +10,17 @@ pub trait RowMapper: Sized {
     type Output;
 
     #[cfg(feature = "postgres")]
-    fn deserialize_postgresql(row: &tokio_postgres::Row) -> <Self as RowMapper>::Output;
+    fn deserialize_postgresql(
+        row: &tokio_postgres::Row,
+    ) -> Result<<Self as RowMapper>::Output, CanyonError>;
     #[cfg(feature = "mssql")]
-    fn deserialize_sqlserver(row: &tiberius::Row) -> Self::Output;
+    fn deserialize_sqlserver(
+        row: &tiberius::Row,
+    ) -> Result<<Self as RowMapper>::Output, CanyonError>;
     #[cfg(feature = "mysql")]
-    fn deserialize_mysql(row: &mysql_async::Row) -> Self::Output;
+    fn deserialize_mysql(
+        row: &mysql_async::Row,
+    ) -> Result<<Self as RowMapper>::Output, CanyonError>;
 }
 
 pub trait DefaultRowMapper {

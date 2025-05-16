@@ -34,7 +34,7 @@ pub(crate) mod sqlserver_query_launcher {
             .await?
             .into_iter()
             .flatten()
-            .map(|row| R::deserialize_sqlserver(&row))
+            .flat_map(|row| R::deserialize_sqlserver(&row))
             .collect::<Vec<R>>())
     }
 
@@ -66,7 +66,7 @@ pub(crate) mod sqlserver_query_launcher {
         let result = execute_query(stmt, params, conn).await?.into_row().await?;
 
         match result {
-            Some(r) => Ok(Some(R::deserialize_sqlserver(&r))),
+            Some(r) => Ok(Some(R::deserialize_sqlserver(&r)?)),
             None => Ok(None),
         }
     }

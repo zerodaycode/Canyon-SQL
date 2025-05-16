@@ -12,7 +12,7 @@ use tiberius::{self};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self};
 
-use crate::mapper::{CanyonError, IntoResults, RowMapper};
+use crate::mapper::RowMapper;
 use crate::row::Row;
 
 use cfg_if::cfg_if;
@@ -33,15 +33,15 @@ pub enum CanyonRows {
     MySQL(Vec<mysql_async::Row>),
 }
 
-impl IntoResults for Result<CanyonRows, CanyonError> {
-    fn into_results<R>(self) -> Result<Vec<R>, CanyonError>
-    where
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
-        self.map(move |rows| rows.into_results::<R>())
-    }
-}
+// impl IntoResults for Result<CanyonRows, CanyonError> {
+//     fn into_results<R>(self) -> Result<Vec<R>, CanyonError>
+//     where
+//         R: RowMapper,
+//         Vec<R>: FromIterator<<R as RowMapper>::Output>,
+//     {
+//         self.map(move |rows| rows.into_results::<R>())
+//     }
+// }
 
 impl CanyonRows {
     #[cfg(feature = "postgres")]
@@ -68,21 +68,21 @@ impl CanyonRows {
         }
     }
 
-    /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of R
-    pub fn into_results<R>(self) -> Vec<R>
-    where
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
-        match self {
-            #[cfg(feature = "postgres")]
-            Self::Postgres(v) => v.iter().map(|row| R::deserialize_postgresql(row)).collect(),
-            #[cfg(feature = "mssql")]
-            Self::Tiberius(v) => v.iter().map(|row| R::deserialize_sqlserver(row)).collect(),
-            #[cfg(feature = "mysql")]
-            Self::MySQL(v) => v.iter().map(|row| R::deserialize_mysql(row)).collect(),
-        }
-    }
+    // /// Consumes `self` and returns the wrapped [`std::vec::Vec`] with the instances of R
+    // pub fn into_results<R>(self) -> Vec<R>
+    // where
+    //     R: RowMapper,
+    //     Vec<R>: FromIterator<<R as RowMapper>::Output>,
+    // {
+    //     match self {
+    //         #[cfg(feature = "postgres")]
+    //         Self::Postgres(v) => v.iter().map(|row| R::deserialize_postgresql(row)?).collect(),
+    //         #[cfg(feature = "mssql")]
+    //         Self::Tiberius(v) => v.iter().map(|row| R::deserialize_sqlserver(row)?).collect(),
+    //         #[cfg(feature = "mysql")]
+    //         Self::MySQL(v) => v.iter().map(|row| R::deserialize_mysql(row)?).collect(),
+    //     }
+    // }
 
     /// Returns the entity at the given index for the returned rows
     ///
@@ -99,14 +99,16 @@ impl CanyonRows {
     }
 
     pub fn first_row<T: RowMapper<Output = T>>(&self) -> Option<T> {
-        match self {
+        let row = match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.first().map(|r| T::deserialize_postgresql(r)),
             #[cfg(feature = "mssql")]
             Self::Tiberius(v) => v.first().map(|r| T::deserialize_sqlserver(r)),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.first().map(|r| T::deserialize_mysql(r)),
-        }
+        };
+
+        row?.ok()
     }
 
     /// Returns the number of elements present on the wrapped collection

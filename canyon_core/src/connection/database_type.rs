@@ -2,6 +2,7 @@ use super::datasources::Auth;
 use crate::canyon::Canyon;
 use serde::Deserialize;
 use std::error::Error;
+use std::fmt::Display;
 
 /// Holds the current supported databases by Canyon-SQL
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
@@ -15,6 +16,12 @@ pub enum DatabaseType {
     #[cfg(feature = "mysql")]
     #[serde(alias = "mysql")]
     MySQL,
+}
+
+impl Display for DatabaseType {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        write!(fmt, "{:?}", self)
+    }
 }
 
 impl From<&Auth> for DatabaseType {

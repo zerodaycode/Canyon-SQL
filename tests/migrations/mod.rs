@@ -5,7 +5,6 @@ use canyon_sql::connection::DbConnection;
 use canyon_sql::core::Canyon;
 /// Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::core::Transaction;
-#[cfg(feature = "migrations")]
 use canyon_sql::migrations::handler::Migrations;
 
 /// Brings the information of the `PostgreSQL` requested schema

@@ -34,7 +34,7 @@ pub(crate) mod postgres_query_launcher {
             .query(stmt.as_ref(), &get_psql_params(params))
             .await?
             .iter()
-            .map(|row| R::deserialize_postgresql(row))
+            .flat_map(|row| R::deserialize_postgresql(row))
             .collect())
     }
 
@@ -70,7 +70,7 @@ pub(crate) mod postgres_query_launcher {
         let result = conn.client.query_one(stmt, m_params.as_slice()).await;
 
         match result {
-            Ok(row) => Ok(Some(R::deserialize_postgresql(&row))),
+            Ok(row) => Ok(Some(R::deserialize_postgresql(&row)?)),
             Err(e) => match e.to_string().contains("unexpected number of rows") {
                 true => Ok(None),
                 _ => Err(e)?,

@@ -43,7 +43,7 @@ pub(crate) mod mysql_query_launcher {
         Ok(execute_query(stmt, params, conn)
             .await?
             .iter()
-            .map(|row| R::deserialize_mysql(row))
+            .flat_map(|row| R::deserialize_mysql(row))
             .collect())
     }
 
@@ -68,7 +68,7 @@ pub(crate) mod mysql_query_launcher {
         let result = execute_query(stmt, params, conn).await?;
 
         match result.first() {
-            Some(r) => Ok(Some(R::deserialize_mysql(r))),
+            Some(r) => Ok(Some(R::deserialize_mysql(r)?)),
             None => Ok(None),
         }
     }

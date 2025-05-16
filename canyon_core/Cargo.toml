@@ -31,4 +31,4 @@ cfg-if = "1.0.0"
 [features]
 postgres = ["tokio-postgres"]
 mssql = ["tiberius", "async-std"]
-mysql = ["mysql_async","mysql_common"]
+mysql = ["mysql_async", "mysql_common"]

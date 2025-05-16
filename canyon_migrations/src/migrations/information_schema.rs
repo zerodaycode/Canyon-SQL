@@ -1,5 +1,6 @@
 #[cfg(feature = "mssql")]
 use canyon_core::connection::tiberius::ColumnType as TIB_TY;
+#[cfg(feature = "postgres")]
 use canyon_core::connection::tokio_postgres::types::Type as TP_TYP;
 use canyon_core::{
     column::{Column, ColumnType},
