@@ -1,4 +1,3 @@
-use crate::query_operations::consts;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;

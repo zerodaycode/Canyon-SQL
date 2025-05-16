@@ -13,7 +13,7 @@ mod utils;
 
 use proc_macro::TokenStream as CompilerTokenStream;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Error};
+use syn::{DeriveInput, Error, parse_macro_input};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
 use crate::canyon_entity_macro::generate_canyon_entity_tokens;
@@ -164,8 +164,6 @@ pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_mac
     canyon_mapper_impl_tokens(ast).into()
 }
 
-/// Generates the enums that contains the `TypeFields` and `TypeFieldsValues`
-/// that the query-builder requires for construct its queries
 #[proc_macro_derive(Fields)]
 pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let entity_res = syn::parse::<CanyonEntity>(input);

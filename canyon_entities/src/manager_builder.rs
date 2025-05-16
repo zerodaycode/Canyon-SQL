@@ -106,7 +106,6 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     let generics = &canyon_entity.generics;
 
     quote! {
-        #[derive(Clone, Debug)]
         #[allow(non_camel_case_types)]
         #[allow(unused_variables)]
         #[allow(dead_code)]
@@ -177,7 +176,6 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
     let visibility = &canyon_entity.vis;
 
     quote! {
-        #[derive(Debug)]
         #[allow(non_camel_case_types)]
         #[allow(unused_variables)]
         #[allow(dead_code)]

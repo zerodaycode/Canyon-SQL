@@ -1,4 +1,9 @@
 use crate::query::parameters::QueryParameter;
+use std::any::Any;
+
+pub trait StructMetadata {
+    fn type_fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
+}
 
 pub trait TableMetadata: std::fmt::Display {
     fn as_str(&self) -> &'static str;
@@ -68,6 +73,6 @@ pub trait FieldValueIdentifier<'a> {
 /// Usually, it's used on the Canyon macros to retrieve the column that
 /// this side of the relation it's representing
 pub trait ForeignKeyable<T> {
-    /// Retrieves the field related to the column passed in
+    /// Returns the actual value of the field related to the column passed in
     fn get_fk_column(&self, column: &str) -> Option<&dyn QueryParameter<'_>>;
 }

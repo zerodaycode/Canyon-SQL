@@ -45,8 +45,8 @@ tokio = { version = "1.27.0", features = ["full"]  }
 tokio-util = { version = "0.7.4", features = ["compat"]  }
 tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
 tiberius = { version = "0.12.3", features = ["tds73", "chrono", "integrated-auth-gssapi"] }
-mysql_async = { version = "0.32.2" }
-mysql_common = { version = "0.30.6", features = [ "chrono" ]}
+mysql_async = { version = "0.36.1" }
+mysql_common = { version = "0.35.4", features = [ "chrono" ]}
 
 chrono = { version = "0.4", features = ["serde"] }  # Just from TP better?
 serde = { version = "1.0.138", features = ["derive"] }

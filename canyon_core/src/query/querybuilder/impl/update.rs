@@ -8,7 +8,7 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
     fn set<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Self
     where
-        Z: FieldIdentifier + Clone,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>,
     {
         if columns.is_empty() {

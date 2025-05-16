@@ -11,7 +11,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
     fn set<Z, Q>(self, columns: &'a [(Z, Q)]) -> Self
     where
-        Z: FieldIdentifier + Clone,
+        Z: FieldIdentifier,
         Q: QueryParameter<'a>;
 }
 
