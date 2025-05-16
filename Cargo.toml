@@ -63,8 +63,8 @@ proc-macro2 = "1.0.27"
 
 [workspace.package]
 version = "0.5.1"
-edition = "2021"
-authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto Musi<gonzalo.busto@gmail.com>"]
+edition = "2024"
+authors = ["Alex Vergara<alex.vergara@tuta.io>, Gonzalo Busto Musi<gonzalo.busto@gmail.com>"]
 documentation = "https://zerodaycode.github.io/canyon-book/"
 homepage = "https://github.com/zerodaycode/Canyon-SQL"
 readme = "README.md"
