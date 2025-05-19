@@ -1,3 +1,4 @@
+use std::ops::DerefMut;
 use crate::{
     canyon_crud::DatabaseType,
     constants,
@@ -44,13 +45,14 @@ impl Migrations {
             let mut db_conn = Canyon::instance()
                 .unwrap_or_else(|_| panic!("Failure getting db connection: {}", &datasource.name))
                 .get_connection(&datasource.name)
-                .await
                 .unwrap_or_else(|_| {
                     panic!(
                         "Unable to get a database connection on the migrations processor for: {:?}",
                         datasource.name
                     )
-                });
+                })
+                .lock()
+                .await;
 
             let canyon_entities = CANYON_REGISTER_ENTITIES.lock().unwrap().to_vec();
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;

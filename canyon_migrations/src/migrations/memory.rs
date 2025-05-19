@@ -75,13 +75,14 @@ impl CanyonMemory {
                 )
             })
             .get_connection(&datasource.name)
-            .await
             .unwrap_or_else(|_| {
                 panic!(
                     "Unable to get a database connection on Canyon Memory: {:?}",
                     datasource.name
                 )
-            });
+            })
+            .lock()
+            .await;
 
         // Creates the memory table if not exists
         Self::create_memory(&datasource.name, &mut db_conn, &datasource.get_db_type()).await;

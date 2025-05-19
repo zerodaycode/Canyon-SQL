@@ -1,4 +1,3 @@
-use canyon_sql::connection::DbConnection;
 use canyon_sql::core::Canyon;
 use canyon_sql::macros::{CanyonCrud, CanyonMapper, canyon_entity};
 use canyon_sql::query::querybuilder::SelectQueryBuilder;
@@ -10,8 +9,9 @@ fn test_hex_arch_find_all() {
     let binding = Canyon::instance()
         .unwrap()
         .get_default_connection()
-        .await
-        .unwrap();
+        .unwrap()
+        .lock()
+        .await;
     let league_service = LeagueServiceAdapter {
         league_repository: LeagueRepositoryAdapter {
             db_conn: binding.postgres_connection(),

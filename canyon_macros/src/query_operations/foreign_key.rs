@@ -99,14 +99,13 @@ fn generate_find_by_foreign_key_tokens(
                 quote! {
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
-                        <#fk_ty as canyon_sql::core::Transaction>::query_one::<
-                            &str,
-                            &[&dyn canyon_sql::query::QueryParameter<'_>],
-                            #fk_ty
-                        >(
+                        let default_db_conn = canyon_sql::core::Canyon::instance()?
+                            .get_default_connection()?
+                            .lock()
+                            .await;
+                        default_db_conn.query_one::<#fk_ty>(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>],
-                            ""
+                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>]
                         ).await
                     }
                 },
@@ -193,11 +192,11 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     #quoted_method_signature
                     {
                         let lookup_value = #lookup_value;
-                        <#ty #ty_generics as canyon_sql::core::Transaction>::query::<&str, #mapper_ty>(
-                            #stmt,
-                            &[lookup_value],
-                            ""
-                        ).await
+                        let default_db_conn = canyon_sql::core::Canyon::instance()?
+                            .get_default_connection()?
+                            .lock()
+                            .await;
+                        default_db_conn.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
                     }
                 },
             ));

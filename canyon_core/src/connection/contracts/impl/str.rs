@@ -9,8 +9,9 @@ macro_rules! impl_db_connection {
                 params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
             ) -> Result<crate::rows::CanyonRows, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?
-                    .get_connection(self)
-                    .await?;
+                    .get_connection(self)?
+                    .lock()
+                    .await;
                 conn.query_rows(stmt, params).await
             }
 
@@ -25,8 +26,9 @@ macro_rules! impl_db_connection {
                 Vec<R>: std::iter::FromIterator<<R as crate::mapper::RowMapper>::Output>,
             {
                 let conn = crate::connection::Canyon::instance()?
-                    .get_connection(self)
-                    .await?;
+                    .get_connection(self)?
+                    .lock()
+                    .await;
                 conn.query(stmt, params).await
             }
 
@@ -39,8 +41,9 @@ macro_rules! impl_db_connection {
                 R: crate::mapper::RowMapper,
             {
                 let conn = crate::connection::Canyon::instance()?
-                    .get_connection(self)
-                    .await?;
+                    .get_connection(self)?
+                    .lock()
+                    .await;
                 conn.query_one::<R>(stmt, params).await
             }
 
@@ -50,8 +53,9 @@ macro_rules! impl_db_connection {
                 params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
             ) -> Result<T, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?
-                    .get_connection(self)
-                    .await?;
+                    .get_connection(self)?
+                    .lock()
+                    .await;
                 conn.query_one_for(stmt, params).await
             }
 
@@ -61,8 +65,9 @@ macro_rules! impl_db_connection {
                 params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
             ) -> Result<u64, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?
-                    .get_connection(self)
-                    .await?;
+                    .get_connection(self)?
+                    .lock()
+                    .await;
                 conn.execute(stmt, params).await
             }
 

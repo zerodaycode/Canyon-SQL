@@ -587,13 +587,14 @@ impl MigrationsProcessor {
             let db_conn = Canyon::instance()
                 .expect("Error getting db connection on `from_query_register`")
                 .get_connection(datasource_name)
-                .await
                 .unwrap_or_else(|_| {
                     panic!(
                         "Unable to get a database connection on Canyon Memory: {:?}",
                         datasource_name
                     )
-                });
+                })
+                .lock()
+                .await;
 
             for query_to_execute in datasource.1 {
                 let res = db_conn.query_rows(query_to_execute, &[]).await;

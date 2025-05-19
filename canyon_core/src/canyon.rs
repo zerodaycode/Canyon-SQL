@@ -70,7 +70,9 @@ impl Canyon {
     /// Returns an error if the `Canyon` instance has not yet been initialized.
     /// In that case, the user must call [`Canyon::init`] before accessing the singleton.
     pub fn instance() -> Result<&'static Self, Box<dyn Error + Send + Sync>> {
-        Ok(CANYON_INSTANCE.get().ok_or_else(|| {
+        Ok(CANYON_INSTANCE.get().ok_or_else(|| { // TODO: just call Canyon::init()? Why should we raise this error?
+            // I guess that there's no point in making it fail for the user to manually start Canyon when we can handle everything
+            // internally
             Box::new(std::io::Error::new(
                 std::io::ErrorKind::Other,
                 "Canyon not initialized. Call `Canyon::init()` first.",
@@ -176,24 +178,22 @@ impl Canyon {
     }
 
     // Retrieve a read-only connection from the cache
-    pub async fn get_default_connection(
+    pub fn get_default_connection(
         &self,
-    ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
-        Ok(self
+    ) -> Result<&SharedConnection, DatasourceNotFound> {
+        self
             .default_connection
             .as_ref()
-            .ok_or_else(|| DatasourceNotFound::from(None))?
-            .lock()
-            .await)
+            .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
     // Retrieve a read-only connection from the cache
-    pub async fn get_connection(
+    pub fn get_connection(
         &self,
         name: &str,
-    ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
+    ) -> Result<&SharedConnection, DatasourceNotFound> {
         if name.is_empty() {
-            return self.get_default_connection().await;
+            return self.get_default_connection();
         }
 
         let conn = self
@@ -201,15 +201,7 @@ impl Canyon {
             .get(name)
             .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
 
-        Ok(conn.lock().await)
-    }
-
-    // Retrieve a mutable connection from the cache
-    pub async fn get_mut_connection(
-        &self,
-        name: &str,
-    ) -> Result<tokio::sync::MutexGuard<'_, DatabaseConnection>, DatasourceNotFound> {
-        self.get_connection(name).await
+        Ok(conn)
     }
 }
 

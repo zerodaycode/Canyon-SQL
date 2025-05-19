@@ -42,7 +42,7 @@ impl<'a> Query<'a> {
     where
         Vec<T>: FromIterator<<T as RowMapper>::Output>,
     {
-        let mut input = Canyon::instance()?.get_default_connection().await?;
+        let mut input = Canyon::instance()?.get_default_connection()?.lock().await;
         <T as Transaction>::query(&self.sql, &self.params, input.deref_mut()).await
     }
 

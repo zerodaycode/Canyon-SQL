@@ -18,12 +18,12 @@ fn test_migrations_postgresql_status_query() {
     let ds = ds.unwrap();
     let ds_name = &ds.name;
 
-    let db_conn = canyon.get_connection(ds_name).await.unwrap_or_else(|_| {
+    let db_conn = canyon.get_connection(ds_name).unwrap_or_else(|_| {
         panic!(
             "Unable to get a database connection on Canyon Memory: {:?}",
             ds_name
         )
-    });
+    }).lock().await;
 
     let results = db_conn
         .query_rows(constants::FETCH_PUBLIC_SCHEMA, &[])
