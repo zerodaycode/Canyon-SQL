@@ -2,39 +2,21 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-/// Generates the TokenStream for the _insert_result() CRUD operation
-pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
-    let mut insert_ops_tokens = TokenStream::new();
+pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
+    let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
+    // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
-    let ty = macro_data.ty;
-    let is_mapper_ty_present = macro_data.retrieve_mapping_target_type().is_some();
-    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
+    quote! {
+        #insert_method_ops
+        // #multi_insert_tokens
+    }
+}
 
-    // Retrieves the fields of the Struct as a collection of Strings, already parsed
-    // the condition of remove the primary key if it's present and it's autoincremental
-    let insert_columns = macro_data.get_column_names_pk_parsed().join(", ");
-
-    // Returns a String with the generic $x placeholder for the query parameters.
-    let placeholders = macro_data.placeholders_generator();
-
-    // Retrieves the fields of the Struct
-    let fields = macro_data.get_columns_pk_parsed();
-
-    let insert_values = fields.iter().map(|field| {
-        let field = field.ident.as_ref().unwrap();
-        quote! { &self.#field }
-    });
-
-    let primary_key = macro_data.get_primary_key_annotation();
-    let pk_ident_type = macro_data
-        .fields_with_types()
-        .into_iter()
-        .find(|(i, _t)| Some(i.to_string()) == primary_key);
-
-    let ins_values = quote! {
-        let values: &[&dyn canyon_sql::query::QueryParameter<'_>]  = &[#(#insert_values),*];
-    };
-
+// Generates the TokenStream for the _insert operation
+pub fn generate_insert_method_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &str,
+) -> TokenStream {
     let insert_signature = quote! {
         async fn insert<'a>(&'a mut self)
             -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
@@ -46,147 +28,134 @@ pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
             I: canyon_sql::connection::DbConnection + Send + 'a
     };
 
-    let stmt = format!(
-        "INSERT INTO {} ({}) VALUES ({})",
-        table_schema_data, insert_columns, placeholders
-    );
+    let insert_body;
+    let insert_with_body;
+    let insert_values;
 
-    let insert_body = if let Some(pk_data) = pk_ident_type {
-        let pk_ident = pk_data.0;
-        let pk_type = pk_data.1;
-
-        quote! {
-            #ins_values
-
-            let stmt = format!("{} RETURNING {}", #stmt , #primary_key);
-
-            self.#pk_ident = <#ty #ty_generics as canyon_sql::core::Transaction>::query_one_for::<
-                String,
-                &[&dyn canyon_sql::query::QueryParameter<'_>],
-                #pk_type
-            >(
-                stmt,
-                values,
-                input
-            ).await?;
-
-            Ok(())
-        }
+    let is_mapper_ty_present = macro_data.retrieve_mapping_target_type().is_some();
+    if is_mapper_ty_present {
+        let raised_err = __details::generate_unsupported_operation_err();
+        insert_body = raised_err.clone(); // TODO: Can't we do it better?
+        insert_with_body = raised_err;
+        insert_values = quote! {};
     } else {
-        quote! {
-            #ins_values
-            <#ty #ty_generics as canyon_sql::core::Transaction>::query_rows( // TODO: this should be execute
-                #stmt,
-                values,
-                input
-            ).await?;
-
-            Ok(())
-        }
+        let stmt = __details::generate_insert_sql_statement(macro_data, table_schema_data);
+        insert_values = __details::generate_insert_fn_values_slice_expr(macro_data);
+        insert_body = __details::generate_insert_fn_body_tokens(macro_data, &stmt, false);
+        insert_with_body = __details::generate_insert_fn_body_tokens(macro_data, &stmt, true);
     };
 
-    let insert_transaction = if is_mapper_ty_present {
+    quote! {
+        #insert_signature {
+            #insert_values
+            #insert_body
+        }
+
+        #insert_with_signature {
+            #insert_values
+            #insert_with_body
+        }
+    }
+}
+
+mod __details {
+    use super::*;
+
+    pub(crate) fn generate_insert_fn_body_tokens(
+        macro_data: &MacroTokens,
+        stmt: &str,
+        is_with_method: bool,
+    ) -> TokenStream {
+        let primary_key = macro_data.get_primary_key_annotation();
+        let pk_ident_and_type = macro_data
+            .fields_with_types()
+            .into_iter()
+            .find(|(i, _t)| Some(i.to_string()) == primary_key);
+
+        let db_conn = if is_with_method {
+            quote! {input}
+        } else {
+            quote! { default_db_conn }
+        };
+
+        let mut insert_body_tokens = TokenStream::new();
+        if !is_with_method {
+            insert_body_tokens.extend(quote! {
+                let default_db_conn = canyon_sql::core::Canyon::instance()?
+                    .get_default_connection()?
+                    .lock()
+                    .await;
+            });
+        }
+
+        if let Some(pk_data) = pk_ident_and_type {
+            let pk_ident = pk_data.0;
+            let pk_type = pk_data.1;
+
+            insert_body_tokens.extend(quote! {
+                self.#pk_ident = #db_conn.query_one_for::<#pk_type>(#stmt, values).await?;
+                Ok(())
+            });
+        } else {
+            insert_body_tokens.extend(quote! {
+                let _ = #db_conn.execute(#stmt, values).await?;
+                Ok(())
+            });
+        }
+
+        insert_body_tokens
+    }
+
+    pub(crate) fn generate_insert_fn_values_slice_expr(macro_data: &MacroTokens) -> TokenStream {
+        // Retrieves the fields of the Struct
+        let fields = macro_data.get_columns_pk_parsed();
+
+        let insert_values = fields.iter().map(|field| {
+            let field = field.ident.as_ref().unwrap();
+            quote! { &self.#field }
+        });
+
+        quote! {
+            let values: &[&dyn canyon_sql::query::QueryParameter<'_>] = &[#(#insert_values),*];
+        }
+    }
+
+    pub(crate) fn generate_insert_sql_statement(
+        macro_data: &MacroTokens,
+        table_schema_data: &str,
+    ) -> String {
+        // Retrieves the fields of the Struct as a collection of Strings, already parsed
+        // the condition of remove the primary key if it's present, and it's auto incremental
+        let insert_columns = macro_data.get_column_names_pk_parsed().join(", ");
+
+        // Returns a String with the generic $x placeholder for the query parameters.
+        // Already takes in consideration if there's pk annotation
+        let placeholders = macro_data.placeholders_generator();
+
+        let mut stmt = format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            table_schema_data, insert_columns, placeholders
+        );
+
+        if let Some(primary_key) = macro_data.get_primary_key_annotation() {
+            stmt.push_str(format!(" RETURNING {}", primary_key).as_str());
+        }
+
+        stmt
+    }
+
+    pub(crate) fn generate_unsupported_operation_err() -> TokenStream {
         quote! {
             Err(
                 std::io::Error::new(
                     std::io::ErrorKind::Unsupported,
-                    "Can't use the 'Insert' family transactions if your T type in CrudOperations is the same type that implements RowMapper"
+                    "Can't use the 'Insert' family transactions as a method (that receives self as first parameter) \
+                    if your T type in CrudOperations is NOT the same type that implements RowMapper. \
+                    Consider to use instead the provided insert_entity or insert_entity_with functions."
                 ).into_inner().unwrap()
             )
         }
-    } else {
-        quote! { #insert_body }
-    };
-
-    insert_ops_tokens.extend(quote! {
-        /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
-        /// datasource by its `datasource name`, defined in the configuration file.
-        ///
-        /// This `insert` operation needs a `&mut` reference. That's because typically,
-        /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the
-        /// `pk` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
-        /// operation, you instance will have the correct value that is the *PRIMARY KEY*
-        /// of the database row that represents.
-        ///
-        /// This operation returns a result type, indicating a possible failure querying the database.
-        ///
-        /// ## *Examples*
-        ///```
-        /// let mut lec: League = League {
-        ///     id: Default::default(),
-        ///     ext_id: 1,
-        ///     slug: "LEC".to_string(),
-        ///     name: "League Europe Champions".to_string(),
-        ///     region: "EU West".to_string(),
-        ///     image_url: "https://lec.eu".to_string(),
-        /// };
-        ///
-        /// println!("LEC before: {:?}", &lec);
-        ///
-        /// let ins_result = lec.insert_result().await;
-        ///
-        /// // Now, we can handle the result returned, because it can contain a
-        /// // critical error that may lead your program to panic
-        /// if let Ok(_) = ins_result {
-        ///     println!("LEC after: {:?}", &lec);
-        /// } else {
-        ///     eprintln!("{:?}", ins_result.err())
-        /// }
-        /// ```
-        ///
-        #insert_signature {
-            let input = "";
-            #insert_transaction
-        }
-
-        /// Inserts into a database entity the current data in `self`, generating a new
-        /// entry (row), returning the `PRIMARY KEY` = `self.<pk_field>` with the specified
-        /// datasource by its `datasource name`, defined in the configuration file.
-        ///
-        /// This `insert` operation needs a `&mut` reference. That's because typically,
-        /// an insert operation represents *new* data stored in the database, so, when
-        /// inserted, the database will generate a unique new value for the
-        /// `pk` field, having a unique identifier for every record, and it will
-        /// automatically assign that returned pk to `self.<pk_field>`. So, after the `insert`
-        /// operation, your instance will have the correct value that is the *PRIMARY KEY*
-        /// of the database row that represents.
-        ///
-        /// This operation returns a result type, indicating a possible failure querying the database.
-        ///
-        /// ## *Examples*
-        ///```
-        /// let mut lec: League = League {
-        ///     id: Default::default(),
-        ///     ext_id: 1,
-        ///     slug: "LEC".to_string(),
-        ///     name: "League Europe Champions".to_string(),
-        ///     region: "EU West".to_string(),
-        ///     image_url: "https://lec.eu".to_string(),
-        /// };
-        ///
-        /// println!("LEC before: {:?}", &lec);
-        ///
-        /// let ins_result = lec.insert_result().await;
-        ///
-        /// // Now, we can handle the result returned, because it can contains a
-        /// // critical error that may leads your program to panic
-        /// if let Ok(_) = ins_result {
-        ///     println!("LEC after: {:?}", &lec);
-        /// } else {
-        ///     eprintln!("{:?}", ins_result.err())
-        /// }
-        /// ```
-        ///
-        #insert_with_signature { #insert_transaction }
-    });
-
-    // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
-    // insert_ops_tokens.extend(multi_insert_tokens);
-
-    insert_ops_tokens
+    }
 }
 
 /// Generates the TokenStream for the __insert() CRUD operation, but being available

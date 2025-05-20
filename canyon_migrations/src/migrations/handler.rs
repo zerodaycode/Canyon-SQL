@@ -1,4 +1,3 @@
-use std::ops::DerefMut;
 use crate::{
     canyon_crud::DatabaseType,
     constants,
@@ -18,6 +17,7 @@ use canyon_core::{
 };
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
+use std::ops::DerefMut;
 
 #[derive(PartialDebug)]
 pub struct Migrations;

@@ -70,7 +70,8 @@ impl Canyon {
     /// Returns an error if the `Canyon` instance has not yet been initialized.
     /// In that case, the user must call [`Canyon::init`] before accessing the singleton.
     pub fn instance() -> Result<&'static Self, Box<dyn Error + Send + Sync>> {
-        Ok(CANYON_INSTANCE.get().ok_or_else(|| { // TODO: just call Canyon::init()? Why should we raise this error?
+        Ok(CANYON_INSTANCE.get().ok_or_else(|| {
+            // TODO: just call Canyon::init()? Why should we raise this error?
             // I guess that there's no point in making it fail for the user to manually start Canyon when we can handle everything
             // internally
             Box::new(std::io::Error::new(
@@ -178,20 +179,14 @@ impl Canyon {
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_default_connection(
-        &self,
-    ) -> Result<&SharedConnection, DatasourceNotFound> {
-        self
-            .default_connection
+    pub fn get_default_connection(&self) -> Result<&SharedConnection, DatasourceNotFound> {
+        self.default_connection
             .as_ref()
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_connection(
-        &self,
-        name: &str,
-    ) -> Result<&SharedConnection, DatasourceNotFound> {
+    pub fn get_connection(&self, name: &str) -> Result<&SharedConnection, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();
         }
