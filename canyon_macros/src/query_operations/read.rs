@@ -146,7 +146,6 @@ mod __details {
     pub mod find_all_generators {
         use super::*;
         use proc_macro2::TokenStream;
-        use syn::TypeGenerics;
 
         pub fn create_find_all_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
             quote! {
@@ -175,7 +174,6 @@ mod __details {
     pub mod count_generators {
         use super::*;
         use proc_macro2::TokenStream;
-        use syn::TypeGenerics;
 
         pub fn create_count_macro(stmt: &str) -> TokenStream {
             quote! {
@@ -200,7 +198,6 @@ mod __details {
     pub mod find_by_pk_generators {
         use super::*;
         use proc_macro2::TokenStream;
-        use syn::TypeGenerics;
 
         pub fn create_find_by_pk_macro(
             mapper_ty: &Ident,

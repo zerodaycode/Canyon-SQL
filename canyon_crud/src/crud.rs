@@ -1,12 +1,28 @@
 use canyon_core::connection::contracts::DbConnection;
 use canyon_core::connection::database_type::DatabaseType;
 use canyon_core::mapper::RowMapper;
+use canyon_core::query::bounds::Inspectionable;
 use canyon_core::query::parameters::QueryParameter;
 use canyon_core::query::querybuilder::{
     DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
 };
 use std::error::Error;
 use std::future::Future;
+
+pub trait Insertable {
+    // Logically, this looks more like Inserter, and Insertable w'd be the ones with &self
+    fn insert_entity<'a, T>(
+        entity: &'a T,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    where
+        T: RowMapper + Inspectionable;
+    // fn insert_entity_with<'a, I>(
+    //     &mut self,
+    //     input: I,
+    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    // where
+    //     I: DbConnection + Send + 'a;
+}
 
 /// *CrudOperations* it's the core part of Canyon-SQL.
 ///
@@ -167,6 +183,20 @@ where
         input: I,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
+        I: DbConnection + Send + 'a;
+
+    fn insert_entity<'a, T>(
+        entity: &'a T,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    where
+        T: RowMapper + Inspectionable + Sync + 'a;
+
+    fn insert_entity_with<'a, T, I>(
+        entity: &'a T,
+        input: I,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    where
+        T: RowMapper + Inspectionable + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     // TODO: the horripilant multi_insert MUST be replaced with a batch insert

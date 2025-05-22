@@ -26,6 +26,10 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
         }
     });
 
+    let fields_values = fields.iter().map(|(_vis, ident, _ty)| {
+        quote! { &self.#ident }
+    });
+
     #[cfg(feature = "postgres")]
     let pg_implementation = create_postgres_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "postgres")]
@@ -60,9 +64,16 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
     });
 
     quote! {
+        use crate::canyon_sql::crud::CrudOperations;
         impl #impl_generics canyon_sql::core::RowMapper for #ty #ty_generics #where_clause {
             type Output = #ty;
             #impl_methods
+        }
+
+        impl #impl_generics canyon_sql::query::bounds::Inspectionable for #ty #ty_generics #where_clause {
+            fn type_fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
+                vec![#(#fields_values),*]
+            }
         }
     }
 }

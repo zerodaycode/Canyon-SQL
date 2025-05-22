@@ -4,10 +4,12 @@ use quote::quote;
 
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
     let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
+    let insert_entity_ops = generate_insert_entity_function_tokens(macro_data, table_schema_data);
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
     quote! {
         #insert_method_ops
+        #insert_entity_ops
         // #multi_insert_tokens
     }
 }
@@ -58,6 +60,52 @@ pub fn generate_insert_method_tokens(
     }
 }
 
+pub fn generate_insert_entity_function_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &str,
+) -> TokenStream {
+    let insert_entity_signature = quote! {
+        async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
+            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'canyon_lt>>
+        where Entity: canyon_sql::core::RowMapper
+            + canyon_sql::query::bounds::Inspectionable
+            + Sync
+            + 'canyon_lt
+    };
+    let insert_entity_with_signature = quote! {
+        async fn insert_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
+            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'canyon_lt>>
+        where
+            Entity: canyon_sql::core::RowMapper
+                + canyon_sql::query::bounds::Inspectionable
+                + Sync
+                + 'canyon_lt,
+            Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
+    };
+
+    // TODO: missing all the PK logic!
+    // 1. use MacroTokens on RowMapper, so we can discard to add the pk field value to the entity.type_fields_actual_values
+    let stmt = __details::generate_insert_sql_statement(macro_data, table_schema_data);
+
+    quote! {
+        #insert_entity_signature {
+            let values = entity.type_fields_actual_values();
+            let default_db_conn = canyon_sql::core::Canyon::instance()?
+                .get_default_connection()?
+                .lock()
+                .await;
+            let _ = default_db_conn.execute(#stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
+            Ok(())
+        }
+
+        #insert_entity_with_signature {
+            let values = entity.type_fields_actual_values();
+            let _ = input.execute(#stmt, &values).await?;
+            Ok(())
+        }
+    }
+}
+
 mod __details {
     use super::*;
 
@@ -73,7 +121,7 @@ mod __details {
             .find(|(i, _t)| Some(i.to_string()) == primary_key);
 
         let db_conn = if is_with_method {
-            quote! {input}
+            quote! { input }
         } else {
             quote! { default_db_conn }
         };

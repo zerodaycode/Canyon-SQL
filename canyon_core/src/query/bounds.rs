@@ -1,7 +1,14 @@
 use crate::query::parameters::QueryParameter;
-use std::any::Any;
 
-pub trait StructMetadata {
+/// Contract that provides a way to Canyon to inspect certain property or values at runtime.
+///
+/// Typically, these will be used by the macros to gather some information or to create some user code
+/// in more complex scenarios, like when insert an entity, when we need to know the value of the fields of
+/// the current instance that we'd like to insert
+pub trait Inspectionable {
+    /// Returns an allocated linear collection with the current values of all the fields declared
+    /// for the implementor, as the result of the evaluation of the &self.#field expression, iteratively
+    /// over every type member
     fn type_fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
 }
 

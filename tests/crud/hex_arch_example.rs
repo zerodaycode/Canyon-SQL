@@ -34,6 +34,8 @@ pub struct League {
 
 pub trait LeagueService {
     async fn find_all(&self) -> Result<Vec<League>, Box<dyn Error + Send + Sync>>;
+    async fn create<'a>(&self, league: &'a League)
+    -> Result<(), Box<dyn Error + Send + Sync + 'a>>;
 } // As a domain boundary for the application side of the hexagon
 
 pub struct LeagueServiceAdapter<T: LeagueRepository> {
@@ -43,10 +45,19 @@ impl<T: LeagueRepository> LeagueService for LeagueServiceAdapter<T> {
     async fn find_all(&self) -> Result<Vec<League>, Box<dyn Error + Send + Sync>> {
         self.league_repository.find_all().await
     }
+
+    async fn create<'a>(
+        &self,
+        league: &'a League,
+    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+        self.league_repository.create(league).await
+    }
 }
 
 pub trait LeagueRepository {
     async fn find_all(&self) -> Result<Vec<League>, Box<dyn Error + Send + Sync>>;
+    async fn create<'a>(&self, league: &'a League)
+    -> Result<(), Box<dyn Error + Send + Sync + 'a>>;
 } // As a domain boundary for the infrastructure side of the hexagon
 
 #[derive(CanyonCrud)]
@@ -59,5 +70,12 @@ impl<T: DbConnection + Send + Sync> LeagueRepository for LeagueRepositoryAdapter
         let select_query =
             SelectQueryBuilder::new("league", self.db_conn.get_database_type()?)?.build()?;
         self.db_conn.query(select_query, &[]).await
+    }
+
+    async fn create<'a>(
+        &self,
+        league: &'a League,
+    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+        LeagueRepositoryAdapter::<T>::insert_entity(league).await
     }
 }
