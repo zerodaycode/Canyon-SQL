@@ -186,15 +186,15 @@ where
         I: DbConnection + Send + 'a;
 
     fn insert_entity<'a, T>(
-        entity: &'a T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+        entity: &'a mut T,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
         T: RowMapper + Inspectionable + Sync + 'a;
 
     fn insert_entity_with<'a, T, I>(
-        entity: &'a T,
+        entity: &'a mut T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
         T: RowMapper + Inspectionable + Sync + 'a,
         I: DbConnection + Send + 'a;

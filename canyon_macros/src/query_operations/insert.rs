@@ -21,11 +21,11 @@ pub fn generate_insert_method_tokens(
 ) -> TokenStream {
     let insert_signature = quote! {
         async fn insert<'a>(&'a mut self)
-            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>
     };
     let insert_with_signature = quote! {
         async fn insert_with<'a, I>(&mut self, input: I)
-            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'a>>
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>
         where
             I: canyon_sql::connection::DbConnection + Send + 'a
     };
@@ -65,16 +65,17 @@ pub fn generate_insert_entity_function_tokens(
     table_schema_data: &str,
 ) -> TokenStream {
     let insert_entity_signature = quote! {
-        async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
-            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'canyon_lt>>
+        async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt mut Entity)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where Entity: canyon_sql::core::RowMapper
             + canyon_sql::query::bounds::Inspectionable
             + Sync
             + 'canyon_lt
     };
+
     let insert_entity_with_signature = quote! {
-        async fn insert_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
-            -> Result<(), Box<dyn std::error::Error + Sync + Send + 'canyon_lt>>
+        async fn insert_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt mut Entity, input: Input)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where
             Entity: canyon_sql::core::RowMapper
                 + canyon_sql::query::bounds::Inspectionable
@@ -85,6 +86,7 @@ pub fn generate_insert_entity_function_tokens(
 
     // TODO: missing all the PK logic!
     // 1. use MacroTokens on RowMapper, so we can discard to add the pk field value to the entity.type_fields_actual_values
+    // 2. this standalone isn't valid, since use the macro data for the CrudOperations type, not for the RowMapper one
     let stmt = __details::generate_insert_sql_statement(macro_data, table_schema_data);
 
     quote! {
