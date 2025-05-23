@@ -19,13 +19,6 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
 
     let fields = ast.fields();
 
-    // Recovers the identifiers of the structs members, adding or removing the pk field
-    // This is only useful for the impl of Inspectionable
-    let binding = ast.get_columns_pk_parsed();
-    let fields_values = binding.iter().map(|ident| {
-        quote! { &self.#ident }
-    });
-
     #[cfg(feature = "postgres")]
     let pg_implementation = create_postgres_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "postgres")]
@@ -59,6 +52,10 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         }
     });
 
+    let fields_values = ast.get_fields_idents_pk_parsed().into_iter().map(|ident| {
+        quote! { &self.#ident }
+    });
+
     quote! {
         use crate::canyon_sql::crud::CrudOperations;
         impl #impl_generics canyon_sql::core::RowMapper for #ty #ty_generics #where_clause {
@@ -77,7 +74,7 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
 #[cfg(feature = "postgres")]
 fn create_postgres_fields_mapping<'a>(
     ty: &'a str,
-    fields: &'a [(&Visibility, &Ident, &Type)],
+    fields: &'a [(Visibility, Ident, Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
@@ -91,7 +88,7 @@ fn create_postgres_fields_mapping<'a>(
 #[cfg(feature = "mysql")]
 fn create_mysql_fields_mapping<'a>(
     ty: &'a str,
-    fields: &'a [(&Visibility, &Ident, &Type)],
+    fields: &'a [(Visibility, Ident, Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
@@ -105,7 +102,7 @@ fn create_mysql_fields_mapping<'a>(
 #[cfg(feature = "mssql")]
 fn create_sqlserver_fields_mapping<'a>(
     struct_ty: &'a str,
-    fields: &'a [(&Visibility, &Ident, &Type)],
+    fields: &'a [(Visibility, Ident, Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(move |(_vis, ident, ty)| {
         let ident_name = ident.to_string();

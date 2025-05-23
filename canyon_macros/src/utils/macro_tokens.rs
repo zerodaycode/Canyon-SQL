@@ -20,7 +20,8 @@ pub struct MacroTokens<'a> {
 }
 
 impl<'a> MacroTokens<'a> {
-    pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> { // TODO: impl syn::parse instead
+    pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
+        // TODO: impl syn::parse instead
         if let syn::Data::Struct(ref s) = ast.data {
             let attrs = &ast.attrs;
             let mut canyon_crud_attribute = None;
@@ -54,10 +55,16 @@ impl<'a> MacroTokens<'a> {
         }
     }
 
-    pub fn fields(&self) -> Vec<(&Visibility, &Ident, &Type)> {
+    pub fn fields(&self) -> Vec<(Visibility, Ident, Type)> {
         self.fields
             .iter()
-            .map(|field| (&field.vis, field.ident.as_ref().unwrap(), &field.ty))
+            .map(|field| {
+                (
+                    field.vis.clone(),
+                    field.ident.clone().unwrap(),
+                    field.clone().ty,
+                )
+            })
             .collect::<Vec<_>>()
     }
 
@@ -101,6 +108,15 @@ impl<'a> MacroTokens<'a> {
                     true
                 }
             })
+            .collect::<Vec<_>>()
+    }
+
+    /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
+    /// the field which is annotated with #[primary_key]
+    pub fn get_fields_idents_pk_parsed(&self) -> Vec<&Ident> {
+        self.get_columns_pk_parsed()
+            .iter()
+            .map(|field| field.ident.as_ref().unwrap())
             .collect::<Vec<_>>()
     }
 
