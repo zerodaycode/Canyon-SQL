@@ -10,15 +10,20 @@ pub trait Inspectionable {
     /// for the implementor, as the result of the evaluation of the &self.#field expression, iteratively
     /// over every type member, but if the type contains in some field the #[primary_key] annotation,
     /// this will be skipped!!
-    /// 
+    ///
     /// This is mostly because this operation now is only useful on the insert_entity family operations,
-    /// and is a fixed invariant in our logic nowadays. 
-    /// 
+    /// and is a fixed invariant in our logic nowadays.
+    ///
     /// # Warning
     /// This may change in the future, so that's why this operation shouldn't be used, nor it's
     /// recommended to use it publicly as an end-user.
     fn fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
-    
+
+    fn fields_as_comma_sep_string(&self) -> &'static str;
+
+    fn queries_placeholders(&self) -> &'static str;
+
+    fn primary_key(&self) -> Option<&'static str>;
 }
 
 pub trait TableMetadata: std::fmt::Display {

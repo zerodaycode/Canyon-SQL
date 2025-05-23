@@ -54,6 +54,12 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
     let fields_values = ast.get_fields_idents_pk_parsed().into_iter().map(|ident| {
         quote! { &self.#ident }
     });
+    let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
+    let queries_placeholders = ast.placeholders_generator();
+    let pk = match ast.get_primary_key_annotation() {
+        Some(primary_key) => quote! { Some(#primary_key) },
+        None => quote! { None },
+    };
 
     quote! {
         use crate::canyon_sql::crud::CrudOperations;
@@ -65,6 +71,18 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         impl #impl_generics canyon_sql::query::bounds::Inspectionable for #ty #ty_generics #where_clause {
             fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
                 vec![#(#fields_values),*]
+            }
+
+            fn fields_as_comma_sep_string(&self) -> &'static str {
+                #fields_as_comma_sep_string
+            }
+
+            fn queries_placeholders(&self) -> &'static str {
+                #queries_placeholders
+            }
+
+            fn primary_key(&self) -> Option<&'static str> {
+                #pk
             }
         }
     }

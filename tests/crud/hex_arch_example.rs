@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_hex_arch_find_all() {
+fn test_hex_arch_ops() {
     let default_db_conn = Canyon::instance()
         .unwrap()
         .get_default_connection()

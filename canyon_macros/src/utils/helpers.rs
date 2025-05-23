@@ -1,7 +1,10 @@
-use std::fmt::Write;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{Attribute, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility, punctuated::Punctuated, Field};
+use std::fmt::Write;
+use syn::{
+    Attribute, Field, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility,
+    punctuated::Punctuated,
+};
 
 use super::macro_tokens::MacroTokens;
 
@@ -237,7 +240,7 @@ fn test_entity_database_name_defaulter() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syn::{parse_str, ItemStruct};
+    use syn::{ItemStruct, parse_str};
 
     #[test]
     fn detects_target_attribute_correctly() {

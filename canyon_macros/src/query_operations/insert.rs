@@ -4,7 +4,7 @@ use quote::quote;
 
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
     let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
-    let insert_entity_ops = generate_insert_entity_function_tokens(macro_data, table_schema_data);
+    let insert_entity_ops = generate_insert_entity_function_tokens(table_schema_data);
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
     quote! {
@@ -60,10 +60,7 @@ pub fn generate_insert_method_tokens(
     }
 }
 
-pub fn generate_insert_entity_function_tokens(
-    macro_data: &MacroTokens,
-    table_schema_data: &str,
-) -> TokenStream {
+pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenStream {
     let insert_entity_signature = quote! {
         async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
@@ -84,23 +81,42 @@ pub fn generate_insert_entity_function_tokens(
             Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
     };
 
-    // TODO: missing all the PK logic!
-    // 1. use MacroTokens on RowMapper, so we can discard to add the pk field value to the entity.fields_actual_values
-    // 2. this standalone isn't valid, since use the macro data for the CrudOperations type, not for the RowMapper one
-    let stmt = __details::generate_insert_sql_statement(macro_data, table_schema_data);
+    let no_fields_to_insert_err = __details::no_fields_to_insert_err();
+
+    let stmt_ctr = quote! {
+        let insert_columns = entity.fields_as_comma_sep_string();
+
+        if insert_columns.is_empty() {
+            return #no_fields_to_insert_err;
+        }
+
+        let placeholders = entity.queries_placeholders();
+
+        let mut stmt = format!(
+            "INSERT INTO {} ({}) VALUES ({})",
+            #table_schema_data, insert_columns, placeholders
+        );
+
+        if let Some(primary_key) = entity.primary_key() {
+            stmt.push_str(" RETURNING {}");
+            stmt.push_str(primary_key);
+        }
+    };
 
     quote! {
         #insert_entity_signature {
+            #stmt_ctr;
             let values = entity.fields_actual_values();
             let default_db_conn = canyon_sql::core::Canyon::instance()?
                 .get_default_connection()?;
-            let _ = default_db_conn.lock().await.execute(#stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
+            let _ = default_db_conn.lock().await.execute(&stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
             Ok(())
         }
 
         #insert_entity_with_signature {
+            #stmt_ctr;
             let values = entity.fields_actual_values();
-            let _ = input.execute(#stmt, &values).await?;
+            let _ = input.execute(&stmt, &values).await?;
             Ok(())
         }
     }
@@ -198,6 +214,18 @@ mod __details {
                     "Can't use the 'Insert' family transactions as a method (that receives self as first parameter) \
                     if your T type in CrudOperations is NOT the same type that implements RowMapper. \
                     Consider to use instead the provided insert_entity or insert_entity_with functions."
+                ).into_inner().unwrap()
+            )
+        }
+    }
+
+    pub(crate) fn no_fields_to_insert_err() -> TokenStream {
+        quote! {
+            Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    "The type has either zero fields or exactly one that is annotated with #[primary_key].\
+                     That's makes it ineligibly to be used in the insert_entity family of operations."
                 ).into_inner().unwrap()
             )
         }

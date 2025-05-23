@@ -1,9 +1,9 @@
-use std::convert::TryFrom;
 use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
+use crate::utils::helpers;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, Span};
+use std::convert::TryFrom;
 use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
-use crate::utils::helpers;
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -93,19 +93,17 @@ impl<'a> MacroTokens<'a> {
     ///
     /// Returns every field if there's no PK, or if it's present but autoincremental = false
     pub fn get_columns_pk_parsed(&self) -> impl Iterator<Item = &Field> {
-        self.fields
-            .iter()
-            .filter(|field| {
-                if !field.attrs.is_empty() {
-                    field.attrs.iter().any(|attr| {
-                        let a = attr.path.segments[0].clone().ident;
-                        let b = attr.tokens.to_string();
-                        !(a == "primary_key" || b.contains("false"))
-                    })
-                } else {
-                    true
-                }
-            })
+        self.fields.iter().filter(|field| {
+            if !field.attrs.is_empty() {
+                field.attrs.iter().any(|attr| {
+                    let a = attr.path.segments[0].clone().ident;
+                    let b = attr.tokens.to_string();
+                    !(a == "primary_key" || b.contains("false"))
+                })
+            } else {
+                true
+            }
+        })
     }
 
     /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
@@ -143,7 +141,10 @@ impl<'a> MacroTokens<'a> {
         let mut pk_index = None;
         for (idx, field) in self.fields.iter().enumerate() {
             for attr in &field.attrs {
-                if attr.path.segments.first()
+                if attr
+                    .path
+                    .segments
+                    .first()
                     .map(|segment| segment.ident == "primary_key")?
                 {
                     pk_index = Some(idx);
@@ -156,9 +157,10 @@ impl<'a> MacroTokens<'a> {
     /// Utility for find the primary key attribute (if exists) and the
     /// column name (field) which belongs
     pub fn get_primary_key_annotation(&self) -> Option<String> {
-        let f = self.fields.iter().find(|field| {
-            helpers::field_has_target_attribute(field, "primary_key")
-        });
+        let f = self
+            .fields
+            .iter()
+            .find(|field| helpers::field_has_target_attribute(field, "primary_key"));
 
         f.map(|v| v.ident.clone().unwrap().to_string())
     }
@@ -186,9 +188,9 @@ impl<'a> MacroTokens<'a> {
     /// Boolean that returns true if the type contains a `#[primary_key]`
     /// annotation. False otherwise.
     pub fn type_has_primary_key(&self) -> bool {
-        self.fields.iter().any(|field| {
-            helpers::field_has_target_attribute(field, "primary_key")
-        })
+        self.fields
+            .iter()
+            .any(|field| helpers::field_has_target_attribute(field, "primary_key"))
     }
 
     /// Returns a String ready to be inserted on the VALUES Sql clause
