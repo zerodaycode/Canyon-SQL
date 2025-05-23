@@ -20,7 +20,7 @@ pub struct MacroTokens<'a> {
 }
 
 impl<'a> MacroTokens<'a> {
-    pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
+    pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> { // TODO: impl syn::parse instead
         if let syn::Data::Struct(ref s) = ast.data {
             let attrs = &ast.attrs;
             let mut canyon_crud_attribute = None;
@@ -52,6 +52,13 @@ impl<'a> MacroTokens<'a> {
         } else {
             &None
         }
+    }
+
+    pub fn fields(&self) -> Vec<(&Visibility, &Ident, &Type)> {
+        self.fields
+            .iter()
+            .map(|field| (&field.vis, field.ident.as_ref().unwrap(), &field.ty))
+            .collect::<Vec<_>>()
     }
 
     /// Gives a Vec of tuples that contains the name and

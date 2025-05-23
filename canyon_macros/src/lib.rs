@@ -161,7 +161,13 @@ pub fn implement_foreignkeyable_for_type(
 #[proc_macro_derive(CanyonMapper)]
 pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast: DeriveInput = syn::parse(input).unwrap();
-    canyon_mapper_impl_tokens(ast).into()
+    let macro_data = MacroTokens::new(&ast);
+    let macro_data = if let Err(err) = macro_data {
+        return err.to_compile_error().into();
+    } else {
+        macro_data.unwrap()
+    };
+    canyon_mapper_impl_tokens(macro_data).into()
 }
 
 #[proc_macro_derive(Fields)]

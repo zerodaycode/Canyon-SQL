@@ -11,22 +11,18 @@ use syn::{DeriveInput, Type, Visibility};
 #[cfg(feature = "mssql")]
 const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
-pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
-    let ty = &ast.ident;
+pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
+    let ty = &ast.ty;
     let ty_str = ty.to_string();
     let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
     let mut impl_methods = TokenStream::new();
 
-    // Recovers the identifiers of the structs members
-    let fields = fields_with_types(match ast.data {
-        syn::Data::Struct(ref s) => &s.fields,
-        _ => {
-            return syn::Error::new(ast.ident.span(), "CanyonMapper only works with Structs")
-                .to_compile_error();
-        }
-    });
+    let fields = ast.fields();
 
-    let fields_values = fields.iter().map(|(_vis, ident, _ty)| {
+    // Recovers the identifiers of the structs members, adding or removing the pk field
+    // This is only useful for the impl of Inspectionable
+    let binding = ast.get_columns_pk_parsed();
+    let fields_values = binding.iter().map(|ident| {
         quote! { &self.#ident }
     });
 
@@ -81,7 +77,7 @@ pub fn canyon_mapper_impl_tokens(ast: DeriveInput) -> TokenStream {
 #[cfg(feature = "postgres")]
 fn create_postgres_fields_mapping<'a>(
     ty: &'a str,
-    fields: &'a [(Visibility, Ident, Type)],
+    fields: &'a [(&Visibility, &Ident, &Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
@@ -95,7 +91,7 @@ fn create_postgres_fields_mapping<'a>(
 #[cfg(feature = "mysql")]
 fn create_mysql_fields_mapping<'a>(
     ty: &'a str,
-    fields: &'a [(Visibility, Ident, Type)],
+    fields: &'a [(&Visibility, &Ident, &Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(|(_vis, ident, _ty)| {
         let ident_name = ident.to_string();
@@ -109,7 +105,7 @@ fn create_mysql_fields_mapping<'a>(
 #[cfg(feature = "mssql")]
 fn create_sqlserver_fields_mapping<'a>(
     struct_ty: &'a str,
-    fields: &'a [(Visibility, Ident, Type)],
+    fields: &'a [(&Visibility, &Ident, &Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(move |(_vis, ident, ty)| {
         let ident_name = ident.to_string();
@@ -194,6 +190,7 @@ fn __get_deserializing_type_str(target_type: &str) -> String {
         .collect::<String>()
 }
 
+use crate::utils::macro_tokens::MacroTokens;
 use canyon_core::connection::database_type::DatabaseType;
 #[cfg(feature = "mssql")]
 use quote::ToTokens;
