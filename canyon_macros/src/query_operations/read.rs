@@ -2,7 +2,6 @@ use crate::query_operations::consts;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use syn::TypeGenerics;
 
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
@@ -152,8 +151,8 @@ mod __details {
                 async fn find_all()
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 {
-                    let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?.lock().await;
-                    default_db_conn.query(#stmt, &[]).await
+                    let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
+                    default_db_conn.lock().await.query(#stmt, &[]).await
                 }
             }
         }
@@ -178,8 +177,8 @@ mod __details {
         pub fn create_count_macro(stmt: &str) -> TokenStream {
             quote! {
                 async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>> {
-                    let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?.lock().await;
-                    default_db_conn.query_one_for(#stmt, &[]).await
+                    let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
+                    default_db_conn.lock().await.query_one_for(#stmt, &[]).await
                 }
             }
         }
@@ -207,10 +206,8 @@ mod __details {
             let body = if pk_runtime_error.is_none() {
                 quote! {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?
-                        .get_default_connection()?
-                        .lock()
-                        .await;
-                    default_db_conn.query_one::<#mapper_ty>(#stmt, &[value]).await
+                        .get_default_connection()?;
+                    default_db_conn.lock().await.query_one::<#mapper_ty>(#stmt, &[value]).await
                 }
             } else {
                 quote! { #pk_runtime_error }

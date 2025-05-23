@@ -179,14 +179,14 @@ impl Canyon {
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_default_connection(&self) -> Result<&SharedConnection, DatasourceNotFound> {
+    pub fn get_default_connection(&self) -> Result<SharedConnection, DatasourceNotFound> {
         self.default_connection
-            .as_ref()
+            .clone()
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_connection(&self, name: &str) -> Result<&SharedConnection, DatasourceNotFound> {
+    pub fn get_connection(&self, name: &str) -> Result<SharedConnection, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();
         }
@@ -196,7 +196,7 @@ impl Canyon {
             .get(name)
             .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
 
-        Ok(conn)
+        Ok(conn.clone())
     }
 }
 

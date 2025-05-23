@@ -11,7 +11,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::future::Future;
-use std::ops::Not;
+use std::ops::{DerefMut, Not};
 
 use super::information_schema::{ColumnMetadata, TableMetadata};
 use super::memory::CanyonMemory;
@@ -592,12 +592,15 @@ impl MigrationsProcessor {
                         "Unable to get a database connection on Canyon Memory: {:?}",
                         datasource_name
                     )
-                })
-                .lock()
-                .await;
+                });
 
             for query_to_execute in datasource.1 {
-                let res = db_conn.query_rows(query_to_execute, &[]).await;
+                let res = db_conn
+                    .lock()
+                    .await
+                    .deref_mut()
+                    .query_rows(query_to_execute, &[])
+                    .await;
                 match res {
                     Ok(_) => println!(
                         "\t[OK] - {:?} - Query: {:?}",

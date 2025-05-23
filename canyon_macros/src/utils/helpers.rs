@@ -67,7 +67,9 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
     } else {
         let target_type = if let Some(mapper_ty) = macro_data.retrieve_mapping_target_type() {
             mapper_ty.to_string()
-        } else { macro_data.ty.to_string() };
+        } else {
+            macro_data.ty.to_string()
+        };
         let defaulted = default_database_table_name_from_entity_name(&target_type);
         final_table_name.push_str(&defaulted)
     }

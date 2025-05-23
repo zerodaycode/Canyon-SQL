@@ -7,6 +7,7 @@ use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
+use std::ops::DerefMut;
 use std::sync::Mutex;
 use walkdir::WalkDir;
 
@@ -67,7 +68,7 @@ impl CanyonMemory {
         datasource: &DatasourceConfig,
         canyon_entities: &[CanyonRegisterEntity<'_>],
     ) -> Self {
-        let mut db_conn = Canyon::instance()
+        let db_conn = Canyon::instance()
             .unwrap_or_else(|_| {
                 panic!(
                     "Failure getting db connection: {} on Canyon Memory",
@@ -80,15 +81,21 @@ impl CanyonMemory {
                     "Unable to get a database connection on Canyon Memory: {:?}",
                     datasource.name
                 )
-            })
-            .lock()
-            .await;
+            });
 
         // Creates the memory table if not exists
-        Self::create_memory(&datasource.name, &mut db_conn, &datasource.get_db_type()).await;
+        Self::create_memory(
+            &datasource.name,
+            db_conn.lock().await.deref_mut(),
+            &datasource.get_db_type(),
+        )
+        .await;
 
         // Retrieve the last status data from the `canyon_memory` table
         let res = db_conn
+            .lock()
+            .await
+            .deref_mut()
             .query_rows("SELECT * FROM canyon_memory", &[])
             .await
             .expect("Error querying Canyon Memory");

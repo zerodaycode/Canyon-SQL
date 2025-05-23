@@ -100,10 +100,8 @@ fn generate_find_by_foreign_key_tokens(
                     /// Searches the parent entity (if exists) for this type
                     #quoted_method_signature {
                         let default_db_conn = canyon_sql::core::Canyon::instance()?
-                            .get_default_connection()?
-                            .lock()
-                            .await;
-                        default_db_conn.query_one::<#fk_ty>(
+                            .get_default_connection()?;
+                        default_db_conn.lock().await.query_one::<#fk_ty>(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>]
                         ).await
@@ -143,7 +141,6 @@ fn generate_find_by_reverse_foreign_key_tokens(
         .retrieve_mapping_target_type()
         .as_ref()
         .unwrap_or(ty);
-    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
     for (field_ident, fk_annot) in macro_data.get_fk_annotations().iter() {
         if let EntityFieldAnnotation::ForeignKey(table, column) = fk_annot {
@@ -193,10 +190,8 @@ fn generate_find_by_reverse_foreign_key_tokens(
                     {
                         let lookup_value = #lookup_value;
                         let default_db_conn = canyon_sql::core::Canyon::instance()?
-                            .get_default_connection()?
-                            .lock()
-                            .await;
-                        default_db_conn.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
+                            .get_default_connection()?;
+                        default_db_conn.lock().await.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
                     }
                 },
             ));

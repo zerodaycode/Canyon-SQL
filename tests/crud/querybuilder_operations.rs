@@ -20,9 +20,7 @@ use canyon_sql::query::operators::{Comp, Like};
 ///
 use canyon_sql::{
     crud::CrudOperations,
-    query::querybuilder::{
-        QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps,
-    },
+    query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
 };
 
 use crate::tests_models::league::*;

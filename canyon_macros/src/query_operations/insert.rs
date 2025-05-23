@@ -93,10 +93,8 @@ pub fn generate_insert_entity_function_tokens(
         #insert_entity_signature {
             let values = entity.type_fields_actual_values();
             let default_db_conn = canyon_sql::core::Canyon::instance()?
-                .get_default_connection()?
-                .lock()
-                .await;
-            let _ = default_db_conn.execute(#stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
+                .get_default_connection()?;
+            let _ = default_db_conn.lock().await.execute(#stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
             Ok(())
         }
 
@@ -125,16 +123,14 @@ mod __details {
         let db_conn = if is_with_method {
             quote! { input }
         } else {
-            quote! { default_db_conn }
+            quote! { default_db_conn.lock().await }
         };
 
         let mut insert_body_tokens = TokenStream::new();
         if !is_with_method {
             insert_body_tokens.extend(quote! {
                 let default_db_conn = canyon_sql::core::Canyon::instance()?
-                    .get_default_connection()?
-                    .lock()
-                    .await;
+                    .get_default_connection()?;
             });
         }
 

@@ -133,7 +133,7 @@ impl<'a> MacroTokens<'a> {
     }
 
     /// Retrieves the value of the index of an annotated field with #[primary_key]
-    pub fn get_pk_index(&self) -> Option<usize> {
+    pub fn _get_pk_index(&self) -> Option<usize> {
         let mut pk_index = None;
         for (idx, field) in self.fields.iter().enumerate() {
             for attr in &field.attrs {

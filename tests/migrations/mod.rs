@@ -6,6 +6,7 @@ use canyon_sql::core::Canyon;
 /// Integration tests for the migrations feature of `Canyon-SQL`
 use canyon_sql::core::Transaction;
 use canyon_sql::migrations::handler::Migrations;
+use std::ops::DerefMut;
 
 /// Brings the information of the `PostgreSQL` requested schema
 #[cfg(all(feature = "postgres", feature = "migrations"))]
@@ -18,18 +19,17 @@ fn test_migrations_postgresql_status_query() {
     let ds = ds.unwrap();
     let ds_name = &ds.name;
 
-    let db_conn = canyon
-        .get_connection(ds_name)
-        .unwrap_or_else(|_| {
-            panic!(
-                "Unable to get a database connection on Canyon Memory: {:?}",
-                ds_name
-            )
-        })
-        .lock()
-        .await;
+    let db_conn = canyon.get_connection(ds_name).unwrap_or_else(|_| {
+        panic!(
+            "Unable to get a database connection on Canyon Memory: {:?}",
+            ds_name
+        )
+    });
 
     let results = db_conn
+        .lock()
+        .await
+        .deref_mut()
         .query_rows(constants::FETCH_PUBLIC_SCHEMA, &[])
         .await;
     assert!(results.is_ok());

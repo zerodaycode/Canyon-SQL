@@ -12,7 +12,6 @@ use canyon_sql::crud::CrudOperations;
 
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
-use crate::tests_models::tournament::Tournament;
 
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
