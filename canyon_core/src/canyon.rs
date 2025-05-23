@@ -185,7 +185,11 @@ impl Canyon {
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
-    // Retrieve a read-only connection from the cache
+    /// Quickly retrieves the default shared database connection.
+    ///
+    /// This is a fast and efficient operation: cloning the [`SharedConnection`]
+    /// simply increases the reference count [`Arc`] without duplicating the underlying
+    /// [`DatabaseConnection`]. Returns an error if no default connection is configured.
     pub fn get_connection(&self, name: &str) -> Result<SharedConnection, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();

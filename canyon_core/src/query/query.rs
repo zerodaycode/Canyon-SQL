@@ -27,11 +27,11 @@ impl AsRef<str> for Query<'_> {
 }
 
 impl<'a> Query<'a> {
-    pub fn new(sql: String) -> Query<'a> {
-        Self {
-            sql,
-            params: vec![],
-        }
+    /// Constructs a new [`Self`] but receiving the number of expected query parameters, allowing
+    /// to pre-allocate the underlying linear collection that holds the arguments to the exact capacity,
+    /// potentially saving re-allocations when the query is created
+    pub fn new(sql: String, params: Vec<&'a dyn QueryParameter<'a>>) -> Query<'a> {
+        Self { sql, params }
     }
 
     /// Launches the generated query against the database assuming the default

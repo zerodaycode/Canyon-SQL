@@ -35,10 +35,7 @@ impl<'a> QueryBuilder<'a> {
     pub fn build(mut self) -> Result<Query<'a>, Box<(dyn Error + Send + Sync)>> {
         // TODO: here we should check for our invariants
         self.sql.push(';');
-        Ok(Query {
-            sql: self.sql,
-            params: self.params,
-        })
+        Ok(Query::new(self.sql, self.params))
     }
 
     pub fn r#where<Z: FieldValueIdentifier<'a>>(&mut self, r#where: Z, op: impl Operator) {
