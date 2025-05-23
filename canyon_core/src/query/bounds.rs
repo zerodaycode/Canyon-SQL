@@ -18,6 +18,7 @@ pub trait Inspectionable {
     /// This may change in the future, so that's why this operation shouldn't be used, nor it's
     /// recommended to use it publicly as an end-user.
     fn fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
+    
 }
 
 pub trait TableMetadata: std::fmt::Display {

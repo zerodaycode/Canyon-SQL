@@ -13,14 +13,14 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     let fields = macro_data.get_struct_fields();
 
     let mut vec_columns_values: Vec<String> = Vec::new();
-    for (i, column_name) in update_columns.iter().enumerate() {
+    for (i, column_name) in update_columns.enumerate() {
         let column_equal_value = format!("{} = ${}", column_name.to_owned(), i + 2);
         vec_columns_values.push(column_equal_value)
     }
 
     let str_columns_values = vec_columns_values.join(", ");
 
-    let update_values = fields.iter().map(|ident| {
+    let update_values = fields.map(|ident| {
         quote! { &self.#ident }
     });
 

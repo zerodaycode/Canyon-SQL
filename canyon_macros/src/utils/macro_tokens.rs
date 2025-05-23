@@ -1,6 +1,4 @@
 use std::convert::TryFrom;
-use std::fmt::Write;
-
 use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, Span};
@@ -79,11 +77,10 @@ impl<'a> MacroTokens<'a> {
     }
 
     /// Gives a Vec of Ident with the fields of a Struct
-    pub fn get_struct_fields(&self) -> Vec<Ident> {
+    pub fn get_struct_fields(&self) -> impl Iterator<Item = Ident> {
         self.fields
             .iter()
             .map(|field| field.ident.as_ref().unwrap().clone())
-            .collect::<Vec<_>>()
     }
 
     /// Returns a Vec populated with the fields of the struct
@@ -95,7 +92,7 @@ impl<'a> MacroTokens<'a> {
     /// to the same behaviour.
     ///
     /// Returns every field if there's no PK, or if it's present but autoincremental = false
-    pub fn get_columns_pk_parsed(&self) -> Vec<&Field> {
+    pub fn get_columns_pk_parsed(&self) -> impl Iterator<Item = &Field> {
         self.fields
             .iter()
             .filter(|field| {
@@ -109,14 +106,12 @@ impl<'a> MacroTokens<'a> {
                     true
                 }
             })
-            .collect::<Vec<_>>()
     }
 
     /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
     /// the field which is annotated with #[primary_key]
     pub fn get_fields_idents_pk_parsed(&self) -> Vec<&Ident> {
         self.get_columns_pk_parsed()
-            .iter()
             .map(|field| field.ident.as_ref().unwrap())
             .collect::<Vec<_>>()
     }
@@ -131,27 +126,16 @@ impl<'a> MacroTokens<'a> {
     /// to the same behaviour.
     ///
     /// Returns every field if there's no PK, or if it's present but autoincremental = false
-    pub fn get_column_names_pk_parsed(&self) -> Vec<String> {
+    pub fn get_column_names_pk_parsed(&self) -> impl Iterator<Item = String> {
         self.get_columns_pk_parsed()
-            .iter()
             .map(|c| format!("\"{}\"", c.ident.as_ref().unwrap()))
-            .collect::<Vec<String>>()
     }
 
     /// Retrieves the fields of the Struct as continuous String, comma separated
-    pub fn _get_struct_fields_as_strings(&self) -> String {
-        let column_names: String = self
-            .get_struct_fields()
-            .iter()
-            .map(|ident| ident.to_owned().to_string())
-            .map(|column| column.to_owned() + ", ")
-            .collect();
-
-        let mut column_names_as_chars = column_names.chars();
-        column_names_as_chars.next_back();
-        column_names_as_chars.next_back();
-
-        column_names_as_chars.as_str().to_owned()
+    pub fn get_struct_fields_as_comma_sep_string(&self) -> String {
+        self.get_column_names_pk_parsed()
+            .collect::<Vec<String>>()
+            .join(", ")
     }
 
     /// Retrieves the value of the index of an annotated field with #[primary_key]
@@ -159,7 +143,7 @@ impl<'a> MacroTokens<'a> {
         let mut pk_index = None;
         for (idx, field) in self.fields.iter().enumerate() {
             for attr in &field.attrs {
-                if attr.path.segments.first()      
+                if attr.path.segments.first()
                     .map(|segment| segment.ident == "primary_key")?
                 {
                     pk_index = Some(idx);

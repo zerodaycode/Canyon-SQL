@@ -156,7 +156,7 @@ mod __details {
         // Retrieves the fields of the Struct
         let fields = macro_data.get_columns_pk_parsed();
 
-        let insert_values = fields.iter().map(|field| {
+        let insert_values = fields.map(|field| {
             let field = field.ident.as_ref().unwrap();
             quote! { &self.#field }
         });
@@ -172,7 +172,7 @@ mod __details {
     ) -> String {
         // Retrieves the fields of the Struct as a collection of Strings, already parsed
         // the condition of remove the primary key if it's present, and it's auto incremental
-        let insert_columns = macro_data.get_column_names_pk_parsed().join(", ");
+        let insert_columns = macro_data.get_struct_fields_as_comma_sep_string();
 
         // Returns a String with the generic $x placeholder for the query parameters.
         // Already takes in consideration if there's pk annotation
@@ -218,12 +218,12 @@ fn _generate_multiple_insert_tokens(
     let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
     // Retrieves the fields of the Struct as continuous String
-    let column_names = macro_data._get_struct_fields_as_strings();
+    let column_names = macro_data.get_struct_fields_as_comma_sep_string();
 
     // Retrieves the fields of the Struct
     let fields = macro_data.get_struct_fields();
 
-    let macro_fields = fields.iter().map(|field| quote! { &instance.#field });
+    let macro_fields: Vec<TokenStream> = fields.map(|field| quote! { &instance.#field }).collect();
     let macro_fields_cloned = macro_fields.clone();
 
     let pk = macro_data.get_primary_key_annotation().unwrap_or_default();
