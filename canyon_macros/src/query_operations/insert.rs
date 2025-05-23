@@ -85,13 +85,13 @@ pub fn generate_insert_entity_function_tokens(
     };
 
     // TODO: missing all the PK logic!
-    // 1. use MacroTokens on RowMapper, so we can discard to add the pk field value to the entity.type_fields_actual_values
+    // 1. use MacroTokens on RowMapper, so we can discard to add the pk field value to the entity.fields_actual_values
     // 2. this standalone isn't valid, since use the macro data for the CrudOperations type, not for the RowMapper one
     let stmt = __details::generate_insert_sql_statement(macro_data, table_schema_data);
 
     quote! {
         #insert_entity_signature {
-            let values = entity.type_fields_actual_values();
+            let values = entity.fields_actual_values();
             let default_db_conn = canyon_sql::core::Canyon::instance()?
                 .get_default_connection()?;
             let _ = default_db_conn.lock().await.execute(#stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
@@ -99,7 +99,7 @@ pub fn generate_insert_entity_function_tokens(
         }
 
         #insert_entity_with_signature {
-            let values = entity.type_fields_actual_values();
+            let values = entity.fields_actual_values();
             let _ = input.execute(#stmt, &values).await?;
             Ok(())
         }

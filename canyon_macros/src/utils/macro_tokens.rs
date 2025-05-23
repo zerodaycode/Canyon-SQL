@@ -5,6 +5,7 @@ use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, Span};
 use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
+use crate::utils::helpers;
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -143,10 +144,8 @@ impl<'a> MacroTokens<'a> {
             .get_struct_fields()
             .iter()
             .map(|ident| ident.to_owned().to_string())
-            .collect::<Vec<String>>()
-            .iter()
             .map(|column| column.to_owned() + ", ")
-            .collect::<String>();
+            .collect();
 
         let mut column_names_as_chars = column_names.chars();
         column_names_as_chars.next_back();
@@ -160,7 +159,9 @@ impl<'a> MacroTokens<'a> {
         let mut pk_index = None;
         for (idx, field) in self.fields.iter().enumerate() {
             for attr in &field.attrs {
-                if attr.path.segments[0].clone().ident == "primary_key" {
+                if attr.path.segments.first()      
+                    .map(|segment| segment.ident == "primary_key")?
+                {
                     pk_index = Some(idx);
                 }
             }
@@ -172,13 +173,7 @@ impl<'a> MacroTokens<'a> {
     /// column name (field) which belongs
     pub fn get_primary_key_annotation(&self) -> Option<String> {
         let f = self.fields.iter().find(|field| {
-            field
-                .attrs
-                .iter()
-                .map(|attr| attr.path.segments[0].clone().ident)
-                .map(|ident| ident.to_string())
-                .find(|a| a == "primary_key")
-                == Some("primary_key".to_string())
+            helpers::field_has_target_attribute(field, "primary_key")
         });
 
         f.map(|v| v.ident.clone().unwrap().to_string())
@@ -208,13 +203,7 @@ impl<'a> MacroTokens<'a> {
     /// annotation. False otherwise.
     pub fn type_has_primary_key(&self) -> bool {
         self.fields.iter().any(|field| {
-            field
-                .attrs
-                .iter()
-                .map(|attr| attr.path.segments[0].clone().ident)
-                .map(|ident| ident.to_string())
-                .find(|a| a == "primary_key")
-                == Some("primary_key".to_string())
+            helpers::field_has_target_attribute(field, "primary_key")
         })
     }
 
@@ -230,14 +219,6 @@ impl<'a> MacroTokens<'a> {
             self.fields.len() + 1
         };
 
-        let mut placeholders = String::new();
-        for (i, n) in (1..range_upper_bound).enumerate() {
-            if i > 0 {
-                placeholders.push_str(", ");
-            }
-            write!(placeholders, "${}", n).unwrap();
-        }
-
-        placeholders
+        helpers::placeholders_generator(range_upper_bound)
     }
 }

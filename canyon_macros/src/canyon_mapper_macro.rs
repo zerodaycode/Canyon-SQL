@@ -1,6 +1,5 @@
 #![allow(unused_imports)]
 
-use crate::utils::helpers::fields_with_types;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use regex::Regex;
@@ -64,7 +63,7 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         }
 
         impl #impl_generics canyon_sql::query::bounds::Inspectionable for #ty #ty_generics #where_clause {
-            fn type_fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
+            fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
                 vec![#(#fields_values),*]
             }
         }

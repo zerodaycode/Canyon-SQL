@@ -8,8 +8,16 @@ use crate::query::parameters::QueryParameter;
 pub trait Inspectionable {
     /// Returns an allocated linear collection with the current values of all the fields declared
     /// for the implementor, as the result of the evaluation of the &self.#field expression, iteratively
-    /// over every type member
-    fn type_fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
+    /// over every type member, but if the type contains in some field the #[primary_key] annotation,
+    /// this will be skipped!!
+    /// 
+    /// This is mostly because this operation now is only useful on the insert_entity family operations,
+    /// and is a fixed invariant in our logic nowadays. 
+    /// 
+    /// # Warning
+    /// This may change in the future, so that's why this operation shouldn't be used, nor it's
+    /// recommended to use it publicly as an end-user.
+    fn fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
 }
 
 pub trait TableMetadata: std::fmt::Display {

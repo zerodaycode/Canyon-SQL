@@ -1,8 +1,7 @@
+use std::fmt::Write;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use syn::{
-    Attribute, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility, punctuated::Punctuated,
-};
+use syn::{Attribute, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility, punctuated::Punctuated, Field};
 
 use super::macro_tokens::MacroTokens;
 
@@ -27,7 +26,7 @@ pub fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
         .collect::<Vec<_>>()
 }
 
-pub fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
+pub fn __fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
     fields
         .iter()
         .map(|field| {
@@ -38,6 +37,28 @@ pub fn fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
             )
         })
         .collect::<Vec<_>>()
+}
+
+pub fn placeholders_generator(num_values: usize) -> String {
+    let mut placeholders = String::new();
+    for (i, n) in (1..num_values).enumerate() {
+        if i > 0 {
+            placeholders.push_str(", ");
+        }
+        write!(placeholders, "${}", n).unwrap();
+    }
+
+    placeholders
+}
+
+pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool {
+    field.attrs.iter().any(|attr| {
+        attr.path
+            .segments
+            .first()
+            .map(|segment| segment.ident == target_attribute)
+            .unwrap_or(false)
+    })
 }
 
 /// If the `canyon_entity` macro has valid attributes attached, and those attrs are the
@@ -212,4 +233,29 @@ fn test_entity_database_name_defaulter() {
         default_database_table_name_from_entity_name("MajorLeague"),
         "MajorLeague".to_owned()
     );
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syn::{parse_str, ItemStruct};
+
+    #[test]
+    fn detects_target_attribute_correctly() {
+        let input = r#"
+            struct Test {
+                #[my_attr]
+                field1: String,
+                field2: i32,
+            }
+        "#;
+
+        // Parse the struct
+        let item: ItemStruct = parse_str(input).expect("Failed to parse struct");
+        let fields: Vec<_> = item.fields.iter().collect();
+
+        // Check the field with #[my_attr]
+        assert!(field_has_target_attribute(fields[0], "my_attr"));
+        // Check the field without the attribute
+        assert!(!field_has_target_attribute(fields[1], "my_attr"));
+    }
 }
