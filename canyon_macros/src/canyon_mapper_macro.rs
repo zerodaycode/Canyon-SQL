@@ -11,12 +11,14 @@ use syn::{DeriveInput, Type, Visibility};
 const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
 pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
-    let ty = &ast.ty;
-    let ty_str = ty.to_string();
-    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
-    let mut impl_methods = TokenStream::new();
+    let mut row_mapper_tokens = TokenStream::new();
 
+    let ty = ast.ty;
+    let ty_str = ty.to_string();
     let fields = ast.fields();
+    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+
+    let mut impl_methods = TokenStream::new();
 
     #[cfg(feature = "postgres")]
     let pg_implementation = create_postgres_fields_mapping(&ty_str, &fields);
@@ -51,41 +53,21 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         }
     });
 
-    let fields_values = ast.get_fields_idents_pk_parsed().into_iter().map(|ident| {
-        quote! { &self.#ident }
-    });
-    let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
-    let queries_placeholders = ast.placeholders_generator();
-    let pk = match ast.get_primary_key_annotation() {
-        Some(primary_key) => quote! { Some(#primary_key) },
-        None => quote! { None },
-    };
-
-    quote! {
+    row_mapper_tokens.extend(quote! {
         use crate::canyon_sql::crud::CrudOperations;
         impl #impl_generics canyon_sql::core::RowMapper for #ty #ty_generics #where_clause {
             type Output = #ty;
             #impl_methods
         }
+    });
 
-        impl #impl_generics canyon_sql::query::bounds::Inspectionable for #ty #ty_generics #where_clause {
-            fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
-                vec![#(#fields_values),*]
-            }
+    let inspectionable_impl_tokens =
+        __details::inspectionable_macro::generate_inspectionable_impl_tokens(&ast);
+    row_mapper_tokens.extend(quote! {
+        #inspectionable_impl_tokens
+    });
 
-            fn fields_as_comma_sep_string(&self) -> &'static str {
-                #fields_as_comma_sep_string
-            }
-
-            fn queries_placeholders(&self) -> &'static str {
-                #queries_placeholders
-            }
-
-            fn primary_key(&self) -> Option<&'static str> {
-                #pk
-            }
-        }
-    }
+    row_mapper_tokens
 }
 
 #[cfg(feature = "postgres")]
@@ -265,5 +247,65 @@ mod mapper_macro_tests {
             "canyon_sql::date_time::NaiveDateTime",
             __get_deserializing_type_str("NaiveDateTime")
         );
+    }
+}
+
+mod __details {
+    use super::*;
+    pub(crate) mod inspectionable_macro {
+        use super::*;
+        pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
+            let ty = ast.ty;
+            let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+
+            let fields = ast.get_fields_idents_pk_parsed().into_iter();
+            let fields_values = fields.clone().map(|ident| {
+                quote! { &self.#ident }
+            });
+            let fields_names = fields.map(|ident| ident.to_string()).collect::<Vec<_>>();
+
+            let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
+            let queries_placeholders = ast.placeholders_generator();
+
+            let pk = match ast.get_primary_key_annotation() {
+                Some(primary_key) => quote! { Some(#primary_key) },
+                None => quote! { None },
+            };
+            let pk_actual_value = match ast.get_primary_key_annotation() {
+                Some(primary_key) => {
+                    let pk_ident = Ident::new(&primary_key, Span::call_site());
+                    quote! { &self.#pk_ident }
+                }
+                None => quote! { &-1 }, // TODO: yeah, big todo :)
+            };
+
+            quote! {
+                impl #impl_generics canyon_sql::query::bounds::Inspectionable for #ty #ty_generics #where_clause {
+                    fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
+                        vec![#(#fields_values),*]
+                    }
+
+                    fn fields_names(&self) -> &[&'static str] {
+                        &[#(#fields_names),*]
+                    }
+
+                    fn fields_as_comma_sep_string(&self) -> &'static str {
+                        #fields_as_comma_sep_string
+                    }
+
+                    fn queries_placeholders(&self) -> &'static str {
+                        #queries_placeholders
+                    }
+
+                    fn primary_key(&self) -> Option<&'static str> {
+                        #pk
+                    }
+
+                    fn primary_key_actual_value(&self) -> &dyn canyon_sql::query::QueryParameter<'_> {
+                        #pk_actual_value
+                    }
+                }
+            }
+        }
     }
 }

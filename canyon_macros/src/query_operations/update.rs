@@ -3,8 +3,19 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
-/// Generates the TokenStream for the __update() CRUD operation
-pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &String) -> TokenStream {
+pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
+    let update_method_ops = generate_update_method_tokens(macro_data, table_schema_data);
+    let update_entity_ops = generate_update_entity_tokens(table_schema_data);
+    let update_querybuilder_tokens = generate_update_querybuilder_tokens(table_schema_data);
+
+    quote! {
+        #update_method_ops
+        #update_entity_ops
+        #update_querybuilder_tokens
+    }
+}
+
+fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
     let mut update_ops_tokens = TokenStream::new();
 
     let ty = macro_data.ty;
@@ -14,7 +25,7 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
 
     let mut vec_columns_values: Vec<String> = Vec::new();
     for (i, column_name) in update_columns.enumerate() {
-        let column_equal_value = format!("{} = ${}", column_name.to_owned(), i + 2);
+        let column_equal_value = format!("{} = ${}", column_name, i + 2);
         vec_columns_values.push(column_equal_value)
     }
 
@@ -25,8 +36,6 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
     });
 
     let update_signature = quote! {
-        /// Updates a database record that matches the current instance of a T type, returning a
-        /// result indicating a possible failure querying the database.
         async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>>
     };
     let update_with_signature = quote! {
@@ -74,15 +83,42 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Stri
         });
     }
 
-    let querybuilder_update_tokens = generate_update_querybuilder_tokens(table_schema_data);
-    update_ops_tokens.extend(querybuilder_update_tokens);
-
     update_ops_tokens
+}
+
+fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
+    let update_entity_signature = quote! {
+        async fn update_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        where Entity: canyon_sql::core::RowMapper
+            + canyon_sql::query::bounds::Inspectionable
+            + Sync
+            + 'canyon_lt
+    };
+
+    let update_entity_with_signature = quote! {
+        async fn update_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        where
+            Entity: canyon_sql::core::RowMapper
+                + canyon_sql::query::bounds::Inspectionable
+                + Sync
+                + 'canyon_lt,
+            Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
+    };
+
+    let update_entity_body = __details::generate_update_entity_body(table_schema_data);
+    let update_entity_with_body = __details::generate_update_entity_with_body(table_schema_data);
+
+    quote! {
+        #update_entity_signature { #update_entity_body }
+        #update_entity_with_signature { #update_entity_with_body }
+    }
 }
 
 /// Generates the TokenStream for the __update() CRUD operation
 /// being the query generated with the [`QueryBuilder`]
-fn generate_update_querybuilder_tokens(table_schema_data: &String) -> TokenStream {
+fn generate_update_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -113,6 +149,76 @@ fn generate_update_querybuilder_tokens(table_schema_data: &String) -> TokenStrea
             Box<(dyn std::error::Error + Send + Sync + 'a)>
         > {
             canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, database_type)
+        }
+    }
+}
+
+mod __details {
+    use super::*;
+
+    pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
+        let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
+        let no_pk_err = generate_no_pk_error();
+
+        quote! {
+            if let Some(primary_key) = entity.primary_key() {
+                #update_entity_core_logic
+
+                let default_db_conn = canyon_sql::core::Canyon::instance()?
+                    .get_default_connection()?;
+                let _ = default_db_conn.lock().await.execute(&stmt, &update_values).await?;
+                Ok(())
+            } else {
+                #no_pk_err
+            }
+        }
+    }
+
+    pub(crate) fn generate_update_entity_with_body(table_schema_data: &str) -> TokenStream {
+        let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
+        let no_pk_err = generate_no_pk_error();
+
+        quote! {
+            if let Some(primary_key) = entity.primary_key() {
+                #update_entity_core_logic
+
+                let _ = input.execute(&stmt, &update_values).await?;
+                Ok(())
+            } else {
+                #no_pk_err
+            }
+        }
+    }
+
+    fn generate_update_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
+        quote! {
+            let pk_actual_value = entity.primary_key_actual_value();
+            let update_columns = entity.fields_names();
+            let update_values = entity.fields_actual_values();
+
+            let mut vec_columns_values: Vec<String> = Vec::new();
+            for (i, column_name) in update_columns.to_vec().iter().enumerate() {
+                let column_equal_value = format!("{} = ${}", column_name, i + 2);
+                vec_columns_values.push(column_equal_value)
+            }
+            let str_columns_values = vec_columns_values.join(", ");
+
+            let stmt = format!(
+                "UPDATE {} SET {} WHERE {} = ${:?}",
+                #table_schema_data, str_columns_values, primary_key, pk_actual_value
+            );
+        }
+    }
+
+    pub(crate) fn generate_no_pk_error() -> TokenStream {
+        let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE;
+        quote! {
+            return Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    #err_msg
+                ).into_inner().unwrap()
+            );
         }
     }
 }

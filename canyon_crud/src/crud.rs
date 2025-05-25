@@ -211,6 +211,8 @@ where
     // where
     //     I: DbConnection + Send + 'a;
 
+    /// Updates a database record that matches the current instance of a T type, returning a
+    /// result indicating a possible failure querying the database.
     fn update(&self) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send;
 
     fn update_with<'a, I>(
@@ -218,6 +220,20 @@ where
         input: I,
     ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync + 'a)>>> + Send
     where
+        I: DbConnection + Send + 'a;
+
+    fn update_entity<'a, T>(
+        entity: &'a T,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    where
+        T: RowMapper + Inspectionable + Sync + 'a;
+
+    fn update_entity_with<'a, T, I>(
+        entity: &'a T,
+        input: I,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    where
+        T: RowMapper + Inspectionable + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     fn update_query<'a>() -> Result<UpdateQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;

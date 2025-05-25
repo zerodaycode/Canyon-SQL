@@ -19,11 +19,14 @@ pub trait Inspectionable {
     /// recommended to use it publicly as an end-user.
     fn fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
 
+    /// Returns a linear collection with the names of every field for the implementor as a String
+    fn fields_names(&self) -> &[&'static str];
     fn fields_as_comma_sep_string(&self) -> &'static str;
 
     fn queries_placeholders(&self) -> &'static str;
 
     fn primary_key(&self) -> Option<&'static str>;
+    fn primary_key_actual_value(&self) -> &dyn QueryParameter<'_>;
 }
 
 pub trait TableMetadata: std::fmt::Display {

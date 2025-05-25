@@ -92,7 +92,7 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
 
         let placeholders = entity.queries_placeholders();
 
-        let mut stmt = format!(
+        let mut stmt = format!( // TODO: use the InsertQueryBuilder when created ;)
             "INSERT INTO {} ({}) VALUES ({})",
             #table_schema_data, insert_columns, placeholders
         );
