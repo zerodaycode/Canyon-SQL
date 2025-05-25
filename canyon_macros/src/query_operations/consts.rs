@@ -2,6 +2,7 @@
 
 use std::cell::RefCell;
 
+use crate::query_operations::consts;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, Type};
@@ -9,6 +10,18 @@ use syn::{Ident, Type};
 pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str = "Operation is unavailable. T doesn't contain a #[primary_key]\
     annotation. You must construct the query with the QueryBuilder type\
     (<op_type>_query method for the CrudOperations implementors";
+
+pub(crate) fn generate_no_pk_error() -> TokenStream {
+    let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE;
+    quote! {
+        return Err(
+            std::io::Error::new(
+                std::io::ErrorKind::Unsupported,
+                #err_msg
+            ).into_inner().unwrap()
+        );
+    }
+}
 
 thread_local! {
     pub static USER_MOCK_TY: RefCell<Ident> = RefCell::new(Ident::new("User", Span::call_site()));

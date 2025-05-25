@@ -251,6 +251,20 @@ where
     where
         I: DbConnection + Send + 'a;
 
+    fn delete_entity<'a, T>(
+        entity: &'a T,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    where
+        T: RowMapper + Inspectionable + Sync + 'a;
+
+    fn delete_entity_with<'a, T, I>(
+        entity: &'a T,
+        input: I,
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    where
+        T: RowMapper + Inspectionable + Sync + 'a,
+        I: DbConnection + Send + 'a;
+
     fn delete_query<'a>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
 
     fn delete_query_with<'a>(
