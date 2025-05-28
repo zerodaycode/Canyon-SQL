@@ -65,7 +65,7 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
         async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable
+            + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
             + Sync
             + 'canyon_lt
     };
@@ -75,7 +75,7 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable
+                + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
                 + Sync
                 + 'canyon_lt,
             Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
@@ -89,34 +89,43 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
         if insert_columns.is_empty() {
             return #no_fields_to_insert_err;
         }
-
+        let values = entity.fields_actual_values();
         let placeholders = entity.queries_placeholders();
 
         let mut stmt = format!( // TODO: use the InsertQueryBuilder when created ;)
             "INSERT INTO {} ({}) VALUES ({})",
             #table_schema_data, insert_columns, placeholders
         );
-
-        if let Some(primary_key) = entity.primary_key() {
-            stmt.push_str(" RETURNING {}");
-            stmt.push_str(primary_key);
-        }
+    };
+    let add_returning_clause = quote! {
+        stmt.push_str(" RETURNING ");
+        stmt.push_str(pk);
     };
 
     quote! {
         #insert_entity_signature {
-            #stmt_ctr;
-            let values = entity.fields_actual_values();
             let default_db_conn = canyon_sql::core::Canyon::instance()?
                 .get_default_connection()?;
-            let _ = default_db_conn.lock().await.execute(&stmt, &values).await?; // Should we remove the pk? Or even look for the pk?
+            #stmt_ctr;
+
+            if let Some(pk) = entity.primary_key() {
+                #add_returning_clause
+                let r = default_db_conn.lock().await.execute(&stmt, &values).await? as i64;
+                // entity.set_primary_key_actual_value(&r);
+            } else {
+                let _ = default_db_conn.lock().await.execute(&stmt, &values).await?;
+            }
+            // println!("Insert query {:?}", &stmt);
             Ok(())
         }
 
         #insert_entity_with_signature {
             #stmt_ctr;
-            let values = entity.fields_actual_values();
-            let _ = input.execute(&stmt, &values).await?;
+            if let Some(pk) = entity.primary_key() {
+                #add_returning_clause
+            } else {
+                let _ = input.execute(&stmt, &values).await?;
+            }
             Ok(())
         }
     }
@@ -130,11 +139,7 @@ mod __details {
         stmt: &str,
         is_with_method: bool,
     ) -> TokenStream {
-        let primary_key = macro_data.get_primary_key_annotation();
-        let pk_ident_and_type = macro_data
-            .fields_with_types()
-            .into_iter()
-            .find(|(i, _t)| Some(i.to_string()) == primary_key);
+        let pk_ident_and_type = macro_data.get_primary_key_ident_and_type();
 
         let db_conn = if is_with_method {
             quote! { input }

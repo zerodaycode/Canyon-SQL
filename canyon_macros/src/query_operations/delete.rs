@@ -86,7 +86,7 @@ pub fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStream {
         async fn delete_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable
+            + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
             + Sync
             + 'canyon_lt
     };
@@ -96,7 +96,7 @@ pub fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStream {
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable
+                + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
                 + Sync
                 + 'canyon_lt,
             Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
@@ -187,6 +187,7 @@ mod __details {
 
     fn generate_delete_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
         quote! {
+            // let pk_actual_value = &entity.primary_key_actual_value() as &dyn canyon_sql::query::QueryParameter<'canyon_lt>;
             let pk_actual_value = entity.primary_key_actual_value();
             let delete_stmt = format!(
                 "DELETE FROM {} WHERE {:?} = $1",

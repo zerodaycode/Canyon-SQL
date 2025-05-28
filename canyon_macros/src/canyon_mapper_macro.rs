@@ -256,31 +256,48 @@ mod __details {
         use super::*;
         pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
+            let pk = ast.get_primary_key_field_annotation();
+            let pk_ident_ts= pk.map(|pk| pk.ident);
+            let pk_ty_ts = pk.map(|pk| pk.ty);
             let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
 
-            let fields = ast.get_fields_idents_pk_parsed().into_iter();
-            let fields_values = fields.clone().map(|ident| {
+            let fields = ast.get_fields_idents_pk_parsed().collect::<Vec<_>>();
+            let fields_values = fields.iter().map(|ident| {
                 quote! { &self.#ident }
             });
-            let fields_names = fields.map(|ident| ident.to_string()).collect::<Vec<_>>();
+            let fields_names = fields.iter().map(|ident| ident.to_string()).collect::<Vec<_>>();
 
             let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
             let queries_placeholders = ast.placeholders_generator();
 
-            let pk = match ast.get_primary_key_annotation() {
+            let pk_opt_val = match ast.get_primary_key_annotation() {
                 Some(primary_key) => quote! { Some(#primary_key) },
                 None => quote! { None },
             };
             let pk_actual_value = match ast.get_primary_key_annotation() {
                 Some(primary_key) => {
                     let pk_ident = Ident::new(&primary_key, Span::call_site());
-                    quote! { &self.#pk_ident }
+                    quote! { self.#pk_ident }
                 }
-                None => quote! { &-1 }, // TODO: yeah, big todo :)
+                None => quote! { -1 }, // TODO: yeah, big todo :)
             };
 
+            let set_pk_val_method = if let Some(pk_ident) = pk_ident_ts {
+                quote! { 
+                    use canyon_sql::query::parameters::QueryParameterValue; 
+                    self.#pk_ident = value.downcast_ref::<i32>()
+    .ok_or_else(|| "Error downcasting the pk value passed")?
+                    .clone();
+                    Ok(()) 
+                }
+            } else {
+                quote! { Ok(()) /* TODO: with err */ }
+            };
+            println!("Seeing set pk method for ty: {:?}: {:?}", ty, set_pk_val_method.to_string());
+
             quote! {
-                impl #impl_generics canyon_sql::query::bounds::Inspectionable for #ty #ty_generics #where_clause {
+                impl<'a> canyon_sql::query::bounds::Inspectionable<'a> for #ty #ty_generics #where_clause {
+                    
                     fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
                         vec![#(#fields_values),*]
                     }
@@ -298,11 +315,19 @@ mod __details {
                     }
 
                     fn primary_key(&self) -> Option<&'static str> {
-                        #pk
+                        #pk_opt_val
                     }
 
-                    fn primary_key_actual_value(&self) -> &dyn canyon_sql::query::QueryParameter<'_> {
-                        #pk_actual_value
+                    fn primary_key_st() -> Option<&'static str> {
+                        #pk_opt_val
+                    }
+
+                    fn primary_key_actual_value(&self) -> &'a (dyn canyon_sql::query::QueryParameter + 'a) {
+                         &#pk_actual_value
+                    }
+
+                    fn set_primary_key_actual_value(&mut self, value: &'a (dyn canyon_sql::query::QueryParameter<'a> + 'static)) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>> {
+                        #set_pk_val_method
                     }
                 }
             }

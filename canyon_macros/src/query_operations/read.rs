@@ -47,7 +47,7 @@ fn generate_find_all_operations_tokens(
     }
 }
 
-fn generate_select_querybuilder_tokens(table_schema_data: &String) -> TokenStream {
+fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -82,7 +82,7 @@ fn generate_select_querybuilder_tokens(table_schema_data: &String) -> TokenStrea
     }
 }
 
-fn generate_count_operations_tokens(table_schema_data: &String) -> TokenStream {
+fn generate_count_operations_tokens(table_schema_data: &str) -> TokenStream {
     let count_stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
     let count = __details::count_generators::create_count_macro(&count_stmt);
     let count_with = __details::count_generators::create_count_with_macro(&count_stmt);
@@ -95,42 +95,41 @@ fn generate_count_operations_tokens(table_schema_data: &String) -> TokenStream {
 
 fn generate_find_by_pk_operations_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &String,
+    table_schema_data: &str,
 ) -> TokenStream {
     let ty = macro_data.ty;
-    let mapper_ty = macro_data
-        .retrieve_mapping_target_type()
-        .as_ref()
-        .unwrap_or(ty);
+    let mapper_ty = macro_data.retrieve_mapping_target_type().as_ref();
     let pk = macro_data.get_primary_key_annotation();
-    let no_pk_runtime_err = if pk.is_some() {
-        None
-    } else {
-        let err_msg = consts::FIND_BY_PK_ERR_NO_PK;
-        Some(quote! {
-            Err(
-                std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    #err_msg,
-                ).into_inner().unwrap()
-            )
-        })
-    };
-    let stmt = format!(
-        "SELECT * FROM {table_schema_data} WHERE {} = $1",
-        pk.unwrap_or_default()
-    );
 
-    let find_by_pk = __details::find_by_pk_generators::create_find_by_pk_macro(
-        mapper_ty,
-        &stmt,
-        &no_pk_runtime_err,
-    );
-    let find_by_pk_with = __details::find_by_pk_generators::create_find_by_pk_with(
-        mapper_ty,
-        &stmt,
-        &no_pk_runtime_err,
-    );
+    let base_body = if let Some(compile_time_known_pk) = pk {
+        Some(quote! {
+            let stmt = format!(
+                "SELECT * FROM {} WHERE {} = $1",
+                #table_schema_data, #compile_time_known_pk
+            );
+        })
+    } else {
+        let is_with_mapper_ty = mapper_ty.is_some();
+        if is_with_mapper_ty {
+            Some(quote! {
+                use canyon_sql::query::bounds::Inspectionable;
+                let stmt = format!(
+                    "SELECT * FROM {} WHERE {} = $1",
+                    #table_schema_data,
+                    <#mapper_ty as Inspectionable>::primary_key_st()
+                        .ok_or_else(|| "No primary key found for this instance")? // TODO: better fmtted error msg
+                );
+            })
+        } else {
+            None
+        }
+    };
+
+    let mapper_ty = mapper_ty.unwrap_or(ty);
+    let find_by_pk =
+        __details::find_by_pk_generators::create_find_by_pk_macro(mapper_ty, &base_body);
+    let find_by_pk_with =
+        __details::find_by_pk_generators::create_find_by_pk_with(mapper_ty, &base_body);
 
     quote! {
         #find_by_pk
@@ -196,21 +195,24 @@ mod __details {
 
     pub mod find_by_pk_generators {
         use super::*;
+        use crate::query_operations::consts;
         use proc_macro2::TokenStream;
 
         pub fn create_find_by_pk_macro(
             mapper_ty: &Ident,
-            stmt: &str,
-            pk_runtime_error: &Option<TokenStream>,
+            base_body: &Option<TokenStream>,
         ) -> TokenStream {
-            let body = if pk_runtime_error.is_none() {
+            let body = if let Some(body) = base_body {
+                let default_db_conn_call = consts::generate_default_db_conn_tokens();
                 quote! {
-                    let default_db_conn = canyon_sql::core::Canyon::instance()?
-                        .get_default_connection()?;
-                    default_db_conn.lock().await.query_one::<#mapper_ty>(#stmt, &[value]).await
+                    #body;
+                    #default_db_conn_call
+                        .query_one::<#mapper_ty>(&stmt, &[value])
+                        .await
                 }
             } else {
-                quote! { #pk_runtime_error }
+                let unsupported_op_err = consts::generate_no_pk_error();
+                quote! { #unsupported_op_err }
             };
 
             quote! {
@@ -224,15 +226,16 @@ mod __details {
 
         pub fn create_find_by_pk_with(
             mapper_ty: &Ident,
-            stmt: &str,
-            pk_runtime_error: &Option<TokenStream>,
+            base_body: &Option<TokenStream>,
         ) -> TokenStream {
-            let body = if pk_runtime_error.is_none() {
+            let body = if let Some(body) = base_body {
                 quote! {
-                    input.query_one::<#mapper_ty>(#stmt, &[value]).await
+                    #body;
+                    input.query_one::<#mapper_ty>(&stmt, &[value]).await
                 }
             } else {
-                quote! { #pk_runtime_error }
+                let unsupported_op_err = consts::generate_no_pk_error();
+                quote! { #unsupported_op_err }
             };
 
             quote! {
@@ -288,7 +291,6 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_create_count_macro() {
-        let ty = syn::parse_str::<Ident>("User").unwrap();
         let tokens = create_count_macro(COUNT_STMT);
         let generated = tokens.to_string();
 
@@ -312,8 +314,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_find_by_pk_macro() {
         let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
-        let pk_runtime_error = None;
-        let tokens = create_find_by_pk_macro(&mapper_ty, FIND_BY_PK_STMT, &pk_runtime_error);
+        let tokens = create_find_by_pk_macro(&mapper_ty, &None);
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn find_by_pk"));
@@ -324,8 +325,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_find_by_pk_with_macro() {
         let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
-        let pk_runtime_error = None;
-        let tokens = create_find_by_pk_with(&mapper_ty, FIND_BY_PK_STMT, &pk_runtime_error);
+        let tokens = create_find_by_pk_with(&mapper_ty, &None);
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn find_by_pk_with"));

@@ -91,7 +91,7 @@ fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
         async fn update_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable
+            + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
             + Sync
             + 'canyon_lt
     };
@@ -101,7 +101,7 @@ fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable
+                + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
                 + Sync
                 + 'canyon_lt,
             Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
@@ -192,7 +192,7 @@ mod __details {
 
     fn generate_update_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
         quote! {
-            let pk_actual_value = entity.primary_key_actual_value();
+            let pk_actual_value = &entity.primary_key_actual_value();
             let update_columns = entity.fields_names();
             let update_values = entity.fields_actual_values();
 

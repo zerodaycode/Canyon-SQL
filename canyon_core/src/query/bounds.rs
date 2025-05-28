@@ -5,7 +5,8 @@ use crate::query::parameters::QueryParameter;
 /// Typically, these will be used by the macros to gather some information or to create some user code
 /// in more complex scenarios, like when insert an entity, when we need to know the value of the fields of
 /// the current instance that we'd like to insert
-pub trait Inspectionable {
+pub trait Inspectionable<'a> {
+
     /// Returns an allocated linear collection with the current values of all the fields declared
     /// for the implementor, as the result of the evaluation of the &self.#field expression, iteratively
     /// over every type member, but if the type contains in some field the #[primary_key] annotation,
@@ -26,7 +27,10 @@ pub trait Inspectionable {
     fn queries_placeholders(&self) -> &'static str;
 
     fn primary_key(&self) -> Option<&'static str>;
-    fn primary_key_actual_value(&self) -> &dyn QueryParameter<'_>;
+    fn primary_key_st() -> Option<&'static str>;
+    fn primary_key_actual_value(&self) -> &'a (dyn QueryParameter<'_> + 'a);
+    // fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType);
+    fn set_primary_key_actual_value(&mut self, value: &'a (dyn QueryParameter<'a> + 'static)) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>;
 }
 
 pub trait TableMetadata: std::fmt::Display {

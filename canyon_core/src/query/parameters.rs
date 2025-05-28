@@ -1,3 +1,4 @@
+use std::any::Any;
 #[cfg(feature = "mysql")]
 use mysql_async::{self, prelude::ToValue};
 #[cfg(feature = "mssql")]
@@ -8,9 +9,25 @@ use tokio_postgres::{self, types::ToSql};
 // TODO: cfg feature for this re-exports, as date-time or something
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
+pub trait QueryParameterValue<'a> {
+    fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T>;
+}
+impl<'a> QueryParameterValue<'a> for dyn QueryParameter<'a> {
+    fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
+        self.as_any().downcast_ref()
+    }
+}
+impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter<'a> {
+    fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
+        self.as_any().downcast_ref()
+    }
+}
+
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
 pub trait QueryParameter<'a>: std::fmt::Debug + Send + Sync {
+    fn as_any(&'a self) -> &'a dyn Any;
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     #[cfg(feature = "mssql")]
@@ -28,15 +45,19 @@ pub trait QueryParameter<'a>: std::fmt::Debug + Send + Sync {
 /// that is not dependent of the specific type of the argument that holds
 /// the query parameters of the database connectors
 #[cfg(feature = "mssql")]
-impl<'a> IntoSql<'a> for &'a dyn QueryParameter<'a> {
-    fn into_sql(self) -> ColumnData<'a> {
+impl<'b> IntoSql<'b> for &'b dyn QueryParameter<'b> {
+    fn into_sql(self) -> ColumnData<'b> {
         self.as_sqlserver_param()
     }
 }
 
 //TODO Pending to review and see if it is necessary to apply something similar to the previous implementation.
 
-impl QueryParameter<'_> for bool {
+impl<'a> QueryParameter<'a> for bool {
+    fn as_any(&'a self) -> &'a dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -52,51 +73,29 @@ impl QueryParameter<'_> for bool {
 }
 
 impl QueryParameter<'_> for i16 {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I16(Some(*self))
+        ColumnData::I16(Option::from(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &i16 {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+impl<'a> QueryParameter<'a> for Option<&'static i16> {
+    fn as_any(&'a self) -> &'a dyn Any {
         self
     }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I16(Some(**self))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
-
-impl QueryParameter<'_> for Option<i16> {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-        self
-    }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I16(*self)
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
-
-impl QueryParameter<'_> for Option<&i16> {
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -106,12 +105,16 @@ impl QueryParameter<'_> for Option<&i16> {
         ColumnData::I16(Some(*self.unwrap()))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 impl QueryParameter<'_> for i32 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -121,27 +124,16 @@ impl QueryParameter<'_> for i32 {
         ColumnData::I32(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &i32 {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+impl<'a> QueryParameter<'a> for Option<i32> {
+    fn as_any(&'a self) -> &'a dyn Any {
         self
     }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I32(Some(**self))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for Option<i32> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -151,27 +143,16 @@ impl QueryParameter<'_> for Option<i32> {
         ColumnData::I32(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
-
-impl QueryParameter<'_> for Option<&i32> {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-        self
-    }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I32(Some(*self.unwrap()))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 impl QueryParameter<'_> for f32 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -181,27 +162,17 @@ impl QueryParameter<'_> for f32 {
         ColumnData::F32(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &f32 {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-        self
-    }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::F32(Some(**self))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for Option<f32> {
+impl<'a> QueryParameter<'a> for Option<f32> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -211,29 +182,17 @@ impl QueryParameter<'_> for Option<f32> {
         ColumnData::F32(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
-
-impl QueryParameter<'_> for Option<&f32> {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-        self
-    }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::F32(Some(
-            *self.expect("Error on an f32 value on QueryParameter<'_>"),
-        ))
-    }
-    #[cfg(feature = "mysql")]
     fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for f64 {
+
+impl<'a> QueryParameter<'a> for f64 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -243,27 +202,17 @@ impl QueryParameter<'_> for f64 {
         ColumnData::F64(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &f64 {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-        self
-    }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::F64(Some(**self))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for Option<f64> {
+impl<'a> QueryParameter<'a> for Option<f64> {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -273,29 +222,16 @@ impl QueryParameter<'_> for Option<f64> {
         ColumnData::F64(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for Option<&f64> {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+impl<'a> QueryParameter<'a> for i64 {
+    fn as_any(&self) -> &dyn Any {
         self
     }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::F64(Some(
-            *self.expect("Error on an f64 value on QueryParameter<'_>"),
-        ))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for i64 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -305,27 +241,16 @@ impl QueryParameter<'_> for i64 {
         ColumnData::I64(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &i64 {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+impl<'a> QueryParameter<'a> for Option<i64> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I64(Some(**self))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for Option<i64> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -335,27 +260,16 @@ impl QueryParameter<'_> for Option<i64> {
         ColumnData::I64(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for Option<&i64> {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+impl<'a> QueryParameter<'a> for String {
+    fn as_any(&self) -> &dyn Any {
         self
     }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I64(Some(*self.unwrap()))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for String {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -365,27 +279,16 @@ impl QueryParameter<'_> for String {
         ColumnData::String(Some(std::borrow::Cow::Owned(self.to_owned())))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &String {
-    #[cfg(feature = "postgres")]
-    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+impl<'a> QueryParameter<'a> for Option<String> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
-    #[cfg(feature = "mssql")]
-    fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::String(Some(std::borrow::Cow::Borrowed(self)))
-    }
-    #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
-    }
-}
 
-impl QueryParameter<'_> for Option<String> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -398,12 +301,16 @@ impl QueryParameter<'_> for Option<String> {
         }
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for Option<&String> {
+impl<'a> QueryParameter<'a> for Option<&'static String> {
+    fn as_any(&'a self) -> &'a dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -416,27 +323,36 @@ impl QueryParameter<'_> for Option<&String> {
         }
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for &'_ str {
+impl QueryParameter<'_> for &'static str {
+    fn as_any(& self) -> &dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
     }
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::String(Some(std::borrow::Cow::Borrowed(*self)))
+        ColumnData::String(Some(std::borrow::Cow::Borrowed(self)))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
-impl QueryParameter<'_> for Option<&'_ str> {
+
+impl QueryParameter<'_> for Option<&'static str> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -455,6 +371,10 @@ impl QueryParameter<'_> for Option<&'_ str> {
 }
 
 impl QueryParameter<'_> for NaiveDate {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -464,12 +384,16 @@ impl QueryParameter<'_> for NaiveDate {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 impl QueryParameter<'_> for Option<NaiveDate> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -479,12 +403,16 @@ impl QueryParameter<'_> for Option<NaiveDate> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 impl QueryParameter<'_> for NaiveTime {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -494,12 +422,16 @@ impl QueryParameter<'_> for NaiveTime {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 impl QueryParameter<'_> for Option<NaiveTime> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -509,12 +441,16 @@ impl QueryParameter<'_> for Option<NaiveTime> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 impl QueryParameter<'_> for NaiveDateTime {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -530,6 +466,10 @@ impl QueryParameter<'_> for NaiveDateTime {
 }
 
 impl QueryParameter<'_> for Option<NaiveDateTime> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -539,13 +479,17 @@ impl QueryParameter<'_> for Option<NaiveDateTime> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         self
     }
 }
 
 //TODO pending
 impl QueryParameter<'_> for DateTime<FixedOffset> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -555,12 +499,16 @@ impl QueryParameter<'_> for DateTime<FixedOffset> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         todo!()
     }
 }
 
 impl QueryParameter<'_> for Option<DateTime<FixedOffset>> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -570,12 +518,16 @@ impl QueryParameter<'_> for Option<DateTime<FixedOffset>> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         todo!()
     }
 }
 
 impl QueryParameter<'_> for DateTime<Utc> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -585,12 +537,16 @@ impl QueryParameter<'_> for DateTime<Utc> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         todo!()
     }
 }
 
 impl QueryParameter<'_> for Option<DateTime<Utc>> {
+    fn as_any(&'_ self) -> &'_ dyn Any {
+        self
+    }
+    
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -600,7 +556,7 @@ impl QueryParameter<'_> for Option<DateTime<Utc>> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
+    fn as_mysql_param(&self) -> &dyn ToValue {
         todo!()
     }
 }

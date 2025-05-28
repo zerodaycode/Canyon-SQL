@@ -9,20 +9,6 @@ use canyon_core::query::querybuilder::{
 use std::error::Error;
 use std::future::Future;
 
-pub trait Insertable {
-    // Logically, this looks more like Inserter, and Insertable w'd be the ones with &self
-    fn insert_entity<'a, T>(
-        entity: &'a T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
-    where
-        T: RowMapper + Inspectionable;
-    // fn insert_entity_with<'a, I>(
-    //     &mut self,
-    //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a;
-}
 
 /// *CrudOperations* it's the core part of Canyon-SQL.
 ///
@@ -97,7 +83,7 @@ where
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```ignore
     /// let mut lec = League {
     ///     id: Default::default(),
     ///     ext_id: 1,
@@ -189,14 +175,14 @@ where
         entity: &'a mut T,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
-        T: RowMapper + Inspectionable + Sync + 'a;
+        T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
     fn insert_entity_with<'a, T, I>(
         entity: &'a mut T,
         input: I,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
-        T: RowMapper + Inspectionable + Sync + 'a,
+        T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     // TODO: the horripilant multi_insert MUST be replaced with a batch insert
@@ -226,14 +212,14 @@ where
         entity: &'a T,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
-        T: RowMapper + Inspectionable + Sync + 'a;
+        T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
     fn update_entity_with<'a, T, I>(
         entity: &'a T,
         input: I,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
-        T: RowMapper + Inspectionable + Sync + 'a,
+        T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     fn update_query<'a>() -> Result<UpdateQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
@@ -255,14 +241,14 @@ where
         entity: &'a T,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
-        T: RowMapper + Inspectionable + Sync + 'a;
+        T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
     fn delete_entity_with<'a, T, I>(
         entity: &'a T,
         input: I,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
     where
-        T: RowMapper + Inspectionable + Sync + 'a,
+        T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     fn delete_query<'a>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;

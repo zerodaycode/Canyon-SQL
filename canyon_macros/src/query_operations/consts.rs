@@ -2,7 +2,6 @@
 
 use std::cell::RefCell;
 
-use crate::query_operations::consts;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{Ident, Type};
@@ -12,7 +11,7 @@ pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str = "Operation is unavailable. T d
     (<op_type>_query method for the CrudOperations implementors";
 
 pub(crate) fn generate_no_pk_error() -> TokenStream {
-    let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE;
+    let err_msg = UNAVAILABLE_CRUD_OP_ON_INSTANCE;
     quote! {
         return Err(
             std::io::Error::new(
@@ -20,6 +19,14 @@ pub(crate) fn generate_no_pk_error() -> TokenStream {
                 #err_msg
             ).into_inner().unwrap()
         );
+    }
+}
+
+pub(crate) fn generate_default_db_conn_tokens() -> TokenStream {
+    quote! {
+        let default_db_conn = canyon_sql::core::Canyon::instance()?
+            .get_default_connection()?;
+        default_db_conn.lock().await
     }
 }
 
