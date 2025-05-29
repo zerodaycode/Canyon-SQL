@@ -6,6 +6,7 @@ use crate::query::parameters::QueryParameter;
 /// in more complex scenarios, like when insert an entity, when we need to know the value of the fields of
 /// the current instance that we'd like to insert
 pub trait Inspectionable<'a> {
+    type PrimaryKeyType;
 
     /// Returns an allocated linear collection with the current values of all the fields declared
     /// for the implementor, as the result of the evaluation of the &self.#field expression, iteratively
@@ -29,8 +30,13 @@ pub trait Inspectionable<'a> {
     fn primary_key(&self) -> Option<&'static str>;
     fn primary_key_st() -> Option<&'static str>;
     fn primary_key_actual_value(&self) -> &'a (dyn QueryParameter<'_> + 'a);
-    // fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType);
-    fn set_primary_key_actual_value(&mut self, value: &'a (dyn QueryParameter<'a> + 'static)) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>;
+    fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    // fn set_primary_key_actual_value(&mut self, value: Box<dyn std::any::Any>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>;
+    // fn set_primary_key_actual_value(&mut self, value: Box<dyn QueryParameter<'a> + 'a>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>;
+//     fn set_primary_key_actual_value<T>(&mut self, value: T) -> Result<(), Box<dyn std::error::Error + Send + Sync>> 
+//         where Self::PrimaryKeyType: From<T>;
+//     fn set_primary_key_actual_value<Z>(&mut self, value: Z) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+//     where Z: Into<Self::PrimaryKeyType>;
 }
 
 pub trait TableMetadata: std::fmt::Display {

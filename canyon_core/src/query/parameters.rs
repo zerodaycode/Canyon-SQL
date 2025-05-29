@@ -1,4 +1,5 @@
 use std::any::Any;
+use std::fmt::Debug;
 #[cfg(feature = "mysql")]
 use mysql_async::{self, prelude::ToValue};
 #[cfg(feature = "mssql")]
@@ -11,21 +12,54 @@ use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 pub trait QueryParameterValue<'a> {
     fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T>;
+    fn to_owned_any<T: Clone + 'a + 'static>(&'a self) -> Box<T>;
 }
 impl<'a> QueryParameterValue<'a> for dyn QueryParameter<'a> {
     fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
         self.as_any().downcast_ref()
+    }
+
+    fn to_owned_any<T: Clone + 'a + 'static>(&'a self) -> Box<T> {
+        Box::new(self.downcast_ref::<T>().cloned().unwrap())
     }
 }
 impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter<'a> {
     fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
         self.as_any().downcast_ref()
     }
+
+    fn to_owned_any<T>(&self) -> Box<T> {
+        todo!()
+    }
 }
+
+// Define a zero-sized type to represent the absence of a primary key
+// #[derive(Debug, Clone, Copy)]
+// pub struct NoPrimaryKey;
+// 
+// // Implement the QueryParameter<'a> trait for the zero-sized type
+// impl<'a> QueryParameter<'a> for NoPrimaryKey {
+//     fn as_any(&'a self) -> &'a dyn Any {
+//         todo!()
+//     }
+// 
+//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+//         todo!()
+//     }
+// 
+//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
+//         todo!()
+//     }
+// 
+//     fn as_mysql_param(&self) -> &dyn ToValue {
+//         todo!()
+//     }
+// }
+// 
 
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
-pub trait QueryParameter<'a>: std::fmt::Debug + Send + Sync {
+pub trait QueryParameter<'a>: Debug + Send + Sync {
     fn as_any(&'a self) -> &'a dyn Any;
 
     #[cfg(feature = "postgres")]
@@ -95,7 +129,7 @@ impl<'a> QueryParameter<'a> for Option<&'static i16> {
     fn as_any(&'a self) -> &'a dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -431,7 +465,7 @@ impl QueryParameter<'_> for Option<NaiveTime> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -469,7 +503,7 @@ impl QueryParameter<'_> for Option<NaiveDateTime> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -489,7 +523,7 @@ impl QueryParameter<'_> for DateTime<FixedOffset> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -508,7 +542,7 @@ impl QueryParameter<'_> for Option<DateTime<FixedOffset>> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -527,7 +561,7 @@ impl QueryParameter<'_> for DateTime<Utc> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -546,7 +580,7 @@ impl QueryParameter<'_> for Option<DateTime<Utc>> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
-    
+
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self

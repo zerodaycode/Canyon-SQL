@@ -109,20 +109,17 @@ fn generate_find_by_pk_operations_tokens(
             );
         })
     } else {
-        let is_with_mapper_ty = mapper_ty.is_some();
-        if is_with_mapper_ty {
+            println!("Genera+ting Row Mapper inspectionable at runtime for: {:?}", ty);
             Some(quote! {
-                use canyon_sql::query::bounds::Inspectionable;
-                let stmt = format!(
-                    "SELECT * FROM {} WHERE {} = $1",
-                    #table_schema_data,
-                    <#mapper_ty as Inspectionable>::primary_key_st()
-                        .ok_or_else(|| "No primary key found for this instance")? // TODO: better fmtted error msg
-                );
-            })
-        } else {
-            None
-        }
+                let pk = <#mapper_ty as Inspectionable>::primary_key_st()
+                            .ok_or_else(|| "No primary key found for this instance")?;
+                    use canyon_sql::query::bounds::Inspectionable;
+                    let stmt = format!(
+                        "SELECT * FROM {} WHERE {} = $1",
+                        #table_schema_data,
+                        pk
+                    );
+                })
     };
 
     let mapper_ty = mapper_ty.unwrap_or(ty);

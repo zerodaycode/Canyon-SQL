@@ -281,23 +281,43 @@ mod __details {
                 }
                 None => quote! { -1 }, // TODO: yeah, big todo :)
             };
-
-            let set_pk_val_method = if let Some(pk_ident) = pk_ident_ts {
-                quote! { 
-                    use canyon_sql::query::parameters::QueryParameterValue; 
-                    self.#pk_ident = value.downcast_ref::<i32>()
-    .ok_or_else(|| "Error downcasting the pk value passed")?
-                    .clone();
-                    Ok(()) 
+    //
+    //         let set_pk_val_method = if let Some(pk_ident) = pk_ident_ts {
+    //             quote! {
+    //     // Convert the i64 value to the primary key type and assign it
+    //     self.#pk_ident = Self::PrimaryKeyType::from(value);
+    //     Ok(())
+    // }
+    //         } else {
+    //             quote! {
+    //     Err(Box::new(std::io::Error::new(
+    //         std::io::ErrorKind::InvalidInput,
+    //         "No primary key field defined for this entity"
+    //     )) as Box<dyn std::error::Error + Send + Sync>)
+    // }
+    //         };
+            let set_pk_val_method = if let Some(pk_ty) = pk_ty_ts {
+                quote! {
+                    self.#pk_ident_ts = value.into();
+                       Ok(())
                 }
             } else {
-                quote! { Ok(()) /* TODO: with err */ }
+                quote! { Ok(()) }
+            };
+            let pk_assoc_ty = if let Some(pk_ident) = pk_ident_ts {
+                quote! {
+                    #pk_ty_ts
+                }
+            } else {
+                quote! { i64 }
             };
             println!("Seeing set pk method for ty: {:?}: {:?}", ty, set_pk_val_method.to_string());
 
             quote! {
                 impl<'a> canyon_sql::query::bounds::Inspectionable<'a> for #ty #ty_generics #where_clause {
-                    
+
+                    type PrimaryKeyType = #pk_assoc_ty;
+
                     fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
                         vec![#(#fields_values),*]
                     }
@@ -326,9 +346,24 @@ mod __details {
                          &#pk_actual_value
                     }
 
-                    fn set_primary_key_actual_value(&mut self, value: &'a (dyn canyon_sql::query::QueryParameter<'a> + 'static)) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>> {
-                        #set_pk_val_method
-                    }
+                    // // fn set_primary_key_actual_value(&mut self, value: &'a (dyn canyon_sql::query::QueryParameter<'a> + 'static)) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>> {
+                    // fn set_primary_key_actual_value(&mut self, value: Box<dyn canyon_sql::query::QueryParameter<'a> + 'a>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>> {
+                    //     #set_pk_val_method
+                    // }
+                    // fn set_primary_key_actual_value<Z>(&mut self, value: Z) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+                    // where Self::PrimaryKeyType: From<Z> {
+                    //     #set_pk_val_method
+                    // }
+                    // fn set_primary_key_actual_value(&mut self, value: Box<dyn std::any::Any>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>> {
+                    //    #set_pk_val_method
+                    // }
+                    fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        #set_pk_val_method
+    }
+//                     fn set_primary_key_actual_value<Z>(&mut self, value: Z) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+// where Z: Into<Self::PrimaryKeyType> {
+//                         #set_pk_val_method
+//                     }
                 }
             }
         }
