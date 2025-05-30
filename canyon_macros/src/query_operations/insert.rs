@@ -104,14 +104,12 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
 
     quote! {
         #insert_entity_signature {
-            let default_db_conn = canyon_sql::core::Canyon::instance()? 
+            let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
             #stmt_ctr;
 
             if let Some(pk) = entity.primary_key() {
                 #add_returning_clause
-                use canyon_sql::query::bounds::Inspectionable;
-
-                let pk = default_db_conn.lock().await.query_one_for::<<Entity as Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
+                let pk = default_db_conn.lock().await.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
                 entity.set_primary_key_actual_value(pk)?;
             } else {
                 let _ = default_db_conn.lock().await.execute(&stmt, &values).await?;
@@ -123,6 +121,8 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
             #stmt_ctr;
             if let Some(pk) = entity.primary_key() {
                 #add_returning_clause
+                let pk = input.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
+                entity.set_primary_key_actual_value(pk)?;
             } else {
                 let _ = input.execute(&stmt, &values).await?;
             }

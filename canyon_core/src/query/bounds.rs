@@ -32,12 +32,6 @@ pub trait Inspectionable<'a> {
     fn primary_key_st() -> Option<&'static str>;
     fn primary_key_actual_value(&self) -> &'a (dyn QueryParameter<'_> + 'a);
     fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
-    // fn set_primary_key_actual_value(&mut self, value: Box<dyn std::any::Any>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>;
-    // fn set_primary_key_actual_value(&mut self, value: Box<dyn QueryParameter<'a> + 'a>) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>;
-//     fn set_primary_key_actual_value<T>(&mut self, value: T) -> Result<(), Box<dyn std::error::Error + Send + Sync>> 
-//         where Self::PrimaryKeyType: From<T>;
-//     fn set_primary_key_actual_value<Z>(&mut self, value: Z) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
-//     where Z: Into<Self::PrimaryKeyType>;
 }
 
 pub trait TableMetadata: std::fmt::Display {

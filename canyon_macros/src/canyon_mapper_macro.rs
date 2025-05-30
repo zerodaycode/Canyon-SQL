@@ -300,7 +300,7 @@ mod __details {
                     #pk_ty_ts
                 }
             } else {
-                quote! { ! }
+                quote! { i64 }
             };
 
             quote! {
