@@ -13,7 +13,7 @@ use canyon_sql::macros::*;
 /// does not have all the CRUD operations available, only the ones that doesn't
 /// require of a primary key.
 pub struct Player {
-    // #[primary_key]  We will omit this to use it as a mock of entities that doesn't declare primary key
+    // #[primary_key]  // We will omit this to use it as a mock of entities that doesn't declare primary key
     id: i32,
     ext_id: i64,
     first_name: String,

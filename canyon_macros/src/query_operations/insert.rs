@@ -4,7 +4,7 @@ use quote::quote;
 
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
     let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
-    let insert_entity_ops = generate_insert_entity_function_tokens(table_schema_data, macro_data);
+    let insert_entity_ops = generate_insert_entity_function_tokens(table_schema_data);
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
     quote! {
@@ -60,8 +60,7 @@ pub fn generate_insert_method_tokens(
     }
 }
 
-pub fn generate_insert_entity_function_tokens(table_schema_data: &str, macro_tokens: &MacroTokens) -> TokenStream {
-    let mapper_ty = (&macro_tokens.retrieve_mapping_target_type()).as_ref().unwrap_or_else(|| macro_tokens.ty);
+pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenStream {
     let insert_entity_signature = quote! {
         async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
@@ -105,17 +104,15 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str, macro_tok
 
     quote! {
         #insert_entity_signature {
-            let default_db_conn = canyon_sql::core::Canyon::instance()?
-                .get_default_connection()?;
+            let default_db_conn = canyon_sql::core::Canyon::instance()? 
             #stmt_ctr;
 
             if let Some(pk) = entity.primary_key() {
                 #add_returning_clause
-            //     let r: <#mapper_ty as canyon_sql::query::bounds::Inspectionable<'canyon_lt>>::PrimaryKeyType = default_db_conn.lock().await.query_one_for(&stmt, &values).await? ;
-            // entity.set_primary_key_actual_value::<_>(r as <#mapper_ty as canyon_sql::query::bounds::Inspectionable<'canyon_lt>>::PrimaryKeyType);
-                
-            let r: <#mapper_ty as canyon_sql::query::bounds::Inspectionable<'canyon_lt>>::PrimaryKeyType = default_db_conn.lock().await.query_one_for(&stmt, &values).await? ;
-            // entity.set_primary_key_actual_value(r);
+                use canyon_sql::query::bounds::Inspectionable;
+
+                let pk = default_db_conn.lock().await.query_one_for::<<Entity as Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
+                entity.set_primary_key_actual_value(pk)?;
             } else {
                 let _ = default_db_conn.lock().await.execute(&stmt, &values).await?;
             }

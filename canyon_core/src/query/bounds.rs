@@ -1,4 +1,5 @@
 use crate::query::parameters::QueryParameter;
+use crate::rows::FromSqlOwnedValue;
 
 /// Contract that provides a way to Canyon to inspect certain property or values at runtime.
 ///
@@ -6,7 +7,7 @@ use crate::query::parameters::QueryParameter;
 /// in more complex scenarios, like when insert an entity, when we need to know the value of the fields of
 /// the current instance that we'd like to insert
 pub trait Inspectionable<'a> {
-    type PrimaryKeyType;
+    type PrimaryKeyType: FromSqlOwnedValue<Self::PrimaryKeyType>;
 
     /// Returns an allocated linear collection with the current values of all the fields declared
     /// for the implementor, as the result of the evaluation of the &self.#field expression, iteratively
