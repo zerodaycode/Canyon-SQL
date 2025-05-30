@@ -1,7 +1,7 @@
 use crate::query_operations::consts;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{quote, ToTokens};
 
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
@@ -109,17 +109,17 @@ fn generate_find_by_pk_operations_tokens(
             );
         })
     } else {
-            println!("Genera+ting Row Mapper inspectionable at runtime for: {:?}", ty);
+        let tt = mapper_ty.unwrap_or(ty).to_token_stream();
             Some(quote! {
-                let pk = <#mapper_ty as Inspectionable>::primary_key_st()
-                            .ok_or_else(|| "No primary key found for this instance")?;
-                    use canyon_sql::query::bounds::Inspectionable;
-                    let stmt = format!(
-                        "SELECT * FROM {} WHERE {} = $1",
-                        #table_schema_data,
-                        pk
-                    );
-                })
+                use canyon_sql::query::bounds::Inspectionable;
+                let pk = <#tt as Inspectionable>::primary_key_st()
+                    .ok_or_else(|| "No primary key found for this instance")?;
+                let stmt = format!(
+                    "SELECT * FROM {} WHERE {} = $1",
+                    #table_schema_data,
+                    pk
+                );
+            })
     };
 
     let mapper_ty = mapper_ty.unwrap_or(ty);
