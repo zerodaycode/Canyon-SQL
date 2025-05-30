@@ -257,7 +257,7 @@ mod __details {
         pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
             let pk = ast.get_primary_key_field_annotation();
-            let pk_ident_ts= pk.map(|pk| pk.ident);
+            let pk_ident_ts = pk.map(|pk| pk.ident);
             let pk_ty_ts = pk.map(|pk| pk.ty);
             let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
 
@@ -265,7 +265,10 @@ mod __details {
             let fields_values = fields.iter().map(|ident| {
                 quote! { &self.#ident }
             });
-            let fields_names = fields.iter().map(|ident| ident.to_string()).collect::<Vec<_>>();
+            let fields_names = fields
+                .iter()
+                .map(|ident| ident.to_string())
+                .collect::<Vec<_>>();
 
             let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
             let queries_placeholders = ast.placeholders_generator();

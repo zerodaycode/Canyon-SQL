@@ -1,10 +1,10 @@
 use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
 use crate::utils::helpers;
+use crate::utils::primary_key_attribute::PrimaryKeyAttribute;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, Span};
 use std::convert::TryFrom;
 use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
-use crate::utils::primary_key_attribute::PrimaryKeyAttribute;
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -26,9 +26,13 @@ impl<'a> MacroTokens<'a> {
         if let syn::Data::Struct(ref s) = ast.data {
             let attrs = &ast.attrs;
 
-            let primary_key_attribute = Self::find_primary_key_field_annotation(&s.fields)
-                .map(|f| PrimaryKeyAttribute { ident: f.ident.as_ref().unwrap(), ty: &f.ty, name: f.ident.as_ref().unwrap().to_string() });
-            
+            let primary_key_attribute =
+                Self::find_primary_key_field_annotation(&s.fields).map(|f| PrimaryKeyAttribute {
+                    ident: f.ident.as_ref().unwrap(),
+                    ty: &f.ty,
+                    name: f.ident.as_ref().unwrap().to_string(),
+                });
+
             let mut canyon_crud_attribute = None;
             for attr in attrs {
                 if attr.path.is_ident("canyon_crud") {
@@ -43,7 +47,7 @@ impl<'a> MacroTokens<'a> {
                 attrs: &ast.attrs,
                 fields: &s.fields,
                 canyon_crud_attribute,
-                primary_key_attribute
+                primary_key_attribute,
             })
         } else {
             Err(syn::Error::new(
@@ -115,7 +119,7 @@ impl<'a> MacroTokens<'a> {
 
     /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
     /// the field which is annotated with #[primary_key]
-    pub fn get_fields_idents_pk_parsed(&self) -> impl Iterator<Item = &Ident>  {
+    pub fn get_fields_idents_pk_parsed(&self) -> impl Iterator<Item = &Ident> {
         self.get_columns_pk_parsed()
             .map(|field| field.ident.as_ref().unwrap())
     }
@@ -165,15 +169,16 @@ impl<'a> MacroTokens<'a> {
     }
 
     pub fn find_primary_key_field_annotation(fields: &'a Fields) -> Option<&'a Field> {
-        fields.iter().find(|field| helpers::field_has_target_attribute(field, "primary_key"))
+        fields
+            .iter()
+            .find(|field| helpers::field_has_target_attribute(field, "primary_key"))
     }
 
     /// Utility for find the primary key attribute (if exists) and the
     /// column name (field) which belongs
     pub fn get_primary_key_annotation(&self) -> Option<String> {
-        self.get_primary_key_field_annotation().map(|attr| {
-            attr.ident.clone().to_string()
-        })
+        self.get_primary_key_field_annotation()
+            .map(|attr| attr.ident.clone().to_string())
     }
 
     pub fn get_primary_key_ident_and_type(&self) -> Option<(&Ident, &Type)> {

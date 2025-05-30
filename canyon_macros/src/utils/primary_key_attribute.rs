@@ -1,8 +1,8 @@
-use std::fmt::{Display, Formatter};
-use proc_macro2::TokenStream;
-use quote::{quote, ToTokens};
 use proc_macro2::Ident;
+use proc_macro2::TokenStream;
 use quote::__private::Span;
+use quote::{ToTokens, quote};
+use std::fmt::{Display, Formatter};
 use syn::{Field, Type};
 
 pub(crate) struct PrimaryKeyAttribute<'a> {
@@ -13,7 +13,12 @@ pub(crate) struct PrimaryKeyAttribute<'a> {
 
 impl<'a> Display for &'a PrimaryKeyAttribute<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let _ = f.write_fmt(format_args!("ident:{},ty:{},name:{}", self.ident.to_string(), self.ty.to_token_stream().to_string(), self.name));
+        let _ = f.write_fmt(format_args!(
+            "ident:{},ty:{},name:{}",
+            self.ident.to_string(),
+            self.ty.to_token_stream().to_string(),
+            self.name
+        ));
         Ok(())
     }
 }
@@ -40,6 +45,10 @@ impl<'a> PrimaryKeyAttribute<'a> {
 }
 impl<'a> From<&'a Field> for PrimaryKeyAttribute<'a> {
     fn from(value: &'a Field) -> Self {
-        Self { ident: value.ident.as_ref().unwrap(), ty: &value.ty, name: value.ident.as_ref().unwrap().to_string() }
+        Self {
+            ident: value.ident.as_ref().unwrap(),
+            ty: &value.ty,
+            name: value.ident.as_ref().unwrap().to_string(),
+        }
     }
 }

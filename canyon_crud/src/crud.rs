@@ -9,7 +9,6 @@ use canyon_core::query::querybuilder::{
 use std::error::Error;
 use std::future::Future;
 
-
 /// *CrudOperations* it's the core part of Canyon-SQL.
 ///
 /// Here it's defined and implemented every CRUD operation
