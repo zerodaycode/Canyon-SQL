@@ -213,8 +213,8 @@ mod __details {
             };
 
             quote! {
-                async fn find_by_pk<'a>(value: &'a dyn canyon_sql::query::QueryParameter<'a>)
-                    -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                async fn find_by_pk<'canyon_lt, 'err_lt>(value: &'canyon_lt dyn canyon_sql::query::QueryParameter<'canyon_lt>)
+                    -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'err_lt)>>
                 {
                     #body
                 }
@@ -236,10 +236,10 @@ mod __details {
             };
 
             quote! {
-                async fn find_by_pk_with<'a, I>(value: &'a dyn canyon_sql::query::QueryParameter<'a>, input: I)
-                    -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                async fn find_by_pk_with<'canyon_lt, 'err_lt, I>(value: &'canyon_lt dyn canyon_sql::query::QueryParameter<'canyon_lt>, input: I)
+                    -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'err_lt)>>
                 where
-                    I: canyon_sql::connection::DbConnection + Send + 'a
+                    I: canyon_sql::connection::DbConnection + Send + 'canyon_lt
                 {
                     #body
                 }

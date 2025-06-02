@@ -24,7 +24,7 @@ use std::future::Future;
 /// See it's definition and docs to see the implementations.
 /// Also, you can find the written macro-code that performs the auto-mapping
 /// in the *canyon_sql_root::canyon_macros* crates, on the root of this project.
-pub trait CrudOperations<R>: Send + Sync
+pub trait CrudOperations<R>: Send
 where
     R: RowMapper,
     Vec<R>: FromIterator<<R as RowMapper>::Output>,
@@ -51,14 +51,14 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn find_by_pk<'a>(
+    fn find_by_pk<'a, 'b>(
         value: &'a dyn QueryParameter<'a>,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'a)>>> + Send;
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'b)>>> + Send;
 
-    fn find_by_pk_with<'a, I>(
+    fn find_by_pk_with<'a, 'b, I>(
         value: &'a dyn QueryParameter<'a>,
         input: I,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'b)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
@@ -170,16 +170,16 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn insert_entity<'a, T>(
+    fn insert_entity<'a, 'b, T>(
         entity: &'a mut T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
-    fn insert_entity_with<'a, T, I>(
+    fn insert_entity_with<'a, 'b, T, I>(
         entity: &'a mut T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
@@ -207,16 +207,16 @@ where
     where
         I: DbConnection + Send + 'a;
 
-    fn update_entity<'a, T>(
+    fn update_entity<'a, 'b, T>(
         entity: &'a T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
-    fn update_entity_with<'a, T, I>(
+    fn update_entity_with<'a, 'b, T, I>(
         entity: &'a T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;

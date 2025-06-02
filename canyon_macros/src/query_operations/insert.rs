@@ -62,8 +62,8 @@ pub fn generate_insert_method_tokens(
 
 pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenStream {
     let insert_entity_signature = quote! {
-        async fn insert_entity<'canyon_lt, Entity>(entity: &'canyon_lt mut Entity)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        async fn insert_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt mut Entity)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where Entity: canyon_sql::core::RowMapper
             + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
             + Sync
@@ -71,8 +71,8 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
     };
 
     let insert_entity_with_signature = quote! {
-        async fn insert_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt mut Entity, input: Input)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        async fn insert_entity_with<'canyon_lt, 'err_lt, Entity, Input>(entity: &'canyon_lt mut Entity, input: Input)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where
             Entity: canyon_sql::core::RowMapper
                 + canyon_sql::query::bounds::Inspectionable<'canyon_lt>

@@ -88,8 +88,8 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &s
 
 fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
     let update_entity_signature = quote! {
-        async fn update_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        async fn update_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt Entity)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where Entity: canyon_sql::core::RowMapper
             + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
             + Sync
@@ -97,8 +97,8 @@ fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
     };
 
     let update_entity_with_signature = quote! {
-        async fn update_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        async fn update_entity_with<'canyon_lt, 'err_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where
             Entity: canyon_sql::core::RowMapper
                 + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
