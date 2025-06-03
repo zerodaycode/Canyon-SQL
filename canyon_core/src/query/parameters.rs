@@ -182,6 +182,45 @@ impl<'a> QueryParameter<'a> for Option<i32> {
     }
 }
 
+impl QueryParameter<'_> for u32 {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    #[cfg(feature = "postgres")]
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+    #[cfg(feature = "mssql")]
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        panic!("Unsupported sqlserver parameter type <u32>");
+    }
+    #[cfg(feature = "mysql")]
+    fn as_mysql_param(&self) -> &dyn ToValue {
+        self
+    }
+}
+
+
+impl<'a> QueryParameter<'a> for Option<u32> {
+    fn as_any(&'a self) -> &'a dyn Any {
+        self
+    }
+
+    #[cfg(feature = "postgres")]
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+    #[cfg(feature = "mssql")]
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        panic!("Unsupported sqlserver parameter type <u32>");
+    }
+    #[cfg(feature = "mysql")]
+    fn as_mysql_param(&self) -> &dyn ToValue {
+        self
+    }
+}
+
 impl QueryParameter<'_> for f32 {
     fn as_any(&self) -> &dyn Any {
         self
