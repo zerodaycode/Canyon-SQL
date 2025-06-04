@@ -1,4 +1,3 @@
-use crate::canyon::Canyon;
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::mapper::RowMapper;

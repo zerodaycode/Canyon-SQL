@@ -285,9 +285,9 @@ mod __details {
                 None => quote! { -1 }, // TODO: yeah, big todo :)
             };
 
-            let set_pk_val_method = if let Some(pk_ty) = pk_ty_ts {
+            let set_pk_val_method = if let Some(pk_ident) = pk_ident_ts {
                 quote! {
-                    self.#pk_ident_ts = value.into();
+                    self.#pk_ident = value.into();
                        Ok(())
                 }
             } else {
@@ -298,16 +298,16 @@ mod __details {
                     )) as Box<dyn std::error::Error + Send + Sync>)
                 }
             };
-            let pk_assoc_ty = if let Some(pk_ident) = pk_ident_ts {
+            let pk_assoc_ty = if let Some(pk_ty) = pk_ty_ts {
                 quote! {
-                    #pk_ty_ts
+                    #pk_ty
                 }
             } else {
                 quote! { i64 }
             };
 
             quote! {
-                impl<'a> canyon_sql::query::bounds::Inspectionable<'a> for #ty #ty_generics #where_clause {
+                impl #impl_generics canyon_sql::query::bounds::Inspectionable<'_> for #ty #ty_generics #where_clause {
 
                     type PrimaryKeyType = #pk_assoc_ty;
 
@@ -335,7 +335,7 @@ mod __details {
                         #pk_opt_val
                     }
 
-                    fn primary_key_actual_value(&self) -> &'a (dyn canyon_sql::query::QueryParameter + 'a) {
+                    fn primary_key_actual_value(&self) -> &'_ (dyn canyon_sql::query::QueryParameter + '_) {
                          &#pk_actual_value
                     }
 
