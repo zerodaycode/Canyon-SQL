@@ -36,8 +36,8 @@ pub fn generate_delete_method_tokens(
         /// Deletes from a database entity the row that matches
         /// the current instance of a T type, returning a result
         /// indicating a possible failure querying the database with the specified datasource.
-        async fn delete_with<'a, I>(&self, input: I) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'a)>>
-            where I: canyon_sql::connection::DbConnection + Send + 'a
+        async fn delete_with<'canyon, 'err, I>(&self, input: I) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'err)>>
+            where I: canyon_sql::connection::DbConnection + Send + 'canyon
     };
 
     if let Some(primary_key) = pk {
@@ -83,23 +83,23 @@ pub fn generate_delete_method_tokens(
 
 pub fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStream {
     let delete_entity_signature = quote! {
-        async fn delete_entity<'canyon_lt, Entity>(entity: &'canyon_lt Entity)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
+            + canyon_sql::query::bounds::Inspectionable<'canyon>
             + Sync
-            + 'canyon_lt
+            + 'canyon
     };
 
     let delete_entity_with_signature = quote! {
-        async fn delete_entity_with<'canyon_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'canyon_lt>>
+        async fn delete_entity_with<'canyon, 'err, Entity, Input>(entity: &'canyon Entity, input: Input)
+            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
+                + canyon_sql::query::bounds::Inspectionable<'canyon>
                 + Sync
-                + 'canyon_lt,
-            Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
+                + 'canyon,
+            Input: canyon_sql::connection::DbConnection + Send + 'canyon
     };
 
     let delete_entity_body = __details::generate_delete_entity_body(table_schema_data);
@@ -122,10 +122,11 @@ fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn delete_query<'a>() -> Result<
-            canyon_sql::query::querybuilder::DeleteQueryBuilder<'a>,
-            Box<(dyn std::error::Error + Send + Sync + 'a)>
-        > {
+        fn delete_query<'canyon, 'err>() -> Result<
+            canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon>,
+            Box<(dyn std::error::Error + Send + Sync + 'err)>
+        > where
+    'canyon: 'err {
             canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
         }
 
@@ -139,11 +140,12 @@ fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         ///
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, selected with the input parameter
-        fn delete_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
+        fn delete_query_with<'canyon, 'err>(database_type: canyon_sql::connection::DatabaseType)
         -> Result<
-            canyon_sql::query::querybuilder::DeleteQueryBuilder<'a>,
-            Box<(dyn std::error::Error + Send + Sync + 'a)>
-        > {
+            canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon>,
+            Box<(dyn std::error::Error + Send + Sync + 'err)>
+        > where
+    'canyon: 'err {
             canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, database_type)
         }
     }
@@ -187,7 +189,7 @@ mod __details {
 
     fn generate_delete_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
         quote! {
-            // let pk_actual_value = &entity.primary_key_actual_value() as &dyn canyon_sql::query::QueryParameter<'canyon_lt>;
+            // let pk_actual_value = &entity.primary_key_actual_value() as &dyn canyon_sql::query::QueryParameter<'canyon>;
             let pk_actual_value = entity.primary_key_actual_value();
             let delete_stmt = format!(
                 "DELETE FROM {} WHERE {:?} = $1",

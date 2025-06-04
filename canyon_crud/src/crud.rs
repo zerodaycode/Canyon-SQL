@@ -229,30 +229,32 @@ where
 
     fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync)>>> + Send;
 
-    fn delete_with<'a, I>(
+    fn delete_with<'a, 'b, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    fn delete_entity<'a, T>(
+    fn delete_entity<'a, 'b, T>(
         entity: &'a T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
-    fn delete_entity_with<'a, T, I>(
+    fn delete_entity_with<'a, 'b, T, I>(
         entity: &'a T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>>
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
 
-    fn delete_query<'a>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
+    fn delete_query<'a, 'b>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'b)>>
+        where 'a: 'b;
 
-    fn delete_query_with<'a>(
+    fn delete_query_with<'a, 'b>(
         database_type: DatabaseType,
-    ) -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
+    ) -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'b)>>
+        where 'a: 'b;
 }
