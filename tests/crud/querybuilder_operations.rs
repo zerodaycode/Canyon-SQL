@@ -397,7 +397,7 @@ fn test_crud_delete_with_querybuilder() {
 //     let q = create_querybuilder_lt(10);
 //     assert_eq!(q.read_sql(), "DELETE FROM tournament WHERE id = 10");
 // }
-// 
+//
 // #[cfg(feature = "postgres")]
 // fn create_querybuilder_lt<'a, 'b: 'a>(id: i32) -> DeleteQueryBuilder<'b> {
 //     Tournament::delete_query()

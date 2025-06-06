@@ -126,7 +126,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn r#where<Z: FieldValueIdentifier<'a>>(self, column: &'a Z, op: impl Operator) -> Self;
+    fn r#where<Z: FieldValueIdentifier>(self, column: &'a Z, op: impl Operator) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query.
     ///
@@ -134,7 +134,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn and<Z: FieldValueIdentifier<'a>>(self, column: &'a Z, op: impl Operator) -> Self;
+    fn and<Z: FieldValueIdentifier>(self, column: &'a Z, op: impl Operator) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query that's being constructed
     ///
@@ -167,7 +167,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn or<Z: FieldValueIdentifier<'a>>(self, column: &'a Z, op: impl Operator) -> Self;
+    fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: impl Operator) -> Self;
 
     /// Generates a `ORDER BY` SQL clause for constraint the query.
     ///

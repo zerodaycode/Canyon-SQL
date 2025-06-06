@@ -85,7 +85,7 @@ pub trait FieldIdentifier: std::fmt::Display {
 /// Ex:
 /// `SELECT * FROM some_table WHERE id = 2`
 ///
-/// That '2' it's extracted from some enum that implements [`FieldValueIdentifier<'a>`],
+/// That '2' it's extracted from some enum that implements [`FieldValueIdentifier`],
 /// where usually the variant w'd be something like:
 ///
 /// ```
@@ -93,8 +93,8 @@ pub trait FieldIdentifier: std::fmt::Display {
 ///     IntVariant(i32)
 /// }
 /// ```
-pub trait FieldValueIdentifier<'a> {
-    fn value(&'a self) -> (&'static str, &'a dyn QueryParameter<'_>);
+pub trait FieldValueIdentifier {
+    fn value(&self) -> (&'static str, &dyn QueryParameter<'_>);
 }
 
 /// Bounds to some type T in order to make it callable over some fn parameter T

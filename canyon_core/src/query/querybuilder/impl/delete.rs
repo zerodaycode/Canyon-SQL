@@ -18,13 +18,13 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier<'a>>(mut self, r#where: &'a Z, op: impl Operator) -> Self {
+    fn r#where<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: impl Operator) -> Self {
         self._inner.r#where(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier<'a>>(mut self, column: &'a Z, op: impl Operator) -> Self {
+    fn and<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: impl Operator) -> Self {
         self._inner.and(column, op);
         self
     }
@@ -50,7 +50,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier<'a>>(mut self, column: &'a Z, op: impl Operator) -> Self {
+    fn or<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: impl Operator) -> Self {
         self._inner.or(column, op);
         self
     }

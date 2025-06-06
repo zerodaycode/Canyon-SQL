@@ -38,7 +38,7 @@ impl<'a> QueryBuilder<'a> {
         Ok(Query::new(self.sql, self.params))
     }
 
-    pub fn r#where<Z: FieldValueIdentifier<'a>>(&mut self, r#where: &'a Z, op: impl Operator) {
+    pub fn r#where<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, op: impl Operator) {
         let (column_name, value) = r#where.value();
 
         let where_ = String::from(" WHERE ")
@@ -49,7 +49,7 @@ impl<'a> QueryBuilder<'a> {
         self.params.push(value);
     }
 
-    pub fn and<Z: FieldValueIdentifier<'a>>(&mut self, r#and: &'a Z, op: impl Operator) {
+    pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, op: impl Operator) {
         let (column_name, value) = r#and.value();
 
         let and_ = String::from(" AND ")
@@ -110,7 +110,7 @@ impl<'a> QueryBuilder<'a> {
         self.sql.push(')');
     }
 
-    pub fn or<Z: FieldValueIdentifier<'a>>(&mut self, r#or: &'a Z, op: impl Operator) {
+    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, op: impl Operator) {
         let (column_name, value) = r#or.value();
 
         let or_ = String::from(" OR ")
