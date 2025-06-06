@@ -14,7 +14,7 @@ pub trait QueryParameterValue<'a> {
     fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T>;
     fn to_owned_any<T: Clone + 'a + 'static>(&'a self) -> Box<T>;
 }
-impl<'a> QueryParameterValue<'a> for dyn QueryParameter<'a> {
+impl<'a> QueryParameterValue<'a> for dyn QueryParameter {
     fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
         self.as_any().downcast_ref()
     }
@@ -23,7 +23,7 @@ impl<'a> QueryParameterValue<'a> for dyn QueryParameter<'a> {
         Box::new(self.downcast_ref::<T>().cloned().unwrap())
     }
 }
-impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter<'a> {
+impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter {
     fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
         self.as_any().downcast_ref()
     }
@@ -37,8 +37,8 @@ impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter<'a> {
 // #[derive(Debug, Clone, Copy)]
 // pub struct NoPrimaryKey;
 //
-// // Implement the QueryParameter<'a> trait for the zero-sized type
-// impl<'a> QueryParameter<'a> for NoPrimaryKey {
+// // Implement the QueryParameter trait for the zero-sized type
+// impl QueryParameter for NoPrimaryKey {
 //     fn as_any(&'a self) -> &'a dyn Any {
 //         todo!()
 //     }
@@ -59,8 +59,8 @@ impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter<'a> {
 
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
-pub trait QueryParameter<'a>: Debug + Send + Sync {
-    fn as_any(&'a self) -> &'a dyn Any;
+pub trait QueryParameter: Debug + Send + Sync {
+    fn as_any(&self) -> &dyn Any;
 
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
@@ -75,11 +75,11 @@ pub trait QueryParameter<'a>: Debug + Send + Sync {
 ///
 /// This implementation is necessary because of the generic amplitude
 /// of the arguments of the [`crate::transaction::Transaction::query`], that should work with
-/// a collection of [`QueryParameter<'a>`], in order to allow a workflow
+/// a collection of [`QueryParameter`], in order to allow a workflow
 /// that is not dependent of the specific type of the argument that holds
 /// the query parameters of the database connectors
 #[cfg(feature = "mssql")]
-impl<'b> IntoSql<'b> for &'b dyn QueryParameter<'b> {
+impl<'b> IntoSql<'b> for &'b dyn QueryParameter {
     fn into_sql(self) -> ColumnData<'b> {
         self.as_sqlserver_param()
     }
@@ -87,8 +87,8 @@ impl<'b> IntoSql<'b> for &'b dyn QueryParameter<'b> {
 
 //TODO Pending to review and see if it is necessary to apply something similar to the previous implementation.
 
-impl<'a> QueryParameter<'a> for bool {
-    fn as_any(&'a self) -> &'a dyn Any {
+impl QueryParameter for bool {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -106,7 +106,7 @@ impl<'a> QueryParameter<'a> for bool {
     }
 }
 
-impl QueryParameter<'_> for i16 {
+impl QueryParameter for i16 {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -125,8 +125,8 @@ impl QueryParameter<'_> for i16 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&'static i16> {
-    fn as_any(&'a self) -> &'a dyn Any {
+impl QueryParameter for Option<&'static i16> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -144,7 +144,7 @@ impl<'a> QueryParameter<'a> for Option<&'static i16> {
     }
 }
 
-impl QueryParameter<'_> for i32 {
+impl QueryParameter for i32 {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -163,8 +163,8 @@ impl QueryParameter<'_> for i32 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<i32> {
-    fn as_any(&'a self) -> &'a dyn Any {
+impl QueryParameter for Option<i32> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -182,7 +182,7 @@ impl<'a> QueryParameter<'a> for Option<i32> {
     }
 }
 
-impl QueryParameter<'_> for u32 {
+impl QueryParameter for u32 {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -201,9 +201,8 @@ impl QueryParameter<'_> for u32 {
     }
 }
 
-
-impl<'a> QueryParameter<'a> for Option<u32> {
-    fn as_any(&'a self) -> &'a dyn Any {
+impl QueryParameter for Option<u32> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -221,7 +220,7 @@ impl<'a> QueryParameter<'a> for Option<u32> {
     }
 }
 
-impl QueryParameter<'_> for f32 {
+impl QueryParameter for f32 {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -240,7 +239,7 @@ impl QueryParameter<'_> for f32 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<f32> {
+impl QueryParameter for Option<f32> {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -259,7 +258,7 @@ impl<'a> QueryParameter<'a> for Option<f32> {
     }
 }
 
-impl<'a> QueryParameter<'a> for f64 {
+impl QueryParameter for f64 {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -278,7 +277,7 @@ impl<'a> QueryParameter<'a> for f64 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<f64> {
+impl QueryParameter for Option<f64> {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -297,7 +296,7 @@ impl<'a> QueryParameter<'a> for Option<f64> {
     }
 }
 
-impl<'a> QueryParameter<'a> for i64 {
+impl QueryParameter for i64 {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -316,7 +315,7 @@ impl<'a> QueryParameter<'a> for i64 {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<i64> {
+impl QueryParameter for Option<i64> {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -335,7 +334,7 @@ impl<'a> QueryParameter<'a> for Option<i64> {
     }
 }
 
-impl<'a> QueryParameter<'a> for String {
+impl QueryParameter for String {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -354,7 +353,7 @@ impl<'a> QueryParameter<'a> for String {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<String> {
+impl QueryParameter for Option<String> {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -376,8 +375,8 @@ impl<'a> QueryParameter<'a> for Option<String> {
     }
 }
 
-impl<'a> QueryParameter<'a> for Option<&'static String> {
-    fn as_any(&'a self) -> &'a dyn Any {
+impl QueryParameter for Option<&'static String> {
+    fn as_any(&self) -> &dyn Any {
         self
     }
 
@@ -398,7 +397,7 @@ impl<'a> QueryParameter<'a> for Option<&'static String> {
     }
 }
 
-impl QueryParameter<'_> for &'static str {
+impl QueryParameter for &'static str {
     fn as_any(&self) -> &dyn Any {
         self
     }
@@ -417,7 +416,7 @@ impl QueryParameter<'_> for &'static str {
     }
 }
 
-impl QueryParameter<'_> for Option<&'static str> {
+impl QueryParameter for Option<&'static str> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -439,7 +438,7 @@ impl QueryParameter<'_> for Option<&'static str> {
     }
 }
 
-impl QueryParameter<'_> for NaiveDate {
+impl QueryParameter for NaiveDate {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -458,7 +457,7 @@ impl QueryParameter<'_> for NaiveDate {
     }
 }
 
-impl QueryParameter<'_> for Option<NaiveDate> {
+impl QueryParameter for Option<NaiveDate> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -477,7 +476,7 @@ impl QueryParameter<'_> for Option<NaiveDate> {
     }
 }
 
-impl QueryParameter<'_> for NaiveTime {
+impl QueryParameter for NaiveTime {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -496,7 +495,7 @@ impl QueryParameter<'_> for NaiveTime {
     }
 }
 
-impl QueryParameter<'_> for Option<NaiveTime> {
+impl QueryParameter for Option<NaiveTime> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -515,7 +514,7 @@ impl QueryParameter<'_> for Option<NaiveTime> {
     }
 }
 
-impl QueryParameter<'_> for NaiveDateTime {
+impl QueryParameter for NaiveDateTime {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -534,7 +533,7 @@ impl QueryParameter<'_> for NaiveDateTime {
     }
 }
 
-impl QueryParameter<'_> for Option<NaiveDateTime> {
+impl QueryParameter for Option<NaiveDateTime> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -554,7 +553,7 @@ impl QueryParameter<'_> for Option<NaiveDateTime> {
 }
 
 //TODO pending
-impl QueryParameter<'_> for DateTime<FixedOffset> {
+impl QueryParameter for DateTime<FixedOffset> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -573,7 +572,7 @@ impl QueryParameter<'_> for DateTime<FixedOffset> {
     }
 }
 
-impl QueryParameter<'_> for Option<DateTime<FixedOffset>> {
+impl QueryParameter for Option<DateTime<FixedOffset>> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -592,7 +591,7 @@ impl QueryParameter<'_> for Option<DateTime<FixedOffset>> {
     }
 }
 
-impl QueryParameter<'_> for DateTime<Utc> {
+impl QueryParameter for DateTime<Utc> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }
@@ -611,7 +610,7 @@ impl QueryParameter<'_> for DateTime<Utc> {
     }
 }
 
-impl QueryParameter<'_> for Option<DateTime<Utc>> {
+impl QueryParameter for Option<DateTime<Utc>> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
     }

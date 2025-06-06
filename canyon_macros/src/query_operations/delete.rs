@@ -42,8 +42,7 @@ pub fn generate_delete_method_tokens(
 
     if let Some(primary_key) = pk {
         let pk_field = Ident::new(&primary_key, Span::call_site());
-        let pk_field_value =
-            quote! { &self.#pk_field as &dyn canyon_sql::query::QueryParameter<'_> };
+        let pk_field_value = quote! { &self.#pk_field as &dyn canyon_sql::query::QueryParameter };
         let delete_stmt = format!(
             "DELETE FROM {} WHERE {:?} = $1",
             table_schema_data, primary_key
@@ -189,7 +188,7 @@ mod __details {
 
     fn generate_delete_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
         quote! {
-            // let pk_actual_value = &entity.primary_key_actual_value() as &dyn canyon_sql::query::QueryParameter<'canyon>;
+            // let pk_actual_value = &entity.primary_key_actual_value() as &dyn canyon_sql::query::QueryParameter;
             let pk_actual_value = entity.primary_key_actual_value();
             let delete_stmt = format!(
                 "DELETE FROM {} WHERE {:?} = $1",

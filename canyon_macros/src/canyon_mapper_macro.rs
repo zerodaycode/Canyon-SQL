@@ -311,7 +311,7 @@ mod __details {
 
                     type PrimaryKeyType = #pk_assoc_ty;
 
-                    fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter<'_>> {
+                    fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter> {
                         vec![#(#fields_values),*]
                     }
 

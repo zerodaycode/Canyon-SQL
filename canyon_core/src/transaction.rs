@@ -43,7 +43,7 @@ use std::future::Future;
 pub trait Transaction {
     fn query<'a, S, R>(
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'a>)],
+        params: &[&'a (dyn QueryParameter)],
         input: impl DbConnection + Send,
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>>
     where
@@ -61,7 +61,7 @@ pub trait Transaction {
     ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send,
+        Z: AsRef<[&'a dyn QueryParameter]> + Send,
         R: RowMapper,
     {
         async move { input.query_one::<R>(stmt.as_ref(), params.as_ref()).await }
@@ -74,7 +74,7 @@ pub trait Transaction {
     ) -> impl Future<Output = Result<F, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,
     {
         async move { input.query_one_for(stmt.as_ref(), params.as_ref()).await }
     }
@@ -89,7 +89,7 @@ pub trait Transaction {
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,
     {
         async move { input.query_rows(stmt.as_ref(), params.as_ref()).await }
     }
@@ -101,7 +101,7 @@ pub trait Transaction {
     ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Send + 'a,
-        Z: AsRef<[&'a dyn QueryParameter<'a>]> + Send + 'a,
+        Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,
     {
         async move { input.execute(stmt.as_ref(), params.as_ref()).await }
     }

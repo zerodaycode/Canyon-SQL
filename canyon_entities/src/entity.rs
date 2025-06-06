@@ -104,7 +104,7 @@ impl CanyonEntity {
                 let field_name_as_string = f.name.to_string();
 
                 quote! {
-                    #enum_name::#field_name(v) => (#field_name_as_string, v as &dyn canyon_sql::query::QueryParameter<'_>)
+                    #enum_name::#field_name(v) => (#field_name_as_string, v as &dyn canyon_sql::query::QueryParameter)
                 }
             })
             .collect::<Vec<_>>()

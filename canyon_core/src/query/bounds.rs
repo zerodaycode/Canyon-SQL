@@ -20,7 +20,7 @@ pub trait Inspectionable<'a> {
     /// # Warning
     /// This may change in the future, so that's why this operation shouldn't be used, nor it's
     /// recommended to use it publicly as an end-user.
-    fn fields_actual_values(&self) -> Vec<&dyn QueryParameter<'_>>;
+    fn fields_actual_values(&self) -> Vec<&dyn QueryParameter>;
 
     /// Returns a linear collection with the names of every field for the implementor as a String
     fn fields_names(&self) -> &[&'static str];
@@ -30,7 +30,7 @@ pub trait Inspectionable<'a> {
 
     fn primary_key(&self) -> Option<&'static str>;
     fn primary_key_st() -> Option<&'static str>;
-    fn primary_key_actual_value(&self) -> &'a (dyn QueryParameter<'_> + 'a);
+    fn primary_key_actual_value(&self) -> &'_ (dyn QueryParameter + '_);
     fn set_primary_key_actual_value(
         &mut self,
         value: Self::PrimaryKeyType,
@@ -76,7 +76,7 @@ pub trait FieldIdentifier: std::fmt::Display {
 /// Represents some kind of introspection to make the implementors
 /// able to retrieve a value inside some variant of an associated enum type.
 /// and convert it to a tuple struct formed by the column name as an String,
-/// and the dynamic value of the [`QueryParameter<'_>`] trait object contained
+/// and the dynamic value of the [`QueryParameter`] trait object contained
 /// inside the variant requested,
 /// enabling a conversion of that value into something
 /// that can be part of an SQL query.
@@ -94,7 +94,7 @@ pub trait FieldIdentifier: std::fmt::Display {
 /// }
 /// ```
 pub trait FieldValueIdentifier {
-    fn value(&self) -> (&'static str, &dyn QueryParameter<'_>);
+    fn value(&self) -> (&'static str, &dyn QueryParameter);
 }
 
 /// Bounds to some type T in order to make it callable over some fn parameter T
@@ -106,5 +106,5 @@ pub trait FieldValueIdentifier {
 /// this side of the relation it's representing
 pub trait ForeignKeyable<T> {
     /// Returns the actual value of the field related to the column passed in
-    fn get_fk_column(&self, column: &str) -> Option<&dyn QueryParameter<'_>>;
+    fn get_fk_column(&self, column: &str) -> Option<&dyn QueryParameter>;
 }

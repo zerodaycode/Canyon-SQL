@@ -56,11 +56,11 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &s
 
         update_ops_tokens.extend(quote! {
             #update_signature {
-                let update_values: &[&dyn canyon_sql::query::QueryParameter<'_>] = #update_values;
+                let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
                 <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
             }
             #update_with_signature {
-                let update_values: &[&dyn canyon_sql::query::QueryParameter<'_>] = #update_values;
+                let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
                 input.execute(#stmt, update_values).await
             }
         });

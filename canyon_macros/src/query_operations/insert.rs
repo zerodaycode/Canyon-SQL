@@ -183,7 +183,7 @@ mod __details {
         });
 
         quote! {
-            let values: &[&dyn canyon_sql::query::QueryParameter<'_>] = &[#(#insert_values),*];
+            let values: &[&dyn canyon_sql::query::QueryParameter] = &[#(#insert_values),*];
         }
     }
 
@@ -489,11 +489,11 @@ fn _generate_multiple_insert_tokens(
          ) {
              let input = "";
 
-              let mut final_values: Vec<Vec<&dyn canyon_sql::query::QueryParameter<'_>>> = Vec::new();
+              let mut final_values: Vec<Vec<&dyn canyon_sql::query::QueryParameter>> = Vec::new();
               for instance in instances.iter() {
-                  let intermediate: &[&dyn canyon_sql::query::QueryParameter<'_>] = &[#(#macro_fields),*];
+                  let intermediate: &[&dyn canyon_sql::query::QueryParameter] = &[#(#macro_fields),*];
 
-                  let mut longer_lived: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = Vec::new();
+                  let mut longer_lived: Vec<&dyn canyon_sql::query::QueryParameter> = Vec::new();
                   for value in intermediate.into_iter() {
                       longer_lived.push(*value)
                   }
@@ -545,11 +545,11 @@ fn _generate_multiple_insert_tokens(
             where
                 I: canyon_sql::connection::DbConnection + Send + 'a
         {
-            let mut final_values: Vec<Vec<&dyn canyon_sql::query::QueryParameter<'_>>> = Vec::new();
+            let mut final_values: Vec<Vec<&dyn canyon_sql::query::QueryParameter>> = Vec::new();
             for instance in instances.iter() {
-                let intermediate: &[&dyn canyon_sql::query::QueryParameter<'_>] = &[#(#macro_fields_cloned),*];
+                let intermediate: &[&dyn canyon_sql::query::QueryParameter] = &[#(#macro_fields_cloned),*];
 
-                let mut longer_lived: Vec<&dyn canyon_sql::query::QueryParameter<'_>> = Vec::new();
+                let mut longer_lived: Vec<&dyn canyon_sql::query::QueryParameter> = Vec::new();
                 for value in intermediate.into_iter() {
                     longer_lived.push(*value)
                 }

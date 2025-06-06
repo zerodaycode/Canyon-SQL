@@ -202,7 +202,7 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         }
 
         impl canyon_sql::query::bounds::FieldValueIdentifier for #enum_name {
-            fn value(&self) -> (&'static str, &dyn canyon_sql::query::QueryParameter<'_>) {
+            fn value(&self) -> (&'static str, &dyn canyon_sql::query::QueryParameter) {
                 match self {
                     #(#match_arms),*
                 }

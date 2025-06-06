@@ -17,7 +17,7 @@ use std::ops::DerefMut;
 #[derive(Debug)]
 pub struct Query<'a> {
     pub sql: String,
-    pub params: Vec<&'a dyn QueryParameter<'a>>,
+    pub params: Vec<&'a dyn QueryParameter>,
 }
 
 impl AsRef<str> for Query<'_> {
@@ -30,7 +30,7 @@ impl<'a> Query<'a> {
     /// Constructs a new [`Self`] but receiving the number of expected query parameters, allowing
     /// to pre-allocate the underlying linear collection that holds the arguments to the exact capacity,
     /// potentially saving re-allocations when the query is created
-    pub fn new(sql: String, params: Vec<&'a dyn QueryParameter<'a>>) -> Query<'a> {
+    pub fn new(sql: String, params: Vec<&'a dyn QueryParameter>) -> Query<'a> {
         Self { sql, params }
     }
 

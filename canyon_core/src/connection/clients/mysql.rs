@@ -32,7 +32,7 @@ pub(crate) mod mysql_query_launcher {
     #[inline(always)]
     pub async fn query<S, R>(
         stmt: S,
-        params: &[&'_ dyn QueryParameter<'_>],
+        params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
@@ -50,7 +50,7 @@ pub(crate) mod mysql_query_launcher {
     #[inline(always)]
     pub(crate) async fn query_rows<'a>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
+        params: &[&'a dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
@@ -59,7 +59,7 @@ pub(crate) mod mysql_query_launcher {
     #[inline(always)]
     pub(crate) async fn query_one<'a, R>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
+        params: &[&'a dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
@@ -76,7 +76,7 @@ pub(crate) mod mysql_query_launcher {
     #[inline(always)]
     pub(crate) async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
+        params: &[&'a dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
         Ok(execute_query(stmt, params, conn)
@@ -91,7 +91,7 @@ pub(crate) mod mysql_query_launcher {
     #[inline(always)]
     async fn execute_query<S>(
         stmt: S,
-        params: &[&'_ dyn QueryParameter<'_>],
+        params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<Vec<Row>, Box<(dyn Error + Send + Sync)>>
     where
@@ -121,7 +121,7 @@ pub(crate) mod mysql_query_launcher {
 
     pub(crate) async fn execute<S>(
         stmt: S,
-        params: &[&'_ dyn QueryParameter<'_>],
+        params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<u64, Box<(dyn Error + Send + Sync)>>
     where
@@ -136,7 +136,7 @@ pub(crate) mod mysql_query_launcher {
     #[cfg(feature = "mysql")]
     fn generate_mysql_stmt(
         stmt: &str,
-        params: &[&'_ dyn QueryParameter<'_>],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<QueryWithParams<String, Vec<Value>>, Box<dyn Error + Send + Sync>> {
         let stmt_with_escape_characters = regex::escape(stmt);
         let query_string =
@@ -162,8 +162,8 @@ pub(crate) mod mysql_query_launcher {
     #[cfg(feature = "mysql")]
     fn reorder_params<T>(
         stmt: &str,
-        params: &[&'_ dyn QueryParameter<'_>],
-        fn_parser: impl Fn(&&dyn QueryParameter<'_>) -> T,
+        params: &[&'_ dyn QueryParameter],
+        fn_parser: impl Fn(&&dyn QueryParameter) -> T,
     ) -> Result<Vec<T>, Box<dyn Error + Send + Sync>> {
         use mysql_query_launcher::DETECT_PARAMS_IN_QUERY;
 

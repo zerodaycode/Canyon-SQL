@@ -13,7 +13,7 @@ use std::error::Error;
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a> {
     pub(crate) sql: String,
-    pub(crate) params: Vec<&'a dyn QueryParameter<'a>>,
+    pub(crate) params: Vec<&'a dyn QueryParameter>,
     pub(crate) database_type: DatabaseType,
 }
 
@@ -63,7 +63,7 @@ impl<'a> QueryBuilder<'a> {
     pub fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q])
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>,
+        Q: QueryParameter,
     {
         if values.is_empty() {
             return;
@@ -88,7 +88,7 @@ impl<'a> QueryBuilder<'a> {
     pub fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>,
+        Q: QueryParameter,
     {
         if values.is_empty() {
             return;

@@ -89,7 +89,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>,
+        Q: QueryParameter,
     {
         self._inner.and_values_in(and, values);
         self
@@ -99,7 +99,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     fn or_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>,
+        Q: QueryParameter,
     {
         self._inner.or_values_in(and, values);
         self

@@ -69,7 +69,7 @@ fn test_hex_arch_find_insert_ops() {
         find_new_league.as_ref().unwrap().name,
         String::from("Test LeagueHex on layered")
     );
-    
+
     let mut updt = find_new_league.unwrap();
     updt.ext_id = 5;
     let r = LeagueHexRepositoryAdapter::<DatabaseConnection>::update_entity(&updt).await;
@@ -99,7 +99,7 @@ pub trait LeagueHexService {
         league: &'a mut LeagueHex,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'a>>;
 
-    async fn get<'a, Pk: QueryParameter<'a>>(
+    async fn get<'a, Pk: QueryParameter>(
         &self,
         id: &'a Pk,
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>>;
@@ -120,7 +120,7 @@ impl<T: LeagueHexRepository> LeagueHexService for LeagueHexServiceAdapter<T> {
         self.league_repository.create(league).await
     }
 
-    async fn get<'a, Pk: QueryParameter<'a>>(
+    async fn get<'a, Pk: QueryParameter>(
         &self,
         id: &'a Pk,
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>> {
@@ -135,7 +135,7 @@ pub trait LeagueHexRepository {
         league: &'a mut LeagueHex,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'a>>;
 
-    async fn get<'a, Pk: QueryParameter<'a>>(
+    async fn get<'a, Pk: QueryParameter>(
         &self,
         id: &'a Pk,
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>>;
@@ -163,7 +163,7 @@ impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryA
         Self::insert_entity(league).await
     }
 
-    async fn get<'a, Pk: QueryParameter<'a>>(
+    async fn get<'a, Pk: QueryParameter>(
         &self,
         id: &'a Pk,
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>> {

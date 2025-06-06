@@ -12,7 +12,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     fn set<Z, Q>(self, columns: &'a [(Z, Q)]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>;
+        Q: QueryParameter;
 }
 
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
@@ -146,7 +146,7 @@ pub trait QueryBuilderOps<'a> {
     fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>;
+        Q: QueryParameter;
 
     /// Generates an `OR` SQL clause for constraint the query that will create
     /// the filter in conjunction with an `IN` operator that will ac
@@ -159,7 +159,7 @@ pub trait QueryBuilderOps<'a> {
     fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter<'a>;
+        Q: QueryParameter;
 
     /// Generates an `OR` SQL clause for constraint the query.
     ///

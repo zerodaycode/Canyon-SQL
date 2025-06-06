@@ -137,9 +137,7 @@ fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
 fn test_crud_find_with_querybuilder_and_leftlike() {
     // Find all the leagues whose name ends with "CK"
     let fv = LeagueFieldValue::name("CK".to_string());
-    let filtered_leagues_result = League::select_query()
-        .unwrap()
-        .r#where(&fv, Like::Left);
+    let filtered_leagues_result = League::select_query().unwrap().r#where(&fv, Like::Left);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -188,9 +186,7 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
 fn test_crud_find_with_querybuilder_and_rightlike() {
     // Find all the leagues whose name starts with "LC"
     let fv = LeagueFieldValue::name("LEC".to_string());
-    let filtered_leagues_result = League::select_query()
-        .unwrap()
-        .r#where(&fv, Like::Right);
+    let filtered_leagues_result = League::select_query().unwrap().r#where(&fv, Like::Right);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -464,9 +460,7 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_where_clause() {
     let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()
-        .unwrap()
-        .r#where(&wh, Comp::Eq);
+    let l = League::select_query().unwrap().r#where(&wh, Comp::Eq);
 
     assert_eq!(l.read_sql(), "SELECT * FROM league WHERE name = $1")
 }

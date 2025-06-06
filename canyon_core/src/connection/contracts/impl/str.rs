@@ -6,7 +6,7 @@ macro_rules! impl_db_connection {
             async fn query_rows<'a>(
                 &self,
                 stmt: &str,
-                params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
+                params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<crate::rows::CanyonRows, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.lock().await.query_rows(stmt, params).await
@@ -15,7 +15,7 @@ macro_rules! impl_db_connection {
             async fn query<'a, S, R>(
                 &self,
                 stmt: S,
-                params: &[&'a (dyn crate::query::parameters::QueryParameter<'a>)],
+                params: &[&'a (dyn crate::query::parameters::QueryParameter)],
             ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync)>>
             where
                 S: AsRef<str> + Send,
@@ -29,7 +29,7 @@ macro_rules! impl_db_connection {
             async fn query_one<'a, R>(
                 &self,
                 stmt: &str,
-                params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
+                params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<Option<R::Output>, Box<(dyn std::error::Error + Send + Sync)>>
             where
                 R: crate::mapper::RowMapper,
@@ -41,7 +41,7 @@ macro_rules! impl_db_connection {
             async fn query_one_for<'a, T: crate::rows::FromSqlOwnedValue<T>>(
                 &self,
                 stmt: &str,
-                params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
+                params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<T, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.lock().await.query_one_for(stmt, params).await
@@ -50,7 +50,7 @@ macro_rules! impl_db_connection {
             async fn execute<'a>(
                 &self,
                 stmt: &str,
-                params: &[&'a dyn crate::query::parameters::QueryParameter<'a>],
+                params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<u64, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.lock().await.execute(stmt, params).await

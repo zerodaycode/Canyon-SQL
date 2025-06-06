@@ -25,12 +25,12 @@ impl_db_connection!(&str);
 impl<T> DbConnection for Arc<Mutex<T>>
 where
     T: DbConnection + Send,
-    Self: Clone
+    Self: Clone,
 {
     async fn query_rows<'a>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter<'a>],
+        params: &[&'a dyn QueryParameter],
     ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
         self.lock().await.query_rows(stmt, params).await
     }
@@ -38,7 +38,7 @@ where
     async fn query<'a, S, R>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter<'a>)],
+        params: &[&'a (dyn QueryParameter)],
     ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
     where
         S: AsRef<str> + Send,
@@ -51,7 +51,7 @@ where
     async fn query_one<'a, R>(
         &self,
         stmt: &str,
-        params: &[&'a (dyn QueryParameter<'a>)],
+        params: &[&'a (dyn QueryParameter)],
     ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
     where
         R: RowMapper,
@@ -62,7 +62,7 @@ where
     async fn query_one_for<'a, F: FromSqlOwnedValue<F>>(
         &self,
         stmt: &str,
-        params: &[&'a (dyn QueryParameter<'a>)],
+        params: &[&'a (dyn QueryParameter)],
     ) -> Result<F, Box<(dyn Error + Send + Sync)>> {
         self.lock().await.query_one_for::<F>(stmt, params).await
     }
@@ -70,7 +70,7 @@ where
     async fn execute<'a>(
         &self,
         stmt: &str,
-        params: &[&'a (dyn QueryParameter<'a>)],
+        params: &[&'a (dyn QueryParameter)],
     ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
         self.lock().await.execute(stmt, params).await
     }

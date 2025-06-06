@@ -103,7 +103,7 @@ fn generate_find_by_foreign_key_tokens(
                             .get_default_connection()?;
                         default_db_conn.lock().await.query_one::<#fk_ty>(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>]
+                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter]
                         ).await
                     }
                 },
@@ -116,7 +116,7 @@ fn generate_find_by_foreign_key_tokens(
                     #quoted_with_method_signature {
                         input.query_one::<#fk_ty>(
                             #stmt,
-                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter<'_>]
+                            &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter]
                         ).await
                     }
                 },

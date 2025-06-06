@@ -84,7 +84,7 @@ assert_eq!(
 );
 ```
 
-Note the leading reference on the `find_by_pk(...)` parameter. This associated function receives an `&dyn QueryParameter<'_>` as argument, not a value.
+Note the leading reference on the `find_by_pk(...)` parameter. This associated function receives an `&dyn QueryParameter` as argument, not a value.
 
 ### :wrench: Building more complex queries
 

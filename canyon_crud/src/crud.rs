@@ -52,11 +52,11 @@ where
         I: DbConnection + Send + 'a;
 
     fn find_by_pk<'a, 'b>(
-        value: &'a dyn QueryParameter<'a>,
+        value: &'a dyn QueryParameter,
     ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'b)>>> + Send;
 
     fn find_by_pk_with<'a, 'b, I>(
-        value: &'a dyn QueryParameter<'a>,
+        value: &'a dyn QueryParameter,
         input: I,
     ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'b)>>> + Send
     where
@@ -251,10 +251,12 @@ where
         I: DbConnection + Send + 'a;
 
     fn delete_query<'a, 'b>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'b)>>
-        where 'a: 'b;
+    where
+        'a: 'b;
 
     fn delete_query_with<'a, 'b>(
         database_type: DatabaseType,
     ) -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'b)>>
-        where 'a: 'b;
+    where
+        'a: 'b;
 }

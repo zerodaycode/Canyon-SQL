@@ -55,7 +55,7 @@ fn test_crud_delete_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk(&new_league.id)
             .await
@@ -102,7 +102,7 @@ fn test_crud_delete_with_mssql_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk_with(&new_league.id, SQL_SERVER_DS)
             .await
@@ -149,7 +149,7 @@ fn test_crud_delete_with_mysql_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk_with(&new_league.id, MYSQL_DS)
             .await
