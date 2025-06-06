@@ -44,13 +44,14 @@ impl CanyonEntity {
     /// which this enum is related to.
     ///
     /// Makes a variant `#field_name(#ty)` where `#ty` it's a trait object
-    /// of type `canyon_core::QueryParameter`
+    /// of type `canyon_core::QueryParameter` TODO: correct the comment when refactored
     pub fn get_fields_as_enum_variants_with_value(&self) -> Vec<TokenStream> {
         self.fields
             .iter()
             .map(|f| {
                 let field_name = &f.name;
-                quote! { #field_name(&'a dyn canyon_sql::query::QueryParameter<'a>) }
+                let field_ty = &f.field_type;
+                quote! { #field_name(#field_ty) }
             })
             .collect::<Vec<_>>()
     }
@@ -91,7 +92,7 @@ impl CanyonEntity {
 
     /// Generates an implementation of the match pattern to find whatever variant
     /// is being requested when the method `.value()` it's invoked over some
-    /// instance that implements the `canyon_sql_root::crud::bounds::FieldValueIdentifier` trait
+    /// instance that implements the `canyon_sql_root::crud::bounds::FieldValueIdentifier<'a>` trait
     pub fn create_match_arm_for_relate_fields_with_values(
         &self,
         enum_name: &Ident,
@@ -103,7 +104,7 @@ impl CanyonEntity {
                 let field_name_as_string = f.name.to_string();
 
                 quote! {
-                    #enum_name::#field_name(v) => (#field_name_as_string, v)
+                    #enum_name::#field_name(v) => (#field_name_as_string, v as &dyn canyon_sql::query::QueryParameter<'_>)
                 }
             })
             .collect::<Vec<_>>()

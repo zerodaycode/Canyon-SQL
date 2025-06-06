@@ -66,9 +66,17 @@ fn test_hex_arch_find_insert_ops() {
     let find_new_league = league_service.get(&other_league.id).await.unwrap();
     assert!(find_new_league.is_some());
     assert_eq!(
-        find_new_league.unwrap().name,
+        find_new_league.as_ref().unwrap().name,
         String::from("Test LeagueHex on layered")
     );
+    
+    let mut updt = find_new_league.unwrap();
+    updt.ext_id = 5;
+    let r = LeagueHexRepositoryAdapter::<DatabaseConnection>::update_entity(&updt).await;
+    assert!(r.is_ok());
+
+    let updated = league_service.get(&other_league.id).await.unwrap();
+    assert_eq!(updated.unwrap().ext_id, 5)
 }
 
 #[derive(CanyonMapper, Debug)]

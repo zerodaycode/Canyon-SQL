@@ -4,6 +4,8 @@ use crate::constants::MYSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 use canyon_sql::connection::DatabaseType;
 
+use canyon_sql::query::querybuilder::DeleteQueryBuilder;
+
 /// Tests for the QueryBuilder available operations within Canyon.
 ///
 /// QueryBuilder are the way of obtain more flexibility that with
@@ -31,6 +33,7 @@ use crate::tests_models::tournament::*;
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_generated_sql_by_the_select_querybuilder() {
+    let fv = LeagueFieldValue::name("KOREA".to_string());
     let select_with_joins = League::select_query()
         .unwrap()
         .inner_join(
@@ -39,8 +42,8 @@ fn test_generated_sql_by_the_select_querybuilder() {
             TournamentField::league,
         )
         .left_join(PlayerTable::DbName, TournamentField::id, PlayerField::id)
-        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
-        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+        .r#where(&LeagueFieldValue::id(7), Comp::Gt)
+        .and(&fv, Comp::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the
@@ -58,10 +61,11 @@ fn test_generated_sql_by_the_select_querybuilder() {
 fn test_crud_find_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
+    let fv = LeagueFieldValue::region("KOREA".to_string());
     let filtered_leagues_result: Result<Vec<League>, _> = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::id(&50), Comp::LtEq)
-        .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
+        .r#where(&LeagueFieldValue::id(50), Comp::LtEq)
+        .and(&fv, Comp::Eq)
         .build()
         .unwrap()
         .launch_default()
@@ -81,9 +85,10 @@ fn test_crud_find_with_querybuilder() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike() {
     // Find all the leagues with "LC" in their name
+    let binding = LeagueFieldValue::name("LEC".to_string());
     let filtered_leagues_result = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+        .r#where(&binding, Like::Full);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -97,9 +102,10 @@ fn test_crud_find_with_querybuilder_and_fulllike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
     // Find all the leagues with "LC" in their name
+    let fv = LeagueFieldValue::name("LEC".to_string());
     let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+        .r#where(&fv, Like::Full);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -113,9 +119,10 @@ fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
     // Find all the leagues with "LC" in their name
+    let fv = LeagueFieldValue::name("LEC".to_string());
     let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+        .r#where(&fv, Like::Full);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -129,9 +136,10 @@ fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike() {
     // Find all the leagues whose name ends with "CK"
+    let fv = LeagueFieldValue::name("CK".to_string());
     let filtered_leagues_result = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+        .r#where(&fv, Like::Left);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -145,9 +153,10 @@ fn test_crud_find_with_querybuilder_and_leftlike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
     // Find all the leagues whose name ends with "CK"
+    let fv = LeagueFieldValue::name("CK".to_string());
     let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+        .r#where(&fv, Like::Left);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -161,9 +170,10 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
     // Find all the leagues whose name ends with "CK"
+    let fv = LeagueFieldValue::name("CK".to_string());
     let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+        .r#where(&fv, Like::Left);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -177,9 +187,10 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike() {
     // Find all the leagues whose name starts with "LC"
+    let fv = LeagueFieldValue::name("LEC".to_string());
     let filtered_leagues_result = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+        .r#where(&fv, Like::Right);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -193,9 +204,10 @@ fn test_crud_find_with_querybuilder_and_rightlike() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike_with_mssql() {
     // Find all the leagues whose name starts with "LC"
+    let fv = LeagueFieldValue::name("LEC".to_string());
     let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+        .r#where(&fv, Like::Right);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -209,9 +221,10 @@ fn test_crud_find_with_querybuilder_and_rightlike_with_mssql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike_with_mysql() {
     // Find all the leagues whose name starts with "LC"
+    let wh = LeagueFieldValue::name("LEC".to_string());
     let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+        .r#where(&wh, Like::Right);
 
     assert_eq!(
         filtered_leagues_result.read_sql(),
@@ -226,7 +239,7 @@ fn test_crud_find_with_querybuilder_with_mssql() {
     // Find all the players where its ID column value is greater than 50
     let filtered_find_players = Player::select_query_with(DatabaseType::SqlServer)
         .unwrap()
-        .r#where(PlayerFieldValue::id(&50), Comp::Gt)
+        .r#where(&PlayerFieldValue::id(50), Comp::Gt)
         .build()
         .unwrap()
         .launch_with::<&str, Player>(SQL_SERVER_DS)
@@ -242,7 +255,7 @@ fn test_crud_find_with_querybuilder_with_mysql() {
     // Find all the players where its ID column value is greater than 50
     let filtered_find_players = Player::select_query_with(DatabaseType::MySQL)
         .unwrap()
-        .r#where(PlayerFieldValue::id(&50), Comp::Gt)
+        .r#where(&PlayerFieldValue::id(50), Comp::Gt)
         .build()
         .unwrap()
         .launch_with::<&str, Player>(MYSQL_DS)
@@ -264,16 +277,16 @@ fn test_crud_update_with_querybuilder() {
             (LeagueField::slug, "Updated with the QueryBuilder"),
             (LeagueField::name, "Random"),
         ])
-        .r#where(LeagueFieldValue::id(&1), Comp::Gt)
-        .and(LeagueFieldValue::id(&8), Comp::Lt);
+        .r#where(&LeagueFieldValue::id(1), Comp::Gt)
+        .and(&LeagueFieldValue::id(8), Comp::Lt);
 
     q.build()
         .expect("Failed to update records with the querybuilder");
 
     let found_updated_values = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::id(&1), Comp::Gt)
-        .and(LeagueFieldValue::id(&7), Comp::Lt)
+        .r#where(&LeagueFieldValue::id(1), Comp::Gt)
+        .and(&LeagueFieldValue::id(7), Comp::Lt)
         .build()
         .unwrap()
         .launch_default::<League>()
@@ -296,8 +309,8 @@ fn test_crud_update_with_querybuilder_with_mssql() {
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
     ])
-    .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-    .and(PlayerFieldValue::id(&8), Comp::Lt)
+    .r#where(&PlayerFieldValue::id(1), Comp::Gt)
+    .and(&PlayerFieldValue::id(8), Comp::Lt)
     .build()
     .unwrap()
     .launch_with::<&str, Player>(SQL_SERVER_DS)
@@ -306,8 +319,8 @@ fn test_crud_update_with_querybuilder_with_mssql() {
 
     let found_updated_values = Player::select_query_with(DatabaseType::SqlServer)
         .unwrap()
-        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-        .and(PlayerFieldValue::id(&7), Comp::LtEq)
+        .r#where(&PlayerFieldValue::id(1), Comp::Gt)
+        .and(&PlayerFieldValue::id(7), Comp::LtEq)
         .build()
         .unwrap()
         .launch_with::<&str, Player>(SQL_SERVER_DS)
@@ -332,8 +345,8 @@ fn test_crud_update_with_querybuilder_with_mysql() {
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
     ])
-    .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-    .and(PlayerFieldValue::id(&8), Comp::Lt)
+    .r#where(&PlayerFieldValue::id(1), Comp::Gt)
+    .and(&PlayerFieldValue::id(8), Comp::Lt)
     .build()
     .unwrap()
     .launch_with::<&str, Player>(MYSQL_DS)
@@ -342,8 +355,8 @@ fn test_crud_update_with_querybuilder_with_mysql() {
 
     let found_updated_values = Player::select_query_with(DatabaseType::MySQL)
         .unwrap()
-        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-        .and(PlayerFieldValue::id(&7), Comp::LtEq)
+        .r#where(&PlayerFieldValue::id(1), Comp::Gt)
+        .and(&PlayerFieldValue::id(7), Comp::LtEq)
         .build()
         .unwrap()
         .launch_with::<&str, Player>(MYSQL_DS)
@@ -367,8 +380,8 @@ fn test_crud_update_with_querybuilder_with_mysql() {
 fn test_crud_delete_with_querybuilder() {
     Tournament::delete_query()
         .unwrap()
-        .r#where(TournamentFieldValue::id(&14), Comp::Gt)
-        .and(TournamentFieldValue::id(&16), Comp::Lt)
+        .r#where(&TournamentFieldValue::id(14), Comp::Gt)
+        .and(&TournamentFieldValue::id(16), Comp::Lt)
         .build()
         .unwrap()
         .launch_default::<Tournament>()
@@ -378,14 +391,28 @@ fn test_crud_delete_with_querybuilder() {
     assert_eq!(Tournament::find_by_pk(&15).await.unwrap(), None);
 }
 
+// #[cfg(feature = "postgres")]
+// #[canyon_sql::macros::canyon_tokio_test]
+// fn test_crud_delete_with_querybuilder_lt_creation() {
+//     let q = create_querybuilder_lt(10);
+//     assert_eq!(q.read_sql(), "DELETE FROM tournament WHERE id = 10");
+// }
+// 
+// #[cfg(feature = "postgres")]
+// fn create_querybuilder_lt<'a, 'b: 'a>(id: i32) -> DeleteQueryBuilder<'b> {
+//     Tournament::delete_query()
+//         .unwrap()
+//         .r#where(&TournamentFieldValue::id(id), Comp::Gt)
+// }
+
 /// Same as the above delete, but with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_with_mssql() {
     Player::delete_query_with(DatabaseType::SqlServer)
         .unwrap()
-        .r#where(PlayerFieldValue::id(&120), Comp::Gt)
-        .and(PlayerFieldValue::id(&130), Comp::Lt)
+        .r#where(&PlayerFieldValue::id(120), Comp::Gt)
+        .and(&PlayerFieldValue::id(130), Comp::Lt)
         .build()
         .unwrap()
         .launch_with::<&str, Player>(SQL_SERVER_DS)
@@ -395,7 +422,7 @@ fn test_crud_delete_with_querybuilder_with_mssql() {
     assert!(
         Player::select_query_with(DatabaseType::SqlServer)
             .unwrap()
-            .r#where(PlayerFieldValue::id(&122), Comp::Eq)
+            .r#where(&PlayerFieldValue::id(122), Comp::Eq)
             .build()
             .unwrap()
             .launch_with::<&str, Player>(SQL_SERVER_DS)
@@ -411,8 +438,8 @@ fn test_crud_delete_with_querybuilder_with_mssql() {
 fn test_crud_delete_with_querybuilder_with_mysql() {
     Player::delete_query_with(DatabaseType::MySQL)
         .unwrap()
-        .r#where(PlayerFieldValue::id(&120), Comp::Gt)
-        .and(PlayerFieldValue::id(&130), Comp::Lt)
+        .r#where(&PlayerFieldValue::id(120), Comp::Gt)
+        .and(&PlayerFieldValue::id(130), Comp::Lt)
         .build()
         .unwrap()
         .launch_with::<&str, Player>(MYSQL_DS)
@@ -422,7 +449,7 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
     assert!(
         Player::select_query_with(DatabaseType::MySQL)
             .unwrap()
-            .r#where(PlayerFieldValue::id(&122), Comp::Eq)
+            .r#where(&PlayerFieldValue::id(122), Comp::Eq)
             .build()
             .unwrap()
             .launch_with::<&str, Player>(MYSQL_DS)
@@ -436,9 +463,10 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
 /// WHERE clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_where_clause() {
+    let wh = LeagueFieldValue::name("LEC".to_string());
     let l = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq);
+        .r#where(&wh, Comp::Eq);
 
     assert_eq!(l.read_sql(), "SELECT * FROM league WHERE name = $1")
 }
@@ -447,10 +475,11 @@ fn test_where_clause() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause() {
+    let wh = LeagueFieldValue::name("LEC".to_string());
     let l = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .and(LeagueFieldValue::id(&10), Comp::LtEq);
+        .r#where(&wh, Comp::Eq)
+        .and(&LeagueFieldValue::id(10), Comp::LtEq);
 
     assert_eq!(
         l.read_sql().trim(),
@@ -462,9 +491,10 @@ fn test_and_clause() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause_with_in_constraint() {
+    let wh = LeagueFieldValue::name("LEC".to_string());
     let l = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .r#where(&wh, Comp::Eq)
         .and_values_in(LeagueField::id, &[1, 7, 10]);
 
     assert_eq!(
@@ -477,10 +507,11 @@ fn test_and_clause_with_in_constraint() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause() {
+    let wh = LeagueFieldValue::name("LEC".to_string());
     let l = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .or(LeagueFieldValue::id(&10), Comp::LtEq);
+        .r#where(&wh, Comp::Eq)
+        .or(&LeagueFieldValue::id(10), Comp::LtEq);
 
     assert_eq!(
         l.read_sql().trim(),
@@ -492,9 +523,10 @@ fn test_or_clause() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause_with_in_constraint() {
+    let wh = LeagueFieldValue::name("LEC".to_string());
     let l = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .r#where(&wh, Comp::Eq)
         .or_values_in(LeagueField::id, &[1, 7, 10]);
 
     assert_eq!(
@@ -507,9 +539,10 @@ fn test_or_clause_with_in_constraint() {
 /// AND clause
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_order_by_clause() {
+    let fv = LeagueFieldValue::name("LEC".to_string());
     let l = League::select_query()
         .unwrap()
-        .r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
+        .r#where(&fv, Comp::Eq)
         .order_by(LeagueField::id, false);
 
     assert_eq!(

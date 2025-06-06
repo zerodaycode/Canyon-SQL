@@ -197,14 +197,16 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         ///     opt(Option<String>)
         /// }
         /// ```
-        #visibility enum #enum_name<'a> {
-            #(#fields_names),*
+        #visibility enum #enum_name<'field_value> {
+            #(#fields_names),*,
+            None(std::marker::PhantomData<&'field_value ()>)
         }
 
-        impl<'a> canyon_sql::query::bounds::FieldValueIdentifier<'a> for #enum_name<'a> {
-            fn value(self) -> (&'static str, &'a dyn canyon_sql::query::QueryParameter<'a>) {
+        impl<'field_value> canyon_sql::query::bounds::FieldValueIdentifier<'field_value> for #enum_name<'field_value> {
+            fn value(&'field_value self) -> (&'static str, &'field_value dyn canyon_sql::query::QueryParameter<'_>) {
                 match self {
-                    #(#match_arms),*
+                    #(#match_arms),*,
+                    _ => panic!()
                 }
             }
         }
