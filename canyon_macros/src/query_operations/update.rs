@@ -192,20 +192,26 @@ mod __details {
 
     fn generate_update_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
         quote! {
-            let pk_actual_value = &entity.primary_key_actual_value();
+            let pk_actual_value = entity.primary_key_actual_value();
             let update_columns = entity.fields_names();
-            let update_values = entity.fields_actual_values();
+            let update_values_pk_parsed = entity.fields_actual_values();
 
             let mut vec_columns_values: Vec<String> = Vec::new();
             for (i, column_name) in update_columns.to_vec().iter().enumerate() {
                 let column_equal_value = format!("{} = ${}", column_name, i + 2);
                 vec_columns_values.push(column_equal_value)
             }
-            let str_columns_values = vec_columns_values.join(", ");
+            let col_vals_placeholders = vec_columns_values.join(", ");
+
+            // Efficiently build argument list: pk first, then values
+            let mut update_values: Vec<&dyn canyon_sql::query::QueryParameter> =
+                Vec::with_capacity(1 + update_values_pk_parsed.len());
+            update_values.push(pk_actual_value);
+            update_values.extend(update_values_pk_parsed);
 
             let stmt = format!(
-                "UPDATE {} SET {} WHERE {} = ${:?}",
-                #table_schema_data, str_columns_values, primary_key, pk_actual_value
+                "UPDATE {} SET {} WHERE {:?} = $1",
+                #table_schema_data, col_vals_placeholders, primary_key
             );
         }
     }

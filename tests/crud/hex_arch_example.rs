@@ -33,15 +33,11 @@ fn test_hex_arch_ops() {
             .unwrap() as usize,
         find_all_result.len()
     );
-    // assert_eq!(LeagueHexRepositoryAdapter::<DatabaseConnection>::count_with(binding.deref_mut()).await.unwrap() as usize, find_all_result.len());
-    // The line above works, because we're using binding, but in a better ideal world, our repository would hold an Arc<Mutex<...>> with the connection,
-    // so the user acquire the lock on every query, just cloning the Arc, which if you remember, just increases in one unit the number of active
-    // references pointing to the resource behind the atomic smart pointer
 }
 
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_hex_arch_find_insert_ops() {
+fn test_hex_arch_insert_entity_ops() {
     let default_db_conn = Canyon::instance()
         .unwrap()
         .get_default_connection()
@@ -61,7 +57,37 @@ fn test_hex_arch_find_insert_ops() {
         image_url: "http://example.com/image.png".to_string(),
     };
     league_service.create(&mut other_league).await.unwrap();
-    println!("New league inserted with: {:#?}", other_league.id);
+
+    let find_new_league = league_service.get(&other_league.id).await.unwrap();
+    assert!(find_new_league.is_some());
+    assert_eq!(
+        find_new_league.as_ref().unwrap().name,
+        String::from("Test LeagueHex on layered")
+    );
+}
+
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_hex_arch_update_entity_ops() {
+    let default_db_conn = Canyon::instance()
+        .unwrap()
+        .get_default_connection()
+        .unwrap();
+    let league_service = LeagueHexServiceAdapter {
+        league_repository: LeagueHexRepositoryAdapter {
+            db_conn: default_db_conn,
+        },
+    };
+
+    let mut other_league: LeagueHex = LeagueHex {
+        id: Default::default(),
+        ext_id: Default::default(),
+        slug: "leaguehex-slug".to_string(),
+        name: "Test LeagueHex on layered".to_string(),
+        region: "LeagueHex Region".to_string(),
+        image_url: "http://example.com/image.png".to_string(),
+    };
+    league_service.create(&mut other_league).await.unwrap();
 
     let find_new_league = league_service.get(&other_league.id).await.unwrap();
     assert!(find_new_league.is_some());
@@ -76,7 +102,7 @@ fn test_hex_arch_find_insert_ops() {
     assert!(r.is_ok());
 
     let updated = league_service.get(&other_league.id).await.unwrap();
-    assert_eq!(updated.unwrap().ext_id, 5)
+    assert_eq!(updated.unwrap().ext_id, 5);
 }
 
 #[derive(CanyonMapper, Debug)]
@@ -167,8 +193,6 @@ impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryA
         &self,
         id: &'a Pk,
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>> {
-        let r = Self::find_by_pk(id).await;
-        println!("FIND BY PK ON GET err: {:?}", r);
-        r
+        Self::find_by_pk(id).await
     }
 }

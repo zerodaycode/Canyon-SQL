@@ -4,8 +4,6 @@ use crate::constants::MYSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 use canyon_sql::connection::DatabaseType;
 
-use canyon_sql::query::querybuilder::DeleteQueryBuilder;
-
 /// Tests for the QueryBuilder available operations within Canyon.
 ///
 /// QueryBuilder are the way of obtain more flexibility that with

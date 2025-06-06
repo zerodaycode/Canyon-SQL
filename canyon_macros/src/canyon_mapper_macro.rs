@@ -288,7 +288,7 @@ mod __details {
             let set_pk_val_method = if let Some(pk_ident) = pk_ident_ts {
                 quote! {
                     self.#pk_ident = value.into();
-                       Ok(())
+                    Ok(())
                 }
             } else {
                 quote! {
