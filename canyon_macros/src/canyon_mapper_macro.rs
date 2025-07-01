@@ -254,57 +254,28 @@ mod __details {
     use super::*;
     pub(crate) mod inspectionable_macro {
         use super::*;
+        use syn::{Field, Fields};
+
         pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
             let pk = ast.get_primary_key_field_annotation();
             let pk_ident_ts = pk.map(|pk| pk.ident);
             let pk_ty_ts = pk.map(|pk| pk.ty);
+
             let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
 
             let fields = ast.get_fields_idents_pk_parsed().collect::<Vec<_>>();
-            let fields_values = fields.iter().map(|ident| {
-                quote! { &self.#ident }
-            });
-            let fields_names = fields
-                .iter()
-                .map(|ident| ident.to_string())
-                .collect::<Vec<_>>();
+            let fields_values = get_fields_values_expr_tokens(&fields);
+            let fields_names = get_fields_names_expr_tokens(&fields);
 
             let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
             let queries_placeholders = ast.placeholders_generator();
 
-            let pk_opt_val = match ast.get_primary_key_annotation() {
-                Some(primary_key) => quote! { Some(#primary_key) },
-                None => quote! { None },
-            };
-            let pk_actual_value = match ast.get_primary_key_annotation() {
-                Some(primary_key) => {
-                    let pk_ident = Ident::new(&primary_key, Span::call_site());
-                    quote! { self.#pk_ident }
-                }
-                None => quote! { -1 }, // TODO: yeah, big todo :)
-            };
+            let pk_opt_val = get_pk_ident_as_str(ast);
+            let pk_actual_value = get_pk_actual_value_expr_tokens(ast);
 
-            let set_pk_val_method = if let Some(pk_ident) = pk_ident_ts {
-                quote! {
-                    self.#pk_ident = value.into();
-                    Ok(())
-                }
-            } else {
-                quote! {
-                    Err(Box::new(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "No primary key field defined for this entity"
-                    )) as Box<dyn std::error::Error + Send + Sync>)
-                }
-            };
-            let pk_assoc_ty = if let Some(pk_ty) = pk_ty_ts {
-                quote! {
-                    #pk_ty
-                }
-            } else {
-                quote! { i64 }
-            };
+            let set_pk_val_method = set_pk_val_method(&pk_ident_ts);
+            let pk_assoc_ty = generate_pk_associated_type_tokens(&pk_ty_ts);
 
             quote! {
                 impl #impl_generics canyon_sql::query::bounds::Inspectionable<'_> for #ty #ty_generics #where_clause {
@@ -343,6 +314,64 @@ mod __details {
                         #set_pk_val_method
                     }
                 }
+            }
+        }
+    }
+
+    fn get_fields_values_expr_tokens<'a>(
+        fields: &'a Vec<&Ident>,
+    ) -> Map<Iter<'a, &'a Ident>, fn(&'a &Ident) -> TokenStream> {
+        fields.iter().map(|ident| {
+            quote! { &self.#ident }
+        })
+    }
+
+    fn get_fields_names_expr_tokens(fields: &Vec<&Ident>) -> Vec<String> {
+        fields
+            .iter()
+            .map(|ident| ident.to_string())
+            .collect::<Vec<_>>()
+    }
+
+    fn get_pk_ident_as_str(ast: &MacroTokens) -> TokenStream {
+        match ast.get_primary_key_annotation() {
+            Some(primary_key) => quote! { Some(#primary_key) },
+            None => quote! { None },
+        }
+    }
+
+    fn get_pk_actual_value_expr_tokens(ast: &MacroTokens) -> TokenStream {
+        match ast.get_primary_key_annotation() {
+            Some(primary_key) => {
+                let pk_ident = Ident::new(&primary_key, Span::call_site());
+                quote! { self.#pk_ident }
+            }
+            None => quote! { -1 }, // TODO: yeah, big todo :)
+        }
+    }
+
+    fn generate_pk_associated_type_tokens(pk_ident_ts: &Option<&Type>) -> TokenStream {
+        if let Some(pk_ty) = pk_ident_ts {
+            quote! {
+                #pk_ty
+            }
+        } else {
+            quote! { i64 } // TODO: NoPrimaryKey
+        }
+    }
+
+    fn set_pk_val_method(pk_ident_ts: &Option<&Ident>) -> TokenStream {
+        if let Some(pk_ident) = pk_ident_ts {
+            quote! {
+                self.#pk_ident = value.into();
+                Ok(())
+            }
+        } else {
+            quote! {
+                Err(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "No primary key field defined for this entity"
+                )) as Box<dyn std::error::Error + Send + Sync>)
             }
         }
     }
