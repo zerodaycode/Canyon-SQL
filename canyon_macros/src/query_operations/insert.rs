@@ -20,7 +20,7 @@ pub fn generate_insert_method_tokens(
     table_schema_data: &str,
 ) -> TokenStream {
     let insert_signature = quote! {
-        async fn insert<'a>(&'a mut self)
+        async fn insert<'a>(&mut self)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>
     };
     let insert_with_signature = quote! {

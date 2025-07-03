@@ -107,7 +107,7 @@ where
     /// operation will be launched anyway and will insert all the fields, so ensure that your table
     /// your [`Canyon`] annotations matches your database definitions
     fn insert<'a>(
-        &'a mut self,
+        &mut self,
     ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send;
 
     /// # Brief
