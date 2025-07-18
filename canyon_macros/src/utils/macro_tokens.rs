@@ -27,11 +27,7 @@ impl<'a> MacroTokens<'a> {
             let attrs = &ast.attrs;
 
             let primary_key_attribute =
-                __details::find_primary_key_field_annotation(&s.fields).map(|f| PrimaryKeyAttribute {
-                    ident: f.ident.as_ref().unwrap(),
-                    ty: &f.ty,
-                    name: f.ident.as_ref().unwrap().to_string(),
-                });
+                __details::find_primary_key_field_annotation(&s.fields).map(PrimaryKeyAttribute::from);
 
             let mut canyon_crud_attribute = None;
             for attr in attrs {
@@ -50,10 +46,7 @@ impl<'a> MacroTokens<'a> {
                 primary_key_attribute,
             })
         } else {
-            Err(syn::Error::new(
-                Span::call_site(),
-                "CanyonCrud may only be implemented for structs",
-            ))
+            __details::raise_canyon_crud_only_for_structs_err()
         }
     }
 
@@ -231,12 +224,31 @@ impl<'a> MacroTokens<'a> {
 }
 
 mod __details {
+    use proc_macro2::Span;
     use syn::{Field, Fields};
     use crate::utils::helpers;
+    use crate::utils::macro_tokens::MacroTokens;
+    use crate::utils::primary_key_attribute::PrimaryKeyIndex;
 
-    pub(super) fn find_primary_key_field_annotation(fields: &Fields) -> Option<&Field> {
+    pub(super) fn find_primary_key_field_annotation(fields: &Fields) -> Option<(PrimaryKeyIndex, &Field)> {
         fields
             .iter()
-            .find(|field| helpers::field_has_target_attribute(field, "primary_key"))
+            .enumerate()
+            .find_map(|index_and_field| {
+                let idx = index_and_field.0;
+                let field = index_and_field.1;
+                if helpers::field_has_target_attribute(field, "primary_key") {
+                    Some((PrimaryKeyIndex(idx), field))
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub(crate) fn raise_canyon_crud_only_for_structs_err<'a>() -> Result<MacroTokens<'a>, syn::Error> {
+        Err(syn::Error::new(
+            Span::call_site(),
+            "CanyonCrud may only be implemented for structs",
+        ))
     }
 }
