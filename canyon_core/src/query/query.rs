@@ -5,7 +5,6 @@ use crate::query::parameters::QueryParameter;
 use crate::transaction::Transaction;
 use std::error::Error;
 use std::fmt::Debug;
-use std::ops::DerefMut;
 
 // TODO: query should implement ToStatement (as the drivers underneath Canyon) or similar
 // to be usable directly in the input of Transaction and DbConnenction
@@ -43,8 +42,7 @@ impl<'a> Query<'a> {
         Vec<T>: FromIterator<<T as RowMapper>::Output>,
     {
         let default_conn = Canyon::instance()?.get_default_connection()?;
-        let mut input = default_conn.lock().await;
-        <T as Transaction>::query(&self.sql, &self.params, input.deref_mut()).await
+        <T as Transaction>::query(&self.sql, &self.params, default_conn).await
     }
 
     /// Launches the generated query against the database with the selected [`DbConnection`]

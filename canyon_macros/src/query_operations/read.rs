@@ -147,7 +147,7 @@ mod __details {
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                    default_db_conn.lock().await.query(#stmt, &[]).await
+                    default_db_conn.query(#stmt, &[]).await
                 }
             }
         }
@@ -173,7 +173,7 @@ mod __details {
             quote! {
                 async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>> {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                    default_db_conn.lock().await.query_one_for(#stmt, &[]).await
+                    default_db_conn.query_one_for(#stmt, &[]).await
                 }
             }
         }

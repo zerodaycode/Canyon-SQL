@@ -7,7 +7,6 @@ use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
-use std::ops::DerefMut;
 use std::sync::Mutex;
 use walkdir::WalkDir;
 
@@ -84,18 +83,10 @@ impl CanyonMemory {
             });
 
         // Creates the memory table if not exists
-        Self::create_memory(
-            &datasource.name,
-            db_conn.lock().await.deref_mut(),
-            &datasource.get_db_type(),
-        )
-        .await;
+        Self::create_memory(&datasource.name, db_conn, &datasource.get_db_type()).await;
 
         // Retrieve the last status data from the `canyon_memory` table
         let res = db_conn
-            .lock()
-            .await
-            .deref_mut()
             .query_rows("SELECT * FROM canyon_memory", &[])
             .await
             .expect("Error querying Canyon Memory");
@@ -272,7 +263,7 @@ impl CanyonMemory {
     /// Generates, if not exists the `canyon_memory` table
     async fn create_memory(
         datasource_name: &str,
-        db_conn: &mut DatabaseConnection,
+        db_conn: &DatabaseConnection,
         database_type: &DatabaseType,
     ) {
         let query = match database_type {

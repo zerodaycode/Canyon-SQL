@@ -26,7 +26,7 @@ pub(crate) fn generate_default_db_conn_tokens() -> TokenStream {
     quote! {
         let default_db_conn = canyon_sql::core::Canyon::instance()?
             .get_default_connection()?;
-        default_db_conn.lock().await
+        default_db_conn
     }
 }
 

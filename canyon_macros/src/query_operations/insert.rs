@@ -109,10 +109,10 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
 
             if let Some(pk) = entity.primary_key() {
                 #add_returning_clause
-                let pk = default_db_conn.lock().await.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
+                let pk = default_db_conn.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
                 entity.set_primary_key_actual_value(pk)?;
             } else {
-                let _ = default_db_conn.lock().await.execute(&stmt, &values).await?;
+                let _ = default_db_conn.execute(&stmt, &values).await?;
             }
             Ok(())
         }
@@ -144,7 +144,7 @@ mod __details {
         let db_conn = if is_with_method {
             quote! { input }
         } else {
-            quote! { default_db_conn.lock().await }
+            quote! { default_db_conn }
         };
 
         let mut insert_body_tokens = TokenStream::new();

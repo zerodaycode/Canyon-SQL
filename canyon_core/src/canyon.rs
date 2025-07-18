@@ -53,8 +53,8 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 /// - `get_mut_connection`: Retrieves a mutable connection from the cache.
 pub struct Canyon {
     config: Datasources,
-    connections: HashMap<&'static str, SharedConnection>,
-    default_connection: Option<SharedConnection>,
+    connections: HashMap<&'static str, DatabaseConnection>,
+    default_connection: Option<DatabaseConnection>,
     default_db_type: Option<DatabaseType>,
 }
 
@@ -179,9 +179,9 @@ impl Canyon {
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_default_connection(&self) -> Result<SharedConnection, DatasourceNotFound> {
+    pub fn get_default_connection(&self) -> Result<&DatabaseConnection, DatasourceNotFound> {
         self.default_connection
-            .clone()
+            .as_ref()
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
@@ -190,7 +190,7 @@ impl Canyon {
     /// This is a fast and efficient operation: cloning the [`SharedConnection`]
     /// simply increases the reference count [`Arc`] without duplicating the underlying
     /// [`DatabaseConnection`]. Returns an error if no default connection is configured.
-    pub fn get_connection(&self, name: &str) -> Result<SharedConnection, DatasourceNotFound> {
+    pub fn get_connection(&self, name: &str) -> Result<&DatabaseConnection, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();
         }
@@ -200,20 +200,17 @@ impl Canyon {
             .get(name)
             .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
 
-        Ok(conn.clone())
+        Ok(conn)
     }
 }
 
 mod __impl {
-    use crate::canyon::SharedConnection;
     use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::DatasourceConfig;
     use crate::connection::db_connector::DatabaseConnection;
     use std::collections::HashMap;
     use std::error::Error;
     use std::path::PathBuf;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
     use walkdir::WalkDir;
 
     // Internal helper to locate the config file
@@ -240,10 +237,14 @@ mod __impl {
 
     pub(crate) async fn process_new_conn_by_datasource(
         ds: &DatasourceConfig,
-        connections: &mut HashMap<&str, SharedConnection>,
-        default: &mut Option<SharedConnection>,
+        connections: &mut HashMap<&str, DatabaseConnection>,
+        default: &mut Option<DatabaseConnection>,
         default_db_type: &mut Option<DatabaseType>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if default.is_none() {
+            let cloned_ds_for_default = ds.clone();
+            *default = Some(DatabaseConnection::new(&cloned_ds_for_default).await?); // Only cloning the smart pointer
+        }
         let conn = DatabaseConnection::new(ds).await?;
         let name: &'static str = Box::leak(ds.name.clone().into_boxed_str());
 
@@ -251,12 +252,7 @@ mod __impl {
             *default_db_type = Some(conn.get_db_type());
         }
 
-        let connection_sp = Arc::new(Mutex::new(conn));
-
-        if default.is_none() {
-            *default = Some(connection_sp.clone()); // Only cloning the smart pointer
-        }
-
+        let connection_sp = conn;
         connections.insert(name, connection_sp);
 
         Ok(())

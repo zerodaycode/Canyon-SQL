@@ -27,9 +27,6 @@ fn test_migrations_postgresql_status_query() {
     });
 
     let results = db_conn
-        .lock()
-        .await
-        .deref_mut()
         .query_rows(constants::FETCH_PUBLIC_SCHEMA, &[])
         .await;
     assert!(results.is_ok());

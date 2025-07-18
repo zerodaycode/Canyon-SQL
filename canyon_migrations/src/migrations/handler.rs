@@ -17,7 +17,6 @@ use canyon_core::{
 };
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use partialdebug::placeholder::PartialDebug;
-use std::ops::DerefMut;
 
 #[derive(PartialDebug)]
 pub struct Migrations;
@@ -56,12 +55,8 @@ impl Migrations {
             let canyon_memory = CanyonMemory::remember(datasource, &canyon_entities).await;
 
             // Tracked entities that must be migrated whenever Canyon starts
-            let schema_status = Self::fetch_database(
-                &datasource.name,
-                db_conn.lock().await.deref_mut(),
-                datasource.get_db_type(),
-            )
-            .await;
+            let schema_status =
+                Self::fetch_database(&datasource.name, db_conn, datasource.get_db_type()).await;
             let database_tables_schema_info =
                 Self::map_rows(schema_status, datasource.get_db_type());
 
@@ -96,7 +91,7 @@ impl Migrations {
     /// chosen by its datasource name property
     async fn fetch_database(
         ds_name: &str,
-        db_conn: &mut DatabaseConnection,
+        db_conn: &DatabaseConnection,
         db_type: DatabaseType,
     ) -> CanyonRows {
         let query = match db_type {

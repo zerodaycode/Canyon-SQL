@@ -169,7 +169,7 @@ mod __details {
 
                 let default_db_conn = canyon_sql::core::Canyon::instance()?
                     .get_default_connection()?;
-                let _ = default_db_conn.lock().await.execute(&stmt, &update_values).await?;
+                let _ = default_db_conn.execute(&stmt, &update_values).await?;
                 Ok(())
             } else {
                 #no_pk_err
