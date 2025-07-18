@@ -27,7 +27,7 @@ impl<'a> MacroTokens<'a> {
             let attrs = &ast.attrs;
 
             let primary_key_attribute =
-                Self::find_primary_key_field_annotation(&s.fields).map(|f| PrimaryKeyAttribute {
+                __details::find_primary_key_field_annotation(&s.fields).map(|f| PrimaryKeyAttribute {
                     ident: f.ident.as_ref().unwrap(),
                     ty: &f.ty,
                     name: f.ident.as_ref().unwrap().to_string(),
@@ -168,12 +168,6 @@ impl<'a> MacroTokens<'a> {
         self.primary_key_attribute.as_ref()
     }
 
-    pub fn find_primary_key_field_annotation(fields: &'a Fields) -> Option<&'a Field> {
-        fields
-            .iter()
-            .find(|field| helpers::field_has_target_attribute(field, "primary_key"))
-    }
-
     /// Utility for find the primary key attribute (if exists) and the
     /// column name (field) which belongs
     pub fn get_primary_key_annotation(&self) -> Option<String> {
@@ -233,5 +227,16 @@ impl<'a> MacroTokens<'a> {
         };
 
         helpers::placeholders_generator(range_upper_bound)
+    }
+}
+
+mod __details {
+    use syn::{Field, Fields};
+    use crate::utils::helpers;
+
+    pub(super) fn find_primary_key_field_annotation(fields: &Fields) -> Option<&Field> {
+        fields
+            .iter()
+            .find(|field| helpers::field_has_target_attribute(field, "primary_key"))
     }
 }
