@@ -5,13 +5,19 @@ use syn::{Field, Type};
 
 /// Strong type for the index numerical value of the actual position on where a `#[primary_key]`
 /// annotation is declared on a struct field
+#[derive(Copy, Clone)]
 pub(crate) struct PrimaryKeyIndex(pub(crate) usize);
+impl From<PrimaryKeyIndex> for usize {
+    fn from(pk: PrimaryKeyIndex) -> usize {
+        pk.0
+    }
+}
 
 pub(crate) struct PrimaryKeyAttribute<'a> {
     pub ident: &'a Ident,
     pub ty: &'a Type,
     pub name: String,
-    pub index: PrimaryKeyIndex
+    pub index: PrimaryKeyIndex,
 }
 
 impl<'a> Display for &'a PrimaryKeyAttribute<'a> {
