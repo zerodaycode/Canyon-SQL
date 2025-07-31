@@ -113,9 +113,9 @@ impl Canyon {
         let config_content = fs::read_to_string(&path)?;
         let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
 
-        let mut connections = HashMap::new();
-        let mut default_connection = None;
-        let mut default_db_type = None;
+        let mut connections: HashMap<&str, DatabaseConnection> = HashMap::new();
+        let mut default_connection: Option<DatabaseConnection> = None;
+        let mut default_db_type: Option<DatabaseType> = None;
 
         for ds in config.datasources.iter() {
             __impl::process_new_conn_by_datasource(
@@ -202,6 +202,8 @@ impl Canyon {
 
         Ok(conn)
     }
+
+
 }
 
 mod __impl {
