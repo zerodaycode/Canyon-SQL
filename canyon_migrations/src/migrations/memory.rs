@@ -74,8 +74,8 @@ impl CanyonMemory {
                     &datasource.name
                 )
             })
-            .get_connection(&datasource.name)
-            .unwrap_or_else(|_| {
+                            .get_connection(&datasource.name)
+                .unwrap_or_else(|_| {
                 panic!(
                     "Unable to get a database connection on Canyon Memory: {:?}",
                     datasource.name

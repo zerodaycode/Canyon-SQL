@@ -200,6 +200,11 @@ impl PoolManager {
         
         PooledConnection::new(pool.clone()).await
     }
+
+    /// Checks if a pool exists for the given name
+    pub fn has_pool(&self, name: &str) -> bool {
+        self.pools.contains_key(name)
+    }
 }
 
 // Global pool manager instance
