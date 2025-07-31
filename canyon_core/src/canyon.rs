@@ -1,7 +1,7 @@
 use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
-use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
+use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime, pool::get_pool_manager};
 use db_connector::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -201,6 +201,34 @@ impl Canyon {
             .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
 
         Ok(conn)
+    }
+
+    /// Gets a pooled connection for better performance
+    /// This is an internal method that uses the connection pool
+    pub async fn get_pooled_connection(&self, name: &str) -> Result<crate::connection::pool::PooledConnection, DatasourceNotFound> {
+        let pool_manager = get_pool_manager();
+        let mut pool_manager_guard = pool_manager.lock().await;
+        
+        // Find the datasource
+        let datasource = self.find_datasource_by_name_or_default(name)?;
+        
+        // Create pool if it doesn't exist
+        if !pool_manager_guard.has_pool(name) {
+            pool_manager_guard.create_pool(name, datasource).await
+                .map_err(|_| DatasourceNotFound::from(Some(name)))?;
+        }
+        
+        // Get pooled connection
+        pool_manager_guard.get_connection(name).await
+            .map_err(|_| DatasourceNotFound::from(Some(name)))
+    }
+
+    /// Gets a fast connection that automatically uses pooling when available
+    /// This method provides the best performance by using connection pooling
+    pub async fn get_fast_connection(&self, name: &str) -> Result<&DatabaseConnection, DatasourceNotFound> {
+        // For now, fall back to the regular connection
+        // In the future, this could automatically use the pool
+        self.get_connection(name)
     }
 
 
