@@ -39,10 +39,10 @@ pub trait DbConnection {
     ///
     /// # Returns
     /// A [Future] that resolves to a [Result] containing [`CanyonRows`] on success or an error on failure.
-    fn query_rows<'a>(
+    fn query_rows(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send;
 
     /// Executes a query and maps the result to a collection of rows of type `R`.
@@ -55,10 +55,10 @@ pub trait DbConnection {
     /// A [Future] that resolves to a [Result] containing a `Vec<R>` on success or an error on failure.
     ///
     /// The `R` type must implement the [`RowMapper`] trait.
-    fn query<'a, S, R>(
+    fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter)],
+        params: &[&(dyn QueryParameter)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Send,
@@ -75,10 +75,10 @@ pub trait DbConnection {
     /// A [Future] that resolves to a [Result] containing an `Option<R::Output>` on success or an error on failure.
     ///
     /// The `R` type must implement the [`RowMapper`] trait.
-    fn query_one<'a, R>(
+    fn query_one<R>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         R: RowMapper;
@@ -93,10 +93,10 @@ pub trait DbConnection {
     /// A [Future] that resolves to a [Result] containing the value of type `T` on success or an error on failure.
     ///
     /// The `T` type must implement the [`FromSqlOwnedValue`] trait.
-    fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    fn query_one_for<T: FromSqlOwnedValue<T>>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<T, Box<(dyn Error + Send + Sync)>>> + Send;
 
     /// Executes a SQL statement and returns the number of affected rows.
@@ -107,10 +107,10 @@ pub trait DbConnection {
     ///
     /// # Returns
     /// A [Future] that resolves to a [Result] containing the number of affected rows on success or an error on failure.
-    fn execute<'a>(
+    fn execute(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send;
 
     /// Retrieves the type of the database associated with the connection.

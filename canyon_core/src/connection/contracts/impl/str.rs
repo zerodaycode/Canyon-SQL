@@ -9,7 +9,7 @@ macro_rules! impl_db_connection {
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<crate::rows::CanyonRows, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
-                conn.lock().await.query_rows(stmt, params).await
+                conn.query_rows(stmt, params).await
             }
 
             async fn query<'a, S, R>(
@@ -23,7 +23,7 @@ macro_rules! impl_db_connection {
                 Vec<R>: std::iter::FromIterator<<R as crate::mapper::RowMapper>::Output>,
             {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
-                conn.lock().await.query(stmt, params).await
+                conn.query(stmt, params).await
             }
 
             async fn query_one<'a, R>(
@@ -35,7 +35,7 @@ macro_rules! impl_db_connection {
                 R: crate::mapper::RowMapper,
             {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
-                conn.lock().await.query_one::<R>(stmt, params).await
+                conn.query_one::<R>(stmt, params).await
             }
 
             async fn query_one_for<'a, T: crate::rows::FromSqlOwnedValue<T>>(
@@ -44,7 +44,7 @@ macro_rules! impl_db_connection {
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<T, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
-                conn.lock().await.query_one_for(stmt, params).await
+                conn.query_one_for(stmt, params).await
             }
 
             async fn execute<'a>(
@@ -53,7 +53,7 @@ macro_rules! impl_db_connection {
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
             ) -> Result<u64, Box<(dyn std::error::Error + Send + Sync)>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
-                conn.lock().await.execute(stmt, params).await
+                conn.execute(stmt, params).await
             }
 
             fn get_database_type(

@@ -1,6 +1,7 @@
 use crate::query_operations::consts;
 use crate::utils::macro_tokens::MacroTokens;
-use proc_macro2::{Ident, Span, TokenStream};
+use crate::utils::primary_key_attribute::PrimaryKeyIndex;
+use proc_macro2::TokenStream;
 use quote::quote;
 
 pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
@@ -16,25 +17,6 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &str)
 }
 
 fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
-    let mut update_ops_tokens = TokenStream::new();
-
-    let ty = macro_data.ty;
-    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
-    let update_columns = macro_data.get_column_names_pk_parsed();
-    let fields = macro_data.get_struct_fields();
-
-    let mut vec_columns_values: Vec<String> = Vec::new();
-    for (i, column_name) in update_columns.enumerate() {
-        let column_equal_value = format!("{} = ${}", column_name, i + 2);
-        vec_columns_values.push(column_equal_value)
-    }
-
-    let str_columns_values = vec_columns_values.join(", ");
-
-    let update_values = fields.map(|ident| {
-        quote! { &self.#ident }
-    });
-
     let update_signature = quote! {
         async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>>
     };
@@ -44,11 +26,32 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &s
         where I: canyon_sql::connection::DbConnection + Send + 'a
     };
 
-    if let Some(primary_key) = macro_data.get_primary_key_annotation() {
-        let pk_ident = Ident::new(&primary_key, Span::call_site());
+    let mut update_ops_tokens = TokenStream::new();
+
+    let ty = macro_data.ty;
+
+    if let Some(primary_key) = macro_data.get_primary_key_field_annotation() {
+        let (_, ty_generics, _) = macro_data.generics.split_for_impl();
+        let update_columns = macro_data.get_column_names_pk_parsed();
+        let fields = macro_data.get_struct_fields();
+
+        let mut vec_columns_values: Vec<String> = Vec::new();
+        for (i, column_name) in update_columns.enumerate() {
+            let column_equal_value = format!("{} = ${}", column_name, i + 2);
+            vec_columns_values.push(column_equal_value)
+        }
+
+        let str_columns_values = vec_columns_values.join(", ");
+
+        let update_values = fields.map(|ident| {
+            quote! { &self.#ident }
+        });
+
+        let pk_name = &primary_key.name;
+        let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
         let stmt = quote! {&format!(
-            "UPDATE {} SET {} WHERE {} = ${:?}",
-            #table_schema_data, #str_columns_values, #primary_key, &self.#pk_ident
+            "UPDATE {} SET {} WHERE {} = ${}",
+            #table_schema_data, #str_columns_values, #pk_name, #pk_index
         )};
         let update_values = quote! {
             &[#(#update_values),*]
@@ -166,7 +169,7 @@ mod __details {
 
                 let default_db_conn = canyon_sql::core::Canyon::instance()?
                     .get_default_connection()?;
-                let _ = default_db_conn.lock().await.execute(&stmt, &update_values).await?;
+                let _ = default_db_conn.execute(&stmt, &update_values).await?;
                 Ok(())
             } else {
                 #no_pk_err

@@ -2,9 +2,7 @@ use canyon_sql::connection::DatabaseConnection;
 use canyon_sql::core::Canyon;
 use canyon_sql::macros::{CanyonCrud, CanyonMapper, canyon_entity};
 use canyon_sql::query::{QueryParameter, querybuilder::SelectQueryBuilder};
-use canyon_sql::runtime::tokio::sync::Mutex;
 use std::error::Error;
-use std::sync::Arc;
 
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
@@ -172,11 +170,11 @@ pub trait LeagueHexRepository {
 #[canyon_entity(table_name = "league")]
 pub struct LeagueHexRepositoryAdapter<T: DbConnection + Send + Sync> {
     // db_conn: &'b T,
-    db_conn: Arc<Mutex<T>>,
+    db_conn: T,
 }
 impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryAdapter<T> {
     async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>> {
-        let db_conn = self.db_conn.lock().await;
+        let db_conn = &self.db_conn;
         let select_query =
             SelectQueryBuilder::new("league", db_conn.get_database_type()?)?.build()?;
         db_conn.query(select_query, &[]).await

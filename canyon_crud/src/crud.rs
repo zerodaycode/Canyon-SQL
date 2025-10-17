@@ -106,9 +106,9 @@ where
     /// The primary key field must be set to some column before calling `insert`, otherwise, the
     /// operation will be launched anyway and will insert all the fields, so ensure that your table
     /// your [`Canyon`] annotations matches your database definitions
-    fn insert<'a>(
+    fn insert<'a, 'b>(
         &'a mut self,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send;
+    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>> + Send;
 
     /// # Brief
     ///

@@ -19,7 +19,7 @@ chrono = { workspace = true }
 async-std = { workspace = true, optional = true }
 regex = { workspace = true }
 
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["sync"] }
 tokio-util = { workspace = true }
 
 futures = { workspace = true }

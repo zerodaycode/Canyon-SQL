@@ -10,18 +10,18 @@ use crate::{
 use std::{error::Error, future::Future};
 
 impl DbConnection for MysqlConnection {
-    fn query_rows<'a>(
+    fn query_rows(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send {
         mysql_query_launcher::query_rows(stmt, params, self)
     }
 
-    fn query<'a, S, R>(
+    fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter)],
+        params: &[&(dyn QueryParameter)],
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         S: AsRef<str> + Send,
@@ -31,10 +31,10 @@ impl DbConnection for MysqlConnection {
         mysql_query_launcher::query(stmt, params, self)
     }
 
-    fn query_one<'a, R>(
+    fn query_one<R>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
     where
         R: RowMapper,
@@ -42,18 +42,18 @@ impl DbConnection for MysqlConnection {
         mysql_query_launcher::query_one::<R>(stmt, params, self)
     }
 
-    fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    fn query_one_for<T: FromSqlOwnedValue<T>>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<T, Box<(dyn Error + Send + Sync)>>> + Send {
         mysql_query_launcher::query_one_for(stmt, params, self)
     }
 
-    fn execute<'a>(
+    fn execute(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&dyn QueryParameter],
     ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send {
         mysql_query_launcher::execute(stmt, params, self)
     }

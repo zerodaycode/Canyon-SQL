@@ -41,9 +41,9 @@ use std::future::Future;
 /// - `query_rows`: Executes a query and retrieves the raw rows wrapped in `CanyonRows`.
 /// - `execute`: Executes a SQL statement and returns the number of affected rows.
 pub trait Transaction {
-    fn query<'a, S, R>(
+    fn query<S, R>(
         stmt: S,
-        params: &[&'a (dyn QueryParameter)],
+        params: &[&(dyn QueryParameter)],
         input: impl DbConnection + Send,
     ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>>
     where

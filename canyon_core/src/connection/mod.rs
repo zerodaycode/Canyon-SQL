@@ -24,7 +24,7 @@ pub mod contracts;
 pub mod database_type;
 pub mod datasources;
 pub mod db_connector;
-
+pub mod pool;
 use crate::canyon::Canyon;
 use std::sync::OnceLock;
 use tokio::runtime::Runtime;

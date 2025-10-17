@@ -147,7 +147,7 @@ mod __details {
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                    default_db_conn.lock().await.query(#stmt, &[]).await
+                    default_db_conn.query(#stmt, &[]).await
                 }
             }
         }
@@ -173,7 +173,20 @@ mod __details {
             quote! {
                 async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>> {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                    default_db_conn.lock().await.query_one_for(#stmt, &[]).await
+                    // Handle different database types for COUNT(*) operations
+                    let db_type = default_db_conn.get_database_type()?;
+                    match db_type {
+                        #[cfg(feature = "mssql")]
+                        canyon_sql::connection::DatabaseType::SqlServer => {
+                            // SQL Server COUNT(*) returns i32, convert to i64
+                            let count_i32: i32 = default_db_conn.query_one_for::<i32>(#stmt, &[]).await?;
+                            Ok(count_i32 as i64)
+                        }
+                        _ => {
+                            // PostgreSQL and MySQL COUNT(*) return i64
+                            default_db_conn.query_one_for::<i64>(#stmt, &[]).await
+                        }
+                    }
                 }
             }
         }
@@ -183,7 +196,20 @@ mod __details {
                 async fn count_with<'a, I>(input: I) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>
                     where I: canyon_sql::connection::DbConnection + Send + 'a
                 {
-                    Ok(input.query_one_for::<i64>(#stmt, &[]).await? as i64)
+                    // Handle different database types for COUNT(*) operations
+                    let db_type = input.get_database_type()?;
+                    match db_type {
+                        #[cfg(feature = "mssql")]
+                        canyon_sql::connection::DatabaseType::SqlServer => {
+                            // SQL Server COUNT(*) returns i32, convert to i64
+                            let count_i32: i32 = input.query_one_for::<i32>(#stmt, &[]).await?;
+                            Ok(count_i32 as i64)
+                        }
+                        _ => {
+                            // PostgreSQL and MySQL COUNT(*) return i64
+                            input.query_one_for::<i64>(#stmt, &[]).await
+                        }
+                    }
                 }
             }
         }

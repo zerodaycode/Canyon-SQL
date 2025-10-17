@@ -101,7 +101,7 @@ fn generate_find_by_foreign_key_tokens(
                     #quoted_method_signature {
                         let default_db_conn = canyon_sql::core::Canyon::instance()?
                             .get_default_connection()?;
-                        default_db_conn.lock().await.query_one::<#fk_ty>(
+                        default_db_conn.query_one::<#fk_ty>(
                             #stmt,
                             &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter]
                         ).await
@@ -191,7 +191,7 @@ fn generate_find_by_reverse_foreign_key_tokens(
                         let lookup_value = #lookup_value;
                         let default_db_conn = canyon_sql::core::Canyon::instance()?
                             .get_default_connection()?;
-                        default_db_conn.lock().await.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
+                        default_db_conn.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
                     }
                 },
             ));

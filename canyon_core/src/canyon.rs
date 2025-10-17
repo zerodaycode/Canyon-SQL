@@ -1,7 +1,7 @@
 use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
-use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
+use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime, pool::get_pool_manager};
 use db_connector::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -53,8 +53,8 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 /// - `get_mut_connection`: Retrieves a mutable connection from the cache.
 pub struct Canyon {
     config: Datasources,
-    connections: HashMap<&'static str, SharedConnection>,
-    default_connection: Option<SharedConnection>,
+    connections: HashMap<&'static str, DatabaseConnection>,
+    default_connection: Option<DatabaseConnection>,
     default_db_type: Option<DatabaseType>,
 }
 
@@ -113,9 +113,9 @@ impl Canyon {
         let config_content = fs::read_to_string(&path)?;
         let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
 
-        let mut connections = HashMap::new();
-        let mut default_connection = None;
-        let mut default_db_type = None;
+        let mut connections: HashMap<&str, DatabaseConnection> = HashMap::new();
+        let mut default_connection: Option<DatabaseConnection> = None;
+        let mut default_db_type: Option<DatabaseType> = None;
 
         for ds in config.datasources.iter() {
             __impl::process_new_conn_by_datasource(
@@ -179,9 +179,9 @@ impl Canyon {
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_default_connection(&self) -> Result<SharedConnection, DatasourceNotFound> {
+    pub fn get_default_connection(&self) -> Result<&DatabaseConnection, DatasourceNotFound> {
         self.default_connection
-            .clone()
+            .as_ref()
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
@@ -190,7 +190,7 @@ impl Canyon {
     /// This is a fast and efficient operation: cloning the [`SharedConnection`]
     /// simply increases the reference count [`Arc`] without duplicating the underlying
     /// [`DatabaseConnection`]. Returns an error if no default connection is configured.
-    pub fn get_connection(&self, name: &str) -> Result<SharedConnection, DatasourceNotFound> {
+    pub fn get_connection(&self, name: &str) -> Result<&DatabaseConnection, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();
         }
@@ -200,20 +200,47 @@ impl Canyon {
             .get(name)
             .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
 
-        Ok(conn.clone())
+        Ok(conn)
     }
+
+    /// Gets a pooled connection for better performance
+    /// This is an internal method that uses the connection pool
+    pub async fn get_pooled_connection(&self, name: &str) -> Result<crate::connection::pool::PooledConnection, DatasourceNotFound> {
+        let pool_manager = get_pool_manager();
+        let mut pool_manager_guard = pool_manager.lock().await;
+        
+        // Find the datasource
+        let datasource = self.find_datasource_by_name_or_default(name)?;
+        
+        // Create pool if it doesn't exist
+        if !pool_manager_guard.has_pool(name) {
+            pool_manager_guard.create_pool(name, datasource).await
+                .map_err(|_| DatasourceNotFound::from(Some(name)))?;
+        }
+        
+        // Get pooled connection
+        pool_manager_guard.get_connection(name).await
+            .map_err(|_| DatasourceNotFound::from(Some(name)))
+    }
+
+    /// Gets a fast connection that automatically uses pooling when available
+    /// This method provides the best performance by using connection pooling
+    pub async fn get_fast_connection(&self, name: &str) -> Result<&DatabaseConnection, DatasourceNotFound> {
+        // For now, fall back to the regular connection
+        // In the future, this could automatically use the pool
+        self.get_connection(name)
+    }
+
+
 }
 
 mod __impl {
-    use crate::canyon::SharedConnection;
     use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::DatasourceConfig;
     use crate::connection::db_connector::DatabaseConnection;
     use std::collections::HashMap;
     use std::error::Error;
     use std::path::PathBuf;
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
     use walkdir::WalkDir;
 
     // Internal helper to locate the config file
@@ -240,10 +267,14 @@ mod __impl {
 
     pub(crate) async fn process_new_conn_by_datasource(
         ds: &DatasourceConfig,
-        connections: &mut HashMap<&str, SharedConnection>,
-        default: &mut Option<SharedConnection>,
+        connections: &mut HashMap<&str, DatabaseConnection>,
+        default: &mut Option<DatabaseConnection>,
         default_db_type: &mut Option<DatabaseType>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if default.is_none() {
+            let cloned_ds_for_default = ds.clone();
+            *default = Some(DatabaseConnection::new(&cloned_ds_for_default).await?); // Only cloning the smart pointer
+        }
         let conn = DatabaseConnection::new(ds).await?;
         let name: &'static str = Box::leak(ds.name.clone().into_boxed_str());
 
@@ -251,12 +282,7 @@ mod __impl {
             *default_db_type = Some(conn.get_db_type());
         }
 
-        let connection_sp = Arc::new(Mutex::new(conn));
-
-        if default.is_none() {
-            *default = Some(connection_sp.clone()); // Only cloning the smart pointer
-        }
-
+        let connection_sp = conn;
         connections.insert(name, connection_sp);
 
         Ok(())

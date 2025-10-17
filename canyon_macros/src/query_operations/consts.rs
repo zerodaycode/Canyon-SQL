@@ -22,13 +22,13 @@ pub(crate) fn generate_no_pk_error() -> TokenStream {
     }
 }
 
-pub(crate) fn generate_default_db_conn_tokens() -> TokenStream {
-    quote! {
-        let default_db_conn = canyon_sql::core::Canyon::instance()?
-            .get_default_connection()?;
-        default_db_conn.lock().await
+    pub(crate) fn generate_default_db_conn_tokens() -> TokenStream {
+        quote! {
+            let default_db_conn = canyon_sql::core::Canyon::instance()?
+                .get_default_connection()?;
+            default_db_conn
+        }
     }
-}
 
 thread_local! {
     pub static USER_MOCK_TY: RefCell<Ident> = RefCell::new(Ident::new("User", Span::call_site()));

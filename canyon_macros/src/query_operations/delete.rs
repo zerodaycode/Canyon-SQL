@@ -163,7 +163,7 @@ mod __details {
                 #delete_entity_core_logic
                 let default_db_conn = canyon_sql::core::Canyon::instance()?
                     .get_default_connection()?;
-                let _ = default_db_conn.lock().await.execute(&delete_stmt, &[pk_actual_value]).await?;
+                let _ = default_db_conn.execute(&delete_stmt, &[pk_actual_value]).await?;
                 Ok(())
             } else {
                 #no_pk_err
