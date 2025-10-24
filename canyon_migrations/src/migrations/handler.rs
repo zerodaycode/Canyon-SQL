@@ -202,10 +202,10 @@ impl Migrations {
                     "YES"
                 )
             }
-        } else if column_identifier == "identity_generation" {
-            if let ColumnMetadataTypeValue::StringValue(value) = &column_value {
-                dest.identity_generation = value.to_owned()
-            }
+        } else if column_identifier == "identity_generation"
+            && let ColumnMetadataTypeValue::StringValue(value) = &column_value
+        {
+            dest.identity_generation = value.to_owned()
         };
     }
 

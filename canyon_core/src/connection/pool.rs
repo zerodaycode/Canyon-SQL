@@ -1,15 +1,15 @@
-use crate::connection::db_connector::DatabaseConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
+use crate::connection::db_connector::DatabaseConnection;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::sync::Arc;
 use std::error::Error;
-use tokio::sync::Mutex;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Mutex;
 
 /// A simple, efficient connection pool for Canyon-SQL
-/// 
+///
 /// This pool maintains a collection of database connections that can be
 /// reused across multiple operations, significantly improving performance
 /// by avoiding the overhead of creating new connections for each query.
@@ -24,14 +24,18 @@ pub struct ConnectionPool {
     /// Database type for this pool
     db_type: DatabaseType,
     /// Connection factory function
-    factory: Box<dyn Fn() -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> + Send + Sync>,
+    factory:
+        Box<dyn Fn() -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> + Send + Sync>,
 }
 
 impl ConnectionPool {
     /// Creates a new connection pool
     pub fn new(
         db_type: DatabaseType,
-        factory: impl Fn() -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> + Send + Sync + 'static,
+        factory: impl Fn() -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>>
+        + Send
+        + Sync
+        + 'static,
         min_size: usize,
         max_size: usize,
     ) -> Self {
@@ -45,12 +49,14 @@ impl ConnectionPool {
     }
 
     /// Gets a connection from the pool
-    /// 
+    ///
     /// If a connection is available, it's returned immediately.
     /// If no connections are available and the pool hasn't reached max_size,
     /// a new connection is created.
     /// If the pool is at max_size, this will wait for a connection to become available.
-    pub async fn get_connection(&mut self) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
+    pub async fn get_connection(
+        &mut self,
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         // Try to get an existing connection
         if let Some(conn) = self.connections.pop_front() {
             return Ok(conn);
@@ -64,13 +70,13 @@ impl ConnectionPool {
         // Wait for a connection to become available
         // This is a simple implementation - in production you might want more sophisticated waiting
         tokio::time::sleep(Duration::from_millis(10)).await;
-        
+
         // Use Box::pin to avoid recursion issues
         Box::pin(self.get_connection()).await
     }
 
     /// Returns a connection to the pool
-    /// 
+    ///
     /// If the pool is at max_size, the connection is dropped.
     /// Otherwise, it's added back to the pool for reuse.
     pub fn return_connection(&mut self, conn: DatabaseConnection) {
@@ -104,12 +110,14 @@ pub struct PooledConnection {
 
 impl PooledConnection {
     /// Creates a new pooled connection wrapper
-    pub async fn new(pool: Arc<Mutex<ConnectionPool>>) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn new(
+        pool: Arc<Mutex<ConnectionPool>>,
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         let connection = {
             let mut pool_guard = pool.lock().await;
             pool_guard.get_connection().await?
         };
-        
+
         Ok(Self {
             connection: Some(connection),
             pool,
@@ -160,7 +168,7 @@ impl PoolManager {
         datasource: &DatasourceConfig,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         let db_type = datasource.get_db_type();
-        
+
         // Create a factory function for this datasource
         let factory = {
             let datasource = datasource.clone();
@@ -172,32 +180,38 @@ impl PoolManager {
         };
 
         let pool = ConnectionPool::new(
-            db_type,
-            factory,
-            2,  // min_size
+            db_type, factory, 2,  // min_size
             10, // max_size
         );
 
-        self.pools.insert(name.to_string(), Arc::new(Mutex::new(pool)));
+        self.pools
+            .insert(name.to_string(), Arc::new(Mutex::new(pool)));
         Ok(())
     }
 
     /// Gets a pooled connection by name
-    pub async fn get_connection(&self, name: &str) -> Result<PooledConnection, Box<dyn Error + Send + Sync>> {
-        let pool = self.pools
+    pub async fn get_connection(
+        &self,
+        name: &str,
+    ) -> Result<PooledConnection, Box<dyn Error + Send + Sync>> {
+        let pool = self
+            .pools
             .get(name)
             .ok_or_else(|| format!("Pool '{}' not found", name))?;
-        
+
         PooledConnection::new(pool.clone()).await
     }
 
     /// Gets the default connection pool
-    pub async fn get_default_connection(&self) -> Result<PooledConnection, Box<dyn Error + Send + Sync>> {
-        let pool = self.pools
+    pub async fn get_default_connection(
+        &self,
+    ) -> Result<PooledConnection, Box<dyn Error + Send + Sync>> {
+        let pool = self
+            .pools
             .values()
             .next()
             .ok_or("No connection pools available")?;
-        
+
         PooledConnection::new(pool.clone()).await
     }
 
@@ -212,9 +226,9 @@ static POOL_MANAGER: std::sync::OnceLock<Arc<Mutex<PoolManager>>> = std::sync::O
 
 /// Gets the global pool manager instance
 pub fn get_pool_manager() -> Arc<Mutex<PoolManager>> {
-    POOL_MANAGER.get_or_init(|| {
-        Arc::new(Mutex::new(PoolManager::new()))
-    }).clone()
+    POOL_MANAGER
+        .get_or_init(|| Arc::new(Mutex::new(PoolManager::new())))
+        .clone()
 }
 
 // Implement DbConnection trait for PooledConnection
@@ -223,11 +237,11 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
         &self,
         stmt: &str,
         params: &[&dyn crate::query::parameters::QueryParameter],
-    ) -> impl std::future::Future<Output = Result<crate::rows::CanyonRows, Box<dyn Error + Send + Sync>>> + Send {
+    ) -> impl std::future::Future<
+        Output = Result<crate::rows::CanyonRows, Box<dyn Error + Send + Sync>>,
+    > + Send {
         let conn = self.connection();
-        async move {
-            conn.query_rows(stmt, params).await
-        }
+        async move { conn.query_rows(stmt, params).await }
     }
 
     fn query<S, R>(
@@ -241,9 +255,7 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
         Vec<R>: std::iter::FromIterator<<R as crate::mapper::RowMapper>::Output>,
     {
         let conn = self.connection();
-        async move {
-            conn.query(stmt, params).await
-        }
+        async move { conn.query(stmt, params).await }
     }
 
     fn query_one<R>(
@@ -255,9 +267,7 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
         R: crate::mapper::RowMapper,
     {
         let conn = self.connection();
-        async move {
-            conn.query_one::<R>(stmt, params).await
-        }
+        async move { conn.query_one::<R>(stmt, params).await }
     }
 
     fn query_one_for<T: crate::rows::FromSqlOwnedValue<T>>(
@@ -266,9 +276,7 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
         params: &[&dyn crate::query::parameters::QueryParameter],
     ) -> impl std::future::Future<Output = Result<T, Box<dyn Error + Send + Sync>>> + Send {
         let conn = self.connection();
-        async move {
-            conn.query_one_for(stmt, params).await
-        }
+        async move { conn.query_one_for(stmt, params).await }
     }
 
     fn execute(
@@ -277,9 +285,7 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
         params: &[&dyn crate::query::parameters::QueryParameter],
     ) -> impl std::future::Future<Output = Result<u64, Box<dyn Error + Send + Sync>>> + Send {
         let conn = self.connection();
-        async move {
-            conn.execute(stmt, params).await
-        }
+        async move { conn.execute(stmt, params).await }
     }
 
     fn get_database_type(
@@ -287,4 +293,4 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
     ) -> Result<crate::connection::database_type::DatabaseType, Box<dyn Error + Send + Sync>> {
         self.connection().get_database_type()
     }
-} 
+}

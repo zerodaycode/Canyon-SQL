@@ -63,7 +63,9 @@ impl DatabaseConnection {
             }
 
             #[cfg(feature = "mysql")]
-            DatabaseType::MySQL => connection_helpers::create_mysql_connection_optimized(datasource).await,
+            DatabaseType::MySQL => {
+                connection_helpers::create_mysql_connection_optimized(datasource).await
+            }
         }
     }
 
@@ -136,7 +138,7 @@ mod connection_helpers {
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
-        
+
         // Use optimized connection settings
         let mut config = tokio_postgres::Config::new();
         config.host(&datasource.properties.host);
@@ -144,7 +146,7 @@ mod connection_helpers {
         config.dbname(&datasource.properties.db_name);
         config.user(user);
         config.password(password);
-        
+
         // Optimize connection settings for better performance
         config.connect_timeout(std::time::Duration::from_secs(5));
         config.keepalives_idle(std::time::Duration::from_secs(30));
@@ -209,7 +211,7 @@ mod connection_helpers {
         tiberius_config.authentication(auth_config);
         tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
         tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
-        
+
         // Optimize connection settings for better performance
         // Note: Tiberius doesn't expose these settings directly
         // The optimization is handled at the TCP level
@@ -247,10 +249,10 @@ mod connection_helpers {
 
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
         let url = connection_string(user, password, datasource);
-        
+
         // Use optimized pool settings for better performance
         let _pool_constraints = mysql_async::PoolConstraints::new(2, 10).unwrap();
-        
+
         let mysql_connection = Pool::from_url(url)?;
 
         Ok(DatabaseConnection::MySQL(MysqlConnection {

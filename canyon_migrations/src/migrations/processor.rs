@@ -231,31 +231,33 @@ impl MigrationsProcessor {
         canyon_register_entity_field: CanyonRegisterEntityField,
         current_column_metadata: Option<&ColumnMetadata>,
     ) {
-        // If we do not retrieve data for this database column, it does not exist yet,
-        // and therefore it has to be created
-        if current_column_metadata.is_none() {
+        if let Some(current_col_met) = current_column_metadata {
+            if !MigrationsHelper::is_same_datatype(
+                db_type,
+                &canyon_register_entity_field,
+                current_col_met,
+            ) {
+                self.change_column_datatype(
+                    entity_name.to_string(),
+                    canyon_register_entity_field.clone(),
+                )
+            }
+        } else {
+            // If we do not retrieve data for this database column, it does not exist yet,
+            // and therefore it has to be created
             self.create_column(
-                entity_name.to_string(),
-                canyon_register_entity_field.clone(),
-            )
-        } else if !MigrationsHelper::is_same_datatype(
-            db_type,
-            &canyon_register_entity_field,
-            current_column_metadata.unwrap(),
-        ) {
-            self.change_column_datatype(
                 entity_name.to_string(),
                 canyon_register_entity_field.clone(),
             )
         }
 
-        if let Some(column_metadata) = current_column_metadata {
-            if canyon_register_entity_field.is_nullable() != column_metadata.is_nullable {
-                if column_metadata.is_nullable {
-                    self.set_not_null(entity_name.to_string(), canyon_register_entity_field)
-                } else {
-                    self.drop_not_null(entity_name.to_string(), canyon_register_entity_field)
-                }
+        if let Some(column_metadata) = current_column_metadata
+            && canyon_register_entity_field.is_nullable() != column_metadata.is_nullable
+        {
+            if column_metadata.is_nullable {
+                self.set_not_null(entity_name.to_string(), canyon_register_entity_field)
+            } else {
+                self.drop_not_null(entity_name.to_string(), canyon_register_entity_field)
             }
         }
     }

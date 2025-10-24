@@ -74,8 +74,8 @@ impl CanyonMemory {
                     &datasource.name
                 )
             })
-                            .get_connection(&datasource.name)
-                .unwrap_or_else(|_| {
+            .get_connection(&datasource.name)
+            .unwrap_or_else(|_| {
                 panic!(
                     "Unable to get a database connection on Canyon Memory: {:?}",
                     datasource.name
@@ -147,28 +147,27 @@ impl CanyonMemory {
                     || el.declared_table_name == _struct.declared_table_name
             });
 
-            if let Some(old) = already_in_db {
-                if !(old.filepath == _struct.filepath
+            if let Some(old) = already_in_db
+                && !(old.filepath == _struct.filepath
                     && old.struct_name == _struct.struct_name
                     && old.declared_table_name == _struct.declared_table_name)
-                {
-                    updates.push(&old.struct_name);
-                    let stmt = format!(
-                        "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}', declared_table_name = '{}' \
+            {
+                updates.push(&old.struct_name);
+                let stmt = format!(
+                    "UPDATE canyon_memory SET filepath = '{}', struct_name = '{}', declared_table_name = '{}' \
                                 WHERE id = {}",
-                        _struct.filepath, _struct.struct_name, _struct.declared_table_name, old.id
+                    _struct.filepath, _struct.struct_name, _struct.declared_table_name, old.id
+                );
+                save_canyon_memory_query(stmt, &datasource.name);
+
+                // if the updated element is the struct name, we add it to the table_rename Hashmap
+                let rename_table = old.declared_table_name != _struct.declared_table_name;
+
+                if rename_table {
+                    mem.renamed_entities.insert(
+                        _struct.declared_table_name.to_string(), // The new one
+                        old.declared_table_name.to_string(),     // The old one
                     );
-                    save_canyon_memory_query(stmt, &datasource.name);
-
-                    // if the updated element is the struct name, we add it to the table_rename Hashmap
-                    let rename_table = old.declared_table_name != _struct.declared_table_name;
-
-                    if rename_table {
-                        mem.renamed_entities.insert(
-                            _struct.declared_table_name.to_string(), // The new one
-                            old.declared_table_name.to_string(),     // The old one
-                        );
-                    }
                 }
             }
 
