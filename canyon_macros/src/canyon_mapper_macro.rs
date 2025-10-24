@@ -218,13 +218,10 @@ fn create_row_mapper_error_extracting_row(
     ty: &str,
     db_ty: DatabaseType,
 ) -> String {
-    std::io::Error::new(
-        std::io::ErrorKind::Other,
-        format!(
-            "Failed to retrieve the `{}` field for type: {} with {}",
-            field_ident, ty, db_ty
-        ),
-    )
+    std::io::Error::other(format!(
+        "Failed to retrieve the `{}` field for type: {} with {}",
+        field_ident, ty, db_ty
+    ))
     .to_string()
 }
 
