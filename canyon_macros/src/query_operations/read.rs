@@ -2,6 +2,9 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 
+#[cfg(feature = "mssql")]
+const MSSQL_ENABLED: bool = true;
+
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
 pub fn generate_read_operations_tokens(
@@ -144,7 +147,7 @@ mod __details {
         pub fn create_find_all_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
             quote! {
                 async fn find_all()
-                    -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync>>
+                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     default_db_conn.query(#stmt, &[]).await
@@ -155,7 +158,7 @@ mod __details {
         pub fn create_find_all_with_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
             quote! {
                 async fn find_all_with<'a, I>(input: I)
-                    -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync>>
+                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 where
                     I: canyon_sql::connection::DbConnection + Send + 'a
                 {
@@ -166,24 +169,30 @@ mod __details {
     }
 
     pub mod count_generators {
+        use crate::query_operations::read::MSSQL_ENABLED;
+
         use super::*;
         use proc_macro2::TokenStream;
 
         pub fn create_count_macro(stmt: &str) -> TokenStream {
+            let mssql_arm = if MSSQL_ENABLED {
+                quote! {
+                    canyon_sql::connection::DatabaseType::SqlServer => {
+                        let count_i32: i32 = default_db_conn.query_one_for::<i32>(#stmt, &[]).await?;
+                        Ok(count_i32 as i64)
+                    }
+                }
+            } else {
+                quote! {} // MSSQL disabled → no branch emitted
+            };
+
             quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                    // Handle different database types for COUNT(*) operations
                     let db_type = default_db_conn.get_database_type()?;
                     match db_type {
-                        #[cfg(feature = "mssql")]
-                        canyon_sql::connection::DatabaseType::SqlServer => {
-                            // SQL Server COUNT(*) returns i32, convert to i64
-                            let count_i32: i32 = default_db_conn.query_one_for::<i32>(#stmt, &[]).await?;
-                            Ok(count_i32 as i64)
-                        }
+                        #mssql_arm
                         _ => {
-                            // PostgreSQL and MySQL COUNT(*) return i64
                             default_db_conn.query_one_for::<i64>(#stmt, &[]).await
                         }
                     }
@@ -192,19 +201,27 @@ mod __details {
         }
 
         pub fn create_count_with_macro(stmt: &str) -> TokenStream {
+            let mssql_arm = if MSSQL_ENABLED {
+                quote! {
+                    canyon_sql::connection::DatabaseType::SqlServer => {
+                        // SQL Server COUNT(*) returns i32, convert to i64
+                        let count_i32: i32 = input.query_one_for::<i32>(#stmt, &[]).await?;
+                        Ok(count_i32 as i64)
+                    }
+                }
+            } else {
+                quote! {} // No MSSQL support compiled → emit nothing
+            };
+
             quote! {
-                async fn count_with<'a, I>(input: I) -> Result<i64, Box<dyn std::error::Error + Send + Sync + 'a>>
-                    where I: canyon_sql::connection::DbConnection + Send + 'a
+                async fn count_with<'a, I>(input: I)
+                    -> Result<i64, Box<dyn std::error::Error + Send + Sync + 'a>>
+                where
+                    I: canyon_sql::connection::DbConnection + Send + 'a
                 {
-                    // Handle different database types for COUNT(*) operations
                     let db_type = input.get_database_type()?;
                     match db_type {
-                        #[cfg(feature = "mssql")]
-                        canyon_sql::connection::DatabaseType::SqlServer => {
-                            // SQL Server COUNT(*) returns i32, convert to i64
-                            let count_i32: i32 = input.query_one_for::<i32>(#stmt, &[]).await?;
-                            Ok(count_i32 as i64)
-                        }
+                        #mssql_arm
                         _ => {
                             // PostgreSQL and MySQL COUNT(*) return i64
                             input.query_one_for::<i64>(#stmt, &[]).await
