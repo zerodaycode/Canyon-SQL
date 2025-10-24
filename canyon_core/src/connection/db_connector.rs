@@ -28,7 +28,7 @@ unsafe impl Sync for DatabaseConnection {}
 impl DatabaseConnection {
     pub async fn new(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         // Add connection pooling at the client level for better performance
         match datasource.get_db_type() {
             #[cfg(feature = "postgres")]
@@ -49,7 +49,7 @@ impl DatabaseConnection {
     /// Creates a connection with optimized settings for better performance
     pub async fn new_optimized(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         // Use optimized connection settings for better performance
         match datasource.get_db_type() {
             #[cfg(feature = "postgres")]
@@ -112,7 +112,7 @@ mod connection_helpers {
     #[cfg(feature = "postgres")]
     pub async fn create_postgres_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
         let url = connection_string(user, password, datasource);
 
@@ -134,7 +134,7 @@ mod connection_helpers {
     #[cfg(feature = "postgres")]
     pub async fn create_postgres_connection_optimized(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
         
         // Use optimized connection settings
@@ -169,7 +169,7 @@ mod connection_helpers {
     #[cfg(feature = "mssql")]
     pub async fn create_sqlserver_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         use async_std::net::TcpStream;
         let mut tiberius_config = tiberius::Config::new();
 
@@ -197,7 +197,7 @@ mod connection_helpers {
     #[cfg(feature = "mssql")]
     pub async fn create_sqlserver_connection_optimized(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         use async_std::net::TcpStream;
         let mut tiberius_config = tiberius::Config::new();
 
@@ -227,7 +227,7 @@ mod connection_helpers {
     #[cfg(feature = "mysql")]
     pub async fn create_mysql_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         use mysql_async::Pool;
 
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
@@ -242,7 +242,7 @@ mod connection_helpers {
     #[cfg(feature = "mysql")]
     pub async fn create_mysql_connection_optimized(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         use mysql_async::Pool;
 
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
@@ -290,7 +290,7 @@ mod auth {
     #[cfg(feature = "postgres")]
     pub fn extract_postgres_auth(
         auth: &Auth,
-    ) -> Result<(&str, &str), Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<(&str, &str), Box<dyn std::error::Error + Send + Sync>> {
         match auth {
             Auth::Postgres(pg_auth) => match pg_auth {
                 PostgresAuth::Basic { username, password } => Ok((username, password)),
@@ -303,7 +303,7 @@ mod auth {
     #[cfg(feature = "mssql")]
     pub fn extract_mssql_auth(
         auth: &Auth,
-    ) -> Result<tiberius::AuthMethod, Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<tiberius::AuthMethod, Box<dyn std::error::Error + Send + Sync>> {
         match auth {
             Auth::SqlServer(sql_server_auth) => match sql_server_auth {
                 SqlServerAuth::Basic { username, password } => {
@@ -319,7 +319,7 @@ mod auth {
     #[cfg(feature = "mysql")]
     pub fn extract_mysql_auth(
         auth: &Auth,
-    ) -> Result<(&str, &str), Box<(dyn std::error::Error + Send + Sync)>> {
+    ) -> Result<(&str, &str), Box<dyn std::error::Error + Send + Sync>> {
         match auth {
             Auth::MySQL(mysql_auth) => match mysql_auth {
                 MySQLAuth::Basic { username, password } => Ok((username, password)),

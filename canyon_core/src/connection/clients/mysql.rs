@@ -34,7 +34,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -52,7 +52,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &MysqlConnection,
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
     }
 
@@ -61,7 +61,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &MysqlConnection,
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
     {
@@ -78,7 +78,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &MysqlConnection,
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<T, Box<dyn Error + Send + Sync>> {
         Ok(execute_query(stmt, params, conn)
             .await?
             .first()
@@ -93,7 +93,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
-    ) -> Result<Vec<Row>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Vec<Row>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
     {
@@ -123,7 +123,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<u64, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
     {

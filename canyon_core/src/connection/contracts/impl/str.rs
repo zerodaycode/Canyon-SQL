@@ -7,7 +7,7 @@ macro_rules! impl_db_connection {
                 &self,
                 stmt: &str,
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
-            ) -> Result<crate::rows::CanyonRows, Box<(dyn std::error::Error + Send + Sync)>> {
+            ) -> Result<crate::rows::CanyonRows, Box<dyn std::error::Error + Send + Sync>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.query_rows(stmt, params).await
             }
@@ -15,8 +15,8 @@ macro_rules! impl_db_connection {
             async fn query<'a, S, R>(
                 &self,
                 stmt: S,
-                params: &[&'a (dyn crate::query::parameters::QueryParameter)],
-            ) -> Result<Vec<R>, Box<(dyn std::error::Error + Send + Sync)>>
+                params: &[&'a dyn crate::query::parameters::QueryParameter],
+            ) -> Result<Vec<R>, Box<dyn std::error::Error + Send + Sync>>
             where
                 S: AsRef<str> + Send,
                 R: crate::mapper::RowMapper,
@@ -30,7 +30,7 @@ macro_rules! impl_db_connection {
                 &self,
                 stmt: &str,
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
-            ) -> Result<Option<R::Output>, Box<(dyn std::error::Error + Send + Sync)>>
+            ) -> Result<Option<R::Output>, Box<dyn std::error::Error + Send + Sync>>
             where
                 R: crate::mapper::RowMapper,
             {
@@ -42,7 +42,7 @@ macro_rules! impl_db_connection {
                 &self,
                 stmt: &str,
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
-            ) -> Result<T, Box<(dyn std::error::Error + Send + Sync)>> {
+            ) -> Result<T, Box<dyn std::error::Error + Send + Sync>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.query_one_for(stmt, params).await
             }
@@ -51,7 +51,7 @@ macro_rules! impl_db_connection {
                 &self,
                 stmt: &str,
                 params: &[&'a dyn crate::query::parameters::QueryParameter],
-            ) -> Result<u64, Box<(dyn std::error::Error + Send + Sync)>> {
+            ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
                 let conn = crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.execute(stmt, params).await
             }
@@ -60,7 +60,7 @@ macro_rules! impl_db_connection {
                 &self,
             ) -> Result<
                 crate::connection::database_type::DatabaseType,
-                Box<(dyn std::error::Error + Send + Sync)>,
+                Box<dyn std::error::Error + Send + Sync>,
             > {
                 Ok(crate::connection::Canyon::instance()?
                     .find_datasource_by_name_or_default(self)?

@@ -29,36 +29,36 @@ where
     R: RowMapper,
     Vec<R>: FromIterator<<R as RowMapper>::Output>,
 {
-    fn find_all() -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send;
+    fn find_all() -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send;
 
     fn find_all_with<'a, I>(
         input: I,
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
+    ) -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send
     where
         I: DbConnection + Send + 'a;
 
-    fn select_query<'a>() -> Result<SelectQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
+    fn select_query<'a>() -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
     fn select_query_with<'a>(
         database_type: DatabaseType,
-    ) -> Result<SelectQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
+    ) -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
-    fn count() -> impl Future<Output = Result<i64, Box<(dyn Error + Send + Sync)>>> + Send;
+    fn count() -> impl Future<Output = Result<i64, Box<dyn Error + Send + Sync>>> + Send;
 
     fn count_with<'a, I>(
         input: I,
-    ) -> impl Future<Output = Result<i64, Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    ) -> impl Future<Output = Result<i64, Box<dyn Error + Send + Sync + 'a>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn find_by_pk<'a, 'b>(
         value: &'a dyn QueryParameter,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'b)>>> + Send;
+    ) -> impl Future<Output = Result<Option<R>, Box<dyn Error + Send + Sync + 'b>>> + Send;
 
     fn find_by_pk_with<'a, 'b, I>(
         value: &'a dyn QueryParameter,
         input: I,
-    ) -> impl Future<Output = Result<Option<R>, Box<(dyn Error + Send + Sync + 'b)>>> + Send
+    ) -> impl Future<Output = Result<Option<R>, Box<dyn Error + Send + Sync + 'b>>> + Send
     where
         I: DbConnection + Send + 'a;
 
@@ -108,7 +108,7 @@ where
     /// your [`Canyon`] annotations matches your database definitions
     fn insert<'a, 'b>(
         &'a mut self,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>> + Send;
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>> + Send;
 
     /// # Brief
     ///
@@ -166,20 +166,20 @@ where
     fn insert_with<'a, I>(
         &mut self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'a>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn insert_entity<'a, 'b, T>(
         entity: &'a mut T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
     fn insert_entity_with<'a, 'b, T, I>(
         entity: &'a mut T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
@@ -187,76 +187,76 @@ where
     // TODO: the horripilant multi_insert MUST be replaced with a batch insert
     // fn multi_insert<'a, T>(
     //     instances: &'a mut [&'a mut T],
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send;
+    // ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'a>>> + Send;
     //
     // fn multi_insert_with<'a, T, I>(
     //     instances: &'a mut [&'a mut T],
     //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    // ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'a>>> + Send
     // where
     //     I: DbConnection + Send + 'a;
 
     /// Updates a database record that matches the current instance of a T type, returning a
     /// result indicating a possible failure querying the database.
-    fn update(&self) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send;
+    fn update(&self) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync>>> + Send;
 
     fn update_with<'a, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync + 'a)>>> + Send
+    ) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync + 'a>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn update_entity<'a, 'b, T>(
         entity: &'a T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
     fn update_entity_with<'a, 'b, T, I>(
         entity: &'a T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
 
-    fn update_query<'a>() -> Result<UpdateQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
+    fn update_query<'a>() -> Result<UpdateQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
     fn update_query_with<'a>(
         database_type: DatabaseType,
-    ) -> Result<UpdateQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'a)>>;
+    ) -> Result<UpdateQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
-    fn delete(&self) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync)>>> + Send;
+    fn delete(&self) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync>>> + Send;
 
     fn delete_with<'a, 'b, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>> + Send
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>> + Send
     where
         I: DbConnection + Send + 'a;
 
     fn delete_entity<'a, 'b, T>(
         entity: &'a T,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a;
 
     fn delete_entity_with<'a, 'b, T, I>(
         entity: &'a T,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<(dyn Error + Send + Sync + 'b)>>>
+    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
         T: RowMapper + Inspectionable<'a> + Sync + 'a,
         I: DbConnection + Send + 'a;
 
-    fn delete_query<'a, 'b>() -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'b)>>
+    fn delete_query<'a, 'b>() -> Result<DeleteQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'b>>
     where
         'a: 'b;
 
     fn delete_query_with<'a, 'b>(
         database_type: DatabaseType,
-    ) -> Result<DeleteQueryBuilder<'a>, Box<(dyn Error + Send + Sync + 'b)>>
+    ) -> Result<DeleteQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'b>>
     where
         'a: 'b;
 }

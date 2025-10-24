@@ -35,7 +35,7 @@ where
     type Mapper = T;
 }
 
-pub type CanyonError = Box<(dyn std::error::Error + Send + Sync)>; // TODO: convert this into a
+pub type CanyonError = Box<dyn std::error::Error + Send + Sync>; // TODO: convert this into a
 // real error
 pub trait IntoResults {
     fn into_results<R>(self) -> Result<Vec<R>, CanyonError>

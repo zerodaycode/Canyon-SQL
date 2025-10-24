@@ -13,15 +13,15 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         db_conn_query_rows_impl(self, stmt, params).await
     }
 
     async fn query<'a, S, R>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+        params: &[&'a dyn QueryParameter],
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -34,7 +34,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
     {
@@ -45,7 +45,7 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<T, Box<dyn Error + Send + Sync>> {
         db_conn_query_one_for_impl::<T>(self, stmt, params).await
     }
 
@@ -53,11 +53,11 @@ impl DbConnection for DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         db_conn_execute_impl(self, stmt, params).await
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
         Ok(self.get_db_type())
     }
 }
@@ -67,15 +67,15 @@ impl DbConnection for &DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         db_conn_query_rows_impl(self, stmt, params).await
     }
 
     async fn query<'a, S, R>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+        params: &[&'a dyn QueryParameter],
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -88,7 +88,7 @@ impl DbConnection for &DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
     {
@@ -99,7 +99,7 @@ impl DbConnection for &DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<T, Box<dyn Error + Send + Sync>> {
         db_conn_query_one_for_impl::<T>(self, stmt, params).await
     }
 
@@ -107,11 +107,11 @@ impl DbConnection for &DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         db_conn_execute_impl(self, stmt, params).await
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
         Ok(self.get_db_type())
     }
 }
@@ -121,15 +121,15 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         db_conn_query_rows_impl(self, stmt, params).await
     }
 
     async fn query<'a, S, R>(
         &self,
         stmt: S,
-        params: &[&'a (dyn QueryParameter)],
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+        params: &[&'a dyn QueryParameter],
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -142,7 +142,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
     {
@@ -153,7 +153,7 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<T, Box<dyn Error + Send + Sync>> {
         db_conn_query_one_for_impl::<T>(self, stmt, params).await
     }
 
@@ -161,11 +161,11 @@ impl DbConnection for &mut DatabaseConnection {
         &self,
         stmt: &str,
         params: &[&'a dyn QueryParameter],
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         db_conn_execute_impl(self, stmt, params).await
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
         Ok(self.get_db_type())
     }
 }
@@ -210,8 +210,8 @@ where
 pub(crate) async fn db_conn_query_impl<'a, S, R>(
     c: &DatabaseConnection,
     stmt: S,
-    params: &[&'a (dyn QueryParameter)],
-) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+    params: &[&'a dyn QueryParameter],
+) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
 where
     S: AsRef<str> + Send,
     R: RowMapper,
@@ -233,7 +233,7 @@ pub(crate) async fn db_conn_query_one_for_impl<'a, T>(
     c: &DatabaseConnection,
     stmt: &str,
     params: &[&'a dyn QueryParameter],
-) -> Result<T, Box<(dyn Error + Send + Sync)>>
+) -> Result<T, Box<dyn Error + Send + Sync>>
 where
     T: FromSqlOwnedValue<T>,
 {
@@ -253,7 +253,7 @@ pub(crate) async fn db_conn_execute_impl<'a>(
     c: &DatabaseConnection,
     stmt: &str,
     params: &[&'a dyn QueryParameter],
-) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+) -> Result<u64, Box<dyn Error + Send + Sync>> {
     match c {
         #[cfg(feature = "postgres")]
         DatabaseConnection::Postgres(client) => client.execute(stmt, params).await,

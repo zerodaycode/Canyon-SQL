@@ -65,7 +65,7 @@ pub trait RowOperations {
     where
         Output: mysql_async::prelude::FromValue;
 
-    fn columns(&self) -> Vec<Column>;
+    fn columns(&self) -> Vec<Column<'_>>;
 }
 
 impl RowOperations for &dyn Row {
@@ -133,7 +133,7 @@ impl RowOperations for &dyn Row {
         panic!() // TODO into result and propagate
     }
 
-    fn columns(&self) -> Vec<Column> {
+    fn columns(&self) -> Vec<Column<'_>> {
         let mut cols = vec![];
 
         #[cfg(feature = "postgres")]

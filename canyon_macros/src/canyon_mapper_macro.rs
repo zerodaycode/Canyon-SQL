@@ -24,7 +24,7 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
     let pg_implementation = create_postgres_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "postgres")]
     impl_methods.extend(quote! {
-        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> Result<Self::Output, Box<(dyn std::error::Error + Send + Sync)>> {
+        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
             Ok(Self {
                 #(#pg_implementation),*
             })
@@ -35,7 +35,7 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
     let sqlserver_implementation = create_sqlserver_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "mssql")]
     impl_methods.extend(quote! {
-        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> Result<Self::Output, Box<(dyn std::error::Error + Send + Sync)>> {
+        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
             Ok(Self {
                 #(#sqlserver_implementation),*
             })
@@ -46,7 +46,7 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
     let mysql_implementation = create_mysql_fields_mapping(&ty_str, &fields);
     #[cfg(feature = "mysql")]
     impl_methods.extend(quote! {
-        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> Result<Self::Output, Box<(dyn std::error::Error + Send + Sync)>> {
+        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
             Ok(Self {
                 #(#mysql_implementation),*
             })

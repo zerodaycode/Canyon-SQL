@@ -37,7 +37,7 @@ impl<'a> Query<'a> {
     /// [`DbConnection`]
     pub async fn launch_default<T: Transaction + RowMapper>(
         self,
-    ) -> Result<Vec<T>, Box<(dyn Error + Send + Sync + 'a)>>
+    ) -> Result<Vec<T>, Box<dyn Error + Send + Sync + 'a>>
     where
         Vec<T>: FromIterator<<T as RowMapper>::Output>,
     {
@@ -49,7 +49,7 @@ impl<'a> Query<'a> {
     pub async fn launch_with<I: DbConnection, R: RowMapper>(
         self,
         input: I,
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync + 'a)>>
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync + 'a>>
     where
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {

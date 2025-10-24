@@ -22,7 +22,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: S,
         params: &[&'a dyn QueryParameter],
         conn: &SqlServerConnection,
-    ) -> Result<Vec<R>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -43,7 +43,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &SqlServerConnection,
-    ) -> Result<CanyonRows, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         let result = execute_query(stmt, params, conn)
             .await?
             .into_results()
@@ -59,7 +59,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &SqlServerConnection,
-    ) -> Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
     {
@@ -75,7 +75,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &SqlServerConnection,
-    ) -> Result<T, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<T, Box<dyn Error + Send + Sync>> {
         let row = execute_query(stmt, params, conn)
             .await?
             .into_row()
@@ -95,7 +95,7 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&'a dyn QueryParameter],
         conn: &SqlServerConnection,
-    ) -> Result<u64, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         let mssql_query = generate_mssql_stmt(stmt, params).await;
 
         #[allow(mutable_transmutes)] // TODO: pls solve this elegantly someday :(
@@ -111,9 +111,9 @@ pub(crate) mod sqlserver_query_launcher {
 
     async fn execute_query<'a>(
         stmt: &str,
-        params: &[&'a (dyn QueryParameter)],
+        params: &[&'a dyn QueryParameter],
         conn: &SqlServerConnection,
-    ) -> Result<QueryStream<'a>, Box<(dyn Error + Send + Sync)>> {
+    ) -> Result<QueryStream<'a>, Box<dyn Error + Send + Sync>> {
         let mssql_query = generate_mssql_stmt(stmt, params).await;
 
         #[allow(mutable_transmutes)] // TODO: pls solve this elegantly someday :(
@@ -122,7 +122,7 @@ pub(crate) mod sqlserver_query_launcher {
         Ok(mssql_query.query(sqlservconn.client).await?)
     }
 
-    async fn generate_mssql_stmt<'a>(stmt: &str, params: &[&'a (dyn QueryParameter)]) -> Query<'a> {
+    async fn generate_mssql_stmt<'a>(stmt: &str, params: &[&'a dyn QueryParameter]) -> Query<'a> {
         let mut stmt = String::from(stmt);
         if stmt.contains("RETURNING") {
             let c = stmt.clone();

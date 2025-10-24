@@ -24,7 +24,7 @@ impl<'a> QueryBuilder<'a> {
     pub fn new(
         sql: String,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<(dyn Error + Send + Sync + 'a)>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
             sql,
             params: vec![], // TODO: as option? and then match it for emptyness and pass &[] if possible?
@@ -32,7 +32,7 @@ impl<'a> QueryBuilder<'a> {
         })
     }
 
-    pub fn build(mut self) -> Result<Query<'a>, Box<(dyn Error + Send + Sync)>> {
+    pub fn build(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync>> {
         // TODO: here we should check for our invariants
         self.sql.push(';');
         Ok(Query::new(self.sql, self.params))

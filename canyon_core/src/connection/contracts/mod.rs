@@ -43,7 +43,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<CanyonRows, Box<(dyn Error + Send + Sync)>>> + Send;
+    ) -> impl Future<Output = Result<CanyonRows, Box<dyn Error + Send + Sync>>> + Send;
 
     /// Executes a query and maps the result to a collection of rows of type `R`.
     ///
@@ -58,8 +58,8 @@ pub trait DbConnection {
     fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&(dyn QueryParameter)],
-    ) -> impl Future<Output = Result<Vec<R>, Box<(dyn Error + Send + Sync)>>> + Send
+        params: &[&dyn QueryParameter],
+    ) -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -79,7 +79,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<(dyn Error + Send + Sync)>>> + Send
+    ) -> impl Future<Output = Result<Option<R::Output>, Box<dyn Error + Send + Sync>>> + Send
     where
         R: RowMapper;
 
@@ -97,7 +97,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<T, Box<(dyn Error + Send + Sync)>>> + Send;
+    ) -> impl Future<Output = Result<T, Box<dyn Error + Send + Sync>>> + Send;
 
     /// Executes a SQL statement and returns the number of affected rows.
     ///
@@ -111,11 +111,11 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<u64, Box<(dyn Error + Send + Sync)>>> + Send;
+    ) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync>>> + Send;
 
     /// Retrieves the type of the database associated with the connection.
     ///
     /// # Returns
     /// A `Result` containing the [`DatabaseType`] on success or an error on failure.
-    fn get_database_type(&self) -> Result<DatabaseType, Box<(dyn Error + Send + Sync)>>;
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>>;
 }

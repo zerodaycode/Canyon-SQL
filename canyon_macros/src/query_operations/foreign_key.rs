@@ -81,11 +81,11 @@ fn generate_find_by_foreign_key_tokens(
             );
             let quoted_method_signature: TokenStream = quote! {
                 async fn #method_name_ident<'a>(&self) ->
-                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                    Result<Option<#fk_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
             };
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, I>(&self, input: I) ->
-                    Result<Option<#fk_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                    Result<Option<#fk_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
                 where I: canyon_sql::connection::DbConnection + Send + 'a
             };
 
@@ -155,13 +155,13 @@ fn generate_find_by_reverse_foreign_key_tokens(
             );
             let quoted_method_signature: TokenStream = quote! {
                 async fn #method_name_ident<'a, F>(value: &F)
-                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                    -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
                 where
                     F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync
             };
             let quoted_with_method_signature: TokenStream = quote! {
                 async fn #method_name_ident_with<'a, F, I> (value: &F, input: I)
-                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                    -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
                 where
                     F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync,
                     I: canyon_sql::connection::DbConnection + Send + 'a

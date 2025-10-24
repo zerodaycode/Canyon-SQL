@@ -12,7 +12,7 @@ impl<'a> SelectQueryBuilder<'a> {
     pub fn new(
         table_schema_data: &str,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<(dyn Error + Send + Sync + 'a)>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
             _inner: QueryBuilder::new(format!("SELECT * FROM {table_schema_data}"), database_type)?,
         })

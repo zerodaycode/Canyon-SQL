@@ -30,7 +30,7 @@ pub fn generate_delete_method_tokens(
         /// Deletes from a database entity the row that matches
         /// the current instance of a T type, returning a result
         /// indicating a possible failure querying the database.
-        async fn delete(&self) -> Result<(), Box<(dyn std::error::Error + Send + Sync)>>
+        async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
     };
     let delete_with_signature = quote! {
         /// Deletes from a database entity the row that matches

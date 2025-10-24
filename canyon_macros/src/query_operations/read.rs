@@ -58,7 +58,7 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         fn select_query<'a>()
             -> Result<
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,
-                Box<(dyn std::error::Error + Send + Sync + 'a)>
+                Box<dyn std::error::Error + Send + Sync + 'a>
             >
         {
             canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
@@ -74,7 +74,7 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         fn select_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
             -> Result<
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,
-                Box<(dyn std::error::Error + Send + Sync + 'a)>
+                Box<dyn std::error::Error + Send + Sync + 'a>
         > {
             canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, database_type)
         }
@@ -144,7 +144,7 @@ mod __details {
         pub fn create_find_all_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
             quote! {
                 async fn find_all()
-                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
+                    -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync>>
                 {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     default_db_conn.query(#stmt, &[]).await
@@ -155,7 +155,7 @@ mod __details {
         pub fn create_find_all_with_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
             quote! {
                 async fn find_all_with<'a, I>(input: I)
-                    -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
+                    -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync>>
                 where
                     I: canyon_sql::connection::DbConnection + Send + 'a
                 {
@@ -171,7 +171,7 @@ mod __details {
 
         pub fn create_count_macro(stmt: &str) -> TokenStream {
             quote! {
-                async fn count() -> Result<i64, Box<(dyn std::error::Error + Send + Sync)>> {
+                async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     // Handle different database types for COUNT(*) operations
                     let db_type = default_db_conn.get_database_type()?;
@@ -193,7 +193,7 @@ mod __details {
 
         pub fn create_count_with_macro(stmt: &str) -> TokenStream {
             quote! {
-                async fn count_with<'a, I>(input: I) -> Result<i64, Box<(dyn std::error::Error + Send + Sync + 'a)>>
+                async fn count_with<'a, I>(input: I) -> Result<i64, Box<dyn std::error::Error + Send + Sync + 'a>>
                     where I: canyon_sql::connection::DbConnection + Send + 'a
                 {
                     // Handle different database types for COUNT(*) operations

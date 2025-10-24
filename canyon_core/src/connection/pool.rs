@@ -233,7 +233,7 @@ impl crate::connection::contracts::DbConnection for PooledConnection {
     fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&(dyn crate::query::parameters::QueryParameter)],
+        params: &[&dyn crate::query::parameters::QueryParameter],
     ) -> impl std::future::Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send
     where
         S: AsRef<str> + Send,
