@@ -76,8 +76,7 @@ impl Canyon {
             // TODO: just call Canyon::init()? Why should we raise this error?
             // I guess that there's no point in making it fail for the user to manually start Canyon when we can handle everything
             // internally
-            Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
+            Box::new(std::io::Error::other(
                 "Canyon not initialized. Call `Canyon::init()` first.",
             ))
         })?)

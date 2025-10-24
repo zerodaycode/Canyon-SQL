@@ -154,6 +154,12 @@ pub struct PoolManager {
     pools: HashMap<String, Arc<Mutex<ConnectionPool>>>,
 }
 
+impl Default for PoolManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PoolManager {
     pub fn new() -> Self {
         Self {

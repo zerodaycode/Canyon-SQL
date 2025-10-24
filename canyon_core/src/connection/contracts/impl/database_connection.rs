@@ -9,18 +9,18 @@ use crate::{
 use std::error::Error;
 
 impl DbConnection for DatabaseConnection {
-    async fn query_rows<'a>(
+    async fn query_rows(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         db_conn_query_rows_impl(self, stmt, params).await
     }
 
-    async fn query<'a, S, R>(
+    async fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
@@ -30,10 +30,10 @@ impl DbConnection for DatabaseConnection {
         db_conn_query_impl(self, stmt, params).await
     }
 
-    async fn query_one<'a, R>(
+    async fn query_one<R>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
@@ -41,18 +41,18 @@ impl DbConnection for DatabaseConnection {
         db_conn_query_one_impl::<R>(self, stmt, params).await
     }
 
-    async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    async fn query_one_for<T: FromSqlOwnedValue<T>>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         db_conn_query_one_for_impl::<T>(self, stmt, params).await
     }
 
-    async fn execute<'a>(
+    async fn execute(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         db_conn_execute_impl(self, stmt, params).await
     }
@@ -63,18 +63,18 @@ impl DbConnection for DatabaseConnection {
 }
 
 impl DbConnection for &DatabaseConnection {
-    async fn query_rows<'a>(
+    async fn query_rows(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         db_conn_query_rows_impl(self, stmt, params).await
     }
 
-    async fn query<'a, S, R>(
+    async fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
@@ -84,10 +84,10 @@ impl DbConnection for &DatabaseConnection {
         db_conn_query_impl(self, stmt, params).await
     }
 
-    async fn query_one<'a, R>(
+    async fn query_one<R>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
@@ -95,18 +95,18 @@ impl DbConnection for &DatabaseConnection {
         db_conn_query_one_impl::<R>(self, stmt, params).await
     }
 
-    async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    async fn query_one_for<T: FromSqlOwnedValue<T>>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         db_conn_query_one_for_impl::<T>(self, stmt, params).await
     }
 
-    async fn execute<'a>(
+    async fn execute(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         db_conn_execute_impl(self, stmt, params).await
     }
@@ -117,18 +117,18 @@ impl DbConnection for &DatabaseConnection {
 }
 
 impl DbConnection for &mut DatabaseConnection {
-    async fn query_rows<'a>(
+    async fn query_rows(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         db_conn_query_rows_impl(self, stmt, params).await
     }
 
-    async fn query<'a, S, R>(
+    async fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
@@ -138,10 +138,10 @@ impl DbConnection for &mut DatabaseConnection {
         db_conn_query_impl(self, stmt, params).await
     }
 
-    async fn query_one<'a, R>(
+    async fn query_one<R>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
@@ -149,18 +149,18 @@ impl DbConnection for &mut DatabaseConnection {
         db_conn_query_one_impl::<R>(self, stmt, params).await
     }
 
-    async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    async fn query_one_for<T: FromSqlOwnedValue<T>>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         db_conn_query_one_for_impl::<T>(self, stmt, params).await
     }
 
-    async fn execute<'a>(
+    async fn execute(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         db_conn_execute_impl(self, stmt, params).await
     }
@@ -187,10 +187,10 @@ pub(crate) async fn db_conn_query_rows_impl<'a>(
     }
 }
 
-pub(crate) async fn db_conn_query_one_impl<'a, R>(
+pub(crate) async fn db_conn_query_one_impl<R>(
     c: &DatabaseConnection,
     stmt: &str,
-    params: &[&'a (dyn QueryParameter + 'a)],
+    params: &[&'_ (dyn QueryParameter + '_)],
 ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
 where
     R: RowMapper,
@@ -207,10 +207,10 @@ where
     }
 }
 
-pub(crate) async fn db_conn_query_impl<'a, S, R>(
+pub(crate) async fn db_conn_query_impl<S, R>(
     c: &DatabaseConnection,
     stmt: S,
-    params: &[&'a dyn QueryParameter],
+    params: &[&'_ dyn QueryParameter],
 ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
 where
     S: AsRef<str> + Send,
@@ -229,10 +229,10 @@ where
     }
 }
 
-pub(crate) async fn db_conn_query_one_for_impl<'a, T>(
+pub(crate) async fn db_conn_query_one_for_impl<T>(
     c: &DatabaseConnection,
     stmt: &str,
-    params: &[&'a dyn QueryParameter],
+    params: &[&'_ dyn QueryParameter],
 ) -> Result<T, Box<dyn Error + Send + Sync>>
 where
     T: FromSqlOwnedValue<T>,
@@ -249,10 +249,10 @@ where
     }
 }
 
-pub(crate) async fn db_conn_execute_impl<'a>(
+pub(crate) async fn db_conn_execute_impl(
     c: &DatabaseConnection,
     stmt: &str,
-    params: &[&'a dyn QueryParameter],
+    params: &[&'_ dyn QueryParameter],
 ) -> Result<u64, Box<dyn Error + Send + Sync>> {
     match c {
         #[cfg(feature = "postgres")]

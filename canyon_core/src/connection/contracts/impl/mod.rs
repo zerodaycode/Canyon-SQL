@@ -27,18 +27,18 @@ where
     T: DbConnection + Send,
     Self: Clone,
 {
-    async fn query_rows<'a>(
+    async fn query_rows(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         self.lock().await.query_rows(stmt, params).await
     }
 
-    async fn query<'a, S, R>(
+    async fn query<S, R>(
         &self,
         stmt: S,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
@@ -48,10 +48,10 @@ where
         self.lock().await.query(stmt, params).await
     }
 
-    async fn query_one<'a, R>(
+    async fn query_one<R>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
@@ -59,18 +59,18 @@ where
         self.lock().await.query_one::<R>(stmt, params).await
     }
 
-    async fn query_one_for<'a, F: FromSqlOwnedValue<F>>(
+    async fn query_one_for<F: FromSqlOwnedValue<F>>(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<F, Box<dyn Error + Send + Sync>> {
         self.lock().await.query_one_for::<F>(stmt, params).await
     }
 
-    async fn execute<'a>(
+    async fn execute(
         &self,
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
     ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         self.lock().await.execute(stmt, params).await
     }

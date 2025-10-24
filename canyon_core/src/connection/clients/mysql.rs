@@ -48,18 +48,18 @@ pub(crate) mod mysql_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_rows<'a>(
+    pub(crate) async fn query_rows(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
     }
 
     #[inline(always)]
-    pub(crate) async fn query_one<'a, R>(
+    pub(crate) async fn query_one<R>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
@@ -74,9 +74,9 @@ pub(crate) mod mysql_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    pub(crate) async fn query_one_for<T: FromSqlOwnedValue<T>>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &MysqlConnection,
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         Ok(execute_query(stmt, params, conn)

@@ -39,9 +39,9 @@ pub(crate) mod postgres_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_rows<'a>(
+    pub(crate) async fn query_rows(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &PostgreSqlConnection,
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         let m_params: Vec<_> = params
@@ -55,9 +55,9 @@ pub(crate) mod postgres_query_launcher {
     /// *NOTE*: implementation details of `query_one` when handling errors are
     /// discussed [here](https://github.com/sfackler/rust-postgres/issues/790#issuecomment-2095729043)
     #[inline(always)]
-    pub(crate) async fn query_one<'a, R>(
+    pub(crate) async fn query_one<R>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &PostgreSqlConnection,
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
@@ -79,9 +79,9 @@ pub(crate) mod postgres_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    pub(crate) async fn query_one_for<T: FromSqlOwnedValue<T>>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &PostgreSqlConnection,
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         let m_params: Vec<_> = params
@@ -93,9 +93,9 @@ pub(crate) mod postgres_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn execute<S>(
+    pub(crate) async fn execute<'a, S>(
         stmt: S,
-        params: &[&'_ dyn QueryParameter],
+        params: &'a [&'a (dyn QueryParameter + 'a)],
         conn: &PostgreSqlConnection,
     ) -> Result<u64, Box<dyn Error + Send + Sync>>
     where
@@ -107,9 +107,8 @@ pub(crate) mod postgres_query_launcher {
             .map_err(From::from)
     }
 
-    fn get_psql_params<'a>(params: &[&'a dyn QueryParameter]) -> Vec<&'a (dyn ToSql + Sync)> {
+    fn get_psql_params<'a>(params: &'a [&'a dyn QueryParameter]) -> Vec<&'a (dyn ToSql + Sync)> {
         params
-            .as_ref()
             .iter()
             .map(|param| param.as_postgres_param())
             .collect::<Vec<_>>()

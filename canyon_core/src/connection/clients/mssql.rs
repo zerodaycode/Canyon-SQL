@@ -18,9 +18,9 @@ pub(crate) mod sqlserver_query_launcher {
     use tiberius::QueryStream;
 
     #[inline(always)]
-    pub(crate) async fn query<'a, S, R>(
+    pub(crate) async fn query<S, R>(
         stmt: S,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &SqlServerConnection,
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
@@ -39,9 +39,9 @@ pub(crate) mod sqlserver_query_launcher {
     }
 
     #[inline(always)]
-    pub(crate) async fn query_rows<'a>(
+    pub(crate) async fn query_rows(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &SqlServerConnection,
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         let result = execute_query(stmt, params, conn)
@@ -55,9 +55,9 @@ pub(crate) mod sqlserver_query_launcher {
         Ok(CanyonRows::Tiberius(result))
     }
 
-    pub(crate) async fn query_one<'a, R>(
+    pub(crate) async fn query_one<R>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &SqlServerConnection,
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
@@ -71,9 +71,9 @@ pub(crate) mod sqlserver_query_launcher {
         }
     }
 
-    pub(crate) async fn query_one_for<'a, T: FromSqlOwnedValue<T>>(
+    pub(crate) async fn query_one_for<T: FromSqlOwnedValue<T>>(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &SqlServerConnection,
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         let row = execute_query(stmt, params, conn)
@@ -91,9 +91,9 @@ pub(crate) mod sqlserver_query_launcher {
         )
     }
 
-    pub(crate) async fn execute<'a>(
+    pub(crate) async fn execute(
         stmt: &str,
-        params: &[&'a dyn QueryParameter],
+        params: &[&'_ dyn QueryParameter],
         conn: &SqlServerConnection,
     ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         let mssql_query = generate_mssql_stmt(stmt, params).await;
