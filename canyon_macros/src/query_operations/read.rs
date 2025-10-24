@@ -2,9 +2,6 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 
-#[cfg(feature = "mssql")]
-const MSSQL_ENABLED: bool = true;
-
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
 pub fn generate_read_operations_tokens(
@@ -169,22 +166,11 @@ mod __details {
     }
 
     pub mod count_generators {
-        use crate::query_operations::read::MSSQL_ENABLED;
-
         use super::*;
         use proc_macro2::TokenStream;
 
         pub fn create_count_macro(stmt: &str) -> TokenStream {
-            let mssql_arm = if MSSQL_ENABLED {
-                quote! {
-                    canyon_sql::connection::DatabaseType::SqlServer => {
-                        let count_i32: i32 = default_db_conn.query_one_for::<i32>(#stmt, &[]).await?;
-                        Ok(count_i32 as i64)
-                    }
-                }
-            } else {
-                quote! {} // MSSQL disabled → no branch emitted
-            };
+            let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, false);
 
             quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
@@ -201,17 +187,7 @@ mod __details {
         }
 
         pub fn create_count_with_macro(stmt: &str) -> TokenStream {
-            let mssql_arm = if MSSQL_ENABLED {
-                quote! {
-                    canyon_sql::connection::DatabaseType::SqlServer => {
-                        // SQL Server COUNT(*) returns i32, convert to i64
-                        let count_i32: i32 = input.query_one_for::<i32>(#stmt, &[]).await?;
-                        Ok(count_i32 as i64)
-                    }
-                }
-            } else {
-                quote! {} // No MSSQL support compiled → emit nothing
-            };
+            let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, true);
 
             quote! {
                 async fn count_with<'a, I>(input: I)
@@ -228,6 +204,24 @@ mod __details {
                         }
                     }
                 }
+            }
+        }
+
+        fn get_mssql_arm_tokens_if_enabled(stmt: &str, is_with_input: bool) -> TokenStream {
+            let db_conn = if is_with_input {
+                quote! {input}
+            } else {
+                quote! {default_db_conn}
+            };
+            if cfg!(feature = "mssql") {
+                quote! {
+                    canyon_sql::connection::DatabaseType::SqlServer => {
+                        let count_i32: i32 = #db_conn.query_one_for::<i32>(#stmt, &[]).await?;
+                        Ok(count_i32 as i64)
+                    }
+                }
+            } else {
+                quote! {} // nothing emitted
             }
         }
     }
