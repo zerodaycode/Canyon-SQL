@@ -225,7 +225,6 @@ mod __impl {
     use std::error::Error;
     use std::path::PathBuf;
     use walkdir::WalkDir;
-    use crate::connection::pool::CanyonConnection;
 
     // Internal helper to locate the config file
     pub(crate) fn find_config_path() -> Result<PathBuf, std::io::Error> {
@@ -251,8 +250,8 @@ mod __impl {
 
     pub(crate) async fn process_new_conn_by_datasource<'a>(
         ds: &DatasourceConfig,
-        connections: &mut HashMap<&str, CanyonConnection<'a>>,
-        default: &mut Option<CanyonConnection<'a>>,
+        connections: &mut HashMap<&str, DatabaseConnection>,
+        default: &mut Option<DatabaseConnection>,
         default_db_type: &mut Option<DatabaseType>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         if default.is_none() {

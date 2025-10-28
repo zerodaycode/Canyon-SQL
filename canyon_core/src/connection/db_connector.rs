@@ -4,9 +4,22 @@ use crate::connection::clients::mssql::SqlServerConnection;
 use crate::connection::clients::mysql::MysqlConnection;
 #[cfg(feature = "postgres")]
 use crate::connection::clients::postgresql::PostgreSqlConnection;
+
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
 use std::error::Error;
+use std::sync::Arc;
+use bb8::PooledConnection;
+use bb8_postgres::PostgresConnectionManager;
+use tokio_postgres::NoTls;
+use mysql_async::{self, Pool as MySqlPool};
+use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
+
+type PgManager = PostgresConnectionManager<NoTls>;
+pub(crate) type PgPooled<'a> = PooledConnection<'a, PgManager>;
+
+type MsManager = TiberiusConnectionManager;
+pub(crate) type MsPooled<'a> = PooledConnection<'a, MsManager>;
 
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
@@ -15,11 +28,11 @@ use std::error::Error;
 pub enum DatabaseConnection {
     // NOTE: is this a Datasource instead of a connection?
     #[cfg(feature = "postgres")]
-    Postgres(PostgreSqlConnection), // NOTE: *Connection means *Client?
+    Postgres(Arc<bb8::Pool<PgManager>>),
     #[cfg(feature = "mssql")]
-    SqlServer(SqlServerConnection),
+    SqlServer(Arc<bb8::Pool<MsManager>>),
     #[cfg(feature = "mysql")]
-    MySQL(MysqlConnection),
+    MySQL(mysql_async::Pool),
 }
 
 unsafe impl Send for DatabaseConnection {}
@@ -28,21 +41,21 @@ unsafe impl Sync for DatabaseConnection {}
 impl DatabaseConnection {
     pub async fn new(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         // Add connection pooling at the client level for better performance
         match datasource.get_db_type() {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => {
-                connection_helpers::create_postgres_connection(datasource).await
+                Ok(Self::Postgres(Arc::from(connection_helpers::create_postgres_connection(datasource).await?)))
             }
 
             #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => {
-                connection_helpers::create_sqlserver_connection(datasource).await
+                Ok(Self::SqlServer(Arc::from(connection_helpers::create_sqlserver_connection(datasource).await?)))
             }
 
             #[cfg(feature = "mysql")]
-            DatabaseType::MySQL => connection_helpers::create_mysql_connection(datasource).await,
+            DatabaseType::MySQL => Ok(Self::MySQL(connection_helpers::create_mysql_connection(datasource).await?)),
         }
     }
 
@@ -57,6 +70,7 @@ impl DatabaseConnection {
         }
     }
 
+    /*
     #[cfg(feature = "postgres")]
     pub fn postgres_connection(&self) -> &PostgreSqlConnection {
         match self {
@@ -83,15 +97,17 @@ impl DatabaseConnection {
             _ => panic!(),
         }
     }
+*/
 }
 
 mod connection_helpers {
+    use bb8::Pool;
     use super::*;
 
     #[cfg(feature = "postgres")]
-    pub async fn create_postgres_connection(
+    pub(crate) async fn create_postgres_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Pool<PgManager>, Box<dyn Error + Send + Sync>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
 
         // Use optimized connection settings
@@ -118,15 +134,17 @@ mod connection_helpers {
             }
         });
 
-        Ok(DatabaseConnection::Postgres(PostgreSqlConnection {
-            client,
-        }))
+        let manager = PostgresConnectionManager::new(config, NoTls);
+        bb8::Pool::builder()
+            .max_size(10u32)
+            .build(manager).await
+            .map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)
     }
 
     #[cfg(feature = "mssql")]
-    pub async fn create_sqlserver_connection(
+    pub(crate) async fn create_sqlserver_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Pool<bb8_tiberius::ConnectionManager>, Box<dyn Error + Send + Sync>> {
         use async_std::net::TcpStream;
         let mut tiberius_config = tiberius::Config::new();
 
@@ -144,31 +162,28 @@ mod connection_helpers {
         let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
         tcp.set_nodelay(true)?;
 
-        let client = tiberius::Client::connect(tiberius_config, tcp).await?;
-
-        Ok(DatabaseConnection::SqlServer(SqlServerConnection {
-            client: Box::leak(Box::new(client)),
-        }))
+        let manager = TiberiusConnectionManager::new(tiberius_config);
+        bb8::Pool::builder().max_size(10u32).build(manager).await
+            .map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)
     }
 
     #[cfg(feature = "mysql")]
-    pub async fn create_mysql_connection(
+    pub(crate) async fn create_mysql_connection(
         datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
+    ) -> Result<MySqlPool, Box<dyn Error + Send + Sync>> {
         use mysql_async::Pool;
 
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
         let url = connection_string(user, password, datasource);
 
         // Use optimized pool settings for better performance
-        let _pool_constraints = mysql_async::PoolConstraints::new(2, 10)
+        let pool_constraints = mysql_async::PoolConstraints::new(2, 10)
             .ok_or_else(|| "Failure launching the MySQL pool")?;
 
-        let mysql_connection = Pool::from_url(url)?;
-
-        Ok(DatabaseConnection::MySQL(MysqlConnection {
-            client: mysql_connection,
-        }))
+        let mysql_opts = mysql_async::Opts::from_url(&url)?;
+        let mysql_opts_builder = mysql_async::OptsBuilder::from_opts(mysql_opts)
+            .pool_opts(mysql_async::PoolOpts::default().with_constraints(pool_constraints));
+        Ok(MySqlPool::new(mysql_opts_builder))
     }
 
     // #[cfg(any(feature = "postgres", feature = "mysql"))]
