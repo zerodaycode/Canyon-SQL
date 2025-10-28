@@ -2,13 +2,14 @@ use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
 use crate::connection::{
-    CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime, pool::get_pool_manager,
+    CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime,
 };
 use db_connector::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::{error::Error, fs};
 use tokio::sync::Mutex;
+use crate::connection::pool::CanyonConnection;
 
 pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 
@@ -53,14 +54,14 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 /// - `find_datasource_by_name_or_default`: Finds a datasource by name or returns the default.
 /// - `get_connection`: Retrieves a read-only connection from the cache.
 /// - `get_mut_connection`: Retrieves a mutable connection from the cache.
-pub struct Canyon {
+pub struct Canyon<'a> {
     config: Datasources,
-    connections: HashMap<&'static str, DatabaseConnection>,
+    connections: HashMap<&'static str, CanyonConnection<'a>>,
     default_connection: Option<DatabaseConnection>,
     default_db_type: Option<DatabaseType>,
 }
 
-impl Canyon {
+impl<'a> Canyon<'a> {
     /// Returns the global singleton instance of `Canyon`.
     ///
     /// This function allows access to the singleton instance of the Canyon engine
@@ -114,8 +115,8 @@ impl Canyon {
         let config_content = fs::read_to_string(&path)?;
         let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
 
-        let mut connections: HashMap<&str, DatabaseConnection> = HashMap::new();
-        let mut default_connection: Option<DatabaseConnection> = None;
+        let mut connections: HashMap<&str, CanyonConnection<'a>> = HashMap::new();
+        let mut default_connection: Option<CanyonConnection<'a>> = None;
         let mut default_db_type: Option<DatabaseType> = None;
 
         for ds in config.datasources.iter() {
@@ -204,33 +205,6 @@ impl Canyon {
         Ok(conn)
     }
 
-    /// Gets a pooled connection for better performance
-    /// This is an internal method that uses the connection pool
-    pub async fn get_pooled_connection(
-        &self,
-        name: &str,
-    ) -> Result<crate::connection::pool::PooledConnection, DatasourceNotFound> {
-        let pool_manager = get_pool_manager();
-        let mut pool_manager_guard = pool_manager.lock().await;
-
-        // Find the datasource
-        let datasource = self.find_datasource_by_name_or_default(name)?;
-
-        // Create pool if it doesn't exist
-        if !pool_manager_guard.has_pool(name) {
-            pool_manager_guard
-                .create_pool(name, datasource)
-                .await
-                .map_err(|_| DatasourceNotFound::from(Some(name)))?;
-        }
-
-        // Get pooled connection
-        pool_manager_guard
-            .get_connection(name)
-            .await
-            .map_err(|_| DatasourceNotFound::from(Some(name)))
-    }
-
     /// Gets a fast connection that automatically uses pooling when available
     /// This method provides the best performance by using connection pooling
     pub async fn get_fast_connection(
@@ -251,6 +225,7 @@ mod __impl {
     use std::error::Error;
     use std::path::PathBuf;
     use walkdir::WalkDir;
+    use crate::connection::pool::CanyonConnection;
 
     // Internal helper to locate the config file
     pub(crate) fn find_config_path() -> Result<PathBuf, std::io::Error> {
@@ -274,10 +249,10 @@ mod __impl {
             })
     }
 
-    pub(crate) async fn process_new_conn_by_datasource(
+    pub(crate) async fn process_new_conn_by_datasource<'a>(
         ds: &DatasourceConfig,
-        connections: &mut HashMap<&str, DatabaseConnection>,
-        default: &mut Option<DatabaseConnection>,
+        connections: &mut HashMap<&str, CanyonConnection<'a>>,
+        default: &mut Option<CanyonConnection<'a>>,
         default_db_type: &mut Option<DatabaseType>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         if default.is_none() {

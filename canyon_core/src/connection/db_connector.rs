@@ -46,29 +46,6 @@ impl DatabaseConnection {
         }
     }
 
-    /// Creates a connection with optimized settings for better performance
-    pub async fn new_optimized(
-        datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
-        // Use optimized connection settings for better performance
-        match datasource.get_db_type() {
-            #[cfg(feature = "postgres")]
-            DatabaseType::PostgreSql => {
-                connection_helpers::create_postgres_connection_optimized(datasource).await
-            }
-
-            #[cfg(feature = "mssql")]
-            DatabaseType::SqlServer => {
-                connection_helpers::create_sqlserver_connection_optimized(datasource).await
-            }
-
-            #[cfg(feature = "mysql")]
-            DatabaseType::MySQL => {
-                connection_helpers::create_mysql_connection_optimized(datasource).await
-            }
-        }
-    }
-
     pub fn get_db_type(&self) -> DatabaseType {
         match self {
             #[cfg(feature = "postgres")]
@@ -113,28 +90,6 @@ mod connection_helpers {
 
     #[cfg(feature = "postgres")]
     pub async fn create_postgres_connection(
-        datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
-        let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
-        let url = connection_string(user, password, datasource);
-
-        let (client, connection) = tokio_postgres::connect(&url, tokio_postgres::NoTls).await?;
-
-        tokio::spawn(async move {
-            if let Err(e) = connection.await {
-                eprintln!(
-                    "An error occurred while trying to connect to the PostgreSQL database: {e}"
-                );
-            }
-        });
-
-        Ok(DatabaseConnection::Postgres(PostgreSqlConnection {
-            client,
-        }))
-    }
-
-    #[cfg(feature = "postgres")]
-    pub async fn create_postgres_connection_optimized(
         datasource: &DatasourceConfig,
     ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
         let (user, password) = auth::extract_postgres_auth(&datasource.auth)?;
@@ -196,36 +151,6 @@ mod connection_helpers {
         }))
     }
 
-    #[cfg(feature = "mssql")]
-    pub async fn create_sqlserver_connection_optimized(
-        datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
-        use async_std::net::TcpStream;
-        let mut tiberius_config = tiberius::Config::new();
-
-        tiberius_config.host(&datasource.properties.host);
-        tiberius_config.port(datasource.properties.port.unwrap_or_default());
-        tiberius_config.database(&datasource.properties.db_name);
-
-        let auth_config = auth::extract_mssql_auth(&datasource.auth)?;
-        tiberius_config.authentication(auth_config);
-        tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
-        tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
-
-        // Optimize connection settings for better performance
-        // Note: Tiberius doesn't expose these settings directly
-        // The optimization is handled at the TCP level
-
-        let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
-        tcp.set_nodelay(true)?;
-
-        let client = tiberius::Client::connect(tiberius_config, tcp).await?;
-
-        Ok(DatabaseConnection::SqlServer(SqlServerConnection {
-            client: Box::leak(Box::new(client)),
-        }))
-    }
-
     #[cfg(feature = "mysql")]
     pub async fn create_mysql_connection(
         datasource: &DatasourceConfig,
@@ -234,24 +159,10 @@ mod connection_helpers {
 
         let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
         let url = connection_string(user, password, datasource);
-        let mysql_connection = Pool::from_url(url)?;
-
-        Ok(DatabaseConnection::MySQL(MysqlConnection {
-            client: mysql_connection,
-        }))
-    }
-
-    #[cfg(feature = "mysql")]
-    pub async fn create_mysql_connection_optimized(
-        datasource: &DatasourceConfig,
-    ) -> Result<DatabaseConnection, Box<dyn Error + Send + Sync>> {
-        use mysql_async::Pool;
-
-        let (user, password) = auth::extract_mysql_auth(&datasource.auth)?;
-        let url = connection_string(user, password, datasource);
 
         // Use optimized pool settings for better performance
-        let _pool_constraints = mysql_async::PoolConstraints::new(2, 10).unwrap();
+        let _pool_constraints = mysql_async::PoolConstraints::new(2, 10)
+            .ok_or_else(|| "Failure launching the MySQL pool")?;
 
         let mysql_connection = Pool::from_url(url)?;
 
