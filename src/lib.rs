@@ -30,7 +30,7 @@ pub mod macros {
 pub mod connection {
     pub use canyon_core::connection::contracts::DbConnection;
     pub use canyon_core::connection::database_type::DatabaseType;
-    pub use canyon_core::connection::db_connector::DatabaseConnection;
+    pub use canyon_core::connection::db_connector::DatabaseConnector;
 }
 
 pub mod core {

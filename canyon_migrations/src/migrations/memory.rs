@@ -1,7 +1,7 @@
 use crate::constants;
 use canyon_core::canyon::Canyon;
 use canyon_core::connection::contracts::DbConnection;
-use canyon_core::connection::db_connector::DatabaseConnection;
+use canyon_core::connection::db_connector::DatabaseConnector;
 use canyon_core::transaction::Transaction;
 use canyon_crud::{DatabaseType, DatasourceConfig};
 use regex::Regex;
@@ -262,7 +262,7 @@ impl CanyonMemory {
     /// Generates, if not exists the `canyon_memory` table
     async fn create_memory(
         datasource_name: &str,
-        db_conn: &DatabaseConnection,
+        db_conn: &DatabaseConnector,
         database_type: &DatabaseType,
     ) {
         let query = match database_type {

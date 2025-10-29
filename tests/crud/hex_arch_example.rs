@@ -1,4 +1,4 @@
-use canyon_sql::connection::DatabaseConnection;
+use canyon_sql::connection::DatabaseConnector;
 use canyon_sql::core::Canyon;
 use canyon_sql::macros::{CanyonCrud, CanyonMapper, canyon_entity};
 use canyon_sql::query::{QueryParameter, querybuilder::SelectQueryBuilder};
@@ -26,7 +26,7 @@ fn test_hex_arch_ops() {
     // If we try to do a call using the adapter, count will use the default datasource, which is locked at this point,
     // since we passed the same connection that it will be using here to the repository!
     assert_eq!(
-        LeagueHexRepositoryAdapter::<DatabaseConnection>::count()
+        LeagueHexRepositoryAdapter::<DatabaseConnector>::count()
             .await
             .unwrap() as usize,
         find_all_result.len()
@@ -96,7 +96,7 @@ fn test_hex_arch_update_entity_ops() {
 
     let mut updt = find_new_league.unwrap();
     updt.ext_id = 5;
-    let r = LeagueHexRepositoryAdapter::<DatabaseConnection>::update_entity(&updt).await;
+    let r = LeagueHexRepositoryAdapter::<DatabaseConnector>::update_entity(&updt).await;
     assert!(r.is_ok());
 
     let updated = league_service.get(&other_league.id).await.unwrap();

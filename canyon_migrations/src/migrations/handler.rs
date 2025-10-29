@@ -10,7 +10,7 @@ use crate::{
 use canyon_core::canyon::Canyon;
 use canyon_core::{
     column::Column,
-    connection::db_connector::DatabaseConnection,
+    connection::db_connector::DatabaseConnector,
     row::{Row, RowOperations},
     rows::CanyonRows,
     transaction::Transaction,
@@ -91,7 +91,7 @@ impl Migrations {
     /// chosen by its datasource name property
     async fn fetch_database(
         ds_name: &str,
-        db_conn: &DatabaseConnection,
+        db_conn: &DatabaseConnector,
         db_type: DatabaseType,
     ) -> CanyonRows {
         let query = match db_type {

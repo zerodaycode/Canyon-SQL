@@ -1,6 +1,6 @@
 use crate::{
     connection::{
-        contracts::DbConnection, database_type::DatabaseType, db_connector::DatabaseConnection,
+        contracts::DbConnection, database_type::DatabaseType, db_connector::DatabaseConnector,
     },
     mapper::RowMapper,
     query::parameters::QueryParameter,
@@ -8,7 +8,7 @@ use crate::{
 };
 use std::error::Error;
 
-impl DbConnection for DatabaseConnection {
+impl DbConnection for DatabaseConnector {
     async fn query_rows(
         &self,
         stmt: &str,
@@ -62,7 +62,7 @@ impl DbConnection for DatabaseConnection {
     }
 }
 
-impl DbConnection for &DatabaseConnection {
+impl DbConnection for &DatabaseConnector {
     async fn query_rows(
         &self,
         stmt: &str,
@@ -116,7 +116,7 @@ impl DbConnection for &DatabaseConnection {
     }
 }
 
-impl DbConnection for &mut DatabaseConnection {
+impl DbConnection for &mut DatabaseConnector {
     async fn query_rows(
         &self,
         stmt: &str,
@@ -171,24 +171,24 @@ impl DbConnection for &mut DatabaseConnection {
 }
 
 pub(crate) async fn db_conn_query_rows_impl<'a>(
-    c: &DatabaseConnection,
+    c: &DatabaseConnector,
     stmt: &str,
     params: &[&'a (dyn QueryParameter + 'a)],
 ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
     match c {
         #[cfg(feature = "postgres")]
-        DatabaseConnection::Postgres(client) => client.query_rows(stmt, params).await,
+        DatabaseConnector::Postgres(client) => client.query_rows(stmt, params).await,
 
         #[cfg(feature = "mssql")]
-        DatabaseConnection::SqlServer(client) => client.query_rows(stmt, params).await,
+        DatabaseConnector::SqlServer(client) => client.query_rows(stmt, params).await,
 
         #[cfg(feature = "mysql")]
-        DatabaseConnection::MySQL(client) => client.query_rows(stmt, params).await,
+        DatabaseConnector::MySQL(client) => client.query_rows(stmt, params).await,
     }
 }
 
 pub(crate) async fn db_conn_query_one_impl<R>(
-    c: &DatabaseConnection,
+    c: &DatabaseConnector,
     stmt: &str,
     params: &[&'_ (dyn QueryParameter + '_)],
 ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
@@ -197,18 +197,18 @@ where
 {
     match c {
         #[cfg(feature = "postgres")]
-        DatabaseConnection::Postgres(client) => client.query_one::<R>(stmt, params).await,
+        DatabaseConnector::Postgres(client) => client.query_one::<R>(stmt, params).await,
 
         #[cfg(feature = "mssql")]
-        DatabaseConnection::SqlServer(client) => client.query_one::<R>(stmt, params).await,
+        DatabaseConnector::SqlServer(client) => client.query_one::<R>(stmt, params).await,
 
         #[cfg(feature = "mysql")]
-        DatabaseConnection::MySQL(client) => client.query_one::<R>(stmt, params).await,
+        DatabaseConnector::MySQL(client) => client.query_one::<R>(stmt, params).await,
     }
 }
 
 pub(crate) async fn db_conn_query_impl<S, R>(
-    c: &DatabaseConnection,
+    c: &DatabaseConnector,
     stmt: S,
     params: &[&'_ dyn QueryParameter],
 ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
@@ -219,18 +219,18 @@ where
 {
     match c {
         #[cfg(feature = "postgres")]
-        DatabaseConnection::Postgres(client) => client.query(stmt, params).await,
+        DatabaseConnector::Postgres(client) => client.query(stmt, params).await,
 
         #[cfg(feature = "mssql")]
-        DatabaseConnection::SqlServer(client) => client.query(stmt, params).await,
+        DatabaseConnector::SqlServer(client) => client.query(stmt, params).await,
 
         #[cfg(feature = "mysql")]
-        DatabaseConnection::MySQL(client) => client.query(stmt, params).await,
+        DatabaseConnector::MySQL(client) => client.query(stmt, params).await,
     }
 }
 
 pub(crate) async fn db_conn_query_one_for_impl<T>(
-    c: &DatabaseConnection,
+    c: &DatabaseConnector,
     stmt: &str,
     params: &[&'_ dyn QueryParameter],
 ) -> Result<T, Box<dyn Error + Send + Sync>>
@@ -239,29 +239,29 @@ where
 {
     match c {
         #[cfg(feature = "postgres")]
-        DatabaseConnection::Postgres(client) => client.query_one_for(stmt, params).await,
+        DatabaseConnector::Postgres(client) => client.query_one_for(stmt, params).await,
 
         #[cfg(feature = "mssql")]
-        DatabaseConnection::SqlServer(client) => client.query_one_for(stmt, params).await,
+        DatabaseConnector::SqlServer(client) => client.query_one_for(stmt, params).await,
 
         #[cfg(feature = "mysql")]
-        DatabaseConnection::MySQL(client) => client.query_one_for(stmt, params).await,
+        DatabaseConnector::MySQL(client) => client.query_one_for(stmt, params).await,
     }
 }
 
 pub(crate) async fn db_conn_execute_impl(
-    c: &DatabaseConnection,
+    c: &DatabaseConnector,
     stmt: &str,
     params: &[&'_ dyn QueryParameter],
 ) -> Result<u64, Box<dyn Error + Send + Sync>> {
     match c {
         #[cfg(feature = "postgres")]
-        DatabaseConnection::Postgres(client) => client.execute(stmt, params).await,
+        DatabaseConnector::Postgres(client) => client.execute(stmt, params).await,
 
         #[cfg(feature = "mssql")]
-        DatabaseConnection::SqlServer(client) => client.execute(stmt, params).await,
+        DatabaseConnector::SqlServer(client) => client.execute(stmt, params).await,
 
         #[cfg(feature = "mysql")]
-        DatabaseConnection::MySQL(client) => client.execute(stmt, params).await,
+        DatabaseConnector::MySQL(client) => client.execute(stmt, params).await,
     }
 }

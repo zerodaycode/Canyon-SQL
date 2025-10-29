@@ -13,7 +13,7 @@ use std::error::Error;
 /// starts, Canyon gets the information about the desired datasources,
 /// process them and generates a pool of 1 to 1 database connection for
 /// every datasource defined.
-pub enum DatabaseConnection {
+pub enum DatabaseConnector {
     // NOTE: is this a Datasource instead of a connection?
     #[cfg(feature = "postgres")]
     Postgres(PostgresConnection),
@@ -23,10 +23,10 @@ pub enum DatabaseConnection {
     MySQL(MySQLConnector),
 }
 
-unsafe impl Send for DatabaseConnection {}
-unsafe impl Sync for DatabaseConnection {}
+unsafe impl Send for DatabaseConnector {}
+unsafe impl Sync for DatabaseConnector {}
 
-impl DatabaseConnection {
+impl DatabaseConnector {
     pub async fn new(datasource: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
         // Add connection pooling at the client level for better performance
         match datasource.get_db_type() {
@@ -50,11 +50,11 @@ impl DatabaseConnection {
     pub fn get_db_type(&self) -> DatabaseType {
         match self {
             #[cfg(feature = "postgres")]
-            DatabaseConnection::Postgres(_) => DatabaseType::PostgreSql,
+            DatabaseConnector::Postgres(_) => DatabaseType::PostgreSql,
             #[cfg(feature = "mssql")]
-            DatabaseConnection::SqlServer(_) => DatabaseType::SqlServer,
+            DatabaseConnector::SqlServer(_) => DatabaseType::SqlServer,
             #[cfg(feature = "mysql")]
-            DatabaseConnection::MySQL(_) => DatabaseType::MySQL,
+            DatabaseConnector::MySQL(_) => DatabaseType::MySQL,
         }
     }
 
@@ -62,7 +62,7 @@ impl DatabaseConnection {
         #[cfg(feature = "postgres")]
         pub fn postgres_connection(&self) -> &PostgreSqlConnection {
             match self {
-                DatabaseConnection::Postgres(conn) => conn,
+                DatabaseConnector::Postgres(conn) => conn,
                 #[cfg(any(feature = "mssql", feature = "mysql"))]
                 _ => panic!(),
             }
@@ -71,7 +71,7 @@ impl DatabaseConnection {
         #[cfg(feature = "mssql")]
         pub fn sqlserver_connection(&mut self) -> &mut SqlServerConnection {
             match self {
-                DatabaseConnection::SqlServer(conn) => conn,
+                DatabaseConnector::SqlServer(conn) => conn,
                 #[cfg(any(feature = "postgres", feature = "mysql"))]
                 _ => panic!(),
             }
@@ -80,7 +80,7 @@ impl DatabaseConnection {
         #[cfg(feature = "mysql")]
         pub fn mysql_connection(&self) -> &MysqlConnection {
             match self {
-                DatabaseConnection::MySQL(conn) => conn,
+                DatabaseConnector::MySQL(conn) => conn,
                 #[cfg(any(feature = "postgres", feature = "mssql"))]
                 _ => panic!(),
             }

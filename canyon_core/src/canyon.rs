@@ -2,13 +2,13 @@ use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
 use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
-use db_connector::DatabaseConnection;
+use db_connector::DatabaseConnector;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::{error::Error, fs};
 use tokio::sync::Mutex;
 
-pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
+pub type SharedConnection = Arc<Mutex<DatabaseConnector>>;
 
 /// The `Canyon` struct provides the main entry point for interacting with the Canyon-SQL context.
 ///
@@ -53,8 +53,8 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 /// - `get_mut_connection`: Retrieves a mutable connection from the cache.
 pub struct Canyon {
     config: Datasources,
-    connections: HashMap<&'static str, DatabaseConnection>,
-    default_connection: Option<DatabaseConnection>,
+    connections: HashMap<&'static str, DatabaseConnector>,
+    default_connection: Option<DatabaseConnector>,
     default_db_type: Option<DatabaseType>,
 }
 
@@ -112,8 +112,8 @@ impl Canyon {
         let config_content = fs::read_to_string(&path)?;
         let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
 
-        let mut connections: HashMap<&str, DatabaseConnection> = HashMap::new();
-        let mut default_connection: Option<DatabaseConnection> = None;
+        let mut connections: HashMap<&str, DatabaseConnector> = HashMap::new();
+        let mut default_connection: Option<DatabaseConnector> = None;
         let mut default_db_type: Option<DatabaseType> = None;
 
         for ds in config.datasources.iter() {
@@ -178,7 +178,7 @@ impl Canyon {
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_default_connection(&self) -> Result<&DatabaseConnection, DatasourceNotFound> {
+    pub fn get_default_connection(&self) -> Result<&DatabaseConnector, DatasourceNotFound> {
         self.default_connection
             .as_ref()
             .ok_or_else(|| DatasourceNotFound::from(None))
@@ -188,8 +188,8 @@ impl Canyon {
     ///
     /// This is a fast and efficient operation: cloning the [`SharedConnection`]
     /// simply increases the reference count [`Arc`] without duplicating the underlying
-    /// [`DatabaseConnection`]. Returns an error if no default connection is configured.
-    pub fn get_connection(&self, name: &str) -> Result<&DatabaseConnection, DatasourceNotFound> {
+    /// [`DatabaseConnector`]. Returns an error if no default connection is configured.
+    pub fn get_connection(&self, name: &str) -> Result<&DatabaseConnector, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();
         }
@@ -207,7 +207,7 @@ impl Canyon {
     pub async fn get_fast_connection(
         &self,
         name: &str,
-    ) -> Result<&DatabaseConnection, DatasourceNotFound> {
+    ) -> Result<&DatabaseConnector, DatasourceNotFound> {
         // For now, fall back to the regular connection
         // In the future, this could automatically use the pool
         self.get_connection(name)
@@ -217,7 +217,7 @@ impl Canyon {
 mod __impl {
     use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::DatasourceConfig;
-    use crate::connection::db_connector::DatabaseConnection;
+    use crate::connection::db_connector::DatabaseConnector;
     use std::collections::HashMap;
     use std::error::Error;
     use std::path::PathBuf;
@@ -247,15 +247,15 @@ mod __impl {
 
     pub(crate) async fn process_new_conn_by_datasource(
         ds: &DatasourceConfig,
-        connections: &mut HashMap<&str, DatabaseConnection>,
-        default: &mut Option<DatabaseConnection>,
+        connections: &mut HashMap<&str, DatabaseConnector>,
+        default: &mut Option<DatabaseConnector>,
         default_db_type: &mut Option<DatabaseType>,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
         if default.is_none() {
             let cloned_ds_for_default = ds.clone();
-            *default = Some(DatabaseConnection::new(&cloned_ds_for_default).await?); // Only cloning the smart pointer
+            *default = Some(DatabaseConnector::new(&cloned_ds_for_default).await?); // Only cloning the smart pointer
         }
-        let conn = DatabaseConnection::new(ds).await?;
+        let conn = DatabaseConnector::new(ds).await?;
         let name: &'static str = Box::leak(ds.name.clone().into_boxed_str());
 
         if default_db_type.is_none() {

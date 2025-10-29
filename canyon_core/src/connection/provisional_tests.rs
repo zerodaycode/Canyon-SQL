@@ -6,7 +6,7 @@
 // mod connection_tests {
 //     use tokio;
 //     use super::connection_helpers::*;
-//     use crate::{db_connector::DatabaseConnection, datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth}};
+//     use crate::{db_connector::DatabaseConnector, datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth}};
 
 //     #[tokio::test]
 //     #[cfg(feature = "postgres")]
@@ -97,7 +97,7 @@
 //                 },
 //             };
 
-//             let result = DatabaseConnection::new(&config).await;
+//             let result = DatabaseConnector::new(&config).await;
 //             assert!(result.is_ok());
 //         }
 
@@ -116,7 +116,7 @@
 //         //         },
 //         //     };
 
-//         //     let result = DatabaseConnection::new(&config).await;
+//         //     let result = DatabaseConnector::new(&config).await;
 //         //     assert!(result.is_ok());
 //         // }
 
@@ -135,7 +135,7 @@
 //         //         },
 //         //     };
 
-//         //     let result = DatabaseConnection::new(&config).await;
+//         //     let result = DatabaseConnector::new(&config).await;
 //         //     assert!(result.is_ok());
 //         // }
 //     }

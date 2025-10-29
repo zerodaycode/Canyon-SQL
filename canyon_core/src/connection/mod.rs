@@ -36,7 +36,7 @@ type MsManager = TiberiusConnectionManager;
 type SqlServerConnectionPool = Arc<bb8::Pool<MsManager>>;
 
 //
-// // TODO's: DatabaseConnection and DataSource can implement default, so there's no need to use str and &str
+// // TODO's: DatabaseConnector and DataSource can implement default, so there's no need to use str and &str
 // // as defaults anymore, since the can load as the default the first one defined in the config file, or have more
 // // complex workflows that are deferred to initialization time
 //
