@@ -1,4 +1,4 @@
-use crate::connection::clients::postgresql::PostgreSqlConnection;
+use crate::connection::clients::postgresql::PostgresConnection;
 use crate::{
     connection::{
         clients::postgresql::postgres_query_launcher, contracts::DbConnection,
@@ -10,7 +10,7 @@ use crate::{
 };
 use std::{error::Error, future::Future};
 
-impl DbConnection for PostgreSqlConnection {
+impl DbConnection for PostgresConnection {
     fn query_rows(
         &self,
         stmt: &str,

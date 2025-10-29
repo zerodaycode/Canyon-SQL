@@ -10,8 +10,12 @@ use std::error::Error;
 
 /// A connection with a `Mysql` database
 #[cfg(feature = "mysql")]
-pub struct MysqlConnection {
-    pub client: Pool,
+pub struct MySQLConnector(mysql_async::Pool);
+
+impl MySQLConnector {
+    pub fn new(pool: Pool) -> Self {
+        Self(pool)
+    }
 }
 
 #[cfg(feature = "mysql")]
@@ -33,7 +37,7 @@ pub(crate) mod mysql_query_launcher {
     pub async fn query<S, R>(
         stmt: S,
         params: &[&'_ dyn QueryParameter],
-        conn: &MysqlConnection,
+        conn: &MySQLConnector,
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
@@ -51,7 +55,7 @@ pub(crate) mod mysql_query_launcher {
     pub(crate) async fn query_rows(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-        conn: &MysqlConnection,
+        conn: &MySQLConnector,
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
         Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
     }
@@ -60,7 +64,7 @@ pub(crate) mod mysql_query_launcher {
     pub(crate) async fn query_one<R>(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-        conn: &MysqlConnection,
+        conn: &MySQLConnector,
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
@@ -77,7 +81,7 @@ pub(crate) mod mysql_query_launcher {
     pub(crate) async fn query_one_for<T: FromSqlOwnedValue<T>>(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-        conn: &MysqlConnection,
+        conn: &MySQLConnector,
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
         Ok(execute_query(stmt, params, conn)
             .await?
@@ -92,12 +96,12 @@ pub(crate) mod mysql_query_launcher {
     async fn execute_query<S>(
         stmt: S,
         params: &[&'_ dyn QueryParameter],
-        conn: &MysqlConnection,
+        conn: &MySQLConnector,
     ) -> Result<Vec<Row>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
     {
-        let mysql_connection = conn.client.get_conn().await?;
+        let mysql_connection = conn.0.get_conn().await?;
         let is_insert = stmt.as_ref().find(" RETURNING");
         let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
 
@@ -122,12 +126,12 @@ pub(crate) mod mysql_query_launcher {
     pub(crate) async fn execute<S>(
         stmt: S,
         params: &[&'_ dyn QueryParameter],
-        conn: &MysqlConnection,
+        conn: &MySQLConnector,
     ) -> Result<u64, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
     {
-        let mysql_connection = conn.client.get_conn().await?;
+        let mysql_connection = conn.0.get_conn().await?;
         let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
 
         Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())

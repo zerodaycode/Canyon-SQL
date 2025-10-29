@@ -1,7 +1,7 @@
 use crate::connection::clients::mysql::mysql_query_launcher;
 use crate::{
     connection::{
-        clients::mysql::MysqlConnection, contracts::DbConnection, database_type::DatabaseType,
+        clients::mysql::MySQLConnector, contracts::DbConnection, database_type::DatabaseType,
     },
     mapper::RowMapper,
     query::parameters::QueryParameter,
@@ -9,7 +9,7 @@ use crate::{
 };
 use std::{error::Error, future::Future};
 
-impl DbConnection for MysqlConnection {
+impl DbConnection for MySQLConnector {
     fn query_rows(
         &self,
         stmt: &str,

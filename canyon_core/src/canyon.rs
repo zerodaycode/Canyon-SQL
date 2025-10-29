@@ -1,15 +1,12 @@
 use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
-use crate::connection::{
-    CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime,
-};
+use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
 use db_connector::DatabaseConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::{error::Error, fs};
 use tokio::sync::Mutex;
-use crate::connection::pool::CanyonConnection;
 
 pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 
@@ -54,14 +51,14 @@ pub type SharedConnection = Arc<Mutex<DatabaseConnection>>;
 /// - `find_datasource_by_name_or_default`: Finds a datasource by name or returns the default.
 /// - `get_connection`: Retrieves a read-only connection from the cache.
 /// - `get_mut_connection`: Retrieves a mutable connection from the cache.
-pub struct Canyon<'a> {
+pub struct Canyon {
     config: Datasources,
-    connections: HashMap<&'static str, CanyonConnection<'a>>,
+    connections: HashMap<&'static str, DatabaseConnection>,
     default_connection: Option<DatabaseConnection>,
     default_db_type: Option<DatabaseType>,
 }
 
-impl<'a> Canyon<'a> {
+impl Canyon {
     /// Returns the global singleton instance of `Canyon`.
     ///
     /// This function allows access to the singleton instance of the Canyon engine
@@ -115,8 +112,8 @@ impl<'a> Canyon<'a> {
         let config_content = fs::read_to_string(&path)?;
         let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
 
-        let mut connections: HashMap<&str, CanyonConnection<'a>> = HashMap::new();
-        let mut default_connection: Option<CanyonConnection<'a>> = None;
+        let mut connections: HashMap<&str, DatabaseConnection> = HashMap::new();
+        let mut default_connection: Option<DatabaseConnection> = None;
         let mut default_db_type: Option<DatabaseType> = None;
 
         for ds in config.datasources.iter() {
@@ -248,7 +245,7 @@ mod __impl {
             })
     }
 
-    pub(crate) async fn process_new_conn_by_datasource<'a>(
+    pub(crate) async fn process_new_conn_by_datasource(
         ds: &DatasourceConfig,
         connections: &mut HashMap<&str, DatabaseConnection>,
         default: &mut Option<DatabaseConnection>,

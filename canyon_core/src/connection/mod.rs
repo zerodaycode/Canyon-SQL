@@ -3,19 +3,16 @@
 //! This module handles database connections, including connection pooling and configuration.
 //! It provides abstractions for managing multiple datasources and supports asynchronous operations.
 
-#[cfg(feature = "postgres")]
-pub extern crate tokio_postgres;
-
 #[cfg(feature = "mssql")]
 pub extern crate async_std;
-#[cfg(feature = "mssql")]
-pub extern crate tiberius;
-
+pub extern crate futures;
 #[cfg(feature = "mysql")]
 pub extern crate mysql_async;
-
-pub extern crate futures;
+#[cfg(feature = "mssql")]
+pub extern crate tiberius;
 pub extern crate tokio;
+#[cfg(feature = "postgres")]
+pub extern crate tokio_postgres;
 pub extern crate tokio_util;
 
 pub mod clients;
@@ -24,10 +21,19 @@ pub mod contracts;
 pub mod database_type;
 pub mod datasources;
 pub mod db_connector;
-pub mod pool;
+
 use crate::canyon::Canyon;
-use std::sync::OnceLock;
+use bb8_postgres::PostgresConnectionManager;
+use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
+use std::sync::{Arc, OnceLock};
 use tokio::runtime::Runtime;
+use tokio_postgres::NoTls;
+
+type PgManager = PostgresConnectionManager<NoTls>;
+type PostgresConnectionPool = Arc<bb8::Pool<PgManager>>;
+
+type MsManager = TiberiusConnectionManager;
+type SqlServerConnectionPool = Arc<bb8::Pool<MsManager>>;
 
 //
 // // TODO's: DatabaseConnection and DataSource can implement default, so there's no need to use str and &str
