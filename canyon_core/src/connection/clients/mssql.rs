@@ -1,6 +1,7 @@
 use crate::connection::clients::mssql::sqlserver_query_launcher::execute_query;
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
+use crate::connection::datasources::DatasourceConfig;
 use crate::connection::{MsManager, SqlServerConnectionPool};
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
@@ -10,11 +11,11 @@ use std::error::Error;
 use tiberius::Query;
 
 /// A connection with a `SqlServer` database
-pub struct SqlServerConnection(SqlServerConnectionPool);
+pub struct SqlServerConnector(SqlServerConnectionPool);
 
-impl SqlServerConnection {
-    pub fn new(pool: SqlServerConnectionPool) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(Self(pool))
+impl SqlServerConnector {
+    pub async fn new(config: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(Self(__impl::create_sqlserver_connector(config).await?))
     }
     pub async fn get_pooled(
         &self,
@@ -23,7 +24,7 @@ impl SqlServerConnection {
     }
 }
 
-impl DbConnection for SqlServerConnection {
+impl DbConnection for SqlServerConnector {
     async fn query_rows(
         &self,
         stmt: &str,
@@ -131,7 +132,6 @@ impl DbConnection for SqlServerConnection {
     }
 }
 
-#[cfg(feature = "mssql")]
 pub(crate) mod sqlserver_query_launcher {
     use super::*;
     use tiberius::QueryStream;
@@ -178,5 +178,60 @@ pub(crate) mod sqlserver_query_launcher {
             mssql_query.bind(*param);
         });
         mssql_query
+    }
+}
+
+pub(crate) mod __impl {
+    use super::*;
+    use crate::connection::datasources::{Auth, SqlServerAuth};
+    use bb8::Pool;
+    use std::sync::Arc;
+    use tiberius::Config;
+
+    pub(crate) async fn create_sqlserver_connector(
+        datasource: &DatasourceConfig,
+    ) -> Result<Arc<Pool<MsManager>>, Box<dyn Error + Send + Sync>> {
+        let sqlserver_config = sqlserver_config_from_datasource(datasource)?;
+        // let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
+        // tcp.set_nodelay(true)?;
+
+        let manager = MsManager::new(sqlserver_config);
+        let pool = bb8::Pool::builder().max_size(10u32).build(manager).await?;
+
+        Ok(SqlServerConnectionPool::from(pool))
+    }
+
+    fn sqlserver_config_from_datasource(
+        datasource: &DatasourceConfig,
+    ) -> Result<Config, Box<dyn Error + Send + Sync>> {
+        let mut tiberius_config = tiberius::Config::new();
+
+        tiberius_config.host(&datasource.properties.host);
+        tiberius_config.port(datasource.properties.port.unwrap_or_default());
+        tiberius_config.database(&datasource.properties.db_name);
+
+        let auth_config = extract_mssql_auth(&datasource.auth)?;
+        tiberius_config.authentication(auth_config);
+        tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
+        tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
+        // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
+        // https://github.com/prisma/tiberius/issues/364
+
+        Ok(tiberius_config)
+    }
+
+    pub fn extract_mssql_auth(
+        auth: &Auth,
+    ) -> Result<tiberius::AuthMethod, Box<dyn std::error::Error + Send + Sync>> {
+        match auth {
+            Auth::SqlServer(sql_server_auth) => match sql_server_auth {
+                SqlServerAuth::Basic { username, password } => {
+                    Ok(tiberius::AuthMethod::sql_server(username, password))
+                }
+                SqlServerAuth::Integrated => Ok(tiberius::AuthMethod::Integrated),
+            },
+            #[cfg(any(feature = "postgres", feature = "mysql"))]
+            _ => Err("Invalid auth configuration for a SqlServer datasource.".into()),
+        }
     }
 }

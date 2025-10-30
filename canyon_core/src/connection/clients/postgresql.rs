@@ -1,22 +1,26 @@
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
+use crate::connection::datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth};
 use crate::connection::{PgManager, PostgresConnectionPool};
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
-use bb8::PooledConnection;
+use bb8::{Pool, PooledConnection};
 use std::error::Error;
+use std::sync::Arc;
 use tokio_postgres::types::ToSql;
+use tokio_postgres::{Config, NoTls};
 
 /// A connector with a `PostgreSQL` database
 #[cfg(feature = "postgres")]
-pub struct PostgresConnection(PostgresConnectionPool);
+pub struct PostgresConnector(PostgresConnectionPool);
 
 #[cfg(feature = "postgres")]
-impl PostgresConnection {
-    pub fn new(pool: PostgresConnectionPool) -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Ok(Self(pool))
+impl PostgresConnector {
+    pub async fn new(datasource: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(Self(create_postgres_connector(datasource).await?))
     }
+
     pub async fn get_pooled(
         &self,
     ) -> Result<PooledConnection<'_, PgManager>, Box<dyn Error + Send + Sync>> {
@@ -24,7 +28,7 @@ impl PostgresConnection {
     }
 }
 
-impl DbConnection for PostgresConnection {
+impl DbConnection for PostgresConnector {
     async fn query_rows(
         &self,
         stmt: &str,
@@ -116,4 +120,59 @@ fn get_psql_params<'a>(params: &'a [&'a dyn QueryParameter]) -> Vec<&'a (dyn ToS
         .iter()
         .map(|param| param.as_postgres_param())
         .collect::<Vec<_>>()
+}
+
+// Façade helper to create a new postgres connector
+async fn create_postgres_connector(
+    datasource: &DatasourceConfig,
+) -> Result<Arc<Pool<PgManager>>, Box<dyn Error + Send + Sync>> {
+    let (user, password) = __impl::extract_postgres_auth(&datasource.auth)?;
+    let config = __impl::set_tokio_postgres_configs(&datasource.properties, user, password);
+    let conn_pool = __impl::create_postgres_connection_pool(config).await?;
+
+    Ok(PostgresConnectionPool::from(conn_pool))
+}
+
+mod __impl {
+    use super::*;
+
+    pub(crate) fn set_tokio_postgres_configs(
+        datasource_properties: &DatasourceProperties,
+        user: &str,
+        password: &str,
+    ) -> Config {
+        let mut config = tokio_postgres::Config::new();
+        config.host(&datasource_properties.host);
+        config.port(datasource_properties.port.unwrap_or_default());
+        config.dbname(&datasource_properties.db_name);
+        config.user(user);
+        config.password(password);
+
+        // Optimize connection settings for better performance
+        config.connect_timeout(std::time::Duration::from_secs(5));
+        config.keepalives_idle(std::time::Duration::from_secs(30));
+        config.keepalives_interval(std::time::Duration::from_secs(10));
+        config.keepalives_retries(3);
+
+        config
+    }
+
+    pub(crate) fn extract_postgres_auth(
+        auth: &Auth,
+    ) -> Result<(&str, &str), Box<dyn std::error::Error + Send + Sync>> {
+        match auth {
+            Auth::Postgres(pg_auth) => match pg_auth {
+                PostgresAuth::Basic { username, password } => Ok((username, password)),
+            },
+            #[cfg(any(feature = "mssql", feature = "mysql"))]
+            _ => Err("Invalid auth configuration for a Postgres datasource.".into()),
+        }
+    }
+    pub(crate) async fn create_postgres_connection_pool(
+        config: Config,
+    ) -> Result<Pool<PgManager>, Box<dyn Error + Send + Sync>> {
+        let manager = PgManager::new(config, NoTls);
+        let pool = bb8::Pool::builder().max_size(10u32).build(manager).await?;
+        Ok(pool)
+    }
 }

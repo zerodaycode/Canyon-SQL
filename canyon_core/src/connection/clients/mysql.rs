@@ -1,11 +1,10 @@
 use crate::connection::clients::mysql::mysql_query_launcher::{execute_query, generate_mysql_stmt};
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
+use crate::connection::datasources::DatasourceConfig;
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
-#[cfg(feature = "mysql")]
-use mysql_async::Pool;
 use mysql_async::Row;
 use mysql_async::prelude::Query;
 use mysql_common::constants::ColumnType;
@@ -13,12 +12,11 @@ use mysql_common::row;
 use std::error::Error;
 
 /// A connection with a `Mysql` database
-#[cfg(feature = "mysql")]
 pub struct MySQLConnector(mysql_async::Pool);
 
 impl MySQLConnector {
-    pub fn new(pool: Pool) -> Self {
-        Self(pool)
+    pub async fn new(config: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
+        Ok(Self(__impl::load_mysql_config(config).await?))
     }
 }
 
@@ -161,7 +159,6 @@ pub(crate) mod mysql_query_launcher {
         })
     }
 
-    #[cfg(feature = "mysql")]
     fn reorder_params<T>(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
@@ -186,5 +183,43 @@ pub(crate) mod mysql_query_launcher {
         }
 
         Ok(ordered_params)
+    }
+}
+
+pub(crate) mod __impl {
+    use crate::connection::datasources::{Auth, DatasourceConfig, MySQLAuth};
+    use mysql_async::Pool;
+    use std::error::Error;
+
+    pub(crate) async fn load_mysql_config(
+        datasource: &DatasourceConfig,
+    ) -> Result<Pool, Box<dyn Error + Send + Sync>> {
+        let (user, password) = extract_mysql_auth(&datasource.auth)?;
+
+        // TODO: the pool constrains must be adquired from the datasource config
+        let pool_constraints =
+            mysql_async::PoolConstraints::new(2, 10).ok_or("Failure launching the MySQL pool")?;
+
+        let mysql_opts_builder = mysql_async::OptsBuilder::default()
+            .pool_opts(mysql_async::PoolOpts::default().with_constraints(pool_constraints))
+            .user(Some(user))
+            .pass(Some(password))
+            .db_name(Some(&datasource.properties.db_name))
+            .ip_or_hostname(&datasource.properties.host)
+            .tcp_port(datasource.properties.port.unwrap_or_default());
+
+        Ok(mysql_async::Pool::new(mysql_opts_builder))
+    }
+
+    pub(crate) fn extract_mysql_auth(
+        auth: &Auth,
+    ) -> Result<(&str, &str), Box<dyn std::error::Error + Send + Sync>> {
+        match auth {
+            Auth::MySQL(mysql_auth) => match mysql_auth {
+                MySQLAuth::Basic { username, password } => Ok((username, password)),
+            },
+            #[cfg(any(feature = "postgres", feature = "mssql"))]
+            _ => Err("Invalid auth configuration for a MySQL datasource.".into()),
+        }
     }
 }
