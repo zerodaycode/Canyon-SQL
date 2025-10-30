@@ -4,11 +4,7 @@ use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasour
 use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
 use db_connector::DatabaseConnector;
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::{error::Error, fs};
-use tokio::sync::Mutex;
-
-pub type SharedConnection = Arc<Mutex<DatabaseConnector>>;
 
 /// The `Canyon` struct provides the main entry point for interacting with the Canyon-SQL context.
 ///
@@ -177,18 +173,15 @@ impl Canyon {
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
-    // Retrieve a read-only connection from the cache
+    // Retrieves a connector to the configured connection as the default connection by the user
+    // (the first defined in the configuration file)
     pub fn get_default_connection(&self) -> Result<&DatabaseConnector, DatasourceNotFound> {
         self.default_connection
             .as_ref()
             .ok_or_else(|| DatasourceNotFound::from(None))
     }
 
-    /// Quickly retrieves the default shared database connection.
-    ///
-    /// This is a fast and efficient operation: cloning the [`SharedConnection`]
-    /// simply increases the reference count [`Arc`] without duplicating the underlying
-    /// [`DatabaseConnector`]. Returns an error if no default connection is configured.
+    // Retrieve a read-only connection from the cache
     pub fn get_connection(&self, name: &str) -> Result<&DatabaseConnector, DatasourceNotFound> {
         if name.is_empty() {
             return self.get_default_connection();
@@ -200,17 +193,6 @@ impl Canyon {
             .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
 
         Ok(conn)
-    }
-
-    /// Gets a fast connection that automatically uses pooling when available
-    /// This method provides the best performance by using connection pooling
-    pub async fn get_fast_connection(
-        &self,
-        name: &str,
-    ) -> Result<&DatabaseConnector, DatasourceNotFound> {
-        // For now, fall back to the regular connection
-        // In the future, this could automatically use the pool
-        self.get_connection(name)
     }
 }
 

@@ -1,10 +1,14 @@
+use crate::connection::contracts::DbConnection;
+use crate::connection::database_type::DatabaseType;
 use crate::connection::{PgManager, PostgresConnectionPool};
 use crate::mapper::RowMapper;
+use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use bb8::PooledConnection;
 use std::error::Error;
+use tokio_postgres::types::ToSql;
 
-/// A connection with a `PostgreSQL` database
+/// A connector with a `PostgreSQL` database
 #[cfg(feature = "postgres")]
 pub struct PostgresConnection(PostgresConnectionPool);
 
@@ -20,25 +24,31 @@ impl PostgresConnection {
     }
 }
 
-#[cfg(feature = "postgres")]
-pub(crate) mod postgres_query_launcher {
-
-    use super::*;
-    use crate::rows::FromSqlOwnedValue;
-    use tokio_postgres::types::ToSql;
-
-    #[inline(always)]
-    pub(crate) async fn query<S, R>(
-        stmt: S,
+impl DbConnection for PostgresConnection {
+    async fn query_rows(
+        &self,
+        stmt: &str,
         params: &[&'_ dyn QueryParameter],
-        conn: &PostgresConnection,
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
+        let r = self
+            .get_pooled()
+            .await?
+            .query(stmt, &get_psql_params(params))
+            .await?;
+        Ok(CanyonRows::Postgres(r))
+    }
+
+    async fn query<S, R>(
+        &self,
+        stmt: S,
+        params: &[&dyn QueryParameter],
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        Ok(conn
+        Ok(self
             .get_pooled()
             .await?
             .query(stmt.as_ref(), &get_psql_params(params))
@@ -48,43 +58,18 @@ pub(crate) mod postgres_query_launcher {
             .collect())
     }
 
-    #[inline(always)]
-    pub(crate) async fn query_rows(
+    async fn query_one<R>(
+        &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-        conn: &PostgresConnection,
-    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
-        let m_params: Vec<_> = params
-            .iter()
-            .map(|param| param.as_postgres_param())
-            .collect();
-        let r = conn
-            .get_pooled()
-            .await?
-            .query(stmt, m_params.as_slice())
-            .await?;
-        Ok(CanyonRows::Postgres(r))
-    }
-
-    /// *NOTE*: implementation details of `query_one` when handling errors are
-    /// discussed [here](https://github.com/sfackler/rust-postgres/issues/790#issuecomment-2095729043)
-    #[inline(always)]
-    pub(crate) async fn query_one<R>(
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-        conn: &PostgresConnection,
     ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
     where
         R: RowMapper,
     {
-        let m_params: Vec<_> = params
-            .iter()
-            .map(|param| param.as_postgres_param())
-            .collect();
-        let result = conn
+        let result = self
             .get_pooled()
             .await?
-            .query_one(stmt, m_params.as_slice())
+            .query_one(stmt, &get_psql_params(params))
             .await;
 
         match result {
@@ -96,44 +81,39 @@ pub(crate) mod postgres_query_launcher {
         }
     }
 
-    #[inline(always)]
-    pub(crate) async fn query_one_for<T: FromSqlOwnedValue<T>>(
+    async fn query_one_for<T: FromSqlOwnedValue<T>>(
+        &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-        conn: &PostgresConnection,
     ) -> Result<T, Box<dyn Error + Send + Sync>> {
-        let m_params: Vec<_> = params
-            .iter()
-            .map(|param| param.as_postgres_param())
-            .collect();
-        let r = conn
+        let r = self
             .get_pooled()
             .await?
-            .query_one(stmt, m_params.as_slice())
+            .query_one(stmt, &get_psql_params(params))
             .await?;
         r.try_get::<usize, T>(0).map_err(From::from)
     }
 
-    #[inline(always)]
-    pub(crate) async fn execute<'a, S>(
-        stmt: S,
-        params: &'a [&'a (dyn QueryParameter + 'a)],
-        conn: &PostgresConnection,
-    ) -> Result<u64, Box<dyn Error + Send + Sync>>
-    where
-        S: AsRef<str> + Send,
-    {
-        conn.get_pooled()
+    async fn execute(
+        &self,
+        stmt: &str,
+        params: &[&dyn QueryParameter],
+    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
+        self.get_pooled()
             .await?
-            .execute(stmt.as_ref(), &get_psql_params(params))
+            .execute(stmt, &get_psql_params(params))
             .await
             .map_err(From::from)
     }
 
-    fn get_psql_params<'a>(params: &'a [&'a dyn QueryParameter]) -> Vec<&'a (dyn ToSql + Sync)> {
-        params
-            .iter()
-            .map(|param| param.as_postgres_param())
-            .collect::<Vec<_>>()
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+        Ok(DatabaseType::PostgreSql)
     }
+}
+
+fn get_psql_params<'a>(params: &'a [&'a dyn QueryParameter]) -> Vec<&'a (dyn ToSql + Sync)> {
+    params
+        .iter()
+        .map(|param| param.as_postgres_param())
+        .collect::<Vec<_>>()
 }

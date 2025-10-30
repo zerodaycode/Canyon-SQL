@@ -5,9 +5,6 @@ use crate::rows::{CanyonRows, FromSqlOwnedValue};
 use std::error::Error;
 use std::future::Future;
 
-mod r#impl;
-// contains the implementation details for the trait
-
 /// The `DbConnection` trait defines the core functionality required for interacting with a database connection.
 /// It provides methods for executing queries, retrieving rows, and obtaining metadata about the database type.
 ///

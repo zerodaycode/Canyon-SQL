@@ -1,9 +1,13 @@
+use crate::connection::clients::mysql::mysql_query_launcher::{execute_query, generate_mysql_stmt};
+use crate::connection::contracts::DbConnection;
+use crate::connection::database_type::DatabaseType;
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 #[cfg(feature = "mysql")]
 use mysql_async::Pool;
 use mysql_async::Row;
+use mysql_async::prelude::Query;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;
 use std::error::Error;
@@ -18,11 +22,80 @@ impl MySQLConnector {
     }
 }
 
-#[cfg(feature = "mysql")]
+impl DbConnection for MySQLConnector {
+    async fn query_rows(
+        &self,
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter],
+    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
+        Ok(CanyonRows::MySQL(execute_query(stmt, params, self).await?))
+    }
+
+    async fn query<S, R>(
+        &self,
+        stmt: S,
+        params: &[&'_ dyn QueryParameter],
+    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
+    where
+        S: AsRef<str> + Send,
+        R: RowMapper,
+        Vec<R>: FromIterator<<R as RowMapper>::Output>,
+    {
+        Ok(execute_query(stmt, params, self)
+            .await?
+            .iter()
+            .flat_map(|row| R::deserialize_mysql(row))
+            .collect())
+    }
+
+    async fn query_one<R>(
+        &self,
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter],
+    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
+    where
+        R: RowMapper,
+    {
+        let result = execute_query(stmt, params, self).await?;
+
+        match result.first() {
+            Some(r) => Ok(Some(R::deserialize_mysql(r)?)),
+            None => Ok(None),
+        }
+    }
+
+    async fn query_one_for<T: FromSqlOwnedValue<T>>(
+        &self,
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter],
+    ) -> Result<T, Box<dyn Error + Send + Sync>> {
+        Ok(execute_query(stmt, params, self)
+            .await?
+            .first()
+            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first row with stmt: {:?}", stmt))?
+            .get::<T, usize>(0)
+            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first column value on the first row with stmt: {:?}", stmt))?
+        )
+    }
+
+    async fn execute(
+        &self,
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter],
+    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
+        let mysql_connection = self.0.get_conn().await?;
+        let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
+
+        Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())
+    }
+
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+        Ok(DatabaseType::MySQL)
+    }
+}
+
 pub(crate) mod mysql_query_launcher {
-    #[cfg(feature = "mysql")]
     pub const DETECT_PARAMS_IN_QUERY: &str = r"\$([\d])+";
-    #[cfg(feature = "mysql")]
     pub const DETECT_QUOTE_IN_QUERY: &str = r#"\"|\\"#;
 
     use super::*;
@@ -33,67 +106,7 @@ pub(crate) mod mysql_query_launcher {
     use regex::Regex;
     use std::sync::Arc;
 
-    #[inline(always)]
-    pub async fn query<S, R>(
-        stmt: S,
-        params: &[&'_ dyn QueryParameter],
-        conn: &MySQLConnector,
-    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
-    where
-        S: AsRef<str> + Send,
-        R: RowMapper,
-        Vec<R>: FromIterator<<R as RowMapper>::Output>,
-    {
-        Ok(execute_query(stmt, params, conn)
-            .await?
-            .iter()
-            .flat_map(|row| R::deserialize_mysql(row))
-            .collect())
-    }
-
-    #[inline(always)]
-    pub(crate) async fn query_rows(
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-        conn: &MySQLConnector,
-    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
-        Ok(CanyonRows::MySQL(execute_query(stmt, params, conn).await?))
-    }
-
-    #[inline(always)]
-    pub(crate) async fn query_one<R>(
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-        conn: &MySQLConnector,
-    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
-    where
-        R: RowMapper,
-    {
-        let result = execute_query(stmt, params, conn).await?;
-
-        match result.first() {
-            Some(r) => Ok(Some(R::deserialize_mysql(r)?)),
-            None => Ok(None),
-        }
-    }
-
-    #[inline(always)]
-    pub(crate) async fn query_one_for<T: FromSqlOwnedValue<T>>(
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-        conn: &MySQLConnector,
-    ) -> Result<T, Box<dyn Error + Send + Sync>> {
-        Ok(execute_query(stmt, params, conn)
-            .await?
-            .first()
-            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first row with stmt: {:?}", stmt))?
-            .get::<T, usize>(0)
-            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first column value on the first row with stmt: {:?}", stmt))?
-        )
-    }
-
-    #[inline(always)]
-    async fn execute_query<S>(
+    pub(crate) async fn execute_query<S>(
         stmt: S,
         params: &[&'_ dyn QueryParameter],
         conn: &MySQLConnector,
@@ -123,22 +136,7 @@ pub(crate) mod mysql_query_launcher {
         Ok(result_rows)
     }
 
-    pub(crate) async fn execute<S>(
-        stmt: S,
-        params: &[&'_ dyn QueryParameter],
-        conn: &MySQLConnector,
-    ) -> Result<u64, Box<dyn Error + Send + Sync>>
-    where
-        S: AsRef<str> + Send,
-    {
-        let mysql_connection = conn.0.get_conn().await?;
-        let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
-
-        Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())
-    }
-
-    #[cfg(feature = "mysql")]
-    fn generate_mysql_stmt(
+    pub(crate) fn generate_mysql_stmt(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
     ) -> Result<QueryWithParams<String, Vec<Value>>, Box<dyn Error + Send + Sync>> {
