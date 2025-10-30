@@ -128,6 +128,14 @@ impl DatasourceConfig {
             false
         }
     }
+
+    pub fn get_port_or_default_by_db(&self) -> u16 {
+        self.properties.port.unwrap_or(match self.get_db_type() {
+            DatabaseType::PostgreSql => 5432,
+            DatabaseType::SqlServer => 1433,
+            DatabaseType::MySQL => 3306,
+        })
+    }
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]

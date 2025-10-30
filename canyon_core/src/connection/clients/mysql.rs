@@ -206,7 +206,7 @@ pub(crate) mod __impl {
             .pass(Some(password))
             .db_name(Some(&datasource.properties.db_name))
             .ip_or_hostname(&datasource.properties.host)
-            .tcp_port(datasource.properties.port.unwrap_or_default());
+            .tcp_port(datasource.get_port_or_default_by_db());
 
         Ok(mysql_async::Pool::new(mysql_opts_builder))
     }

@@ -1,6 +1,6 @@
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
-use crate::connection::datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth};
+use crate::connection::datasources::{Auth, DatasourceConfig, PostgresAuth};
 use crate::connection::{PgManager, PostgresConnectionPool};
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
@@ -127,7 +127,7 @@ async fn create_postgres_connector(
     datasource: &DatasourceConfig,
 ) -> Result<Arc<Pool<PgManager>>, Box<dyn Error + Send + Sync>> {
     let (user, password) = __impl::extract_postgres_auth(&datasource.auth)?;
-    let config = __impl::set_tokio_postgres_configs(&datasource.properties, user, password);
+    let config = __impl::set_tokio_postgres_configs(datasource, user, password);
     let conn_pool = __impl::create_postgres_connection_pool(config).await?;
 
     Ok(PostgresConnectionPool::from(conn_pool))
@@ -137,14 +137,14 @@ mod __impl {
     use super::*;
 
     pub(crate) fn set_tokio_postgres_configs(
-        datasource_properties: &DatasourceProperties,
+        datasource_config: &DatasourceConfig,
         user: &str,
         password: &str,
     ) -> Config {
         let mut config = tokio_postgres::Config::new();
-        config.host(&datasource_properties.host);
-        config.port(datasource_properties.port.unwrap_or_default());
-        config.dbname(&datasource_properties.db_name);
+        config.host(&datasource_config.properties.host);
+        config.port(datasource_config.get_port_or_default_by_db());
+        config.dbname(&datasource_config.properties.db_name);
         config.user(user);
         config.password(password);
 

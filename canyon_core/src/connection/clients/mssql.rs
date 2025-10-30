@@ -207,7 +207,7 @@ pub(crate) mod __impl {
         let mut tiberius_config = tiberius::Config::new();
 
         tiberius_config.host(&datasource.properties.host);
-        tiberius_config.port(datasource.properties.port.unwrap_or_default());
+        tiberius_config.port(datasource.get_port_or_default_by_db());
         tiberius_config.database(&datasource.properties.db_name);
 
         let auth_config = extract_mssql_auth(&datasource.auth)?;
