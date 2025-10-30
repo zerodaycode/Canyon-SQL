@@ -7,15 +7,15 @@
 pub extern crate tokio_postgres;
 
 #[cfg(feature = "mssql")]
-pub extern crate tiberius;
-#[cfg(feature = "mssql")]
 pub extern crate async_std;
+#[cfg(feature = "mssql")]
+pub extern crate tiberius;
 
 #[cfg(feature = "mysql")]
 pub extern crate mysql_async;
 
-pub extern crate tokio;
 pub extern crate futures;
+pub extern crate tokio;
 pub extern crate tokio_util;
 
 #[macro_use]
