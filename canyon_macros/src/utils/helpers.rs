@@ -5,7 +5,7 @@ use syn::{
     Attribute, Field, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility,
     punctuated::Punctuated,
 };
-
+use canyon_core::query::querybuilder::types::TableMetadata;
 use super::macro_tokens::MacroTokens;
 
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
@@ -68,7 +68,7 @@ pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool
 /// user's desired `table_name` and/or the `schema_name`, this method returns its
 /// correct form to be wired as the table name that the CRUD methods requires for generate
 /// the queries
-pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, TokenStream> {
+pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<TableMetadata<'_>, TokenStream> {
     let mut table_name: Option<String> = None;
     let mut schema: Option<String> = None;
 
@@ -78,16 +78,15 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
             parse_canyon_entity_attr(attr, &mut schema, &mut table_name)?;
         }
         // TODO: if segments because we could parse here the canyon_crud proc_macro_attr
-        // TODO: create a custom struct for hold this pair of data
     }
 
-    let mut final_table_name = String::new();
-    if schema.is_some() {
-        final_table_name.push_str(format!("{}.", schema.unwrap()).as_str())
+    let mut table_meta = TableMetadata::default();
+    if let Some(schema_) = schema {
+        table_meta.schema(&schema_);
     }
 
     if let Some(t_name) = table_name {
-        final_table_name.push_str(t_name.as_str())
+        table_meta.table_name(&t_name);
     } else {
         let target_type = if let Some(mapper_ty) = macro_data.retrieve_mapping_target_type() {
             mapper_ty.to_string()
@@ -95,10 +94,10 @@ pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<String, Token
             macro_data.ty.to_string()
         };
         let defaulted = default_database_table_name_from_entity_name(&target_type);
-        final_table_name.push_str(&defaulted)
+        table_meta.table_name(&defaulted);
     }
 
-    Ok(final_table_name)
+    Ok(table_meta)
 }
 
 fn parse_canyon_entity_attr(

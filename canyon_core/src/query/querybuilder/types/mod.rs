@@ -5,16 +5,74 @@ pub mod update;
 pub use self::{delete::*, select::*, update::*};
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Operator;
+use crate::query::operators::{Comp, Operator};
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use std::error::Error;
+use std::fmt::{Write, Formatter, Display};
+
+pub enum QueryKind {
+    Select,
+    Update,
+    Delete,
+}
+impl AsRef<str> for QueryKind {
+    fn as_ref(&self) -> &str {
+        match self {
+            QueryKind::Select => { "SELECT" }
+            QueryKind::Update => { "UPDATE " }
+            QueryKind::Delete => { "DELETE " }
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct TableMetadata<'a> {
+    pub schema: Option<&'a str>,
+    pub name: &'a str,
+}
+
+impl<'a> TableMetadata<'a> {
+    pub fn new(schema: &'a str, name: &'a str) -> Self {
+        Self { schema: Some(schema), name }
+    }
+    pub fn schema(&mut self, schema: &'a str) { self.schema = Some(schema) }
+    pub fn table_name(&mut self, table_name: &'a str) { self.name = table_name }
+}
+
+impl<'a> Display for TableMetadata<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self.schema {
+            Some(schema_name) => {write!(f, "{}.{}", schema_name, self.name)}
+            None => {write!(f, "{}", self.name)}
+        }
+    }
+}
+
+pub struct ConditionClause<'a> {
+    // TODO: where are missing complex where usages, like in joins, so we should consider to add the table
+    // to the column like where table.column = ...
+    pub(crate) kind: ConditionClauseKind,
+    pub(crate) column_name: &'a str,
+    pub(crate) operator: Comp,
+    pub(crate) value: &'a dyn QueryParameter
+}
+#[derive(Eq, PartialEq)]
+pub enum ConditionClauseKind {
+    Where,
+    And,
+    Or,
+    In
+}
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a> {
+    pub(crate) meta: TableMetadata<'a>,
+    pub(crate) kind: QueryKind,
     pub(crate) sql: String,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
     pub(crate) database_type: DatabaseType,
+    pub(crate) condition_clauses: Vec<ConditionClause<'a>>,
 }
 
 unsafe impl Send for QueryBuilder<'_> {}
@@ -22,76 +80,103 @@ unsafe impl Sync for QueryBuilder<'_> {}
 
 impl<'a> QueryBuilder<'a> {
     pub fn new(
-        sql: String,
+        table_metadata: TableMetadata<'a>,
+        kind: QueryKind,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
-            sql,
-            params: vec![], // TODO: as option? and then match it for emptyness and pass &[] if possible?
+            meta: table_metadata,
+            kind,
+            sql: String::new(),
+            params: Vec::new(),
             database_type,
+            condition_clauses: Vec::new(),
         })
     }
 
-    pub fn build(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync>> {
-        // TODO: here we should check for our invariants
-        self.sql.push(';');
-        Ok(Query::new(self.sql, self.params))
+    /// Convenient SQL writer that starts all the appended SQL sentences by adding an initial empty
+    /// whitespace
+    pub fn push_sql(&mut self, part: &str) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+        write!(self.sql, " {}", part)?;
+        Ok(())
     }
 
-    pub fn r#where<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, op: impl Operator) {
+    /// Same as [Self::push_sql] but for adding char values to the underlying buffer
+    pub fn push_sql_char(&mut self, part: char) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+        write!(self.sql, " {}", part)?;
+        Ok(())
+    }
+
+    pub fn build(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        self.sql.push_str(self.kind.as_ref());
+
+        let mut __self = __impl::check_invariants_over_condition_clauses(self)?;
+        let mut __self = __impl::write_from_clause(__self)?;
+
+        __self.sql.push(';');
+        Ok(Query::new(__self.sql, __self.params))
+    }
+
+    pub fn r#where<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Comp) {
         let (column_name, value) = r#where.value();
-
-        let where_ = String::from(" WHERE ")
-            + column_name
-            + &op.as_str(self.params.len() + 1, &self.database_type);
-
-        self.sql.push_str(&where_);
         self.params.push(value);
+        self.condition_clauses.push(
+            ConditionClause {
+                kind: ConditionClauseKind::Where,
+            column_name,
+            operator,
+            value
+        })
     }
 
-    pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, op: impl Operator) {
+    pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, operator: Comp) {
         let (column_name, value) = r#and.value();
-
-        let and_ = String::from(" AND ")
-            + column_name
-            + &op.as_str(self.params.len() + 1, &self.database_type);
-
-        self.sql.push_str(&and_);
         self.params.push(value);
+        self.condition_clauses.push(
+            ConditionClause {
+                kind: ConditionClauseKind::And,
+                column_name,
+                operator,
+                value
+            })
     }
 
-    pub fn and_values_in<Z, Q>(&mut self, r#and: Z, values: &'a [Q])
+    pub fn and_values_in<'b, Z, Q>(&mut self, field: Z, values: &'a [Q])
+    -> Result<(), Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>
     {
-        if values.is_empty() {
-            return;
-        }
+        let target_column = field.as_str();
+        __validators::check_not_empty_in_clause_values(&self.meta, target_column, values)?;
 
-        self.sql.push_str(&format!(" AND {} IN (", r#and.as_str()));
+        self.sql.push_str(" AND ");
+        self.sql.push_str(target_column);
+        self.sql.push_str(" IN (");
 
-        let mut counter = 1;
-        values.iter().for_each(|qp| {
-            if values.len() != counter {
-                self.sql.push_str(&format!("${}, ", self.params.len()));
-                counter += 1;
-            } else {
-                self.sql.push_str(&format!("${}", self.params.len()));
-            }
-            self.params.push(qp)
-        });
+        let start = self.params.len();
+        let placeholders = (0..values.len())
+            .map(|i| format!("${}", start + i + 1))
+            .collect::<Vec<_>>()
+            .join(", ");
 
+        self.sql.push_str(&placeholders);
         self.sql.push(')');
+
+        self.params.extend(values);
+
+        Ok(())
     }
 
     pub fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q])
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>
     {
         if values.is_empty() {
-            return;
+            return; // TODO: return err, so we can notify the client that is adding empty content
         }
 
         self.sql.push_str(&format!(" OR {} IN (", r#or.as_str()));
@@ -110,7 +195,7 @@ impl<'a> QueryBuilder<'a> {
         self.sql.push(')');
     }
 
-    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, op: impl Operator) {
+    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, op: Comp) {
         let (column_name, value) = r#or.value();
 
         let or_ = String::from(" OR ")
@@ -130,5 +215,105 @@ impl<'a> QueryBuilder<'a> {
                 if desc { " DESC " } else { "" }
             )),
         );
+    }
+
+
+}
+
+
+mod __impl {
+    use std::error::Error;
+    use crate::query::querybuilder::types::__detail::write_param_placeholder;
+    use crate::query::querybuilder::{ConditionClauseKind, QueryBuilder};
+    use std::fmt::Write;
+
+    pub(crate) fn write_from_clause<'a>(mut _self: QueryBuilder<'a>) -> Result<QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        if let Some(where_clause) = &_self.condition_clauses.first() {
+            write!(_self.sql,
+               " WHERE {} {}",
+               where_clause.column_name,
+               where_clause.operator
+            )?;
+            write_param_placeholder(_self.database_type, &mut _self.sql, _self.params.iter())?;
+        }
+        Ok(_self)
+    }
+
+    /// Quick standalone that acts as a façade for an orchestrator that just organizes a procedural way of testing
+    /// that the constructed underlying query is syntactically correct
+    pub(crate) fn check_invariants_over_condition_clauses<'a>(_self: QueryBuilder<'a>) -> Result<QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        let _self = super::__validators::check_where_clause_position(_self)?;
+        Ok(_self)
+    }
+}
+
+
+mod __detail {
+    use crate::connection::database_type::DatabaseType;
+    use std::error::Error;
+    use std::fmt::Write;
+
+    /// Convenient standalone that helps us to interpolate the placeholder of the parameters of a SQL
+    /// query directly into the passed in buffer, avoiding the need to construct and allocate temporary strings
+    /// for such purpose
+    pub(crate) fn write_param_placeholder(db_type: DatabaseType, buffer: &mut String, params: impl Iterator) -> Result<(), Box<dyn Error + Send + Sync>> {
+        Ok(match db_type{
+            DatabaseType::PostgreSql => write!(buffer, "${}", calculate_param_placeholder_count_value(params)),
+            DatabaseType::SqlServer => write!(buffer, "@P{}", calculate_param_placeholder_count_value(params)),
+            DatabaseType::MySQL => write!(buffer, "?"),
+        }?)
+    }
+
+    fn calculate_param_placeholder_count_value(container: impl Iterator) -> usize{
+        container.count()
+    }
+}
+
+mod __validators {
+    use std::error::Error;
+    use std::fmt::Display;
+    use crate::query::bounds::FieldIdentifier;
+    use crate::query::parameters::QueryParameter;
+    use crate::query::querybuilder::{ConditionClauseKind, QueryBuilder};
+    use crate::query::querybuilder::types::{TableMetadata, __errors};
+
+    pub(crate) fn check_where_clause_position<'a>(_self: QueryBuilder<'a>) -> Result< QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        if let Some(condition_clause) = &_self.condition_clauses.first() {
+            if condition_clause.kind.ne(&ConditionClauseKind::Where) { // TODO: decide if we just re-organize the condition clauses
+                return __errors::where_clause_position()
+            }
+        }
+        Ok(_self)
+    }
+
+    pub(crate) fn check_not_empty_in_clause_values<'a, 'b, Q>(table_metadata: impl Display, column: &'a str, values: &'a [Q])
+        -> Result<(), Box<dyn Error + Send + Sync + 'b>>
+    where
+        Q: QueryParameter {
+        if values.is_empty() {
+            return __errors::empty_in_clause(table_metadata, column);
+        }
+        Ok(())
+    }
+}
+
+mod __errors {
+    use std::error::Error;
+    use std::fmt::Display;
+    use std::io::ErrorKind;
+    use crate::query::bounds::FieldIdentifier;
+    use crate::query::querybuilder::QueryBuilder;
+    use crate::query::querybuilder::types::TableMetadata;
+
+    pub(crate) fn where_clause_position<'a>() -> Result<QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        return Err(std::io::Error::new( // TODO: CanyonError
+            ErrorKind::Unsupported,
+            "Where clauses should be the first condition clause on a SQL sentence").into())
+    }
+
+    pub(crate) fn empty_in_clause<'a, 'b>(table_metadata: impl Display, column: &'a str) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
+        return Err(std::io::Error::new( // TODO: CanyonError
+            ErrorKind::Unsupported,
+            format!("An IN clause has been added with empty values for {table_metadata} on the column: {column}", )).into())
     }
 }

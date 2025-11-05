@@ -1,21 +1,21 @@
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{Auth, DatasourceConfig, PostgresAuth};
-use crate::connection::{PgManager, PostgresConnectionPool};
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use bb8::{Pool, PooledConnection};
 use std::error::Error;
 use std::sync::Arc;
+use bb8_postgres::PostgresConnectionManager;
 use tokio_postgres::types::ToSql;
 use tokio_postgres::{Config, NoTls};
 
-/// A connector with a `PostgreSQL` database
-#[cfg(feature = "postgres")]
-pub struct PostgresConnector(PostgresConnectionPool);
+type PgManager = PostgresConnectionManager<NoTls>;
+type PostgresConnectionPool = Arc<bb8::Pool<PgManager>>;
 
-#[cfg(feature = "postgres")]
+/// A connector with a `PostgreSQL` database
+pub struct PostgresConnector(PostgresConnectionPool);
 impl PostgresConnector {
     pub async fn new(datasource: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self(create_postgres_connector(datasource).await?))
@@ -168,11 +168,84 @@ mod __impl {
             _ => Err("Invalid auth configuration for a Postgres datasource.".into()),
         }
     }
+
     pub(crate) async fn create_postgres_connection_pool(
         config: Config,
     ) -> Result<Pool<PgManager>, Box<dyn Error + Send + Sync>> {
         let manager = PgManager::new(config, NoTls);
-        let pool = bb8::Pool::builder().max_size(10u32).build(manager).await?;
+        let pool = bb8::Pool::builder()
+            .max_size(10u32)
+            .build(manager).await?;
         Ok(pool)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::__impl;
+    use crate::connection::datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth};
+
+    #[test]
+    fn test_extract_postgres_auth_basic() {
+        let auth = Auth::Postgres(PostgresAuth::Basic {
+            username: "pguser".into(),
+            password: "pgpass".into(),
+        });
+
+        let (user, pass) = __impl::extract_postgres_auth(&auth).unwrap();
+        assert_eq!(user, "pguser");
+        assert_eq!(pass, "pgpass");
+    }
+
+    #[test]
+    fn test_set_tokio_postgres_configs_basic() {
+        let datasource = DatasourceConfig {
+            name: "pg_test".into(),
+            properties: DatasourceProperties {
+                host: "localhost".into(),
+                db_name: "pg_db".into(),
+                port: Some(5433),
+                migrations: None,
+            },
+            auth: Auth::Postgres(PostgresAuth::Basic {
+                username: "pguser".into(),
+                password: "pgpass".into(),
+            }),
+        };
+
+        let config = __impl::set_tokio_postgres_configs(&datasource, "pguser", "pgpass");
+
+        assert_eq!(config.get_hosts(), vec![tokio_postgres::config::Host::Tcp("localhost".into())]);
+        assert_eq!(config.get_dbname(), Some("pg_db"));
+        assert_eq!(config.get_user(), Some("pguser"));
+        assert_eq!(*config.get_ports().first().unwrap(), 5433);
+
+        // sanity check for configured timeouts and keepalives
+        assert_eq!(config.get_connect_timeout(), Some(std::time::Duration::from_secs(5)).as_ref());
+        assert_eq!(config.get_keepalives_idle(), std::time::Duration::from_secs(30));
+        assert_eq!(config.get_keepalives_interval(), Some(std::time::Duration::from_secs(10)));
+        assert_eq!(config.get_keepalives_retries(), Some(3));
+    }
+
+    #[test]
+    fn test_set_tokio_postgres_configs_default_port() {
+        let datasource = DatasourceConfig {
+            name: "pg_test_default".into(),
+            properties: DatasourceProperties {
+                host: "127.0.0.1".into(),
+                db_name: "default_db".into(),
+                port: None,
+                migrations: None,
+            },
+            auth: Auth::Postgres(PostgresAuth::Basic {
+                username: "user".into(),
+                password: "pass".into(),
+            }),
+        };
+
+        let config = __impl::set_tokio_postgres_configs(&datasource, "user", "pass");
+        assert_eq!(*config.get_ports().first().unwrap(), 5432); // default Postgres port
+        assert_eq!(config.get_dbname(), Some("default_db"));
+        assert_eq!(config.get_user(), Some("user"));
     }
 }

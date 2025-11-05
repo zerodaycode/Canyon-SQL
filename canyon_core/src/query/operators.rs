@@ -1,6 +1,7 @@
+use std::fmt::{Display, Formatter};
 use crate::connection::database_type::DatabaseType;
 
-pub trait Operator {
+pub trait Operator: Display {
     fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String;
 }
 
@@ -19,6 +20,20 @@ pub enum Comp {
     Lt,
     /// Operator "=<" less or equals than value
     LtEq,
+}
+
+impl Display for Comp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let op = match *self {
+            Self::Eq => "=",
+            Self::Neq => "<>",
+            Self::Gt => ">",
+            Self::GtEq => ">=",
+            Self::Lt => "<",
+            Self::LtEq => "<=",
+        };
+        write!(f, "{}", op)
+    }
 }
 
 impl Operator for Comp {
@@ -67,5 +82,15 @@ impl Operator for Like {
                 " LIKE CONCAT(CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')"
             ),
         }
+    }
+}
+
+impl Display for Like {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", match *self {
+            Like::Full => "Like::Full",
+            Like::Left => "Like::Left",
+            Like::Right => "Like::Right",
+        })
     }
 }

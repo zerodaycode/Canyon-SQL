@@ -6,7 +6,7 @@ use quote::quote;
 
 pub fn generate_find_by_fk_ops(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &str,
+    table_schema_data: &TableMetadata,
 ) -> TokenStream {
     let ty = &macro_data.ty;
 
@@ -133,7 +133,7 @@ fn generate_find_by_foreign_key_tokens(
 /// derive macro on the parent side of the relation
 fn generate_find_by_reverse_foreign_key_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &str,
+    table_schema_data: &TableMetadata,
 ) -> Vec<(TokenStream, TokenStream)> {
     let mut rev_fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
     let ty = macro_data.ty;

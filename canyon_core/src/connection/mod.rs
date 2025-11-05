@@ -32,23 +32,12 @@ use crate::canyon::Canyon;
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 
-use bb8_postgres::PostgresConnectionManager;
-use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
-
 use std::error::Error;
 use std::sync::{Arc, OnceLock};
 
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
-use tokio_postgres::NoTls;
 
-type PgManager = PostgresConnectionManager<NoTls>;
-type PostgresConnectionPool = Arc<bb8::Pool<PgManager>>;
-
-type MsManager = TiberiusConnectionManager;
-type SqlServerConnectionPool = Arc<bb8::Pool<MsManager>>;
-
-//
 // // TODO's: DatabaseConnector and DataSource can implement default, so there's no need to use str and &str
 // // as defaults anymore, since the can load as the default the first one defined in the config file, or have more
 // // complex workflows that are deferred to initialization time

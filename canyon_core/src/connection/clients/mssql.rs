@@ -2,15 +2,18 @@ use crate::connection::clients::mssql::sqlserver_query_launcher::execute_query;
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
-use crate::connection::{MsManager, SqlServerConnectionPool};
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
 use bb8::PooledConnection;
 use std::error::Error;
+use std::sync::Arc;
 use tiberius::Query;
+use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
 
-/// A connection with a `SqlServer` database
+type SqlServerConnectionPool = Arc<bb8::Pool<TiberiusConnectionManager>>;
+
+/// A connector for a `SqlServer` database
 pub struct SqlServerConnector(SqlServerConnectionPool);
 
 impl SqlServerConnector {
@@ -19,7 +22,7 @@ impl SqlServerConnector {
     }
     pub async fn get_pooled(
         &self,
-    ) -> Result<PooledConnection<'_, MsManager>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<PooledConnection<'_, TiberiusConnectionManager>, Box<dyn Error + Send + Sync>> {
         Ok(self.0.get().await?)
     }
 }
@@ -190,18 +193,16 @@ pub(crate) mod __impl {
 
     pub(crate) async fn create_sqlserver_connector(
         datasource: &DatasourceConfig,
-    ) -> Result<Arc<Pool<MsManager>>, Box<dyn Error + Send + Sync>> {
+    ) -> Result<Arc<Pool<TiberiusConnectionManager>>, Box<dyn Error + Send + Sync>> {
         let sqlserver_config = sqlserver_config_from_datasource(datasource)?;
-        // let tcp = TcpStream::connect(tiberius_config.get_addr()).await?;
-        // tcp.set_nodelay(true)?;
 
-        let manager = MsManager::new(sqlserver_config);
+        let manager = TiberiusConnectionManager::new(sqlserver_config);
         let pool = bb8::Pool::builder().max_size(10u32).build(manager).await?;
 
         Ok(SqlServerConnectionPool::from(pool))
     }
 
-    fn sqlserver_config_from_datasource(
+    pub(crate) fn sqlserver_config_from_datasource(
         datasource: &DatasourceConfig,
     ) -> Result<Config, Box<dyn Error + Send + Sync>> {
         let mut tiberius_config = tiberius::Config::new();
@@ -220,7 +221,7 @@ pub(crate) mod __impl {
         Ok(tiberius_config)
     }
 
-    pub fn extract_mssql_auth(
+    pub(crate) fn extract_mssql_auth(
         auth: &Auth,
     ) -> Result<tiberius::AuthMethod, Box<dyn std::error::Error + Send + Sync>> {
         match auth {
@@ -233,5 +234,54 @@ pub(crate) mod __impl {
             #[cfg(any(feature = "postgres", feature = "mysql"))]
             _ => Err("Invalid auth configuration for a SqlServer datasource.".into()),
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::__impl;
+    use crate::connection::datasources::{Auth, DatasourceConfig, DatasourceProperties, SqlServerAuth};
+    use tiberius::AuthMethod;
+
+    #[test]
+    fn test_extract_mssql_auth_basic() {
+        let auth = Auth::SqlServer(SqlServerAuth::Basic {
+            username: "sa".to_string(),
+            password: "password123".to_string(),
+        });
+
+        let result = __impl::extract_mssql_auth(&auth).unwrap();
+
+        match result {
+            // We can only check the variant, not its internals (private fields)
+            AuthMethod::SqlServer(_) => {} // success
+            _ => panic!("Expected AuthMethod::SqlServer variant"),
+        }
+    }
+
+    #[test]
+    fn test_extract_mssql_auth_integrated() {
+        let auth = Auth::SqlServer(SqlServerAuth::Integrated);
+        let result = __impl::extract_mssql_auth(&auth).unwrap();
+        assert!(matches!(result, AuthMethod::Integrated));
+    }
+
+    #[test]
+    fn test_sqlserver_config_from_datasource_basic() {
+        let datasource = DatasourceConfig {
+            name: "test_source".into(),
+            properties: DatasourceProperties {
+                host: "localhost".into(),
+                db_name: "test_db".into(),
+                port: None, // default
+                migrations: None,
+            },
+            auth: Auth::SqlServer(SqlServerAuth::Basic {
+                username: "sa".into(),
+                password: "pass123".into(),
+            }),
+        };
+
+        let config = __impl::sqlserver_config_from_datasource(&datasource).unwrap();
+        assert_eq!(config.get_addr(), "localhost:1433");
     }
 }

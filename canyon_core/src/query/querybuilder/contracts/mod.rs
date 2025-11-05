@@ -2,7 +2,7 @@
 //! of the behaviour of the Canyon-SQL QueryBuilder
 
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier, TableMetadata};
-use crate::query::operators::Operator;
+use crate::query::operators::{Comp, Operator};
 use crate::query::parameters::QueryParameter;
 
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
@@ -126,7 +126,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn r#where<Z: FieldValueIdentifier>(self, column: &'a Z, op: impl Operator) -> Self;
+    fn r#where<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query.
     ///
@@ -134,7 +134,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn and<Z: FieldValueIdentifier>(self, column: &'a Z, op: impl Operator) -> Self;
+    fn and<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query that's being constructed
     ///
@@ -146,7 +146,8 @@ pub trait QueryBuilderOps<'a> {
     fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter;
+        Q: QueryParameter,
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>;
 
     /// Generates an `OR` SQL clause for constraint the query that will create
     /// the filter in conjunction with an `IN` operator that will ac
@@ -159,7 +160,8 @@ pub trait QueryBuilderOps<'a> {
     fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> Self
     where
         Z: FieldIdentifier,
-        Q: QueryParameter;
+        Q: QueryParameter,
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>;
 
     /// Generates an `OR` SQL clause for constraint the query.
     ///
@@ -167,7 +169,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: impl Operator) -> Self;
+    fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
 
     /// Generates a `ORDER BY` SQL clause for constraint the query.
     ///
