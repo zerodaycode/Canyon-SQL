@@ -1,3 +1,5 @@
+use super::macro_tokens::MacroTokens;
+use canyon_core::query::querybuilder::types::TableMetadata;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use std::fmt::Write;
@@ -5,8 +7,6 @@ use syn::{
     Attribute, Field, Fields, MetaNameValue, Token, Type, TypeGenerics, Visibility,
     punctuated::Punctuated,
 };
-use canyon_core::query::querybuilder::types::TableMetadata;
-use super::macro_tokens::MacroTokens;
 
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
 /// returns a [`TokenStream`] with the final `RowMapper` implementor.

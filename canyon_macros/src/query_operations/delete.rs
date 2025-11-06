@@ -1,9 +1,12 @@
 use crate::utils::macro_tokens::MacroTokens;
+use canyon_core::query::querybuilder::TableMetadata;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use canyon_core::query::querybuilder::TableMetadata;
 
-pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &TableMetadata,) -> TokenStream {
+pub fn generate_delete_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &TableMetadata,
+) -> TokenStream {
     let delete_method_ops = generate_delete_method_tokens(macro_data, table_schema_data);
     let delete_entity_ops = generate_delete_entity_tokens(table_schema_data);
     let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
@@ -81,7 +84,7 @@ pub fn generate_delete_method_tokens(
     delete_ops_tokens
 }
 
-pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata) -> TokenStream {
     let delete_entity_signature = quote! {
         async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
@@ -113,7 +116,7 @@ pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata,) -> Toke
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
-fn generate_delete_querybuilder_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+fn generate_delete_querybuilder_tokens(table_schema_data: &TableMetadata) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::DeleteQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -155,7 +158,7 @@ mod __details {
     use super::*;
     use crate::query_operations::consts;
 
-    pub(crate) fn generate_delete_entity_body(table_schema_data: &TableMetadata,) -> TokenStream {
+    pub(crate) fn generate_delete_entity_body(table_schema_data: &TableMetadata) -> TokenStream {
         let delete_entity_core_logic = generate_delete_entity_pk_body_logic(table_schema_data);
         let no_pk_err = consts::generate_no_pk_error();
 
@@ -172,7 +175,9 @@ mod __details {
         }
     }
 
-    pub(crate) fn generate_delete_entity_with_body(table_schema_data: &TableMetadata,) -> TokenStream {
+    pub(crate) fn generate_delete_entity_with_body(
+        table_schema_data: &TableMetadata,
+    ) -> TokenStream {
         let delete_entity_core_logic = generate_delete_entity_pk_body_logic(table_schema_data);
         let no_pk_err = consts::generate_no_pk_error();
 
@@ -187,7 +192,7 @@ mod __details {
         }
     }
 
-    fn generate_delete_entity_pk_body_logic(table_schema_data: &TableMetadata,) -> TokenStream {
+    fn generate_delete_entity_pk_body_logic(table_schema_data: &TableMetadata) -> TokenStream {
         quote! {
             // let pk_actual_value = &entity.primary_key_actual_value() as &dyn canyon_sql::query::QueryParameter;
             let pk_actual_value = entity.primary_key_actual_value();

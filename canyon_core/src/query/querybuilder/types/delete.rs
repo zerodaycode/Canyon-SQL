@@ -1,11 +1,11 @@
 use crate::connection::database_type::DatabaseType;
-use crate::query::query::Query;
-use std::error::Error;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::{Comp, Operator};
 use crate::query::parameters::QueryParameter;
-use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, QueryKind};
+use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
+use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, QueryKind};
+use std::error::Error;
 
 /// Contains the specific database operations associated with the
 /// *DELETE* SQL statements.
@@ -31,7 +31,6 @@ impl<'a> DeleteQueryBuilder<'a> {
         self._inner.build()
     }
 }
-
 
 impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
 
@@ -63,7 +62,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.and_values_in(and, values);
         self
@@ -74,7 +73,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.or_values_in(or, values);
         self

@@ -1,11 +1,11 @@
 use crate::connection::database_type::DatabaseType;
-use crate::query::query::Query;
-use std::error::Error;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::{Comp, Operator};
 use crate::query::parameters::QueryParameter;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, UpdateQueryBuilderOps};
+use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
+use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, UpdateQueryBuilderOps};
+use std::error::Error;
 
 /// Contains the specific database operations of the *UPDATE* SQL statements.
 pub struct UpdateQueryBuilder<'a> {
@@ -23,11 +23,10 @@ impl<'a> UpdateQueryBuilder<'a> {
         })
     }
 
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync+ 'a>> {
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()
     }
 }
-
 
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
@@ -99,7 +98,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.and_values_in(and, values);
         self
@@ -110,7 +109,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.or_values_in(or, values);
         self

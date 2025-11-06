@@ -1,5 +1,5 @@
-use std::fmt::{Display, Formatter};
 use crate::connection::database_type::DatabaseType;
+use std::fmt::{Display, Formatter};
 
 pub trait Operator: Display {
     fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String;
@@ -87,10 +87,14 @@ impl Operator for Like {
 
 impl Display for Like {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match *self {
-            Like::Full => "Like::Full",
-            Like::Left => "Like::Left",
-            Like::Right => "Like::Right",
-        })
+        write!(
+            f,
+            "{}",
+            match *self {
+                Like::Full => "Like::Full",
+                Like::Left => "Like::Left",
+                Like::Right => "Like::Right",
+            }
+        )
     }
 }

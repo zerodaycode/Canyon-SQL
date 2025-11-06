@@ -5,9 +5,9 @@ use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use bb8::{Pool, PooledConnection};
+use bb8_postgres::PostgresConnectionManager;
 use std::error::Error;
 use std::sync::Arc;
-use bb8_postgres::PostgresConnectionManager;
 use tokio_postgres::types::ToSql;
 use tokio_postgres::{Config, NoTls};
 
@@ -173,9 +173,7 @@ mod __impl {
         config: Config,
     ) -> Result<Pool<PgManager>, Box<dyn Error + Send + Sync>> {
         let manager = PgManager::new(config, NoTls);
-        let pool = bb8::Pool::builder()
-            .max_size(10u32)
-            .build(manager).await?;
+        let pool = bb8::Pool::builder().max_size(10u32).build(manager).await?;
         Ok(pool)
     }
 }
@@ -183,7 +181,9 @@ mod __impl {
 #[cfg(test)]
 mod tests {
     use super::__impl;
-    use crate::connection::datasources::{Auth, DatasourceConfig, DatasourceProperties, PostgresAuth};
+    use crate::connection::datasources::{
+        Auth, DatasourceConfig, DatasourceProperties, PostgresAuth,
+    };
 
     #[test]
     fn test_extract_postgres_auth_basic() {
@@ -215,15 +215,27 @@ mod tests {
 
         let config = __impl::set_tokio_postgres_configs(&datasource, "pguser", "pgpass");
 
-        assert_eq!(config.get_hosts(), vec![tokio_postgres::config::Host::Tcp("localhost".into())]);
+        assert_eq!(
+            config.get_hosts(),
+            vec![tokio_postgres::config::Host::Tcp("localhost".into())]
+        );
         assert_eq!(config.get_dbname(), Some("pg_db"));
         assert_eq!(config.get_user(), Some("pguser"));
         assert_eq!(*config.get_ports().first().unwrap(), 5433);
 
         // sanity check for configured timeouts and keepalives
-        assert_eq!(config.get_connect_timeout(), Some(std::time::Duration::from_secs(5)).as_ref());
-        assert_eq!(config.get_keepalives_idle(), std::time::Duration::from_secs(30));
-        assert_eq!(config.get_keepalives_interval(), Some(std::time::Duration::from_secs(10)));
+        assert_eq!(
+            config.get_connect_timeout(),
+            Some(std::time::Duration::from_secs(5)).as_ref()
+        );
+        assert_eq!(
+            config.get_keepalives_idle(),
+            std::time::Duration::from_secs(30)
+        );
+        assert_eq!(
+            config.get_keepalives_interval(),
+            Some(std::time::Duration::from_secs(10))
+        );
         assert_eq!(config.get_keepalives_retries(), Some(3));
     }
 

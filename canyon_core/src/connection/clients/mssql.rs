@@ -6,10 +6,10 @@ use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
 use bb8::PooledConnection;
+use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
 use std::error::Error;
 use std::sync::Arc;
 use tiberius::Query;
-use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
 
 type SqlServerConnectionPool = Arc<bb8::Pool<TiberiusConnectionManager>>;
 
@@ -239,7 +239,9 @@ pub(crate) mod __impl {
 #[cfg(test)]
 mod tests {
     use super::__impl;
-    use crate::connection::datasources::{Auth, DatasourceConfig, DatasourceProperties, SqlServerAuth};
+    use crate::connection::datasources::{
+        Auth, DatasourceConfig, DatasourceProperties, SqlServerAuth,
+    };
     use tiberius::AuthMethod;
 
     #[test]

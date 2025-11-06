@@ -4,7 +4,10 @@ use crate::utils::primary_key_attribute::PrimaryKeyIndex;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &TableMetadata,) -> TokenStream {
+pub fn generate_update_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &TableMetadata,
+) -> TokenStream {
     let update_method_ops = generate_update_method_tokens(macro_data, table_schema_data);
     let update_entity_ops = generate_update_entity_tokens(table_schema_data);
     let update_querybuilder_tokens = generate_update_querybuilder_tokens(table_schema_data);
@@ -16,7 +19,10 @@ pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &Tabl
     }
 }
 
-fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &TableMetadata,) -> TokenStream {
+fn generate_update_method_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &TableMetadata,
+) -> TokenStream {
     let update_signature = quote! {
         async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>>
     };
@@ -89,7 +95,7 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &T
     update_ops_tokens
 }
 
-fn generate_update_entity_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+fn generate_update_entity_tokens(table_schema_data: &TableMetadata) -> TokenStream {
     let update_entity_signature = quote! {
         async fn update_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
@@ -121,7 +127,7 @@ fn generate_update_entity_tokens(table_schema_data: &TableMetadata,) -> TokenStr
 
 /// Generates the TokenStream for the __update() CRUD operation
 /// being the query generated with the [`QueryBuilder`]
-fn generate_update_querybuilder_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+fn generate_update_querybuilder_tokens(table_schema_data: &TableMetadata) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -159,7 +165,7 @@ fn generate_update_querybuilder_tokens(table_schema_data: &TableMetadata,) -> To
 mod __details {
     use super::*;
 
-    pub(crate) fn generate_update_entity_body(table_schema_data: &TableMetadata,) -> TokenStream {
+    pub(crate) fn generate_update_entity_body(table_schema_data: &TableMetadata) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
         let no_pk_err = generate_no_pk_error();
 
@@ -177,7 +183,9 @@ mod __details {
         }
     }
 
-    pub(crate) fn generate_update_entity_with_body(table_schema_data: &TableMetadata,) -> TokenStream {
+    pub(crate) fn generate_update_entity_with_body(
+        table_schema_data: &TableMetadata,
+    ) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
         let no_pk_err = generate_no_pk_error();
 
@@ -193,7 +201,7 @@ mod __details {
         }
     }
 
-    fn generate_update_entity_pk_body_logic(table_schema_data: &TableMetadata,) -> TokenStream {
+    fn generate_update_entity_pk_body_logic(table_schema_data: &TableMetadata) -> TokenStream {
         quote! {
             let pk_actual_value = entity.primary_key_actual_value();
             let update_columns = entity.fields_names();

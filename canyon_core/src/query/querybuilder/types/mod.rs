@@ -26,7 +26,7 @@ impl AsRef<str> for QueryKind {
     }
 }
 
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct TableMetadata<'a> {
     pub schema: Option<&'a str>,
     pub name: &'a str,
