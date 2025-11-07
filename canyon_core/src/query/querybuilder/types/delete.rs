@@ -19,7 +19,7 @@ pub struct DeleteQueryBuilder<'a> {
 impl<'a> DeleteQueryBuilder<'a> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(
-        table_schema_data: TableMetadata<'a>,
+        table_schema_data: TableMetadata,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {

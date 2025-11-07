@@ -68,7 +68,7 @@ pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool
 /// user's desired `table_name` and/or the `schema_name`, this method returns its
 /// correct form to be wired as the table name that the CRUD methods requires for generate
 /// the queries
-pub fn table_schema_parser(macro_data: &MacroTokens<'_>) -> Result<TableMetadata<'_>, TokenStream> {
+pub fn table_schema_parser<'a>(macro_data: &MacroTokens<'_>) -> Result<TableMetadata, TokenStream> {
     let mut table_name: Option<String> = None;
     let mut schema: Option<String> = None;
 

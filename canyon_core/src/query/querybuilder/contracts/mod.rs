@@ -1,8 +1,9 @@
 //! Contains the elements that makes part of the formal declaration
 //! of the behaviour of the Canyon-SQL QueryBuilder
 
+use std::error::Error;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier, TableMetadata};
-use crate::query::operators::{Comp, Operator};
+use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
@@ -143,11 +144,12 @@ pub trait QueryBuilderOps<'a> {
     ///   the field name that maps the targeted column name
     /// * `values` - An array of [`QueryParameter`] with the values to filter
     ///   inside the `IN` operator
-    fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> Self
+    fn and_values_in<'b, Z, Q>(self, column: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>;
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
+        Self: std::marker::Sized;
 
     /// Generates an `OR` SQL clause for constraint the query that will create
     /// the filter in conjunction with an `IN` operator that will ac
@@ -157,11 +159,12 @@ pub trait QueryBuilderOps<'a> {
     ///   the field name that maps the targeted column name
     /// * `values` - An array of [`QueryParameter`] with the values to filter
     ///   inside the `IN` operator
-    fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> Self
+    fn or_values_in<'b, Z, Q>(self, r#or: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>;
+        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
+        Self: std::marker::Sized;
 
     /// Generates an `OR` SQL clause for constraint the query.
     ///

@@ -15,7 +15,7 @@ pub struct UpdateQueryBuilder<'a> {
 impl<'a> UpdateQueryBuilder<'a> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(
-        table_schema_data: TableMetadata<'a>,
+        table_schema_data: TableMetadata,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {

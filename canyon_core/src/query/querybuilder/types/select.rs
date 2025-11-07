@@ -1,12 +1,13 @@
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::TableMetadata;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::{Comp, Operator};
+use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata as TableSchemaData;
 use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, SelectQueryBuilderOps};
 use std::error::Error;
+use crate::canyon::Canyon;
 
 pub struct SelectQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a>,
@@ -14,9 +15,20 @@ pub struct SelectQueryBuilder<'a> {
 }
 
 impl<'a> SelectQueryBuilder<'a> {
-    /// Generates a new public instance of the [`SelectQueryBuilder`]
+    /// The constructor for creating [`QueryBuilder`] instances of type: SELECT
     pub fn new(
-        table_schema_data: TableSchemaData<'a>,
+        table_schema_data: TableSchemaData,
+        columns: &'a [String]
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+        Ok(Self {
+            _inner: QueryBuilder::new(table_schema_data, QueryKind::Select, Canyon::instance()?.get_default_db_type()?)?,
+            columns,
+        })
+    }
+
+    /// Same as [`SelectQueryBuilder::new`] but specifying the [`DatabaseType`]
+    pub fn new_for(
+        table_schema_data: TableSchemaData,
         columns: &'a [String],
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
@@ -115,25 +127,27 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     #[inline]
-    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
+    fn and_values_in<'b, Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
         Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
+        Self: std::marker::Sized
     {
-        self._inner.and_values_in(and, values);
-        self
+        self._inner.and_values_in(and, values)?;
+        Ok(self)
     }
 
     #[inline]
-    fn or_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
+    fn or_values_in<'b, Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
         Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
+        Self: std::marker::Sized,
     {
-        self._inner.or_values_in(and, values);
-        self
+        self._inner.or_values_in(and, values)?;
+        Ok(self)
     }
 
     #[inline]
