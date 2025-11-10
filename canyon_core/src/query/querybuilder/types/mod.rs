@@ -26,7 +26,7 @@ impl AsRef<str> for QueryKind {
     }
 }
 
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug)]
 pub struct TableMetadata {
     pub schema: Option<String>,
     pub name: String,
@@ -38,9 +38,22 @@ impl<'a> TableMetadata {
     }
     pub fn schema(&mut self, schema: String) { self.schema = Some(schema); }
     pub fn table_name(&mut self, table_name: String) { self.name = table_name }
+
+    /// Returns an already formatted version of the schema and table of a target database table
+    /// ready to be used in a SQL statement.
+    ///
+    /// This method allocates a new string, so it returns an owned one to the callee.
+    /// Just take it in consideration if someday someone uses it outside the macro generation
+    /// and there's some heavy callee procedure
+    pub fn sql(&self) -> String {
+        match &self.schema {
+            Some(schema_name) => {format!("{}.{}", schema_name, self.name)}
+            None => self.name.to_string()
+        }
+    }
 }
 
-impl<'a> Display for TableMetadata {
+impl Display for TableMetadata {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self.schema {
             Some(schema_name) => {write!(f, "{}.{}", schema_name, self.name)}
@@ -78,7 +91,7 @@ impl<'a> AsRef<str> for ConditionClauseKind {
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a> {
-    pub(crate) meta: TableMetadata,
+    pub(crate) meta: &'a TableMetadata,
     pub(crate) kind: QueryKind,
     pub(crate) sql: String,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
@@ -91,7 +104,7 @@ unsafe impl Sync for QueryBuilder<'_> {}
 
 impl<'a> QueryBuilder<'a> {
     pub fn new(
-        table_metadata: TableMetadata,
+        table_metadata: &'a TableMetadata,
         kind: QueryKind,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
@@ -128,28 +141,20 @@ impl<'a> QueryBuilder<'a> {
         Ok(Query::new(__self.sql, __self.params))
     }
 
-    pub fn r#where<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Comp) {
+    fn r#where(&mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) {
+        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator, value);
+    }
+
+    pub fn where_value<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Comp) {
         let (column_name, value) = r#where.value();
         self.params.push(value);
-        self.condition_clauses.push(
-            ConditionClause {
-                kind: ConditionClauseKind::Where,
-            column_name,
-            operator,
-            value
-        })
+        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator, value);
     }
 
     pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, operator: Comp) {
         let (column_name, value) = r#and.value();
         self.params.push(value);
-        self.condition_clauses.push(
-            ConditionClause {
-                kind: ConditionClauseKind::And,
-                column_name,
-                operator,
-                value
-            })
+        __impl::create_condition_clause(self, ConditionClauseKind::And, column_name, operator, value);
     }
 
     pub fn and_values_in<'b, Z, Q>(&mut self, field: Z, values: &'a [Q])
@@ -196,16 +201,16 @@ impl<'a> QueryBuilder<'a> {
         );
     }
 
-
 }
 
 
 mod __impl {
     use std::error::Error;
     use crate::query::querybuilder::types::__detail::write_param_placeholder;
-    use crate::query::querybuilder::{ConditionClauseKind, QueryBuilder};
+    use crate::query::querybuilder::{ConditionClause, ConditionClauseKind, QueryBuilder};
     use std::fmt::Write;
     use crate::query::bounds::FieldIdentifier;
+    use crate::query::operators::Comp;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::types::__validators;
 
@@ -264,6 +269,16 @@ mod __impl {
         let _self = super::__validators::check_where_clause_position(_self)?;
         Ok(_self)
     }
+
+    pub(crate) fn create_condition_clause<'a>(_self: &mut QueryBuilder<'a>, kind: ConditionClauseKind, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) {
+        _self.condition_clauses.push(
+            ConditionClause {
+                kind,
+                column_name,
+                operator,
+                value
+            });
+    }
 }
 
 
@@ -293,7 +308,7 @@ mod __validators {
     use std::fmt::Display;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::{ConditionClauseKind, QueryBuilder};
-    use crate::query::querybuilder::types::{TableMetadata, __errors};
+    use crate::query::querybuilder::types::__errors;
 
     pub(crate) fn check_where_clause_position<'a>(_self: QueryBuilder<'a>) -> Result< QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
         if let Some(condition_clause) = &_self.condition_clauses.first() {
@@ -319,9 +334,9 @@ mod __errors {
     use std::error::Error;
     use std::fmt::Display;
     use std::io::ErrorKind;
-    use crate::query::bounds::FieldIdentifier;
+    
     use crate::query::querybuilder::QueryBuilder;
-    use crate::query::querybuilder::types::TableMetadata;
+    
 
     pub(crate) fn where_clause_position<'a>() -> Result<QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
         return Err(std::io::Error::new( // TODO: CanyonError

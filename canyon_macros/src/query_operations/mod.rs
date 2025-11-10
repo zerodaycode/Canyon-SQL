@@ -7,6 +7,7 @@ use crate::utils::helpers::compute_crud_ops_mapping_target_type_with_generics;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
+use canyon_core::query::querybuilder::TableMetadata;
 
 pub mod delete;
 pub mod foreign_key;
@@ -19,7 +20,7 @@ mod doc_comments;
 
 pub fn impl_crud_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: String,
+    table_schema_data: &TableMetadata,
 ) -> proc_macro::TokenStream {
     let mut crud_ops_tokens = TokenStream::new();
 
@@ -31,10 +32,10 @@ pub fn impl_crud_operations_trait_for_struct(
         macro_data.retrieve_mapping_target_type().as_ref(),
     );
 
-    let read_operations_tokens = generate_read_operations_tokens(macro_data, &table_schema_data);
-    let insert_tokens = generate_insert_tokens(macro_data, &table_schema_data);
-    let update_tokens = generate_update_tokens(macro_data, &table_schema_data);
-    let delete_tokens = generate_delete_tokens(macro_data, &table_schema_data);
+    let read_operations_tokens = generate_read_operations_tokens(macro_data, table_schema_data);
+    let insert_tokens = generate_insert_tokens(macro_data, table_schema_data);
+    let update_tokens = generate_update_tokens(macro_data, table_schema_data);
+    let delete_tokens = generate_delete_tokens(macro_data, table_schema_data);
 
     let crud_operations_tokens = quote! {
         #read_operations_tokens

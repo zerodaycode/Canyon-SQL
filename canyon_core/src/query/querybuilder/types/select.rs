@@ -17,7 +17,7 @@ pub struct SelectQueryBuilder<'a> {
 impl<'a> SelectQueryBuilder<'a> {
     /// The constructor for creating [`QueryBuilder`] instances of type: SELECT
     pub fn new(
-        table_schema_data: TableSchemaData,
+        table_schema_data: &'a TableSchemaData,
         columns: &'a [String]
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
@@ -28,7 +28,7 @@ impl<'a> SelectQueryBuilder<'a> {
 
     /// Same as [`SelectQueryBuilder::new`] but specifying the [`DatabaseType`]
     pub fn new_for(
-        table_schema_data: TableSchemaData,
+        table_schema_data: &'a TableSchemaData,
         columns: &'a [String],
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {

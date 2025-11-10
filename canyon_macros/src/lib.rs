@@ -138,8 +138,8 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
 
     let table_name_res = helpers::table_schema_parser(&macro_data);
 
-    if let Ok(table_schema_data) = table_name_res {
-        impl_crud_operations_trait_for_struct(&macro_data, table_schema_data)
+    if let Ok(ts_data) = table_name_res {
+        impl_crud_operations_trait_for_struct(&macro_data, &ts_data)
     } else {
         table_name_res.unwrap_err().into()
     }

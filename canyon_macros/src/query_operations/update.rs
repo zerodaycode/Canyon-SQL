@@ -3,6 +3,8 @@ use crate::utils::macro_tokens::MacroTokens;
 use crate::utils::primary_key_attribute::PrimaryKeyIndex;
 use proc_macro2::TokenStream;
 use quote::quote;
+use canyon_core::query::operators::Comp;
+use canyon_core::query::querybuilder::{QueryBuilderOps, TableMetadata, UpdateQueryBuilder, UpdateQueryBuilderOps};
 
 pub fn generate_update_tokens(
     macro_data: &MacroTokens,
@@ -23,6 +25,9 @@ fn generate_update_method_tokens(
     macro_data: &MacroTokens,
     table_schema_data: &TableMetadata,
 ) -> TokenStream {
+    let mut update_ops_tokens = TokenStream::new();
+    let ty = macro_data.ty;
+
     let update_signature = quote! {
         async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>>
     };
@@ -32,29 +37,35 @@ fn generate_update_method_tokens(
         where I: canyon_sql::connection::DbConnection + Send + 'a
     };
 
-    let mut update_ops_tokens = TokenStream::new();
-
-    let ty = macro_data.ty;
-
     if let Some(primary_key) = macro_data.get_primary_key_field_annotation() {
         let (_, ty_generics, _) = macro_data.generics.split_for_impl();
         let update_columns = macro_data.get_column_names_pk_parsed();
         let fields = macro_data.get_struct_fields();
 
         let mut vec_columns_values: Vec<String> = Vec::new();
-        for (i, column_name) in update_columns.enumerate() {
-            let column_equal_value = format!("{} = ${}", column_name, i + 2);
-            vec_columns_values.push(column_equal_value)
-        }
-
+        // for (i, column_name) in update_columns.enumerate() {
+        //     let column_equal_value = format!("{} = ${}", column_name, i + 2);
+        //     vec_columns_values.push(column_equal_value)
+        // }
         let str_columns_values = vec_columns_values.join(", ");
 
+        let pk_name = &primary_key.name;
+        let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
+
+        let update_stmt = UpdateQueryBuilder::new(table_schema_data)
+            .expect("Failed to create a UpdateQueryBuilder")
+            .set(&update_columns.collect())
+            .r#where(pk_name, Comp::Eq, &pk_index)
+            .build()
+            .expect("Failed to construct a Query from a UpdateQueryBuilder")
+            .as_ref();
+        // TODO: provisional until full replace
+
+        
         let update_values = fields.map(|ident| {
             quote! { &self.#ident }
         });
 
-        let pk_name = &primary_key.name;
-        let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
         let stmt = quote! {&format!(
             "UPDATE {} SET {} WHERE {} = ${}",
             #table_schema_data, #str_columns_values, #pk_name, #pk_index
@@ -95,7 +106,7 @@ fn generate_update_method_tokens(
     update_ops_tokens
 }
 
-fn generate_update_entity_tokens(table_schema_data: &TableMetadata) -> TokenStream {
+fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
     let update_entity_signature = quote! {
         async fn update_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
@@ -127,7 +138,7 @@ fn generate_update_entity_tokens(table_schema_data: &TableMetadata) -> TokenStre
 
 /// Generates the TokenStream for the __update() CRUD operation
 /// being the query generated with the [`QueryBuilder`]
-fn generate_update_querybuilder_tokens(table_schema_data: &TableMetadata) -> TokenStream {
+fn generate_update_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -165,7 +176,7 @@ fn generate_update_querybuilder_tokens(table_schema_data: &TableMetadata) -> Tok
 mod __details {
     use super::*;
 
-    pub(crate) fn generate_update_entity_body(table_schema_data: &TableMetadata) -> TokenStream {
+    pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
         let no_pk_err = generate_no_pk_error();
 
@@ -184,7 +195,7 @@ mod __details {
     }
 
     pub(crate) fn generate_update_entity_with_body(
-        table_schema_data: &TableMetadata,
+        table_schema_data: &str
     ) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
         let no_pk_err = generate_no_pk_error();
@@ -201,7 +212,7 @@ mod __details {
         }
     }
 
-    fn generate_update_entity_pk_body_logic(table_schema_data: &TableMetadata) -> TokenStream {
+    fn generate_update_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
         quote! {
             let pk_actual_value = entity.primary_key_actual_value();
             let update_columns = entity.fields_names();

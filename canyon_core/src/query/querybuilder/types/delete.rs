@@ -19,7 +19,7 @@ pub struct DeleteQueryBuilder<'a> {
 impl<'a> DeleteQueryBuilder<'a> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(
-        table_schema_data: TableMetadata,
+        table_schema_data: &'a TableMetadata,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
@@ -58,25 +58,25 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Self
+    fn and_values_in<'b, Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
         Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
-        self._inner.and_values_in(and, values);
-        self
+        self._inner.and_values_in(and, values)?;
+        Ok(self)
     }
 
     #[inline]
-    fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Self
+    fn or_values_in<'b, Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
         Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
-        self._inner.or_values_in(or, values);
-        self
+        self._inner.or_values_in(or, values)?;
+        Ok(self)
     }
 
     #[inline]

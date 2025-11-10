@@ -9,11 +9,19 @@ use crate::query::parameters::QueryParameter;
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 
 pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
-    /// Creates an SQL `SET` clause to specify the columns that must be updated in the sentence
-    fn set<Z, Q>(self, columns: &'a [(Z, Q)]) -> Self
+    /// Creates an SQL `SET` clause by specifying the columns that must be updated in the sentence,
+    /// but without adding any [`QueryParameter`] value to the internal querybuilder
+    fn set(self, columns: &'a [&'a str]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+          where Self: std::marker::Sized;
+
+    /// Similar to [`Self::set`] but storing the underlying update values for each column in the
+    /// internal values collection of the [`crate::query::querybuilder::QueryBuilder`]
+    fn set_with_values<Z, Q>(self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Z: FieldIdentifier,
-        Q: QueryParameter;
+        Q: QueryParameter,
+        Self: std::marker::Sized,
+        Vec<&'a dyn QueryParameter>: Extend<&'a Q>;
 }
 
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
@@ -123,11 +131,19 @@ pub trait QueryBuilderOps<'a> {
 
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///
+    /// * `column` - An [`&str`] that will provide the target column name
+    /// * `op` - Any element that implements [`Operator`] for create the comparison
+    ///   or equality binary operator
+    ///  * `value` - Any implementor of [`QueryParameter] that will be the value to filter
+    fn r#where(self, column: &'a str, op: Comp, value: &'a dyn QueryParameter) -> Self;
+
+    /// Generates a `WHERE` SQL clause for constraint the query.
+    ///
     /// * `column` - A [`FieldValueIdentifier`] that will provide the target
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn r#where<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
+    fn where_value<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query.
     ///

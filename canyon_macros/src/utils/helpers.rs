@@ -82,11 +82,11 @@ pub fn table_schema_parser<'a>(macro_data: &MacroTokens<'_>) -> Result<TableMeta
 
     let mut table_meta = TableMetadata::default();
     if let Some(schema_) = schema {
-        table_meta.schema(&schema_);
+        table_meta.schema(schema_);
     }
 
     if let Some(t_name) = table_name {
-        table_meta.table_name(&t_name);
+        table_meta.table_name(t_name);
     } else {
         let target_type = if let Some(mapper_ty) = macro_data.retrieve_mapping_target_type() {
             mapper_ty.to_string()
@@ -94,7 +94,7 @@ pub fn table_schema_parser<'a>(macro_data: &MacroTokens<'_>) -> Result<TableMeta
             macro_data.ty.to_string()
         };
         let defaulted = default_database_table_name_from_entity_name(&target_type);
-        table_meta.table_name(&defaulted);
+        table_meta.table_name(defaulted);
     }
 
     Ok(table_meta)

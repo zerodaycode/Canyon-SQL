@@ -1,7 +1,7 @@
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::TableMetadata;
 use proc_macro2::TokenStream;
 use quote::quote;
+use canyon_core::query::querybuilder::TableMetadata;
 
 pub fn generate_insert_tokens(
     macro_data: &MacroTokens,
@@ -21,7 +21,7 @@ pub fn generate_insert_tokens(
 // Generates the TokenStream for the _insert operation
 pub fn generate_insert_method_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &str
 ) -> TokenStream {
     let insert_signature = quote! {
         async fn insert<'a>(&mut self)
@@ -64,7 +64,7 @@ pub fn generate_insert_method_tokens(
     }
 }
 
-pub fn generate_insert_entity_function_tokens(table_schema_data: &TableMetadata) -> TokenStream {
+pub fn generate_insert_entity_function_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
     let insert_entity_signature = quote! {
         async fn insert_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
@@ -193,7 +193,7 @@ mod __details {
 
     pub(crate) fn generate_insert_sql_statement(
         macro_data: &MacroTokens,
-        table_schema_data: &TableMetadata,
+        table_schema_data: &str
     ) -> String {
         // Retrieves the fields of the Struct as a collection of Strings, already parsed
         // the condition of remove the primary key if it's present, and it's auto incremental
@@ -249,7 +249,7 @@ mod __details {
 /// [`T`] objects in only one query
 fn _generate_multiple_insert_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &str
 ) -> TokenStream {
     let ty = macro_data.ty;
     let (_, ty_generics, _) = macro_data.generics.split_for_impl();
