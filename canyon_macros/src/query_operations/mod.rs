@@ -56,7 +56,7 @@ pub fn impl_crud_operations_trait_for_struct(
     });
 
     // NOTE: this extends should be documented WHY is needed to be after the base impl of CrudOperations
-    let foreign_key_ops_tokens = generate_find_by_fk_ops(macro_data, &table_schema_data);
+    let foreign_key_ops_tokens = generate_find_by_fk_ops(macro_data, table_schema_data);
     crud_ops_tokens.extend(quote! { #foreign_key_ops_tokens });
 
     crud_ops_tokens.into()

@@ -539,7 +539,7 @@ impl MigrationsProcessor {
                 )
             }
         } else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() {
-            // Case when field don't contains a foreign key annotation, but there is already one in the database column
+            // Case when field don't contain a foreign key annotation, but there is already one in the database column
             Self::delete_foreign_key(
                 self,
                 entity_name,

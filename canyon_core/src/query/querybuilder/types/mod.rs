@@ -62,6 +62,12 @@ impl Display for TableMetadata {
     }
 }
 
+impl AsRef<str> for TableMetadata {
+    fn as_ref(&self) -> &str {
+        self.schema.as_ref().unwrap()
+    }
+}
+
 pub struct ConditionClause<'a> {
     // TODO: where are missing complex where usages, like in joins, so we should consider to add the table
     // to the column like where table.column = ...

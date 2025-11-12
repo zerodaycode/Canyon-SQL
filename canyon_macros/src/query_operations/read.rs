@@ -19,11 +19,11 @@ pub fn generate_read_operations_tokens(
     let cols = macro_data.get_column_names_pk_parsed().collect::<Vec<_>>();
     let find_all_query = SelectQueryBuilder::new(table_schema_data, &cols)
         .expect("Unexpected error creating a SelectQueryBuilder for the find_all operations");
-    
+
     match find_all_query.build() {
         Ok(query) => {
             let sql = query.as_ref();
-            
+
             let find_all_tokens = generate_find_all_operations_tokens(mapper_ty, sql);
             let count_tokens = generate_count_operations_tokens(sql);
             let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, sql);
@@ -37,8 +37,8 @@ pub fn generate_read_operations_tokens(
             }
         },
         Err(e) => {
-            return syn::Error::new(mapper_ty.span(), format!("Failed to build query: {e}"))
-                .to_compile_error();
+            syn::Error::new(mapper_ty.span(), format!("Failed to build query: {e}"))
+                .to_compile_error()
         }
     }
 }
@@ -66,13 +66,13 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn select_query<'a>()
+        async fn select_query<'a>()
             -> Result<
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,
                 Box<dyn std::error::Error + Send + Sync + 'a>
             >
         {
-            canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
+            canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data)
         }
 
         /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
@@ -87,7 +87,7 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,
                 Box<dyn std::error::Error + Send + Sync + 'a>
         > {
-            canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, database_type)
+            canyon_sql::query::querybuilder::SelectQueryBuilder::new_for(#table_schema_data, database_type)
         }
     }
 }

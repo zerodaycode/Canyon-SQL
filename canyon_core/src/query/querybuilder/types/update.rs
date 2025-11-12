@@ -6,25 +6,20 @@ use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
 use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, UpdateQueryBuilderOps};
 use std::error::Error;
-use tokio_postgres::types::Field;
 use crate::canyon::Canyon;
 
 /// Contains the specific database operations of the *UPDATE* SQL statements.
 pub struct UpdateQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a>,
-    pub(crate) columns: &'a [&'a str],
+    pub(crate) columns: &'a [String],
 }
 
 impl<'a> UpdateQueryBuilder<'a> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(
         table_schema_data: &'a TableMetadata,
-        columns: &'a [String],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, QueryKind::Update, Canyon::instance()?.get_default_db_type()?)?,
-            columns: &[]
-        })
+        Self::new_for(table_schema_data, Canyon::instance()?.get_default_db_type()?)
     }
 
     pub fn new_for(
@@ -44,12 +39,12 @@ impl<'a> UpdateQueryBuilder<'a> {
 }
 
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
-    fn set(mut self, columns: &'a [&'a str]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> where Self: std::marker::Sized {
-        __validators::set_clause_values_not_empty(columns.iter())?;
+    fn set(mut self, columns: &'a [String]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> where Self: std::marker::Sized {
+        __validators::set_clause_values_not_empty(columns)?;
         self.columns = columns;
         Ok(self)
     }
-    
+
     fn set_with_values<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Z: FieldIdentifier,
@@ -57,9 +52,10 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         Vec<&'a dyn QueryParameter>: Extend<&'a Q>
     {
         __validators::set_clause_not_already_present(&self)?;
-        __validators::set_clause_values_not_empty(columns.iter().map(|(l, r)| r))?;
-        
-        self._inner.params.extend(columns.iter().map(|(_l, r)| r));
+        __validators::set_clause_values_not_empty(columns)?;
+
+        self._inner.params.extend(columns.iter().map(|(_l, value)| value));
+
         Ok(self)
     }
 }
@@ -80,7 +76,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         self._inner.r#where(column_name, operator, value);
         self
     }
-    
+
     #[inline]
     fn where_value<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: Comp) -> Self {
         self._inner.where_value(r#where, op);
@@ -131,17 +127,17 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 mod __impl {
     use crate::query::querybuilder::UpdateQueryBuilder;
 
-    pub(super) fn create_set_clause_columns_with_placeholders<'a>(_self: &'a mut UpdateQueryBuilder) {
+    pub(super) fn create_set_clause_columns_with_placeholders(_self: &mut UpdateQueryBuilder) {
         let mut set_clause = String::new();
         set_clause.push_str(" SET ");
-    
+
         for (idx, column) in _self.columns.iter().enumerate() {
             set_clause.push_str(&format!(
                 "{} = ${}",
                 column,
                 _self._inner.params.len() + 1
             ));
-    
+
             if idx < _self.columns.len() - 1 {
                 set_clause.push_str(", ");
             }
@@ -155,16 +151,16 @@ mod __validators {
     use crate::query::querybuilder::UpdateQueryBuilder;
 
     pub(super) fn set_clause_not_already_present<'a>(_self: &UpdateQueryBuilder<'a>) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
-        if _self.columns.len() > 0 {
+        if !_self.columns.is_empty() {
             return Err(std::io::Error::new( // TODO: CanyonError
                     ErrorKind::Unsupported,
                     "SET clause already present").into())
         }
         Ok(())
     }
-    
-    pub(super) fn set_clause_values_not_empty<T: ?Sized>(values: impl Iterator<Item = T>) -> Result<(), Box<dyn Error + Send + Sync>> {
-        if values.count().eq(&0) {
+
+    pub(super) fn set_clause_values_not_empty<T>(values: &[T]) -> Result<(), Box<dyn Error + Send + Sync>> {
+        if values.is_empty() {
             return Err(std::io::Error::new( // TODO: CanyonError
                 ErrorKind::Unsupported,
                 "Empty SET clause").into())

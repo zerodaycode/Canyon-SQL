@@ -7,8 +7,8 @@ pub fn generate_insert_tokens(
     macro_data: &MacroTokens,
     table_schema_data: &TableMetadata,
 ) -> TokenStream {
-    let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
-    let insert_entity_ops = generate_insert_entity_function_tokens(table_schema_data);
+    let insert_method_ops = generate_insert_method_tokens(macro_data, &table_schema_data.sql());
+    let insert_entity_ops = generate_insert_entity_function_tokens(&table_schema_data.sql());
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
     quote! {
@@ -64,7 +64,7 @@ pub fn generate_insert_method_tokens(
     }
 }
 
-pub fn generate_insert_entity_function_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+pub fn generate_insert_entity_function_tokens(table_schema_data: &str,) -> TokenStream {
     let insert_entity_signature = quote! {
         async fn insert_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>

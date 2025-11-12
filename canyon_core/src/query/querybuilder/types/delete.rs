@@ -46,8 +46,14 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn r#where<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: Comp) -> Self {
-        self._inner.r#where(r#where, op);
+    fn r#where(mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) -> Self {
+        self._inner.r#where(column_name, operator, value);
+        self
+    }
+
+    #[inline]
+    fn where_value<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: Comp) -> Self {
+        self._inner.where_value(r#where, op);
         self
     }
 

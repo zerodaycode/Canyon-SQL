@@ -104,7 +104,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 }
             }
 
-            fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+            async fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
                 Ok(self.get_db_type())
             }
         }
@@ -168,7 +168,7 @@ macro_rules! impl_db_connection_for_str {
                 conn.execute(stmt, params).await
             }
 
-            fn get_database_type(
+            async fn get_database_type(
                 &self,
             ) -> Result<
                 $crate::connection::database_type::DatabaseType,

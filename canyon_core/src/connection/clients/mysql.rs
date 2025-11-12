@@ -87,7 +87,7 @@ impl DbConnection for MySQLConnector {
         Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+    async fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
         Ok(DatabaseType::MySQL)
     }
 }

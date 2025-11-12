@@ -9,7 +9,7 @@ pub fn generate_delete_tokens(
 ) -> TokenStream {
     let delete_method_ops = generate_delete_method_tokens(macro_data, table_schema_data);
     let delete_entity_ops = generate_delete_entity_tokens(table_schema_data);
-    let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
+    let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(&table_schema_data.sql());
 
     quote! {
         #delete_method_ops
@@ -105,8 +105,8 @@ pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata,) -> Toke
             Input: canyon_sql::connection::DbConnection + Send + 'canyon
     };
 
-    let delete_entity_body = __details::generate_delete_entity_body(table_schema_data);
-    let delete_entity_with_body = __details::generate_delete_entity_with_body(table_schema_data);
+    let delete_entity_body = __details::generate_delete_entity_body(&table_schema_data.sql());
+    let delete_entity_with_body = __details::generate_delete_entity_with_body(&table_schema_data.sql());
 
     quote! {
         #delete_entity_signature { #delete_entity_body }
@@ -116,7 +116,7 @@ pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata,) -> Toke
 
 /// Generates the TokenStream for the __delete() CRUD operation as a
 /// [`query_elements::query_builder::QueryBuilder<'a, #ty>`]
-fn generate_delete_querybuilder_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     quote! {
         /// Generates a [`canyon_sql::query::querybuilder::DeleteQueryBuilder`]
         /// that allows you to customize the query by adding parameters and constrains dynamically.

@@ -11,8 +11,8 @@ pub fn generate_update_tokens(
     table_schema_data: &TableMetadata,
 ) -> TokenStream {
     let update_method_ops = generate_update_method_tokens(macro_data, table_schema_data);
-    let update_entity_ops = generate_update_entity_tokens(table_schema_data);
-    let update_querybuilder_tokens = generate_update_querybuilder_tokens(table_schema_data);
+    let update_entity_ops = generate_update_entity_tokens(&table_schema_data.sql());
+    let update_querybuilder_tokens = generate_update_querybuilder_tokens(&table_schema_data.sql());
 
     quote! {
         #update_method_ops
@@ -42,34 +42,21 @@ fn generate_update_method_tokens(
         let update_columns = macro_data.get_column_names_pk_parsed();
         let fields = macro_data.get_struct_fields();
 
-        let mut vec_columns_values: Vec<String> = Vec::new();
-        // for (i, column_name) in update_columns.enumerate() {
-        //     let column_equal_value = format!("{} = ${}", column_name, i + 2);
-        //     vec_columns_values.push(column_equal_value)
-        // }
-        let str_columns_values = vec_columns_values.join(", ");
-
         let pk_name = &primary_key.name;
         let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
 
         let update_stmt = UpdateQueryBuilder::new(table_schema_data)
             .expect("Failed to create a UpdateQueryBuilder")
-            .set(&update_columns.collect())
-            .r#where(pk_name, Comp::Eq, &pk_index)
+            .set(&update_columns.collect::<Vec<_>>())
+            .expect("Failed to generate a SET clause")
+            .r#where(pk_name, Comp::Eq, &(pk_index as i32))
             .build()
-            .expect("Failed to construct a Query from a UpdateQueryBuilder")
-            .as_ref();
-        // TODO: provisional until full replace
+            .expect("Failed to construct a Query from a UpdateQueryBuilder");
 
-        
         let update_values = fields.map(|ident| {
             quote! { &self.#ident }
         });
 
-        let stmt = quote! {&format!(
-            "UPDATE {} SET {} WHERE {} = ${}",
-            #table_schema_data, #str_columns_values, #pk_name, #pk_index
-        )};
         let update_values = quote! {
             &[#(#update_values),*]
         };
@@ -77,11 +64,11 @@ fn generate_update_method_tokens(
         update_ops_tokens.extend(quote! {
             #update_signature {
                 let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
-                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#&update_stmt, update_values, "").await
             }
             #update_with_signature {
                 let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
-                input.execute(#stmt, update_values).await
+                input.execute(#&update_stmt, update_values).await
             }
         });
     } else {

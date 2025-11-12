@@ -117,7 +117,7 @@ where
         self.lock().await.execute(stmt, params).await
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+    async fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
         todo!()
     }
 }

@@ -33,7 +33,7 @@ impl From<&Auth> for DatabaseType {
 /// The default implementation for [`DatabaseType`] returns the database type for the first
 /// datasource configured
 impl DatabaseType {
-    pub fn default_type() -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn default_type() -> Result<Self, Box<dyn Error + Send + Sync>> {
         Canyon::instance()?
             .get_default_db_type()
             .map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)

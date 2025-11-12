@@ -11,7 +11,7 @@ pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Creates an SQL `SET` clause by specifying the columns that must be updated in the sentence,
     /// but without adding any [`QueryParameter`] value to the internal querybuilder
-    fn set(self, columns: &'a [&'a str]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set(self, columns: &'a [String]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
           where Self: std::marker::Sized;
 
     /// Similar to [`Self::set`] but storing the underlying update values for each column in the
