@@ -137,6 +137,7 @@ impl DatasourceConfig {
             DatabaseType::SqlServer => 1433,
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => 3306,
+            _ => todo!("Non legal port cfg"),
         })
     }
 }

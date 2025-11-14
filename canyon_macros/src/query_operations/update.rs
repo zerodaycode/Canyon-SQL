@@ -45,7 +45,7 @@ fn generate_update_method_tokens(
         let pk_name = &primary_key.name;
         let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
 
-        let update_stmt = UpdateQueryBuilder::new(table_schema_data)
+        let update_stmt = UpdateQueryBuilder::new(table_schema_data.clone())
             .expect("Failed to create a UpdateQueryBuilder")
             .set(&update_columns.collect::<Vec<_>>())
             .expect("Failed to generate a SET clause")
@@ -138,7 +138,7 @@ fn generate_update_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
             canyon_sql::query::querybuilder::UpdateQueryBuilder<'a>,
             Box<dyn std::error::Error + Send + Sync + 'a>
         > {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data)
         }
 
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]

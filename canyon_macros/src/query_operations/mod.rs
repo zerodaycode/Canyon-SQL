@@ -7,6 +7,7 @@ use crate::utils::helpers::compute_crud_ops_mapping_target_type_with_generics;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
+use canyon_core::canyon::Canyon;
 use canyon_core::query::querybuilder::TableMetadata;
 
 pub mod delete;

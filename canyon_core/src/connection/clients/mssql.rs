@@ -130,7 +130,7 @@ impl DbConnection for SqlServerConnector {
             .map_err(From::from)
     }
 
-    async fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
         Ok(DatabaseType::SqlServer)
     }
 }

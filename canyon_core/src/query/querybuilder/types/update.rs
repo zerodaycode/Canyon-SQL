@@ -4,7 +4,7 @@ use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, UpdateQueryBuilderOps};
+use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, SelectQueryBuilder, UpdateQueryBuilderOps};
 use std::error::Error;
 use crate::canyon::Canyon;
 
@@ -17,18 +17,20 @@ pub struct UpdateQueryBuilder<'a> {
 impl<'a> UpdateQueryBuilder<'a> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(
-        table_schema_data: &'a TableMetadata,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Self::new_for(table_schema_data, Canyon::instance()?.get_default_db_type()?)
+        table_schema_data:  impl Into<TableMetadata>,
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    {
+        UpdateQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
     }
-
+    
     pub fn new_for(
-        table_schema_data: &'a TableMetadata,
+        table_schema_data:  impl Into<TableMetadata>,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    {
         Ok(Self {
             _inner: QueryBuilder::new(table_schema_data, QueryKind::Update, database_type)?,
-            columns: &[]
+            columns: &[],
         })
     }
 

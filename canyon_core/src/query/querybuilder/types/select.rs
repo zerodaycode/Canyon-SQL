@@ -17,24 +17,21 @@ pub struct SelectQueryBuilder<'a> {
 impl<'a> SelectQueryBuilder<'a> {
     /// The constructor for creating [`QueryBuilder`] instances of type: SELECT
     pub fn new(
-        table_schema_data: &'a TableSchemaData,
-        columns: &'a [String]
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, QueryKind::Select, Canyon::instance()?.get_default_db_type()?)?,
-            columns,
-        })
+        table_schema_data: impl Into<TableSchemaData>,
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    {
+        SelectQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
     }
 
     /// Same as [`SelectQueryBuilder::new`] but specifying the [`DatabaseType`]
     pub fn new_for(
-        table_schema_data: &'a TableSchemaData,
-        columns: &'a [String],
+        table_schema_data: impl Into<TableSchemaData>,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    {
         Ok(Self {
             _inner: QueryBuilder::new(table_schema_data, QueryKind::Select, database_type)?,
-            columns,
+            columns: &[],
         })
     }
 
@@ -46,6 +43,11 @@ impl<'a> SelectQueryBuilder<'a> {
 }
 
 impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
+    fn with_columns(mut self, columns: &'a [String]) -> Self {
+        self.columns = columns;
+        self
+    }
+
     fn left_join(
         mut self,
         join_table: impl TableMetadata,
@@ -138,7 +140,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         Z: FieldIdentifier,
         Q: QueryParameter,
         Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
-        Self: std::marker::Sized
+        Self: Sized
     {
         self._inner.and_values_in(and, values)?;
         Ok(self)

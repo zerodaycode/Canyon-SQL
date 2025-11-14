@@ -130,7 +130,7 @@ fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
             Box<(dyn std::error::Error + Send + Sync + 'err)>
         > where
     'canyon: 'err {
-            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, canyon_sql::connection::DatabaseType::default_type()?)
+            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data)
         }
 
         /// Generates a [`canyon_sql::query::querybuilder::DeleteQueryBuilder`]

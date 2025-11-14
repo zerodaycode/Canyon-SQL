@@ -5,7 +5,7 @@ pub mod update;
 pub use self::{delete::*, select::*, update::*};
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::{Comp, Operator};
+use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use std::error::Error;
@@ -30,7 +30,28 @@ impl AsRef<str> for QueryKind {
 pub struct TableMetadata {
     pub schema: Option<String>,
     pub name: String,
+} // TODO: we can have those fields as Cow<'_> for max performance
+
+impl From<&str> for TableMetadata {
+    /// Creates a new [`TableMetadata`] from a string slice.
+    ///
+    /// If the slice contains a dot, we assume that is a schema.table_name format, otherwise,
+    /// we assume that the client is just creating a [`Self`] from the passed in string
+    fn from(value: &str) -> Self {
+        if let Some((schema, table)) = value.split_once('.') {
+            TableMetadata {
+                schema: Some(schema.to_string()),
+                name: table.to_string(),
+            }
+        } else {
+            TableMetadata {
+                schema: None,
+                name: value.to_string(),
+            }
+        }
+    }
 }
+
 
 impl<'a> TableMetadata {
     pub fn new(schema: &'a str, name: &'a str) -> Self {
@@ -97,7 +118,7 @@ impl<'a> AsRef<str> for ConditionClauseKind {
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a> {
-    pub(crate) meta: &'a TableMetadata,
+    pub(crate) meta: TableMetadata,
     pub(crate) kind: QueryKind,
     pub(crate) sql: String,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
@@ -110,12 +131,13 @@ unsafe impl Sync for QueryBuilder<'_> {}
 
 impl<'a> QueryBuilder<'a> {
     pub fn new(
-        table_metadata: &'a TableMetadata,
+        table_metadata:  impl Into<TableMetadata>,
         kind: QueryKind,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    {
         Ok(Self {
-            meta: table_metadata,
+            meta: table_metadata.into(),
             kind,
             sql: String::new(),
             params: Vec::new(),
@@ -185,15 +207,10 @@ impl<'a> QueryBuilder<'a> {
         Ok(())
     }
 
-    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, op: Comp) {
+    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, operator: Comp) {
         let (column_name, value) = r#or.value();
-
-        let or_ = String::from(" OR ")
-            + column_name
-            + &op.as_str(self.params.len() + 1, &self.database_type);
-
-        self.sql.push_str(&or_);
         self.params.push(value);
+        __impl::create_condition_clause(self, ConditionClauseKind::And, column_name, operator, value);
     }
 
     #[inline]
@@ -301,6 +318,7 @@ mod __detail {
             DatabaseType::PostgreSql => write!(buffer, "${}", calculate_param_placeholder_count_value(params)),
             DatabaseType::SqlServer => write!(buffer, "@P{}", calculate_param_placeholder_count_value(params)),
             DatabaseType::MySQL => write!(buffer, "?"),
+            _ => panic!("Provisional (placeholder)"),
         }?)
     }
 

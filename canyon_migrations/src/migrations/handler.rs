@@ -101,6 +101,7 @@ impl Migrations {
             DatabaseType::SqlServer => constants::mssql_queries::FETCH_PUBLIC_SCHEMA,
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => todo!("Not implemented fetch database in mysql"),
+            _ => todo!("Non-legal db-type"),
         };
 
         Self::query_rows(query, [], db_conn)
@@ -299,6 +300,7 @@ fn check_for_table_name(
         #[cfg(feature = "mssql")]
         DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),
         #[cfg(feature = "mysql")]
-        DatabaseType::MySQL => todo!(),
+        DatabaseType::MySQL => todo!("Not implemented fetch database in mysql"),
+        _ => todo!("Non-legal db-type"),
     }
 }

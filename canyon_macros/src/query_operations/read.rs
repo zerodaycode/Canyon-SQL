@@ -1,5 +1,5 @@
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::SelectQueryBuilder;
+use canyon_core::query::querybuilder::{SelectQueryBuilder, SelectQueryBuilderOps};
 use canyon_core::query::querybuilder::types::TableMetadata;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
@@ -17,8 +17,9 @@ pub fn generate_read_operations_tokens(
         .unwrap_or(ty);
 
     let cols = macro_data.get_column_names_pk_parsed().collect::<Vec<_>>();
-    let find_all_query = SelectQueryBuilder::new(table_schema_data, &cols)
-        .expect("Unexpected error creating a SelectQueryBuilder for the find_all operations");
+    let find_all_query = SelectQueryBuilder::new(table_schema_data.clone())
+        .expect("Unexpected error creating a SelectQueryBuilder for the find_all operations")
+        .with_columns(&cols);
 
     match find_all_query.build() {
         Ok(query) => {
@@ -66,7 +67,7 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        async fn select_query<'a>()
+        fn select_query<'a>()
             -> Result<
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,
                 Box<dyn std::error::Error + Send + Sync + 'a>

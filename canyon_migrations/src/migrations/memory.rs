@@ -272,6 +272,7 @@ impl CanyonMemory {
             DatabaseType::SqlServer => constants::mssql_queries::CANYON_MEMORY_TABLE,
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => todo!("Memory table in mysql not implemented"),
+            DatabaseType::Deferred => todo!("Deferred")
         };
 
         Self::query_rows(query, [], db_conn)

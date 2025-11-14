@@ -114,5 +114,5 @@ pub trait DbConnection {
     ///
     /// # Returns
     /// A `Result` containing the [`DatabaseType`] on success or an error on failure.
-    async fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>>;
+    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>>;
 }

@@ -67,6 +67,7 @@ impl Operator for Like {
             DatabaseType::SqlServer => "VARCHAR",
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => "CHAR",
+            _ => panic!("Provisional LIKE"),
         };
 
         match *self {

@@ -12,7 +12,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Creates an SQL `SET` clause by specifying the columns that must be updated in the sentence,
     /// but without adding any [`QueryParameter`] value to the internal querybuilder
     fn set(self, columns: &'a [String]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
-          where Self: std::marker::Sized;
+          where Self: Sized;
 
     /// Similar to [`Self::set`] but storing the underlying update values for each column in the
     /// internal values collection of the [`crate::query::querybuilder::QueryBuilder`]
@@ -20,11 +20,15 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Self: std::marker::Sized,
+        Self: Sized,
         Vec<&'a dyn QueryParameter>: Extend<&'a Q>;
 }
 
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
+    /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
+    /// If this method isn't invoked, the querybuilder will create a SELECT * FROM query
+    fn with_columns(self, columns: &'a [String]) -> Self;
+    
     /// Adds a *LEFT JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
