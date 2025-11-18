@@ -1,10 +1,11 @@
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::{Comp, Operator};
+use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, QueryKind};
+use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps};
+use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use std::error::Error;
 
 /// Contains the specific database operations associated with the

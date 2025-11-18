@@ -4,7 +4,8 @@ use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, SelectQueryBuilder, UpdateQueryBuilderOps};
+use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
+use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use std::error::Error;
 use crate::canyon::Canyon;
 

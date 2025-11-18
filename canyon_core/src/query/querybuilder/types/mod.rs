@@ -2,6 +2,7 @@ pub mod delete;
 pub mod select;
 pub mod update;
 
+use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 pub use self::{delete::*, select::*, update::*};
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
@@ -9,118 +10,15 @@ use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use std::error::Error;
-use std::fmt::{Write, Formatter, Display};
-
-pub enum QueryKind {
-    Select,
-    Update,
-    Delete,
-}
-impl AsRef<str> for QueryKind {
-    fn as_ref(&self) -> &str {
-        match self {
-            QueryKind::Select => { "SELECT" }
-            QueryKind::Update => { "UPDATE " }
-            QueryKind::Delete => { "DELETE " }
-        }
-    }
-}
-
-#[derive(Clone, Default, Debug)]
-pub struct TableMetadata {
-    pub schema: Option<String>,
-    pub name: String,
-} // TODO: we can have those fields as Cow<'_> for max performance
-
-impl From<&str> for TableMetadata {
-    /// Creates a new [`TableMetadata`] from a string slice.
-    ///
-    /// If the slice contains a dot, we assume that is a schema.table_name format, otherwise,
-    /// we assume that the client is just creating a [`Self`] from the passed in string
-    fn from(value: &str) -> Self {
-        if let Some((schema, table)) = value.split_once('.') {
-            TableMetadata {
-                schema: Some(schema.to_string()),
-                name: table.to_string(),
-            }
-        } else {
-            TableMetadata {
-                schema: None,
-                name: value.to_string(),
-            }
-        }
-    }
-}
-
-
-impl<'a> TableMetadata {
-    pub fn new(schema: &'a str, name: &'a str) -> Self {
-        Self { schema: Some(schema.to_string()), name: name.to_string() }
-    }
-    pub fn schema(&mut self, schema: String) { self.schema = Some(schema); }
-    pub fn table_name(&mut self, table_name: String) { self.name = table_name }
-
-    /// Returns an already formatted version of the schema and table of a target database table
-    /// ready to be used in a SQL statement.
-    ///
-    /// This method allocates a new string, so it returns an owned one to the callee.
-    /// Just take it in consideration if someday someone uses it outside the macro generation
-    /// and there's some heavy callee procedure
-    pub fn sql(&self) -> String {
-        match &self.schema {
-            Some(schema_name) => {format!("{}.{}", schema_name, self.name)}
-            None => self.name.to_string()
-        }
-    }
-}
-
-impl Display for TableMetadata {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match &self.schema {
-            Some(schema_name) => {write!(f, "{}.{}", schema_name, self.name)}
-            None => {write!(f, "{}", self.name)}
-        }
-    }
-}
-
-impl AsRef<str> for TableMetadata {
-    fn as_ref(&self) -> &str {
-        self.schema.as_ref().unwrap()
-    }
-}
-
-pub struct ConditionClause<'a> {
-    // TODO: where are missing complex where usages, like in joins, so we should consider to add the table
-    // to the column like where table.column = ...
-    pub(crate) kind: ConditionClauseKind,
-    pub(crate) column_name: &'a str,
-    pub(crate) operator: Comp,
-    pub(crate) value: &'a dyn QueryParameter
-}
-#[derive(Eq, PartialEq)]
-pub enum ConditionClauseKind {
-    Where,
-    And,
-    Or,
-    In
-}
-
-impl<'a> AsRef<str> for ConditionClauseKind {
-    fn as_ref(&self) -> &str {
-        match self {
-            ConditionClauseKind::Where => "WHERE",
-            ConditionClauseKind::And => "AND",
-            ConditionClauseKind::In => "IN",
-            ConditionClauseKind::Or => "OR",
-        }
-    }
-}
+use std::fmt::Write;
+use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
+use crate::query::querybuilder::syntax::query_kind::QueryKind;
+use crate::query::querybuilder::syntax::tokens::SqlToken;
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a> {
     pub(crate) meta: TableMetadata,
     pub(crate) kind: QueryKind,
-    pub(crate) sql: String,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
     pub(crate) database_type: DatabaseType,
     pub(crate) condition_clauses: Vec<ConditionClause<'a>>,
@@ -131,7 +29,7 @@ unsafe impl Sync for QueryBuilder<'_> {}
 
 impl<'a> QueryBuilder<'a> {
     pub fn new(
-        table_metadata:  impl Into<TableMetadata>,
+        table_metadata: impl Into<TableMetadata>,
         kind: QueryKind,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
@@ -159,14 +57,28 @@ impl<'a> QueryBuilder<'a> {
         Ok(())
     }
 
-    pub fn build(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
-        self.sql.push_str(self.kind.as_ref());
+    // pub fn build(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    //     self.sql.push_str(self.kind.as_ref());
+    //
+    //     let __self = __impl::check_invariants_over_condition_clauses(self)?;
+    //     let mut __self = __impl::write_from_clause(__self)?;
+    //
+    //     __self.sql.push(';');
+    //     Ok(Query::new(__self.sql, __self.params))
+    // }
 
-        let mut __self = __impl::check_invariants_over_condition_clauses(self)?;
-        let mut __self = __impl::write_from_clause(__self)?;
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        let qb = __impl::check_invariants_over_condition_clauses(self)?;
+        let mut tokens = Vec::<SqlToken>::new();
 
-        __self.sql.push(';');
-        Ok(Query::new(__self.sql, __self.params))
+        __impl::emit_kind(&qb, &mut tokens);
+        __impl::emit_from(&qb, &mut tokens);
+        __impl::emit_conditions(&qb, &mut tokens);
+
+        tokens.push(SqlToken::Symbol(';'));
+
+        let sql = SqlToken::render_all(&tokens);
+        Ok(Query::new(sql, qb.params))
     }
 
     fn r#where(&mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) {
@@ -228,14 +140,49 @@ impl<'a> QueryBuilder<'a> {
 
 
 mod __impl {
+    use std::borrow::Cow;
     use std::error::Error;
     use crate::query::querybuilder::types::__detail::write_param_placeholder;
-    use crate::query::querybuilder::{ConditionClause, ConditionClauseKind, QueryBuilder};
+    use crate::query::querybuilder::QueryBuilder;
     use std::fmt::Write;
     use crate::query::bounds::FieldIdentifier;
     use crate::query::operators::Comp;
     use crate::query::parameters::QueryParameter;
+    use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
+    use crate::query::querybuilder::syntax::query_kind::QueryKind;
+    use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
     use crate::query::querybuilder::types::__validators;
+
+    pub(crate) fn emit_kind<'a>(qb: &'a QueryBuilder<'a>, out: &mut Vec<SqlToken<'a>>) {
+        out.push(qb.kind.to_tokens());
+    }
+
+    pub(crate) fn emit_from<'a>(qb: &QueryBuilder<'a>, out: &mut Vec<SqlToken<'a>>) {
+        match qb.kind {
+            QueryKind::Select => {
+                out.push(SqlToken::Symbol('*'));
+                out.push(SqlToken::Keyword(Cow::from("FROM")));
+                qb.meta.to_tokens(out);
+            }
+            QueryKind::Delete => {
+                out.push(SqlToken::Keyword(std::borrow::Cow::Borrowed("FROM")));
+                qb.meta.to_tokens(out);
+            }
+            QueryKind::Update => {
+                qb.meta.to_tokens(out);
+            }
+        }
+    }
+
+    pub(crate) fn emit_conditions<'a>(
+        qb: &QueryBuilder<'a>,
+        out: &mut Vec<SqlToken<'a>>
+    ) {
+        for (i, c) in qb.condition_clauses.iter().enumerate() {
+            c.to_tokens(out);
+            out.push(SqlToken::Placeholder(i + 1));
+        }
+    }
 
     pub(crate) fn write_from_clause<'a>(mut _self: QueryBuilder<'a>) -> Result<QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {
         if let Some(where_clause) = &_self.condition_clauses.first() {
@@ -268,7 +215,7 @@ mod __impl {
         _self.sql.push_str(conjunction_clause_kind.as_ref());
         _self.sql.push_str(" ");
         _self.sql.push_str(target_column);
-        _self.sql.push_str(" IN ");
+        _self.sql.push_str(" IN "); // TODO: was for reference, this is wrong
         _self.sql.push_str(ConditionClauseKind::In.as_ref());
         _self.sql.push_str(" (");
 
@@ -331,7 +278,8 @@ mod __validators {
     use std::error::Error;
     use std::fmt::Display;
     use crate::query::parameters::QueryParameter;
-    use crate::query::querybuilder::{ConditionClauseKind, QueryBuilder};
+    use crate::query::querybuilder::QueryBuilder;
+    use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
     use crate::query::querybuilder::types::__errors;
 
     pub(crate) fn check_where_clause_position<'a>(_self: QueryBuilder<'a>) -> Result< QueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>> {

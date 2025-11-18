@@ -5,9 +5,9 @@ use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata as TableSchemaData;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, QueryKind, SelectQueryBuilderOps};
+use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps};
 use std::error::Error;
-use crate::canyon::Canyon;
+use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
 pub struct SelectQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a>,
