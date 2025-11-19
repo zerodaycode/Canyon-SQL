@@ -6,11 +6,20 @@ pub trait ToSqlTokens<'a> {
     fn to_tokens(&self) -> SqlToken<'a>;
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Symbol {
+    LParen,
+    RParen,
+    Comma,
+    Dot,
+    Semicolon,
+}
+
 pub enum SqlToken<'a> {
     Keyword(Cow<'a, str>),        // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE
     WhiteSpace,
     Ident(Cow<'a, str>),          // table, column
-    Symbol(char),            // = , ( ) , .
+    Symbol(Symbol),            // = , ( ) , .
     Placeholder(usize),      // $1, ? , @P1
 }
 
@@ -27,20 +36,40 @@ impl<'a> TokenWriter<'a> {
         self.tokens.push(token);
     }
 
-    pub fn render(self, db: DatabaseType) -> String {
+    pub fn render(self, db: DatabaseType) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
 
-        for t in self.tokens {
-            match t {
-                SqlToken::Keyword(k) => write!(out, " {}", k).unwrap(),
-                SqlToken::Ident(i) => write!(out, " {}", i).unwrap(),
-                SqlToken::Symbol(c) => write!(out, " {}", c).unwrap(),
-                SqlToken::Placeholder(p) => match db { // TODO: invent something like placeholder kind, so we can avoid to match it on every pplaceholder?
-                    DatabaseType::PostgreSql => write!(out, " ${}", p).unwrap(),
-                    DatabaseType::SqlServer  => write!(out, " @P{}", p).unwrap(),
-                    DatabaseType::MySQL      => write!(out, " ?").unwrap(),
-                    DatabaseType::Deferred   => write!(out, " ?").unwrap(),
+        for tok in self.tokens {
+            match tok {
+                SqlToken::Keyword(s) => write!(out, " {}", s)?,
+                SqlToken::Ident(s)   => write!(out, " {}", s)?,
+
+                SqlToken::Symbol(sym) => match sym {
+                    Symbol::Comma     => write!(out, ",")?,
+                    Symbol::LParen    => write!(out, " (")?,
+                    Symbol::RParen    => write!(out, ")")?,
+                    Symbol::Dot       => write!(out, ".")?,
+                    Symbol::Semicolon => write!(out, ";")?,
                 },
+
+                SqlToken::Operator(op) =>
+                    write!(out, " {}", op.as_str())?,
+
+                SqlToken::Placeholder => {
+                    ph_idx += 1;
+                    match db {
+                        DatabaseType::PostgreSql => write!(out, " ${}", ph_idx)?,
+                        DatabaseType::SqlServer  => write!(out, " @P{}", ph_idx)?,
+                        DatabaseType::MySQL      => write!(out, " ?")?,
+                        _ => write!(out, " ?")?,
+                    }
+                }
+
+                SqlToken::Number(n) =>
+                    write!(out, " {}", n)?,
+
+                SqlToken::Raw(r) =>
+                    write!(out, " {}", r)?,
             }
         }
 

@@ -15,7 +15,7 @@ pub enum ConditionClauseKind {
     Where,
     And,
     Or,
-    In // TODO: should this one be a Comp instead?
+    In
 }
 
 impl<'a> AsRef<str> for ConditionClauseKind {

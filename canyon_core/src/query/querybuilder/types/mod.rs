@@ -44,6 +44,63 @@ impl<'a> QueryBuilder<'a> {
         })
     }
 
+    /// Build for base QueryBuilder return Query using AST path according to kind.
+    pub fn bui3ld(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        // validate invariants
+        let qb = __impl::check_invariants_over_condition_clauses(self)?;
+
+        // produce AST per kind
+        let db = qb.database_type;
+        return match qb.kind {
+            QueryKind::Select => {
+                // create SelectAst from qb minimal: columns/joins live in SelectQueryBuilder normally.
+                // We produce an empty SelectAst from base and rely on SelectQueryBuilder::build to call SelectAst path.
+                // To keep base behavior, we create a minimal SelectAst and let SelectQueryBuilder override.
+                let mut ast = SelectAst::new(qb.meta.clone(), db);
+                // copy base conditions & params
+                ast.base.conditions = qb.condition_clauses;
+                ast.base.params = qb.params;
+                // emit tokens
+                let mut tokens = Vec::<SqlToken>::new();
+                ast.emit_tokens(&mut tokens);
+                // now replace placeholders: for non-IN clauses we must convert each condition to placeholder indexes
+                // Protocol: when AST emits operator tokens without placeholders, we append placeholders sequentially.
+                // We'll implement helper to interleave placeholders
+                let sql = __detail::render_tokens_with_placeholders(tokens, ast.base.database_type, &ast.base.params)?;
+                Ok(Query::new(sql + ";", ast.base.params))
+            }
+            QueryKind::Update => {
+                let mut ast = UpdateAst::new(qb.meta.clone(), db);
+                ast.base.conditions = qb.condition_clauses;
+                ast.base.params = qb.params;
+                let mut tokens = Vec::<SqlToken>::new();
+                ast.emit_tokens(&mut tokens);
+                let sql = __detail::render_tokens_with_placeholders(tokens, ast.base.database_type, &ast.base.params)?;
+                Ok(Query::new(sql + ";", ast.base.params))
+            }
+            QueryKind::Delete => {
+                let ast = DeleteAst::new(qb.meta.clone(), db);
+                // assign conditions and params
+                let mut ast = ast;
+                ast.base.conditions = qb.condition_clauses;
+                ast.base.params = qb.params;
+                let mut tokens = Vec::<SqlToken>::new();
+                ast.emit_tokens(&mut tokens);
+                let sql = __detail::render_tokens_with_placeholders(tokens, ast.base.database_type, &ast.base.params)?;
+                Ok(Query::new(sql + ";", ast.base.params))
+            }
+            QueryKind::Insert => {
+                let mut ast = InsertAst::new(qb.meta.clone(), db);
+                ast.base.conditions = qb.condition_clauses;
+                ast.base.params = qb.params;
+                let mut tokens = Vec::<SqlToken>::new();
+                ast.emit_tokens(&mut tokens);
+                let sql = __detail::render_tokens_with_placeholders(tokens, ast.base.database_type, &ast.base.params)?;
+                Ok(Query::new(sql + ";", ast.base.params))
+            }
+        }
+    }
+
     /// Convenient SQL writer that starts all the appended SQL sentences by adding an initial empty
     /// whitespace
     pub fn push_sql(&mut self, part: &str) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
@@ -256,6 +313,7 @@ mod __detail {
     use crate::connection::database_type::DatabaseType;
     use std::error::Error;
     use std::fmt::Write;
+    use crate::query::querybuilder::syntax::tokens::SqlToken;
 
     /// Convenient standalone that helps us to interpolate the placeholder of the parameters of a SQL
     /// query directly into the passed in buffer, avoiding the need to construct and allocate temporary strings
@@ -271,6 +329,82 @@ mod __detail {
 
     fn calculate_param_placeholder_count_value(container: impl Iterator) -> usize{
         container.count()
+    }
+    /// Render tokens into SQL string while inserting placeholders for param list.
+    /// Strategy:
+    ///  - tokens contain operators and identifiers; placeholders are inserted sequentially for simple operators (=, <, etc).
+    ///  - For IN clauses that need multiple placeholders, the emitter previously emitted "(" and ")" and the caller
+    ///    must ensure we place N placeholders where required. For simplicity here we map one placeholder per param.
+    pub fn render_tokens_with_placeholders(tokens: Vec<SqlToken>, db: DatabaseType, params: &[&dyn crate::query::parameters::QueryParameter]) -> Result<String, Box<dyn Error + Send + Sync>> {
+        // Simple approach: convert tokens to string and replace special marker tokens (Placeholder) if any.
+        // Our tokens list uses SqlToken::Placeholder(usize) optionally; but many places emit operator and expect placeholders appended after.
+        // For deterministic behavior, we'll transform tokens: when we encounter Operator and next token is not Placeholder, we will append placeholder using next param index.
+        let mut out = String::with_capacity(256);
+        let mut param_index = 0usize;
+
+        let mut iter = tokens.into_iter().peekable();
+        while let Some(tok) = iter.next() {
+            match tok {
+                SqlToken::Keyword(k) => { write!(out, " {}", k)?; }
+                SqlToken::Ident(i) => { write!(out, " {}", i)?; }
+                SqlToken::Symbol(s) => {
+                    // symbols may be "," or "(" or ")"
+                    // keep spacing rules: if s is "," then attach right after previous without leading space is acceptable
+                    if s == "," || s == ")" {
+                        write!(out, "{}", s)?;
+                    } else {
+                        write!(out, " {}", s)?;
+                    }
+                }
+                // SqlToken::Operator(op) => {
+                //     // write operator and then ensure a placeholder is generated unless next token is Placeholder or Symbol("(")
+                //     write!(out, " {}", op)?;
+                //     // peek next token
+                //     if let Some(peek) = iter.peek() {
+                //         match peek {
+                //             SqlToken::Placeholder(_) => { /* will be rendered by next iteration */ }
+                //             SqlToken::Symbol(sym) if *sym == "(" => {
+                //                 // IN ( ) case: next parentheses contain placeholders managed by caller; skip auto placeholder.
+                //             }
+                //             _ => {
+                //                 // inject placeholder for a single param
+                //                 param_index += 1;
+                //                 match db {
+                //                     DatabaseType::PostgreSql => write!(out, " ${}", param_index)?,
+                //                     DatabaseType::SqlServer => write!(out, " @P{}", param_index)?,
+                //                     DatabaseType::MySQL => write!(out, " ?")?,
+                //                     _ => write!(out, " ?")?,
+                //                 }
+                //             }
+                //         }
+                //     } else {
+                //         // no next token => create placeholder
+                //         param_index += 1;
+                //         match db {
+                //             DatabaseType::PostgreSql => write!(out, " ${}", param_index)?,
+                //             DatabaseType::SqlServer => write!(out, " @P{}", param_index)?,
+                //             DatabaseType::MySQL => write!(out, " ?")?,
+                //             _ => write!(out, " ?")?,
+                //         }
+                //     }
+                // }
+                SqlToken::Placeholder(idx) => {
+                    // direct placeholder -- render according to DB, using provided idx
+                    match db {
+                        DatabaseType::PostgreSql => write!(out, " ${}", idx)?,
+                        DatabaseType::SqlServer => write!(out, " @P{}", idx)?,
+                        DatabaseType::MySQL => write!(out, " ?")?,
+                        _ => write!(out, " ?")?,
+                    }
+                }
+                // SqlToken::Number(n) => { write!(out, " {}", n)?; }
+                // SqlToken::Raw(s) => { write!(out, " {}", s)?; }
+            }
+        }
+
+        // trim leading space
+        let result = if out.starts_with(' ') { out[1..].to_string() } else { out };
+        Ok(result)
     }
 }
 
