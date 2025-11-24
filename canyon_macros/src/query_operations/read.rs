@@ -1,6 +1,6 @@
 use crate::utils::macro_tokens::MacroTokens;
 use canyon_core::query::querybuilder::{SelectQueryBuilder, SelectQueryBuilderOps};
-use canyon_core::query::querybuilder::types::TableMetadata;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 
@@ -8,7 +8,7 @@ use quote::{ToTokens, quote};
 /// of all the generated macros for the READ operations
 pub fn generate_read_operations_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> TokenStream {
     let ty = macro_data.ty;
     let mapper_ty = macro_data

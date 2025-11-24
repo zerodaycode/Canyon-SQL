@@ -37,7 +37,7 @@ pub trait Inspectionable<'a> {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
 }
 
-pub trait TableMetadata: std::fmt::Display {
+pub trait TableMetadata<'a>: std::fmt::Display {
     fn as_str(&self) -> &'static str;
 }
 

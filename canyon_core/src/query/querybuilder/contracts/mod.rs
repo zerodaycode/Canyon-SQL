@@ -16,12 +16,11 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 
     /// Similar to [`Self::set`] but storing the underlying update values for each column in the
     /// internal values collection of the [`crate::query::querybuilder::QueryBuilder`]
-    fn set_with_values<Z, Q>(self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set_values<Z, Q>(self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Self: Sized,
-        Vec<&'a dyn QueryParameter>: Extend<&'a Q>;
+        Self: Sized;
 }
 
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
@@ -39,7 +38,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn left_join(
         self,
-        join_table: impl TableMetadata,
+        join_table: impl TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -54,7 +53,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn inner_join(
         self,
-        join_table: impl TableMetadata,
+        join_table: impl TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -69,7 +68,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn right_join(
         self,
-        join_table: impl TableMetadata,
+        join_table: impl TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -84,7 +83,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn full_join(
         self,
-        join_table: impl TableMetadata,
+        join_table: impl TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
     ) -> Self;
@@ -168,8 +167,7 @@ pub trait QueryBuilderOps<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
-        Self: std::marker::Sized;
+        Self: Sized;
 
     /// Generates an `OR` SQL clause for constraint the query that will create
     /// the filter in conjunction with an `IN` operator that will ac
@@ -183,8 +181,7 @@ pub trait QueryBuilderOps<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
-        Self: std::marker::Sized;
+        Self: Sized;
 
     /// Generates an `OR` SQL clause for constraint the query.
     ///

@@ -1,164 +1,157 @@
-use crate::connection::database_type::DatabaseType;
-use crate::query::parameters::QueryParameter;
-use crate::query::querybuilder::syntax::tokens::{SqlToken};
-use crate::query::querybuilder::ast::{BaseAst, SelectAst, UpdateAst, InsertAst, DeleteAst};
-use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
-
-// Trait each AST piece can optionally implement to emit tokens (we'll implement per-AST)
-pub trait EmitTokens<'a> {
-    fn emit_tokens(&self, out: &mut Vec<SqlToken<'a>>);
-}
-
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::join::JoinClause;
-use crate::query::querybuilder::syntax::order::OrderByClause;
-use crate::query::querybuilder::syntax::having::HavingClause;
+use std::borrow::Cow;
+use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::clause::ConditionClause;
+use crate::query::querybuilder::syntax::query_kind::QueryKind;
+use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
+use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::Symbol::{Comma, LParen, RParen};
 
-// Helper: emit table
-fn emit_table<'a>(table: &TableMetadata, out: &mut Vec<SqlToken<'a>>) {
-    if let Some(s) = &table.schema {
-        out.push(SqlToken::Ident(s));
-        out.push(SqlToken::Symbol("."));
-    }
-    out.push(SqlToken::Ident(&table.name));
+// ---------- AST Processor marker trait ----------
+pub trait AstProcessor: Default {} // TODO: maybe this and the other one are visitor related?
+
+// ---------- Emit traits ----------
+pub trait EmitKind<'a> {
+    fn emit_kind(&self, out: &mut Vec<SqlToken<'a>>);
+}
+pub trait EmitFrom<'a> {
+    fn emit_from<'b: 'a>(&'b self, meta: &'b TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>) ;
+}
+pub trait EmitBody<'a> {
+    fn emit_body(&self, out: &mut Vec<SqlToken<'a>>);
 }
 
-impl<'a> EmitTokens<'a> for BaseAst<'a> {
-    fn emit_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        // query kind handled by caller usually
-        // emit WHERE/conditions if present (deferred placeholders handled by caller)
-        if !self.conditions.is_empty() {
-            for (i, cond) in self.conditions.iter().enumerate() {
-                // prefix: first cond -> WHERE else -> AND / OR / IN kind
-                let prefix = if i == 0 { cond.kind.as_str() } else { cond.kind.as_str() };
-                out.push(SqlToken::Keyword(prefix));
-                out.push(SqlToken::Ident(cond.column_name));
-                // for IN, operator text already is "IN", and we will add placeholders externally
-                if cond.kind == ConditionClauseKind::In {
-                    out.push(SqlToken::Operator("IN"));
-                    out.push(SqlToken::Symbol("("));
-                    // placeholders will be appended by the caller (because IN has multiple params)
-                    out.push(SqlToken::Symbol(")"));
-                } else {
-                    out.push(SqlToken::Operator(cond.operator.as_str()));
-                    // placeholder token appended by caller emitter once param index known
-                }
-            }
-        }
+#[derive(Debug)]
+pub struct DeleteEmitter;
+impl<'a> EmitKind<'a> for DeleteEmitter {
+    fn emit_kind(&self, out: &mut Vec<SqlToken<'a>>) {
+        out.push(SqlToken::new_keyword("DELETE"));
     }
 }
-
-impl<'a> EmitTokens<'a> for SelectAst<'a> {
-    fn emit_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        // SELECT clause
-        out.push(SqlToken::Keyword("SELECT"));
-        if self.columns.is_empty() {
-            out.push(SqlToken::Symbol("*"));
-        } else {
-            for (i, col) in self.columns.iter().enumerate() {
-                if i > 0 { out.push(SqlToken::Symbol(",")); }
-                out.push(SqlToken::Ident(col.name));
-                if let Some(alias) = col.alias { out.push(SqlToken::Keyword("AS")); out.push(SqlToken::Ident(alias)); }
-            }
-        }
-
-        // FROM
-        out.push(SqlToken::Keyword("FROM"));
-        emit_table(&self.base.table, out);
-
-        // JOINs
-        for j in &self.joins {
-            out.push(SqlToken::Keyword(j.kind.as_str()));
-            emit_table(&j.table, out);
-            out.push(SqlToken::Keyword("ON"));
-            out.push(SqlToken::Ident(j.left));
-            out.push(SqlToken::Operator(j.operator.as_str()));
-            out.push(SqlToken::Ident(j.right));
-        }
-
-        // WHERE / HAVING / GROUP BY / ORDER BY / LIMIT / OFFSET -> handled by base and specific
-        self.base.emit_tokens(out);
-
-        if !self.group_by.is_empty() {
-            out.push(SqlToken::Keyword("GROUP BY"));
-            for (i, col) in self.group_by.iter().enumerate() {
-                if i > 0 { out.push(SqlToken::Symbol(",")); }
-                out.push(SqlToken::Ident(col));
-            }
-        }
-
-        if !self.having.is_empty() {
-            out.push(SqlToken::Keyword("HAVING"));
-            for (i, h) in self.having.iter().enumerate() {
-                if i > 0 { out.push(SqlToken::Keyword("AND")); }
-                out.push(SqlToken::Ident(h.column));
-                out.push(SqlToken::Operator(h.operator.as_str()));
-                // placeholder: appended by caller with param index
-            }
-        }
-
-        if !self.order_by.is_empty() {
-            out.push(SqlToken::Keyword("ORDER BY"));
-            for (i, ob) in self.order_by.iter().enumerate() {
-                if i > 0 { out.push(SqlToken::Symbol(",")); }
-                out.push(SqlToken::Ident(ob.column));
-                if ob.descending { out.push(SqlToken::Keyword("DESC")); }
-            }
-        }
-
-        if let Some(limit) = self.limit {
-            out.push(SqlToken::Keyword("LIMIT"));
-            out.push(SqlToken::Number(limit));
-        }
-        if let Some(offset) = self.offset {
-            out.push(SqlToken::Keyword("OFFSET"));
-            out.push(SqlToken::Number(offset));
-        }
+impl<'a> EmitFrom<'a> for DeleteEmitter {
+    fn emit_from<'b: 'a>(&'b self, meta: &'b TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>) {
+        out.push(SqlToken::new_keyword("FROM"));
+        meta.to_tokens(out);
     }
 }
+// no body for delete
 
-impl<'a> EmitTokens<'a> for UpdateAst<'a> {
-    fn emit_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        out.push(SqlToken::Keyword("UPDATE"));
-        emit_table(&self.base.table, out);
-        out.push(SqlToken::Keyword("SET"));
+#[derive(Debug)]
+pub struct UpdateEmitter<'a> {
+    pub set_clauses: Vec<(&'a str, &'a str)>, // TODO: better placeholders? params values are already on the base container
+    // pub set_clauses: Vec<(&'a str, &'a dyn QueryParameter)>, // TODO: better placeholders? params values are already on the base container
+    // TODO: this should be a tuple of ColumnRef and a Placeholder
+}
+impl<'a> EmitKind<'a> for UpdateEmitter<'a> {
+    fn emit_kind(&self, out: &mut Vec<SqlToken<'a>>) {
+        out.push(SqlToken::Keyword(Cow::Borrowed("UPDATE")));
+    }
+}
+impl<'a> EmitBody<'a> for UpdateEmitter<'a> {
+    fn emit_body(&self, out: &mut Vec<SqlToken<'a>>) {
+        out.push(SqlToken::new_keyword("SET"));
         for (i, (col, _val)) in self.set_clauses.iter().enumerate() {
-            if i > 0 { out.push(SqlToken::Symbol(",")); }
-            out.push(SqlToken::Ident(col));
-            out.push(SqlToken::Operator("="));
-            // placeholder appended by caller
+            if i > 0 { out.push(SqlToken::Symbol(Symbol::Comma)); }
+            out.push(SqlToken::new_ident(col));
+            out.push(SqlToken::Symbol(Symbol::Equals));
+            // out.push(SqlToken::PlaceholderNext); // TODO: emit placeholder
+            // TODO: create a counter of the
         }
-        self.base.emit_tokens(out);
     }
 }
 
-impl<'a> EmitTokens<'a> for DeleteAst<'a> {
-    fn emit_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        out.push(SqlToken::Keyword("DELETE"));
-        out.push(SqlToken::Keyword("FROM"));
-        emit_table(&self.base.table, out);
-        self.base.emit_tokens(out);
+#[derive(Debug)]
+pub struct InsertEmitter<'a> {
+    pub columns: Vec<&'a str>,
+    pub values_count: usize,
+}
+impl<'a> EmitKind<'a> for InsertEmitter<'a> {
+    fn emit_kind(&self, out: &mut Vec<SqlToken<'a>>) {
+        out.push(SqlToken::new_keyword("INSERT"));
     }
 }
-
-impl<'a> EmitTokens<'a> for InsertAst<'a> {
-    fn emit_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        out.push(SqlToken::Keyword("INSERT INTO"));
-        emit_table(&self.base.table, out);
+impl<'a> EmitFrom<'a> for InsertEmitter<'a> {
+    fn emit_from<'b: 'a>(&'b self, meta: &'b TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>) {
+        meta.to_tokens(out);
         if !self.columns.is_empty() {
-            out.push(SqlToken::Symbol("("));
+            out.push(SqlToken::new_ident("INTO"));
+            out.push(SqlToken::Symbol(LParen));
             for (i, c) in self.columns.iter().enumerate() {
-                if i > 0 { out.push(SqlToken::Symbol(",")); }
-                out.push(SqlToken::Ident(c));
+                if i > 0 { out.push(SqlToken::Symbol(Symbol::Comma)); }
+                out.push(SqlToken::new_ident(c));
             }
-            out.push(SqlToken::Symbol(")"));
+            out.push(SqlToken::Symbol(Symbol::RParen));
         }
-        out.push(SqlToken::Keyword("VALUES"));
-        out.push(SqlToken::Symbol("("));
-        // placeholders appended by caller
-        out.push(SqlToken::Symbol(")"));
+    }
+}
+impl<'a> EmitBody<'a> for InsertEmitter<'a> {
+    fn emit_body(&self, out: &mut Vec<SqlToken<'a>>) {
+        out.push(SqlToken::Keyword(Cow::Borrowed("VALUES")));
+        out.push(SqlToken::Symbol(LParen));
+        for i in 0..self.values_count {
+            if i > 0 { out.push(SqlToken::Symbol(Comma)); }
+            // out.push(SqlToken::PlaceholderNext); self as the real type and call a custom impl
+        }
+        out.push(SqlToken::Symbol(RParen));
+    }
+}
+
+// // ---------- QueryEmitter enum ----------
+// pub enum QueryEmitter<'a> { // Isn't this almost queryKind?
+//     // Raw(BaseAst<'a>),
+//     Select(SelectAst<'a>),
+//     Insert(InsertEmitter<'a>),
+//     Update(UpdateEmitter<'a>),
+//     Delete(DeleteEmitter),
+// }
+// ---------- QueryEmitter enum ----------
+pub struct QueryEmitter<P: AstProcessor> { // Isn't this almost queryKind?
+    kind: QueryKind,
+    ast: P,
+}
+
+impl<'a, P: AstProcessor> QueryEmitter<P> {
+    pub fn new(kind: QueryKind) -> Self {
+        Self {
+            kind,
+            ast: P::default()
+        }
+    }
+    
+    pub fn emit_kind(&self, out: &mut Vec<SqlToken<'a>>) {
+        self.emit_kind(out) // inner impl
+    }
+
+    // only variants that support FROM are matched here
+    pub fn emit_from<'b: 'a>(&'b self, meta: &'b TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>)  {
+        match self.kind {
+            QueryKind::Select | QueryKind::Insert| QueryKind::Delete=> self.emit_from(meta, out),
+            QueryKind::Update => { /* Update has no FROM here */ }
+        }
+    }
+
+    pub fn emit_body(&self, out: &mut Vec<SqlToken<'a>>) {
+        match self.kind {
+            QueryKind::Select | QueryKind::Insert| QueryKind::Update => self.emit_body(out),
+            QueryKind::Delete => { /* delete has no body */ }
+        }
+    }
+
+    /// façade: executes all phases in logical order: KIND -> FROM -> BODY -> CONDITIONS
+    pub fn emit_all_phases(
+        &'a self,
+        meta: &'a TableMetadata<'a>,
+        conditions: &[ConditionClause<'a>],
+        out: &mut Vec<SqlToken<'a>>
+    ) {
+        // 1. kind
+        self.emit_kind(out);
+        // 2. from (if any)
+        self.emit_from(meta, out);
+        // 3. body (set/values/insert columns...)
+        self.emit_body(out); // TODO: swap body and conditions
+        // 4. conditions (WHERE / AND / OR)
+        for cond in conditions {
+            // cond.to_tokens(out);
+        }
     }
 }

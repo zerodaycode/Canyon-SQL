@@ -20,13 +20,13 @@ pub struct DeleteQueryBuilder<'a> {
 impl<'a> DeleteQueryBuilder<'a> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(
-        table_schema_data:  impl Into<TableMetadata>,
+        table_schema_data:  impl Into<TableMetadata<'a>>,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Self::new_for(table_schema_data, DatabaseType::Deferred)
     }
     
     pub fn new_for(
-        table_schema_data:  impl Into<TableMetadata>,
+        table_schema_data:  impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
@@ -75,7 +75,6 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.and_values_in(and, values)?;
         Ok(self)
@@ -86,7 +85,6 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.or_values_in(or, values)?;
         Ok(self)

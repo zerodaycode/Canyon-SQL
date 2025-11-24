@@ -13,7 +13,7 @@ use std::fmt::Debug;
 use std::future::Future;
 use std::ops::Not;
 
-use super::information_schema::{ColumnMetadata, TableMetadata};
+use super::information_schema::{ColumnMetadata, MacroTableMetadata};
 use super::memory::CanyonMemory;
 #[cfg(feature = "postgres")]
 use crate::migrations::transforms::{to_postgres_alter_syntax, to_postgres_syntax};
@@ -41,7 +41,7 @@ impl MigrationsProcessor {
         &'a mut self,
         canyon_memory: CanyonMemory,
         canyon_entities: Vec<CanyonRegisterEntity<'a>>,
-        database_tables: Vec<&'a TableMetadata>,
+        database_tables: Vec<&'a MacroTableMetadata>,
         datasource: &'_ DatasourceConfig,
     ) {
         // The database type formally represented in Canyon
@@ -148,7 +148,7 @@ impl MigrationsProcessor {
         canyon_memory: &'_ CanyonMemory,
         entity_name: &'a str,
         entity_fields: Vec<CanyonRegisterEntityField>,
-        database_tables: &'a [&'a TableMetadata],
+        database_tables: &'a [&'a MacroTableMetadata],
     ) {
         // 1st operation -> Check if the current entity is already on the target database.
         if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
@@ -189,7 +189,7 @@ impl MigrationsProcessor {
         &mut self,
         entity_name: &'a str,
         entity_fields: Vec<CanyonRegisterEntityField>,
-        current_table_metadata: Option<&'a TableMetadata>,
+        current_table_metadata: Option<&'a MacroTableMetadata>,
         _db_type: DatabaseType,
     ) {
         if current_table_metadata.is_none() {
@@ -621,7 +621,7 @@ impl MigrationsHelper {
     /// Checks if a tracked Canyon entity is already present in the database
     fn entity_already_on_database<'a>(
         entity_name: &'a str,
-        database_tables: &'a [&'_ TableMetadata],
+        database_tables: &'a [&'_ MacroTableMetadata],
     ) -> bool {
         database_tables
             .iter()
@@ -631,8 +631,8 @@ impl MigrationsHelper {
     fn get_current_table_metadata<'a>(
         canyon_memory: &'_ CanyonMemory,
         entity_name: &'a str,
-        database_tables: &'a [&'_ TableMetadata],
-    ) -> Option<&'a TableMetadata> {
+        database_tables: &'a [&'_ MacroTableMetadata],
+    ) -> Option<&'a MacroTableMetadata> {
         let correct_entity_name = canyon_memory
             .renamed_entities
             .get(&entity_name.to_lowercase())
@@ -650,7 +650,7 @@ impl MigrationsHelper {
     /// Get the column metadata for a given column name
     fn get_current_column_metadata(
         column_name: String,
-        current_table_metadata: Option<&TableMetadata>,
+        current_table_metadata: Option<&MacroTableMetadata>,
     ) -> Option<&ColumnMetadata> {
         if let Some(metadata_table) = current_table_metadata {
             metadata_table
@@ -1075,14 +1075,14 @@ mod migrations_helper_tests {
     }
 
     pub mod mocked_data {
-        use crate::migrations::information_schema::{ColumnMetadata, TableMetadata};
+        use crate::migrations::information_schema::{ColumnMetadata, MacroTableMetadata};
         use std::sync::OnceLock;
 
-        pub static TABLE_METADATA_LEAGUE_EX: OnceLock<TableMetadata> = OnceLock::new();
-        pub static NON_MATCHING_TABLE_METADATA: OnceLock<TableMetadata> = OnceLock::new();
+        pub static TABLE_METADATA_LEAGUE_EX: OnceLock<MacroTableMetadata> = OnceLock::new();
+        pub static NON_MATCHING_TABLE_METADATA: OnceLock<MacroTableMetadata> = OnceLock::new();
 
         pub fn init_mocked_data() {
-            TABLE_METADATA_LEAGUE_EX.get_or_init(|| TableMetadata {
+            TABLE_METADATA_LEAGUE_EX.get_or_init(|| MacroTableMetadata {
                 table_name: "league".to_string(),
                 columns: vec![
                     ColumnMetadata {
@@ -1166,7 +1166,7 @@ mod migrations_helper_tests {
                 ],
             });
 
-            NON_MATCHING_TABLE_METADATA.get_or_init(|| TableMetadata {
+            NON_MATCHING_TABLE_METADATA.get_or_init(|| MacroTableMetadata {
                 table_name: "random_name_to_assert_false".to_string(),
                 columns: vec![],
             });

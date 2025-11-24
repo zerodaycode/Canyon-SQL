@@ -4,11 +4,12 @@ use crate::utils::primary_key_attribute::PrimaryKeyIndex;
 use proc_macro2::TokenStream;
 use quote::quote;
 use canyon_core::query::operators::Comp;
-use canyon_core::query::querybuilder::{QueryBuilderOps, TableMetadata, UpdateQueryBuilder, UpdateQueryBuilderOps};
+use canyon_core::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilder, UpdateQueryBuilderOps};
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_update_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> TokenStream {
     let update_method_ops = generate_update_method_tokens(macro_data, table_schema_data);
     let update_entity_ops = generate_update_entity_tokens(&table_schema_data.sql());
@@ -23,7 +24,7 @@ pub fn generate_update_tokens(
 
 fn generate_update_method_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> TokenStream {
     let mut update_ops_tokens = TokenStream::new();
     let ty = macro_data.ty;
@@ -39,19 +40,22 @@ fn generate_update_method_tokens(
 
     if let Some(primary_key) = macro_data.get_primary_key_field_annotation() {
         let (_, ty_generics, _) = macro_data.generics.split_for_impl();
-        let update_columns = macro_data.get_column_names_pk_parsed();
+        let update_columns = macro_data.get_column_names_pk_parsed()
+            .collect::<Vec<_>>();
         let fields = macro_data.get_struct_fields();
 
         let pk_name = &primary_key.name;
-        let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
+        let pk_index = (<PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize
+         ) as i32;
 
-        let update_stmt = UpdateQueryBuilder::new(table_schema_data.clone())
+        let mut update_stmt = UpdateQueryBuilder::new(table_schema_data.clone())
             .expect("Failed to create a UpdateQueryBuilder")
-            .set(&update_columns.collect::<Vec<_>>())
+            .set(&update_columns)
             .expect("Failed to generate a SET clause")
-            .r#where(pk_name, Comp::Eq, &(pk_index as i32))
-            .build()
+            .r#where(pk_name, Comp::Eq, &pk_index);
+        let update_stmt = update_stmt    .build()
             .expect("Failed to construct a Query from a UpdateQueryBuilder");
+        let update_stmt = update_stmt    .as_ref();
 
         let update_values = fields.map(|ident| {
             quote! { &self.#ident }
@@ -64,11 +68,11 @@ fn generate_update_method_tokens(
         update_ops_tokens.extend(quote! {
             #update_signature {
                 let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
-                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#&update_stmt, update_values, "").await
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#update_stmt, update_values, "").await
             }
             #update_with_signature {
                 let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
-                input.execute(#&update_stmt, update_values).await
+                input.execute(#update_stmt, update_values).await
             }
         });
     } else {
@@ -155,7 +159,7 @@ fn generate_update_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
             canyon_sql::query::querybuilder::UpdateQueryBuilder<'a>,
             Box<dyn std::error::Error + Send + Sync + 'a>
         > {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, database_type)
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(#table_schema_data, database_type)
         }
     }
 }

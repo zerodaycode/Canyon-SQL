@@ -1,11 +1,11 @@
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
-use canyon_core::query::querybuilder::TableMetadata;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_insert_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> TokenStream {
     let insert_method_ops = generate_insert_method_tokens(macro_data, &table_schema_data.sql());
     let insert_entity_ops = generate_insert_entity_function_tokens(&table_schema_data.sql());

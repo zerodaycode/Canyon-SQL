@@ -10,10 +10,10 @@ use canyon_core::{
 /// Model that represents the database entities that belongs to the current schema.
 ///
 /// Basically, it's an agrupation of rows of results when Canyon queries the `information schema`
-/// table, grouping by table name (one [`TableMetadata`] is the rows that contains the information
+/// table, grouping by table name (one [`MacroTableMetadata`] is the rows that contains the information
 /// of a table)
 #[derive(Debug)]
-pub struct TableMetadata {
+pub struct MacroTableMetadata {
     pub table_name: String,
     pub columns: Vec<ColumnMetadata>,
 }

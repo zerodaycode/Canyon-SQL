@@ -1,6 +1,8 @@
 #[derive(Debug, Clone)]
 pub struct ColumnRef<'a> {
     pub name: &'a str,
+    // TODO: we need the table <table.column> no?
+    // TODO: so we need a ColumnRefBuilder, to avoid have 70 new different new methods?
     pub alias: Option<&'a str>,
 }
 

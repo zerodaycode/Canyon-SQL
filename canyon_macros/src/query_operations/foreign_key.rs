@@ -3,11 +3,11 @@ use crate::utils::macro_tokens::MacroTokens;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use canyon_core::query::querybuilder::TableMetadata;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_find_by_fk_ops(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &TableMetadata
+    table_schema_data: &TableMetadata<'_>
 ) -> TokenStream {
     let ty = &macro_data.ty;
 

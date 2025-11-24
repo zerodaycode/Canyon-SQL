@@ -1,11 +1,11 @@
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use canyon_core::query::querybuilder::TableMetadata;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_delete_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> TokenStream {
     let delete_method_ops = generate_delete_method_tokens(macro_data, table_schema_data);
     let delete_entity_ops = generate_delete_entity_tokens(table_schema_data);
@@ -22,7 +22,7 @@ pub fn generate_delete_tokens(
 /// returning a result, indicating a possible failure querying the database
 pub fn generate_delete_method_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> TokenStream {
     let mut delete_ops_tokens = TokenStream::new();
 
@@ -84,7 +84,7 @@ pub fn generate_delete_method_tokens(
     delete_ops_tokens
 }
 
-pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata,) -> TokenStream {
+pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata<'_>,) -> TokenStream {
     let delete_entity_signature = quote! {
         async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
@@ -149,7 +149,7 @@ fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
             Box<(dyn std::error::Error + Send + Sync + 'err)>
         > where
     'canyon: 'err {
-            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, database_type)
+            canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(#table_schema_data, database_type)
         }
     }
 }

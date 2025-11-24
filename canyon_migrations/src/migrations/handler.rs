@@ -2,7 +2,7 @@ use crate::{
     canyon_crud::DatabaseType,
     constants,
     migrations::{
-        information_schema::{ColumnMetadata, ColumnMetadataTypeValue, TableMetadata},
+        information_schema::{ColumnMetadata, ColumnMetadataTypeValue, MacroTableMetadata},
         memory::CanyonMemory,
         processor::MigrationsProcessor,
     },
@@ -115,7 +115,7 @@ impl Migrations {
     /// and extract the content of the returned rows into custom structures with
     /// the data well organized for every entity present on that schema
     #[allow(unreachable_patterns)]
-    fn map_rows(db_results: CanyonRows, db_type: DatabaseType) -> Vec<TableMetadata> {
+    fn map_rows(db_results: CanyonRows, db_type: DatabaseType) -> Vec<MacroTableMetadata> {
         match db_results {
             #[cfg(feature = "postgres")]
             CanyonRows::Postgres(v) => Self::process_tp_rows(v, db_type),
@@ -127,16 +127,16 @@ impl Migrations {
     }
 
     /// Parses all the [`Row`] after query the information of the targeted schema,
-    /// grouping them in [`TableMetadata`] structs, by relating every [`Row`] that has
+    /// grouping them in [`MacroTableMetadata`] structs, by relating every [`Row`] that has
     /// the same "table_name" (asked with column.name()) being one field of the new
-    /// [`TableMetadata`], and parsing the other columns that belongs to that entity
+    /// [`MacroTableMetadata`], and parsing the other columns that belongs to that entity
     /// and appending as a new [`ColumnMetadata`] element to the columns field.
-    fn get_columns_metadata(res_row: &dyn Row, table: &mut TableMetadata) {
+    fn get_columns_metadata(res_row: &dyn Row, table: &mut MacroTableMetadata) {
         let mut entity_column = ColumnMetadata::default();
         for column in res_row.columns().iter() {
             if column.name() != "table_name" {
                 Self::set_column_metadata(res_row, column, &mut entity_column);
-            } // Discards the column "table_name", 'cause is already a field of [`TableMetadata`]
+            } // Discards the column "table_name", 'cause is already a field of [`TableMetadata<'a>`]
         }
         table.columns.push(entity_column);
     }
@@ -214,8 +214,8 @@ impl Migrations {
     fn process_tp_rows(
         db_results: Vec<tokio_postgres::Row>,
         db_type: DatabaseType,
-    ) -> Vec<TableMetadata> {
-        let mut schema_info: Vec<TableMetadata> = Vec::new();
+    ) -> Vec<MacroTableMetadata> {
+        let mut schema_info: Vec<MacroTableMetadata> = Vec::new();
         for res_row in db_results.iter() {
             let unique_table = schema_info
                 .iter_mut()
@@ -230,7 +230,7 @@ impl Migrations {
                     /* If there's no table for a given "table_name" property on the
                     collection yet, we must create a new instance and attach it
                     the founded columns data in this iteration */
-                    let mut new_table = TableMetadata {
+                    let mut new_table = MacroTableMetadata {
                         table_name: get_table_name_from_tp_row(res_row),
                         columns: Vec::new(),
                     };
@@ -247,8 +247,8 @@ impl Migrations {
     fn process_tib_rows(
         db_results: Vec<tiberius::Row>,
         db_type: DatabaseType,
-    ) -> Vec<TableMetadata> {
-        let mut schema_info: Vec<TableMetadata> = Vec::new();
+    ) -> Vec<MacroTableMetadata> {
+        let mut schema_info: Vec<MacroTableMetadata> = Vec::new();
         for res_row in db_results.iter() {
             let unique_table = schema_info
                 .iter_mut()
@@ -263,7 +263,7 @@ impl Migrations {
                     /* If there's no table for a given "table_name" property on the
                     collection yet, we must create a new instance and attach it
                     the founded columns data in this iteration */
-                    let mut new_table = TableMetadata {
+                    let mut new_table = MacroTableMetadata {
                         table_name: get_table_name_from_tib_row(res_row),
                         columns: Vec::new(),
                     };
@@ -290,7 +290,7 @@ fn get_table_name_from_tib_row(res_row: &tiberius::Row) -> String {
 }
 
 fn check_for_table_name(
-    table: &&mut TableMetadata,
+    table: &&mut MacroTableMetadata,
     db_type: DatabaseType,
     res_row: &dyn Row,
 ) -> bool {

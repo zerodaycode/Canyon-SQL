@@ -18,7 +18,7 @@ pub enum ConditionClauseKind {
     In
 }
 
-impl<'a> AsRef<str> for ConditionClauseKind {
+impl AsRef<str> for ConditionClauseKind {
     fn as_ref(&self) -> &str {
         match self {
             ConditionClauseKind::Where => "WHERE",

@@ -73,7 +73,7 @@ pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> Toke
             }
         }
 
-        impl #generics canyon_sql::query::bounds::TableMetadata for #generics #enum_name #generics {
+        impl #generics canyon_sql::query::bounds::TableMetadata<'_> for #generics #enum_name #generics {
             fn as_str(&self) -> &'static str {
                 match *self {
                     #enum_name::Name => #struct_name,

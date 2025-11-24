@@ -22,14 +22,14 @@ impl JoinKind {
 
 pub struct JoinClause<'a> {
     pub kind: JoinKind,
-    pub table: TableMetadata, // TODO: this should be the target table, and the origin table
+    pub table: TableMetadata<'a>, // TODO: this should be the target table, and the origin table
     pub left: &'a str,  // e.g. "t1.id" // TODO: we need to filter and check the syntax
     pub operator: Comp, // usually Eq
     pub right: &'a str, // e.g. "t2.t1_id"
 }
 
 impl<'a> JoinClause<'a> {
-    pub fn new(kind: JoinKind, table: TableMetadata, left: &'a str, operator: Comp, right: &'a str) -> Self {
+    pub fn new(kind: JoinKind, table: TableMetadata<'a>, left: &'a str, operator: Comp, right: &'a str) -> Self {
         Self { kind, table, left, operator, right }
     }
 }

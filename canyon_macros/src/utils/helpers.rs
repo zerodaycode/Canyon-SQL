@@ -1,5 +1,5 @@
 use super::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::types::TableMetadata;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use std::fmt::Write;
@@ -68,7 +68,7 @@ pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool
 /// user's desired `table_name` and/or the `schema_name`, this method returns its
 /// correct form to be wired as the table name that the CRUD methods requires for generate
 /// the queries
-pub fn table_schema_parser<'a>(macro_data: &MacroTokens<'_>) -> Result<TableMetadata, TokenStream> {
+pub fn table_schema_parser<'a>(macro_data: &MacroTokens<'_>) -> Result<TableMetadata<'a>, TokenStream> {
     let mut table_name: Option<String> = None;
     let mut schema: Option<String> = None;
 

@@ -8,7 +8,7 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
 use canyon_core::canyon::Canyon;
-use canyon_core::query::querybuilder::TableMetadata;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub mod delete;
 pub mod foreign_key;
@@ -21,7 +21,7 @@ mod doc_comments;
 
 pub fn impl_crud_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &TableMetadata,
+    table_schema_data: &TableMetadata<'_>,
 ) -> proc_macro::TokenStream {
     let mut crud_ops_tokens = TokenStream::new();
 

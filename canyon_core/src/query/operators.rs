@@ -7,6 +7,7 @@ pub trait Operator: Display {
 
 /// Enumerated type for represent the comparison operations
 /// in SQL sentences
+#[derive(Debug)]
 pub enum Comp {
     /// Operator "=" equals
     Eq,
@@ -20,7 +21,10 @@ pub enum Comp {
     Lt,
     /// Operator "=<" less or equals than value
     LtEq,
+    /// A "LIKE" comp operator
+    Like(LikeKind)
 }
+
 
 impl Display for Comp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -31,25 +35,14 @@ impl Display for Comp {
             Self::GtEq => ">=",
             Self::Lt => "<",
             Self::LtEq => "<=",
+            Self::Like(ref __kind) => "LIKE"
         };
         write!(f, "{}", op)
     }
 }
 
-impl Operator for Comp {
-    fn as_str(&self, placeholder_counter: usize, _with_type: &DatabaseType) -> String {
-        match *self {
-            Self::Eq => format!(" = ${placeholder_counter}"),
-            Self::Neq => format!(" <> ${placeholder_counter}"),
-            Self::Gt => format!(" > ${placeholder_counter}"),
-            Self::GtEq => format!(" >= ${placeholder_counter}"),
-            Self::Lt => format!(" < ${placeholder_counter}"),
-            Self::LtEq => format!(" <= ${placeholder_counter}"),
-        }
-    }
-}
-
-pub enum Like {
+#[derive(Debug)]
+pub enum LikeKind {
     /// Operator "LIKE"  as '%pattern%'
     Full,
     /// Operator "LIKE"  as '%pattern'
@@ -58,7 +51,7 @@ pub enum Like {
     Right,
 }
 
-impl Operator for Like {
+impl Operator for LikeKind {
     fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String {
         let type_data_to_cast_str = match datasource_type {
             #[cfg(feature = "postgres")]
@@ -71,30 +64,30 @@ impl Operator for Like {
         };
 
         match *self {
-            Like::Full => {
+            Self::Full => {
                 format!(
                     " LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')"
                 )
             }
-            Like::Left => format!(
+            Self::Left => format!(
                 " LIKE CONCAT('%', CAST(${placeholder_counter} AS {type_data_to_cast_str}))"
             ),
-            Like::Right => format!(
+            Self::Right => format!(
                 " LIKE CONCAT(CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')"
             ),
         }
     }
 }
 
-impl Display for Like {
+impl Display for LikeKind {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
             "{}",
             match *self {
-                Like::Full => "Like::Full",
-                Like::Left => "Like::Left",
-                Like::Right => "Like::Right",
+                Self::Full => "Like::Full",
+                Self::Left => "Like::Left",
+                Self::Right => "Like::Right",
             }
         )
     }

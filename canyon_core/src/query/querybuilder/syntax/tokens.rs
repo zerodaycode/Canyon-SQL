@@ -1,9 +1,16 @@
 use std::borrow::Cow;
-use std::fmt::Write;
+use std::fmt::{Display, Write};
 use crate::connection::database_type::DatabaseType;
+use crate::query::operators::Comp;
+use crate::query::querybuilder::syntax::tokens::SqlToken::{Ident, Keyword};
 
 pub trait ToSqlTokens<'a> {
-    fn to_tokens(&self) -> SqlToken<'a>;
+    fn to_tokens<'b>(&'b self, out: &mut Vec<SqlToken<'b>>);
+}
+
+pub trait ToSql<'a>: Display + ToSqlTokens<'a> {
+    /// Writes in the past in buffer the string representation of any 
+    fn write_as_sql(&self, out: &mut String); // Strong typing over the string
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -12,34 +19,44 @@ pub enum Symbol {
     RParen,
     Comma,
     Dot,
+    Equals,
     Semicolon,
+    Asterisk,
 }
 
+#[derive(Debug)]
 pub enum SqlToken<'a> {
-    Keyword(Cow<'a, str>),        // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE
+    Keyword(Cow<'a, str>),        // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
     WhiteSpace,
     Ident(Cow<'a, str>),          // table, column
-    Symbol(Symbol),            // = , ( ) , .
+    Symbol(Symbol),            // =, ( ) , .
+    Operator(Comp),            // Comp::Eq, Comp::GtEq...
     Placeholder(usize),      // $1, ? , @P1
 }
 
-pub struct TokenWriter<'a> {
-    pub tokens: Vec<SqlToken<'a>>,
+impl<'a> SqlToken<'a> {
+    pub(crate) fn new_keyword(kw: &'a str) -> Self {
+        Keyword(Cow::from(kw))
+    }
+
+    pub(crate) fn new_ident(kw: &'a str) -> Self {
+        Ident(Cow::from(kw))
+    }
 }
 
-impl<'a> TokenWriter<'a> {
+
+pub struct TokenWriter {
+}
+
+impl TokenWriter {
     pub fn new() -> Self {
-        Self { tokens: Vec::new() }
+        Self {  }
     }
 
-    pub fn push(&mut self, token: SqlToken<'a>) {
-        self.tokens.push(token);
-    }
-
-    pub fn render(self, db: DatabaseType) -> Result<String, std::fmt::Error> {
+    pub fn render<'a>(self, tokens: &[SqlToken<'a>], db: &'a DatabaseType) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
 
-        for tok in self.tokens {
+        for tok in tokens {
             match tok {
                 SqlToken::Keyword(s) => write!(out, " {}", s)?,
                 SqlToken::Ident(s)   => write!(out, " {}", s)?,
@@ -50,13 +67,13 @@ impl<'a> TokenWriter<'a> {
                     Symbol::RParen    => write!(out, ")")?,
                     Symbol::Dot       => write!(out, ".")?,
                     Symbol::Semicolon => write!(out, ";")?,
+                    _ => {}
                 },
 
                 SqlToken::Operator(op) =>
-                    write!(out, " {}", op.as_str())?,
+                    write!(out, " {}", op)?,
 
-                SqlToken::Placeholder => {
-                    ph_idx += 1;
+                SqlToken::Placeholder(ph_idx) => {
                     match db {
                         DatabaseType::PostgreSql => write!(out, " ${}", ph_idx)?,
                         DatabaseType::SqlServer  => write!(out, " @P{}", ph_idx)?,
@@ -64,15 +81,16 @@ impl<'a> TokenWriter<'a> {
                         _ => write!(out, " ?")?,
                     }
                 }
-
-                SqlToken::Number(n) =>
-                    write!(out, " {}", n)?,
-
-                SqlToken::Raw(r) =>
-                    write!(out, " {}", r)?,
+                //
+                // SqlToken::Number(n) =>
+                //     write!(out, " {}", n)?,
+                //
+                // SqlToken::Raw(r) =>
+                //     write!(out, " {}", r)?,
+                _ => {}
             }
         }
 
-        out.trim_start().to_string()
+        Ok(out.trim_start().to_string())
     }
 }

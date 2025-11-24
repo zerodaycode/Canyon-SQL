@@ -27,7 +27,7 @@ use std::fmt::Display;
 /// let builder = QueryBuilder::new_for(table, columns, DatabaseType::Deferred)?;
 /// let query = builder.build()?; // will resolve to the default DB type
 /// ```
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
 pub enum DatabaseType {
     /// The Postgres database backend.
     #[cfg(feature = "postgres")]
@@ -70,7 +70,7 @@ pub enum DatabaseType {
     /// .where_("id", Comp::Eq, &42)
     /// .build()?; // resolved dynamically to the active database type
     /// ```
-    Deferred,
+    #[default] Deferred,
 }
 
 impl Display for DatabaseType {

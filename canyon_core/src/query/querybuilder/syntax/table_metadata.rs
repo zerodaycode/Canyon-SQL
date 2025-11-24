@@ -1,53 +1,52 @@
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
-use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
 
 #[derive(Clone, Default, Debug)]
-pub struct TableMetadata {
-    pub schema: Option<String>,
-    pub name: String,
+pub struct TableMetadata<'a> {
+    pub schema: Option<Cow<'a, str>>,
+    pub name: Cow<'a, str>,
 } // TODO: we can have those fields as Cow<'_> for max performance
 
-impl<'a> ToSqlTokens<'a> for TableMetadata {
-    fn to_tokens(&self) -> SqlToken<'a> {
+impl<'a> ToSqlTokens<'a> for TableMetadata<'a> {
+    fn to_tokens<'b>(&'b self, out: &mut Vec<SqlToken<'b>>) {
         match &self.schema {
             Some(s) => {
-                out.push(SqlToken::Ident(s));
-                out.push(SqlToken::Symbol('.'));
-                out.push(SqlToken::Ident(&self.name));
+                out.push(SqlToken::Ident(s.clone()));
+                out.push(SqlToken::Symbol(Symbol::Dot));
             }
-            None => {
-                out.push(SqlToken::Ident(&self.name));
-            }
-        }
+            None => {}
+        };
+        out.push(SqlToken::Ident(self.name.clone()));
     }
 }
-impl From<&str> for TableMetadata {
-    /// Creates a new [`TableMetadata`] from a string slice.
+impl<'a> From<&'a str> for TableMetadata<'a> {
+    /// Creates a new [`TableMetadata<'a>`] from a string slice.
     ///
     /// If the slice contains a dot, we assume that is a schema.table_name format, otherwise,
     /// we assume that the client is just creating a [`Self`] from the passed in string
-    fn from(value: &str) -> Self {
+    fn from(value: &'a str) -> Self {
         if let Some((schema, table)) = value.split_once('.') {
             TableMetadata {
-                schema: Some(schema.to_string()),
-                name: table.to_string(),
+                schema: Some(Cow::from(schema)),
+                name: Cow::from(table),
             }
         } else {
             TableMetadata {
                 schema: None,
-                name: value.to_string(),
+                name: Cow::from(value),
             }
         }
     }
 }
 
 
-impl<'a> TableMetadata {
+impl<'a> TableMetadata<'a> {
     pub fn new(schema: &'a str, name: &'a str) -> Self {
-        Self { schema: Some(schema.to_string()), name: name.to_string() }
+        Self { schema: Some(Cow::from(schema)), name: Cow::from(name) }
     }
-    pub fn schema(&mut self, schema: String) { self.schema = Some(schema); }
-    pub fn table_name(&mut self, table_name: String) { self.name = table_name }
+    pub fn schema(&mut self, schema: String) { self.schema = Some(Cow::from(schema)); }
+    pub fn table_name(&mut self, table_name: String) { self.name = Cow::from(table_name) }
 
     /// Returns an already formatted version of the schema and table of a target database table
     /// ready to be used in a SQL statement.
@@ -63,7 +62,7 @@ impl<'a> TableMetadata {
     }
 }
 
-impl Display for TableMetadata {
+impl<'a> Display for TableMetadata<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self.schema {
             Some(schema_name) => {write!(f, "{}.{}", schema_name, self.name)}
@@ -72,7 +71,7 @@ impl Display for TableMetadata {
     }
 }
 
-impl AsRef<str> for TableMetadata {
+impl<'a> AsRef<str> for TableMetadata<'a> {
     fn as_ref(&self) -> &str {
         self.schema.as_ref().unwrap()
     }

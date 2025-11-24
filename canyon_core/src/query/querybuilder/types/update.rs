@@ -7,31 +7,30 @@ use crate::query::querybuilder::types::TableMetadata;
 use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
 use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use std::error::Error;
-use crate::canyon::Canyon;
 
 /// Contains the specific database operations of the *UPDATE* SQL statements.
 pub struct UpdateQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a>,
-    pub(crate) columns: &'a [String],
+    pub(crate) columns: Vec<&'a str>,
 }
 
 impl<'a> UpdateQueryBuilder<'a> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
     pub fn new(
-        table_schema_data:  impl Into<TableMetadata>,
+        table_schema_data: impl Into<TableMetadata<'a>>,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     {
         UpdateQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
     }
     
     pub fn new_for(
-        table_schema_data:  impl Into<TableMetadata>,
+        table_schema_data:  impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     {
         Ok(Self {
             _inner: QueryBuilder::new(table_schema_data, QueryKind::Update, database_type)?,
-            columns: &[],
+            columns: Vec::with_capacity(0),
         })
     }
 
@@ -44,20 +43,28 @@ impl<'a> UpdateQueryBuilder<'a> {
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     fn set(mut self, columns: &'a [String]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> where Self: std::marker::Sized {
         __validators::set_clause_values_not_empty(columns)?;
-        self.columns = columns;
+        self.columns = columns.iter().map(|f| f.as_str()).collect::<Vec<_>>();
         Ok(self)
     }
 
-    fn set_with_values<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set_values<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a dyn QueryParameter>: Extend<&'a Q>
     {
         __validators::set_clause_not_already_present(&self)?;
         __validators::set_clause_values_not_empty(columns)?;
 
-        self._inner.params.extend(columns.iter().map(|(_l, value)| value));
+        // normalized column names
+        self.columns = columns
+            .iter()
+            .map(|(z, _)| z.as_str())
+            .collect::<Vec<_>>();
+
+        // normalized values
+        for (_, v) in columns {
+            self._inner.params.push(v as &dyn QueryParameter);
+        }
 
         Ok(self)
     }
@@ -96,8 +103,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     fn and_values_in<'b, Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
-        Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
+        Q: QueryParameter
     {
         self._inner.and_values_in(and, values)?;
         Ok(self)
@@ -108,7 +114,6 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
-        Vec<&'a (dyn QueryParameter + 'a)>: Extend<&'a Q>,
     {
         self._inner.or_values_in(or, values)?;
         Ok(self)
