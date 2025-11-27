@@ -4,13 +4,14 @@ use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
+use crate::query::querybuilder::{DeleteQueryBuilder, QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
 use std::error::Error;
+use crate::query::querybuilder::syntax::ast::update::UpdateAst;
+use crate::query::querybuilder::syntax::column::ColumnRef;
 
 /// Contains the specific database operations of the *UPDATE* SQL statements.
 pub struct UpdateQueryBuilder<'a> {
-    pub(crate) _inner: QueryBuilder<'a>,
+    pub(crate) _inner: QueryBuilder<'a, UpdateAst<'a>>,
     pub(crate) columns: Vec<&'a str>,
 }
 
@@ -29,21 +30,21 @@ impl<'a> UpdateQueryBuilder<'a> {
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     {
         Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, QueryKind::Update, database_type)?,
+            _inner: QueryBuilder::new(table_schema_data, UpdateAst::new(), database_type)?,
             columns: Vec::with_capacity(0),
         })
     }
 
-    pub fn build(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
-        __impl::create_set_clause_columns_with_placeholders(&mut self);
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        // __impl::create_set_clause_columns_with_placeholders(&mut self);
         self._inner.build()
     }
 }
 
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
-    fn set(mut self, columns: &'a [String]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> where Self: std::marker::Sized {
-        __validators::set_clause_values_not_empty(columns)?;
-        self.columns = columns.iter().map(|f| f.as_str()).collect::<Vec<_>>();
+    fn set<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> where Self: std::marker::Sized {
+        __validators::set_clause_values_not_empty(&*columns)?;
+        self._inner.ast.columns = columns.into_iter().map(|f| f.into()).collect::<Vec<_>>();
         Ok(self)
     }
 
@@ -71,15 +72,15 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
-    #[inline]
-    fn read_sql(&'a self) -> &'a str {
-        self._inner.sql.as_str()
-    }
+    // #[inline]
+    // fn read_sql(&'a self) -> &'a str {
+    //     self._inner.build().unwrap().sql.as_str()
+    // }
 
-    #[inline(always)]
-    fn push_sql(mut self, sql: &str) {
-        self._inner.sql.push_str(sql);
-    }
+    // #[inline(always)]
+    // fn push_sql(mut self, sql: &str) {
+    //     self._inner.sql.push_str(sql);
+    // }
 
     #[inline]
     fn r#where(mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) -> Self {

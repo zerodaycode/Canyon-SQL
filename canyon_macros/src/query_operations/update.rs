@@ -50,7 +50,7 @@ fn generate_update_method_tokens(
 
         let mut update_stmt = UpdateQueryBuilder::new(table_schema_data.clone())
             .expect("Failed to create a UpdateQueryBuilder")
-            .set(&update_columns)
+            .set(update_columns.iter().map(|e| e.as_str()).collect())
             .expect("Failed to generate a SET clause")
             .r#where(pk_name, Comp::Eq, &pk_index);
         let update_stmt = update_stmt    .build()

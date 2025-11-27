@@ -37,8 +37,22 @@ where
     where
         I: DbConnection + Send + 'a;
 
+    /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
+    /// that allows you to customize the query by adding parameters and constrains dynamically.
+    ///
+    /// It generates a Query `SELECT * FROM  table_name`, where `table_name` it's the name of your
+    /// entity but converted to the corresponding database convention,
+    /// unless concrete values are set on the available parameters of the
+    /// `canyon_macro(table_name = "table_name", schema = "schema")`
     fn select_query<'a>() -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
+    /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
+    /// that allows you to customize the query by adding parameters and constrains dynamically.
+    ///
+    /// It generates a Query `SELECT * FROM  table_name`, where `table_name` it's the name of your
+    /// entity but converted to the corresponding database convention,
+    /// unless concrete values are set on the available parameters of the
+    /// `canyon_macro(table_name = "table_name", schema = "schema")`
     fn select_query_with<'a>(
         database_type: DatabaseType,
     ) -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;

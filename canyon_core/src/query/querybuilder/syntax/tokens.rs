@@ -5,7 +5,7 @@ use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::tokens::SqlToken::{Ident, Keyword};
 
 pub trait ToSqlTokens<'a> {
-    fn to_tokens<'b>(&'b self, out: &mut Vec<SqlToken<'b>>);
+    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>);
 }
 
 pub trait ToSql<'a>: Display + ToSqlTokens<'a> {

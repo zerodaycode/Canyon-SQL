@@ -19,7 +19,7 @@ pub fn generate_read_operations_tokens(
     let cols = macro_data.get_column_names_pk_parsed().collect::<Vec<_>>();
     let find_all_query = SelectQueryBuilder::new(table_schema_data.clone())
         .expect("Unexpected error creating a SelectQueryBuilder for the find_all operations")
-        .with_columns(&cols);
+        .with_columns(cols.iter().map(|e| e.as_str()).collect());
 
     match find_all_query.build() {
         Ok(query) => {
@@ -60,13 +60,6 @@ fn generate_find_all_operations_tokens(
 
 fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     quote! {
-        /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
-        /// that allows you to customize the query by adding parameters and constrains dynamically.
-        ///
-        /// It generates a Query `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention,
-        /// unless concrete values are set on the available parameters of the
-        /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn select_query<'a>()
             -> Result<
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,
@@ -76,13 +69,6 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
             canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data)
         }
 
-        /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
-        /// that allows you to customize the query by adding parameters and constrains dynamically.
-        ///
-        /// It generates a Query `SELECT * FROM  table_name`, where `table_name` it's the name of your
-        /// entity but converted to the corresponding database convention,
-        /// unless concrete values are set on the available parameters of the
-        /// `canyon_macro(table_name = "table_name", schema = "schema")`
         fn select_query_with<'a>(database_type: canyon_sql::connection::DatabaseType)
             -> Result<
                 canyon_sql::query::querybuilder::SelectQueryBuilder<'a>,

@@ -1,18 +1,14 @@
 use std::borrow::Cow;
-use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitBody, EmitFrom, EmitKind};
 use crate::query::querybuilder::syntax::having::HavingClause;
 use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
 
 #[derive(Default)]
 pub struct SelectAst<'a> {
-    pub base: BaseAst<'a>,
     pub columns: Vec<ColumnRef<'a>>,
     pub joins: Vec<JoinClause<'a>>,
     pub group_by: Vec<&'a str>,
@@ -23,9 +19,8 @@ pub struct SelectAst<'a> {
 }
 
 impl<'a> SelectAst<'a> {
-    pub fn new(table: TableMetadata<'a>, db: DatabaseType) -> Self {
+    pub fn new() -> Self {
         Self {
-            base: BaseAst::new(QueryKind::Select, table, db),
             columns: Vec::new(),
             joins: Vec::new(),
             group_by: Vec::new(),
@@ -46,7 +41,7 @@ impl<'a> EmitKind<'a> for SelectAst<'a> {
 }
 
 impl<'a> EmitFrom<'a> for SelectAst<'a> {
-    fn emit_from<'b: 'a>(&'b self, meta: &'b TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>)  {
+    fn emit_from<'b>(&self, meta: &TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>)  {
         // columns
         if self.columns.is_empty() {
             out.push(SqlToken::Symbol(Symbol::Asterisk));
@@ -59,7 +54,7 @@ impl<'a> EmitFrom<'a> for SelectAst<'a> {
         // FROM
         out.push(SqlToken::new_keyword("FROM"));
         meta.to_tokens(out);
-        
+
         // joins (simplified)
         for j in &self.joins {
             out.push(SqlToken::new_keyword("LEFT JOIN")); // TODO: actual placeholder until

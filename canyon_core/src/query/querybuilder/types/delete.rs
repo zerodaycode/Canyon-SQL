@@ -7,6 +7,7 @@ use crate::query::querybuilder::types::TableMetadata;
 use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps};
 use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use std::error::Error;
+use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
 
 /// Contains the specific database operations associated with the
 /// *DELETE* SQL statements.
@@ -14,7 +15,7 @@ use std::error::Error;
 /// * `set` - To construct a new `SET` clause to determine the columns to
 ///   update with the provided values
 pub struct DeleteQueryBuilder<'a> {
-    pub(crate) _inner: QueryBuilder<'a>,
+    pub(crate) _inner: QueryBuilder<'a, DeleteAst>,
 }
 
 impl<'a> DeleteQueryBuilder<'a> {
@@ -30,7 +31,7 @@ impl<'a> DeleteQueryBuilder<'a> {
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, QueryKind::Delete, database_type)?,
+            _inner: QueryBuilder::new(table_schema_data, DeleteAst::new(), database_type)?,
         })
     }
 
@@ -42,15 +43,6 @@ impl<'a> DeleteQueryBuilder<'a> {
 impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
-    #[inline]
-    fn read_sql(&'a self) -> &'a str {
-        self._inner.sql.as_str()
-    }
-
-    #[inline(always)]
-    fn push_sql(mut self, sql: &str) {
-        self._inner.sql.push_str(sql);
-    }
 
     #[inline]
     fn r#where(mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) -> Self {

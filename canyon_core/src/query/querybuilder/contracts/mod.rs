@@ -5,13 +5,21 @@ use std::error::Error;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier, TableMetadata};
 use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
+use crate::query::querybuilder::syntax::column::ColumnRef;
 
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 
 pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Creates an SQL `SET` clause by specifying the columns that must be updated in the sentence,
-    /// but without adding any [`QueryParameter`] value to the internal querybuilder
-    fn set(self, columns: &'a [String]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    /// but without adding any [`QueryParameter`] value to the internal querybuilder.
+    /// 
+    /// Is it the responsibility of the callee to pass the query values that will match the generated
+    /// sql placeholders
+    /// 
+    /// Note: If there's values already on the querybuilder, and the only placeholders api is called,
+    /// UB (provisionally) will occur, since we're refactoring the API's and these are subject to change
+    /// at any time while in the v0.x.x
+    fn set<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
           where Self: Sized;
 
     /// Similar to [`Self::set`] but storing the underlying update values for each column in the
@@ -26,7 +34,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
     /// If this method isn't invoked, the querybuilder will create a SELECT * FROM query
-    fn with_columns(self, columns: &'a [String]) -> Self;
+    fn with_columns<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Self;
     
     /// Adds a *LEFT JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
@@ -121,16 +129,16 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 pub trait QueryBuilderOps<'a> {
     /// Returns a read-only reference to the underlying SQL sentence,
     /// with the same lifetime as self
-    fn read_sql(&'a self) -> &'a str;
+    // fn read_sql(&'a self) -> &'a str;
 
-    /// Public interface for append the content of a slice to the end of
-    /// the underlying SQL sentence.
-    ///
-    /// This mutator will allow the user to wire SQL code to the already
-    /// generated one
-    ///
-    /// * `sql` - The [`&str`] to be wired in the SQL
-    fn push_sql(self, sql: &str);
+    // /// Public interface for append the content of a slice to the end of
+    // /// the underlying SQL sentence.
+    // ///
+    // /// This mutator will allow the user to wire SQL code to the already
+    // /// generated one
+    // ///
+    // /// * `sql` - The [`&str`] to be wired in the SQL
+    // fn push_sql(self, sql: &str);
 
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///

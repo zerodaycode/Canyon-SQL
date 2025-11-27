@@ -9,7 +9,7 @@ pub struct TableMetadata<'a> {
 } // TODO: we can have those fields as Cow<'_> for max performance
 
 impl<'a> ToSqlTokens<'a> for TableMetadata<'a> {
-    fn to_tokens<'b>(&'b self, out: &mut Vec<SqlToken<'b>>) {
+    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
         match &self.schema {
             Some(s) => {
                 out.push(SqlToken::Ident(s.clone()));
