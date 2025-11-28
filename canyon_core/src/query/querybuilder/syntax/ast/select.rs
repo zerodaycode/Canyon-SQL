@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitBody, EmitFrom, EmitKind};
+use crate::query::querybuilder::syntax::emitter::{AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql};
 use crate::query::querybuilder::syntax::having::HavingClause;
 use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;
@@ -32,6 +32,8 @@ impl<'a> SelectAst<'a> {
     }
 }
 
+impl<'a> ToSql<'a> for SelectAst<'a> {}
+
 impl<'a> AstProcessor for SelectAst<'a> {}
 
 impl<'a> EmitKind<'a> for SelectAst<'a> {
@@ -41,30 +43,49 @@ impl<'a> EmitKind<'a> for SelectAst<'a> {
 }
 
 impl<'a> EmitFrom<'a> for SelectAst<'a> {
-    fn emit_from<'b>(&self, meta: &TableMetadata<'b>, out: &mut Vec<SqlToken<'b>>)  {
+    fn emit_from(&self, meta: &TableMetadata<'a>, out: &mut Vec<SqlToken<'a>>)  {
         // columns
         if self.columns.is_empty() {
             out.push(SqlToken::Symbol(Symbol::Asterisk));
         } else {
-            for (i, c) in self.columns.iter().enumerate() {
-                if i > 0 { out.push(SqlToken::Symbol(Symbol::Comma)); }
-                // TODO: out.push(SqlToken::new_ident(c));
+            for (i, col) in self.columns.iter().enumerate() {
+                if i > 0 {
+                    out.push(SqlToken::Symbol(Symbol::Comma));
+                }
+                col.to_tokens(out);
+                // out.push(SqlToken::new_ident(col));
             }
         }
         // FROM
         out.push(SqlToken::new_keyword("FROM"));
         meta.to_tokens(out);
 
-        // joins (simplified)
-        for j in &self.joins {
-            out.push(SqlToken::new_keyword("LEFT JOIN")); // TODO: actual placeholder until
-            // we bring the JoinClauses
-            // TODO: out.push(SqlToken::new_ident(*j));
-        }
     }
 }
 impl<'a> EmitBody<'a> for SelectAst<'a> {
     fn emit_body(&self, _out: &mut Vec<SqlToken<'a>>) {
         // optional: ORDER BY, LIMIT, etc. left for child builder
+
+        // joins (simplified)
+        // for j in &self.joins {
+        //     _out.push(SqlToken::new_keyword("LEFT JOIN")); // TODO: actual placeholder until
+        //     // we bring the JoinClauses
+        //     // TODO: out.push(SqlToken::new_ident(*j));
+        // }
     }
 }
+
+
+// tell the system that SelectAst supports these phases:
+impl<'a> AsEmitKind<'a> for SelectAst<'a> {
+    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> { Some(self as &dyn EmitKind<'a>) }
+}
+impl<'a> AsEmitFrom<'a> for SelectAst<'a> {
+    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> { Some(self as &dyn EmitFrom<'a>) }
+}
+impl<'a> AsEmitBody<'a> for SelectAst<'a> {
+    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> { Some(self as &dyn EmitBody<'a>) }
+}
+// impl<'a> AsEmitConditions<'a> for SelectAst<'a> {
+//     fn as_emit_conditions(&self) -> Option<&dyn EmitConditions<'a>> { Some(self as &dyn EmitConditions<'a>) }
+// }

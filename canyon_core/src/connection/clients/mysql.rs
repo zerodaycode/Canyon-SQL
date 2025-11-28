@@ -82,7 +82,7 @@ impl DbConnection for MySQLConnector {
         params: &[&'_ dyn QueryParameter],
     ) -> Result<u64, Box<dyn Error + Send + Sync>> {
         let mysql_connection = self.0.get_conn().await?;
-        let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
+        let mysql_stmt = generate_mysql_stmt(stmt, params)?;
 
         Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())
     }

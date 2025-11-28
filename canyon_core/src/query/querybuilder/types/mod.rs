@@ -11,23 +11,22 @@ use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use std::error::Error;
 use crate::query::querybuilder::syntax::ast::BaseAst;
-use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitKind, QueryEmitter};
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
+use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
+use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
 use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, TokenWriter};
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, P: AstProcessor + EmitKind<'a>> {
+pub struct QueryBuilder<'a, P: AstProcessor + ToSql<'a>> {
     pub(crate) base_ast: BaseAst<'a>,
     pub(crate) ast: P,
     pub(crate) database_type: DatabaseType,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
 }
 
-unsafe impl<'a, P: AstProcessor + EmitKind<'a>> Send for QueryBuilder<'a, P> {}
-unsafe impl<'a, P: AstProcessor + EmitKind<'a>> Sync for QueryBuilder<'a, P> {}
+unsafe impl<'a, P: AstProcessor + ToSql<'a>> Send for QueryBuilder<'a, P> {}
+unsafe impl<'a, P: AstProcessor + ToSql<'a>> Sync for QueryBuilder<'a, P> {}
 
-impl<'a, P: AstProcessor + EmitKind<'a>> QueryBuilder<'a, P> {
+impl<'a, P: AstProcessor + ToSql<'a>> QueryBuilder<'a, P> {
     pub fn new(
         table_metadata: impl Into<TableMetadata<'a>>,
         ast: P,
@@ -48,14 +47,16 @@ impl<'a, P: AstProcessor + EmitKind<'a>> QueryBuilder<'a, P> {
         let mut tokens = Vec::<SqlToken>::new();
         //let emitter = QueryEmitter::new_with_ast(QueryKind::Select, self.ast);
         // TODO: solve the diamond with the base_at and the emitter parameters
-        let emitter = QueryEmitter::Select(self.ast);emitter.emit_all_phases(&self.base_ast.table, &self.base_ast.conditions, &mut tokens);
+        // let emitter = QueryEmitter::Select(self.ast);emitter.emit_all_phases(&self.base_ast.table, &self.base_ast.conditions, &mut tokens);
         // emitter.emit_kind(&mut tokens);
         // emitter.emit_body(&mut tokens);
+        self.ast.emit_all(&self.base_ast.table, &mut tokens);
         tokens.push(SqlToken::Symbol(Symbol::Semicolon)); // end with semicolon
 
         println!("QB TOKENS!: {:?}", tokens);
 
         let sql = TokenWriter::new().render(&tokens, &self.database_type)?;
+        println!("QB str!: {:?}", sql);
         Ok(Query::new(sql, self.params)) // TODO, get rid out of query?
     }
 
@@ -120,7 +121,7 @@ mod __impl {
     use crate::query::operators::Comp;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitKind};
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
     use crate::query::querybuilder::syntax::tokens::SqlToken;
     // pub(crate) fn write_from_clause<'a>(mut _self: QueryBuilder<P>) -> Result<QueryBuilder<P>, Box<dyn Error + Send + Sync + 'a>> {
     //     if let Some(where_clause) = &_self.condition_clauses.first() {
@@ -142,7 +143,7 @@ mod __impl {
     ) -> Result<(), Box<dyn Error + Send + Sync>>
     where
         Q: QueryParameter,
-        Z: FieldIdentifier, P: AstProcessor + EmitKind<'a>
+        Z: FieldIdentifier, P: AstProcessor + ToSql<'a>
         // Vec<&'a dyn QueryParameter>: Extend<&'a Q>
     {
         // let target_column = field.as_str();
@@ -174,12 +175,12 @@ mod __impl {
 
     /// Quick standalone that acts as a façade for an orchestrator that just organizes a procedural way of testing
     /// that the constructed underlying query is syntactically correct
-    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b: 'a, P: AstProcessor + EmitKind<'a>>(_self: QueryBuilder<'a, P>) -> Result<QueryBuilder<P>, Box<dyn Error + Send + Sync + 'a>> {
+    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b: 'a, P: AstProcessor + ToSql<'a>>(_self: QueryBuilder<'a, P>) -> Result<QueryBuilder<'a, P>, Box<dyn Error + Send + Sync + 'a>> {
         let _self = super::__validators::check_where_clause_position(_self)?;
         Ok(_self)
     }
 
-    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor + EmitKind<'a>>(_self: &mut QueryBuilder<'a, P>, kind: ConditionClauseKind, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) {
+    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor + ToSql<'a>>(_self: &mut QueryBuilder<'a, P>, kind: ConditionClauseKind, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) {
         _self.base_ast.conditions.push(
             ConditionClause {
                 kind,
@@ -218,10 +219,10 @@ mod __validators {
     use std::fmt::Display;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::QueryBuilder;
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitKind};
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
     use crate::query::querybuilder::types::__errors;
 
-    pub(crate) fn check_where_clause_position<'a, 'b, P: AstProcessor + EmitKind<'a>>(_self: QueryBuilder<'a, P>) -> Result< QueryBuilder<P>, Box<dyn Error + Send + Sync + 'a>> {
+    pub(crate) fn check_where_clause_position<'a, 'b, P: AstProcessor + ToSql<'a>>(_self: QueryBuilder<'a, P>) -> Result< QueryBuilder<'a, P>, Box<dyn Error + Send + Sync + 'a>> {
         // if let Some(condition_clause) = &_self.ast.condition_clauses.first() && condition_clause.kind.ne(&ConditionClauseKind::Where) {
         //         __errors::where_clause_position()
         // } else {
@@ -246,9 +247,9 @@ mod __errors {
     use std::io::ErrorKind;
     
     use crate::query::querybuilder::QueryBuilder;
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitKind};
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
 
-    pub(crate) fn where_clause_position<'a, 'b, P: AstProcessor + EmitKind<'a>>() -> Result<QueryBuilder<'a, P>, Box<dyn Error + Send + Sync + 'a>> {
+    pub(crate) fn where_clause_position<'a, 'b, P: AstProcessor + ToSql<'a>>() -> Result<QueryBuilder<'a, P>, Box<dyn Error + Send + Sync + 'a>> {
         Err(std::io::Error::new( // TODO: CanyonError
             ErrorKind::Unsupported,
             "Where clauses should be the first condition clause on a SQL sentence").into())

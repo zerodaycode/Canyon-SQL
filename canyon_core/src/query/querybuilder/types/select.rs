@@ -47,7 +47,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     fn left_join(
-        mut self,
+        self,
         join_table: impl crate::query::bounds::TableMetadata<'a>,
         col1: impl FieldIdentifier, // TODO: t_col, not only col
         col2: impl FieldIdentifier,
@@ -61,7 +61,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     fn inner_join(
-        mut self,
+        self,
         join_table: impl crate::query::bounds::TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
@@ -75,7 +75,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     fn right_join(
-        mut self,
+        self,
         join_table: impl crate::query::bounds::TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,
@@ -89,7 +89,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     fn full_join(
-        mut self,
+        self,
         join_table: impl crate::query::bounds::TableMetadata<'a>,
         col1: impl FieldIdentifier,
         col2: impl FieldIdentifier,

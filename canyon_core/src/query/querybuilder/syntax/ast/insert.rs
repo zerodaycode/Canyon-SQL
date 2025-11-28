@@ -3,7 +3,7 @@ use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::emitter::{EmitBody, EmitFrom, EmitKind};
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
-use crate::query::querybuilder::syntax::tokens::Symbol::{Comma, LParen, RParen};
+use crate::query::querybuilder::syntax::tokens::Symbol::{LParen, RParen};
 
 pub struct InsertAst<'a> {
     pub columns: Vec<&'a str>,

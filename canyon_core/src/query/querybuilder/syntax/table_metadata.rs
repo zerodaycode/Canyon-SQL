@@ -10,12 +10,9 @@ pub struct TableMetadata<'a> {
 
 impl<'a> ToSqlTokens<'a> for TableMetadata<'a> {
     fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        match &self.schema {
-            Some(s) => {
-                out.push(SqlToken::Ident(s.clone()));
-                out.push(SqlToken::Symbol(Symbol::Dot));
-            }
-            None => {}
+        if let Some(s) = &self.schema {
+            out.push(SqlToken::Ident(s.clone()));
+            out.push(SqlToken::Symbol(Symbol::Dot));
         };
         out.push(SqlToken::Ident(self.name.clone()));
     }

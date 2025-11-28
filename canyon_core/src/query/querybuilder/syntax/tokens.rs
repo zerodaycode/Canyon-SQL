@@ -1,16 +1,12 @@
+use std::fmt::{Display, Formatter};
 use std::borrow::Cow;
-use std::fmt::{Display, Write};
+use std::fmt::Write;
 use crate::connection::database_type::DatabaseType;
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::tokens::SqlToken::{Ident, Keyword};
 
 pub trait ToSqlTokens<'a> {
     fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>);
-}
-
-pub trait ToSql<'a>: Display + ToSqlTokens<'a> {
-    /// Writes in the past in buffer the string representation of any 
-    fn write_as_sql(&self, out: &mut String); // Strong typing over the string
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -57,40 +53,46 @@ impl TokenWriter {
         let mut out = String::new();
 
         for tok in tokens {
-            match tok {
-                SqlToken::Keyword(s) => write!(out, " {}", s)?,
-                SqlToken::Ident(s)   => write!(out, " {}", s)?,
-
-                SqlToken::Symbol(sym) => match sym {
-                    Symbol::Comma     => write!(out, ",")?,
-                    Symbol::LParen    => write!(out, " (")?,
-                    Symbol::RParen    => write!(out, ")")?,
-                    Symbol::Dot       => write!(out, ".")?,
-                    Symbol::Semicolon => write!(out, ";")?,
-                    _ => {}
-                },
-
-                SqlToken::Operator(op) =>
-                    write!(out, " {}", op)?,
-
-                SqlToken::Placeholder(ph_idx) => {
-                    match db {
-                        DatabaseType::PostgreSql => write!(out, " ${}", ph_idx)?,
-                        DatabaseType::SqlServer  => write!(out, " @P{}", ph_idx)?,
-                        DatabaseType::MySQL      => write!(out, " ?")?,
-                        _ => write!(out, " ?")?,
-                    }
-                }
-                //
-                // SqlToken::Number(n) =>
-                //     write!(out, " {}", n)?,
-                //
-                // SqlToken::Raw(r) =>
-                //     write!(out, " {}", r)?,
-                _ => {}
-            }
+            __impl::output_token_to_string_buffer(tok, db, &mut out)?; // TODO: split, for db and others (maybe)
         }
 
         Ok(out.trim_start().to_string())
+    }
+}
+
+mod __impl {
+    use std::fmt::Write;
+    use crate::connection::database_type::DatabaseType;
+    use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
+
+    pub(crate) fn output_token_to_string_buffer(token: &SqlToken, db: &DatabaseType, f: &mut String) -> Result<(), std::fmt::Error> {
+        let _: () = match token {
+            SqlToken::Keyword(s) => write!(f, " {}", s)?,
+            SqlToken::Ident(s)   => write!(f, " {}", s)?,
+
+            SqlToken::Symbol(sym) => match sym {
+                Symbol::Comma     => write!(f, ",")?,
+                Symbol::LParen    => write!(f, " (")?,
+                Symbol::RParen    => write!(f, ")")?,
+                Symbol::Dot       => write!(f, ".")?,
+                Symbol::Semicolon => write!(f, ";")?,
+                Symbol::Equals => write!(f, " =")?,
+                Symbol::Asterisk => write!(f, " *")?,
+            },
+
+            SqlToken::Operator(op) =>
+                write!(f, " {}", op)?,
+
+            SqlToken::Placeholder(ph_idx) => {
+                match db {
+                    DatabaseType::PostgreSql => write!(f, " ${}", ph_idx)?,
+                    DatabaseType::SqlServer  => write!(f, " @P{}", ph_idx)?,
+                    DatabaseType::MySQL      => write!(f, " ?")?,
+                    _ => write!(f, " ?")?,
+                }
+            }
+            _ => {}
+        };
+        Ok(())
     }
 }

@@ -4,7 +4,7 @@ use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{DeleteQueryBuilder, QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
+use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
 use std::error::Error;
 use crate::query::querybuilder::syntax::ast::update::UpdateAst;
 use crate::query::querybuilder::syntax::column::ColumnRef;
@@ -43,7 +43,7 @@ impl<'a> UpdateQueryBuilder<'a> {
 
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     fn set<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> where Self: std::marker::Sized {
-        __validators::set_clause_values_not_empty(&*columns)?;
+        __validators::set_clause_values_not_empty(&columns)?;
         self._inner.ast.columns = columns.into_iter().map(|f| f.into()).collect::<Vec<_>>();
         Ok(self)
     }
