@@ -20,13 +20,13 @@ pub struct DeleteQueryBuilder<'a> {
 impl<'a> DeleteQueryBuilder<'a> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
     pub fn new(
-        table_schema_data:  impl Into<TableMetadata<'a>>,
+        table_schema_data: impl Into<TableMetadata<'a>>,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Self::new_for(table_schema_data, DatabaseType::Deferred)
     }
     
     pub fn new_for(
-        table_schema_data:  impl Into<TableMetadata<'a>>,
+        table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
@@ -34,7 +34,7 @@ impl<'a> DeleteQueryBuilder<'a> {
         })
     }
 
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn build<'b>(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
         self._inner.build()
     }
 }
@@ -44,8 +44,8 @@ impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for no
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
 
     #[inline]
-    fn r#where(mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) -> Self {
-        self._inner.r#where(column_name, operator, value);
+    fn r#where(mut self, column_name: &'a str, operator: Comp) -> Self {
+        self._inner.r#where(column_name, operator);
         self
     }
 
@@ -84,12 +84,6 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline]
     fn or<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Comp) -> Self {
         self._inner.or(column, op);
-        self
-    }
-
-    #[inline]
-    fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
-        self._inner.order_by(order_by, desc);
         self
     }
 }

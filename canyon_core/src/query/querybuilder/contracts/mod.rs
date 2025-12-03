@@ -2,10 +2,11 @@
 //! of the behaviour of the Canyon-SQL QueryBuilder
 
 use std::error::Error;
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier, TableMetadata};
+use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 
@@ -46,9 +47,9 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn left_join(
         self,
-        join_table: impl TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        col1: impl Into<ColumnRef<'a>>,
+        col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
     /// Adds a *INNER JOIN* SQL statement to the underlying
@@ -61,9 +62,9 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn inner_join(
         self,
-        join_table: impl TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        col1: impl Into<ColumnRef<'a>>,
+        col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
     /// Adds a *RIGHT JOIN* SQL statement to the underlying
@@ -76,9 +77,9 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn right_join(
         self,
-        join_table: impl TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        col1: impl Into<ColumnRef<'a>>,
+        col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
     /// Adds a *FULL JOIN* SQL statement to the underlying
@@ -91,10 +92,16 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// > Note: The order on the column parameters is irrelevant
     fn full_join(
         self,
-        join_table: impl TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        col1: impl Into<ColumnRef<'a>>,
+        col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
+
+    /// Generates a `ORDER BY` SQL clause for constraint the query.
+    ///
+    /// * `order_by` - A [`FieldIdentifier`] that will provide the target  column name
+    /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be in ascending or descending order
+    fn order_by<Z: FieldIdentifier + Into<ColumnRef<'a>>>(self, order_by: Z, desc: bool) -> Self;
 }
 
 /// The [`QueryBuilder`] trait is the root of a kind of hierarchy
@@ -145,8 +152,11 @@ pub trait QueryBuilderOps<'a> {
     /// * `column` - An [`&str`] that will provide the target column name
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    ///  * `value` - Any implementor of [`QueryParameter] that will be the value to filter
-    fn r#where(self, column: &'a str, op: Comp, value: &'a dyn QueryParameter) -> Self;
+    ///
+    ///  It will generate a SQL statement with the where constraint value generated as a placeholder,
+    /// depending on the underlying database driver and the number of elements already added to the
+    /// querybuilder
+    fn r#where(self, column: &'a str, op: Comp) -> Self;
 
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///
@@ -198,10 +208,4 @@ pub trait QueryBuilderOps<'a> {
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
     fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
-
-    /// Generates a `ORDER BY` SQL clause for constraint the query.
-    ///
-    /// * `order_by` - A [`FieldIdentifier`] that will provide the target  column name
-    /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be in ascending or descending order
-    fn order_by<Z: FieldIdentifier>(self, order_by: Z, desc: bool) -> Self;
 }

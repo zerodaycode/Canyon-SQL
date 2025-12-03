@@ -7,7 +7,7 @@ use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_find_by_fk_ops(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &TableMetadata<'_>
+    table_schema_data: &str
 ) -> TokenStream {
     let ty = &macro_data.ty;
 
@@ -20,7 +20,7 @@ pub fn generate_find_by_fk_ops(
     // The tokens for generating the methods that enable Canyon to retrieve the child entities that are of T type
     // given a parent entity U: ForeignKeyable, as an associated function for the child type (T)
     let search_by_reverse_fk_tokens: Vec<(TokenStream, TokenStream)> =
-        generate_find_by_reverse_foreign_key_tokens(macro_data, &table_schema_data.sql());
+        generate_find_by_reverse_foreign_key_tokens(macro_data, &table_schema_data);
     let rev_fk_method_signatures = search_by_reverse_fk_tokens.iter().map(|(sign, _)| sign);
     let rev_fk_method_implementations =
         search_by_reverse_fk_tokens.iter().map(|(_, m_impl)| m_impl);

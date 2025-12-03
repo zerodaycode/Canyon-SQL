@@ -20,7 +20,7 @@ mod doc_comments;
 
 pub fn impl_crud_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &TableMetadata<'_>,
+    table_schema_data: &str,
 ) -> proc_macro::TokenStream {
     let mut crud_ops_tokens = TokenStream::new();
 

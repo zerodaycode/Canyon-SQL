@@ -1,6 +1,4 @@
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::{SelectQueryBuilder, SelectQueryBuilderOps};
-use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 
@@ -8,7 +6,7 @@ use quote::{ToTokens, quote};
 /// of all the generated macros for the READ operations
 pub fn generate_read_operations_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &TableMetadata<'_>,
+    table_schema_data: &str,
 ) -> TokenStream {
     let ty = macro_data.ty;
     let mapper_ty = macro_data
@@ -16,41 +14,28 @@ pub fn generate_read_operations_tokens(
         .as_ref()
         .unwrap_or(ty);
 
-    let cols = macro_data.get_column_names_pk_parsed().collect::<Vec<_>>();
-    let find_all_query = SelectQueryBuilder::new(table_schema_data.clone())
-        .expect("Unexpected error creating a SelectQueryBuilder for the find_all operations")
-        .with_columns(cols.iter().map(|e| e.as_str()).collect());
+    let find_all_tokens = generate_find_all_operations_tokens(mapper_ty, table_schema_data);
+    let count_tokens = generate_count_operations_tokens(table_schema_data);
+    let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, table_schema_data);
+    let read_querybuilder_ops = generate_select_querybuilder_tokens(table_schema_data);
 
-    match find_all_query.build() {
-        Ok(query) => {
-            let sql = query.as_ref();
-
-            let find_all_tokens = generate_find_all_operations_tokens(mapper_ty, sql);
-            let count_tokens = generate_count_operations_tokens(sql);
-            let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, sql);
-            let read_querybuilder_ops = generate_select_querybuilder_tokens(sql);
-
-            quote! {
-                #find_all_tokens
-                #read_querybuilder_ops
-                #count_tokens
-                #find_by_pk_tokens
-            }
-        },
-        Err(e) => {
-            syn::Error::new(mapper_ty.span(), format!("Failed to build query: {e}"))
-                .to_compile_error()
-        }
+    quote! {
+        #find_all_tokens
+        #read_querybuilder_ops
+        #count_tokens
+        #find_by_pk_tokens
     }
 }
 
 fn generate_find_all_operations_tokens(
     mapper_ty: &Ident,
-    find_all_query: &str
+    table_schema_data: &str
 ) -> TokenStream {
-    let find_all = __details::find_all_generators::create_find_all_macro(mapper_ty, &find_all_query);
+    let fa_stmt = format!("SELECT * FROM {table_schema_data}");
+
+    let find_all = __details::find_all_generators::create_find_all_macro(mapper_ty, &fa_stmt);
     let find_all_with =
-        __details::find_all_generators::create_find_all_with_macro(mapper_ty, &find_all_query);
+        __details::find_all_generators::create_find_all_with_macro(mapper_ty, &fa_stmt);
 
     quote! {
         #find_all

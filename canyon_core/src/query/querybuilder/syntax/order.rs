@@ -1,10 +1,11 @@
-#[derive(Debug, Clone)]
+use crate::query::querybuilder::syntax::column::ColumnRef;
+
+#[derive(Debug, Clone, Default)]
 pub struct OrderByClause<'a> {
-    pub column: &'a str,
+    pub column: ColumnRef<'a>,
     pub descending: bool,
 }
 
 impl<'a> OrderByClause<'a> {
-    pub fn asc(column: &'a str) -> Self { Self { column, descending: false } }
-    pub fn desc(column: &'a str) -> Self { Self { column, descending: true } }
+    pub fn new<I: Into<ColumnRef<'a>>>(column: I, descending: bool) -> Self { Self { column: column.into(), descending } }
 }

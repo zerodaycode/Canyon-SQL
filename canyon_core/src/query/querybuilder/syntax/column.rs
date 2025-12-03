@@ -1,12 +1,10 @@
+use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
-use crate::query::querybuilder::syntax::tokens::Symbol::Dot;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ColumnRef<'a> {
-    pub column: &'a str,
     pub table: Option<&'a str>,
-    // TODO: we need the table <table.column> no?
-    // TODO: so we need a ColumnRefBuilder, to avoid have 70 new different new methods?
+    pub column: &'a str,
     pub alias: Option<&'a str>,
 }
 

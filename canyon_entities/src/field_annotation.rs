@@ -109,7 +109,7 @@ impl EntityFieldAnnotation {
                         }
                     },
                     match data.get("column") {
-                        Some(table) => table.to_owned(),
+                        Some(column) => column.to_owned(),
                         None => {
                             return Err(syn::Error::new_spanned(
                                 ident,

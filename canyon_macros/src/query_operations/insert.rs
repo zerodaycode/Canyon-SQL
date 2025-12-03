@@ -5,10 +5,10 @@ use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_insert_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata<'_>,
+    table_schema_data: &str,
 ) -> TokenStream {
-    let insert_method_ops = generate_insert_method_tokens(macro_data, &table_schema_data.sql());
-    let insert_entity_ops = generate_insert_entity_function_tokens(&table_schema_data.sql());
+    let insert_method_ops = generate_insert_method_tokens(macro_data, &table_schema_data);
+    let insert_entity_ops = generate_insert_entity_function_tokens(&table_schema_data);
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
     quote! {
@@ -182,7 +182,7 @@ mod __details {
         let fields = macro_data.get_columns_pk_parsed();
 
         let insert_values = fields.map(|field| {
-            let field = field.ident.as_ref().unwrap();
+            let field = field.ident.as_ref().expect("Error converting a Field to its ident on the insert");
             quote! { &self.#field }
         });
 
@@ -295,7 +295,7 @@ fn _generate_multiple_insert_tokens(
 
             let pk_value_index = split.iter()
                 .position(|pk| *pk == format!("\"{}\"", #pk).as_str())
-                .unwrap(); // ensured that is there
+                .expect("Error extracting the PK"); // ensured that is there
             split.retain(|pk| *pk != format!("\"{}\"", #pk).as_str());
             mapped_fields = split.join(", ").to_string();
 

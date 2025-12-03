@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
-use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::symbol::Symbol;
+use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
 
 #[derive(Clone, Default, Debug)]
 pub struct TableMetadata<'a> {
@@ -39,8 +40,8 @@ impl<'a> From<&'a str> for TableMetadata<'a> {
 
 
 impl<'a> TableMetadata<'a> {
-    pub fn new(schema: &'a str, name: &'a str) -> Self {
-        Self { schema: Some(Cow::from(schema)), name: Cow::from(name) }
+    pub fn new(table_name: &'a str) -> Self {
+        Self { schema: None, name: Cow::from(table_name) }
     }
     pub fn schema(&mut self, schema: String) { self.schema = Some(Cow::from(schema)); }
     pub fn table_name(&mut self, table_name: String) { self.name = Cow::from(table_name) }
@@ -65,11 +66,5 @@ impl<'a> Display for TableMetadata<'a> {
             Some(schema_name) => {write!(f, "{}.{}", schema_name, self.name)}
             None => {write!(f, "{}", self.name)}
         }
-    }
-}
-
-impl<'a> AsRef<str> for TableMetadata<'a> {
-    fn as_ref(&self) -> &str {
-        self.schema.as_ref().unwrap()
     }
 }

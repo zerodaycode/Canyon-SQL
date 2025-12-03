@@ -7,7 +7,7 @@ pub trait Operator: Display {
 
 /// Enumerated type for represent the comparison operations
 /// in SQL sentences
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Comp {
     /// Operator "=" equals
     Eq,
@@ -41,7 +41,7 @@ impl Display for Comp {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum LikeKind {
     /// Operator "LIKE"  as '%pattern%'
     Full,

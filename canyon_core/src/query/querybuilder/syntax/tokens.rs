@@ -1,26 +1,15 @@
-use std::fmt::{Display, Formatter};
 use std::borrow::Cow;
-use std::fmt::Write;
 use crate::connection::database_type::DatabaseType;
 use crate::query::operators::Comp;
+pub(crate) use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::SqlToken::{Ident, Keyword};
 
 pub trait ToSqlTokens<'a> {
     fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>);
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Symbol {
-    LParen,
-    RParen,
-    Comma,
-    Dot,
-    Equals,
-    Semicolon,
-    Asterisk,
-}
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SqlToken<'a> {
     Keyword(Cow<'a, str>),        // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
     WhiteSpace,

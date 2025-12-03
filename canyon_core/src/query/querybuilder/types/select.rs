@@ -7,10 +7,13 @@ use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, SelectQueryBuild
 use std::error::Error;
 use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
+use crate::query::querybuilder::syntax::join::JoinKind::Left;
+use crate::query::querybuilder::syntax::order::OrderByClause;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub struct SelectQueryBuilder<'a> {
-    pub(crate) _inner: QueryBuilder<'a, SelectAst<'a>>, // TODO: probably SelectAst mustn't be on the base QueryBuilder
+    pub(crate) _inner: QueryBuilder<'a, SelectAst<'a>>,
 }
 
 impl<'a> SelectQueryBuilder<'a> {
@@ -33,9 +36,11 @@ impl<'a> SelectQueryBuilder<'a> {
         })
     }
 
+    pub fn sql(&self) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
+        self._inner.sql()
+    }
+
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
-        // let __self = __impl::write_columns_or_select_all(self)?;
-        // let __self = __impl::write_from_clause(__self)?;
         self._inner.build()
     }
 }
@@ -48,65 +53,50 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
     fn left_join(
         self,
-        join_table: impl crate::query::bounds::TableMetadata<'a>,
-        col1: impl FieldIdentifier, // TODO: t_col, not only col
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        left: impl Into<ColumnRef<'a>>,
+        right: impl Into<ColumnRef<'a>>,
     ) -> Self {
-        // self._inner.sql.push_str(&format!(
-        //     " LEFT JOIN {join_table} ON {} = {}", // TODO: this should be avoided
-        //     col1.table_and_column_name(),
-        //     col2.table_and_column_name()
-        // ));
-        self
+        __impl::build_and_append_join_clause(self, JoinKind::Left, join_table, left, right)
     }
 
     fn inner_join(
         self,
-        join_table: impl crate::query::bounds::TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        left: impl Into<ColumnRef<'a>>,
+        right: impl Into<ColumnRef<'a>>,
     ) -> Self {
-        // self._inner.sql.push_str(&format!(
-        //     " INNER JOIN {join_table} ON {} = {}",
-        //     col1.table_and_column_name(),
-        //     col2.table_and_column_name()
-        // ));
-        self
+        __impl::build_and_append_join_clause(self, JoinKind::Inner, join_table, left, right)
     }
 
     fn right_join(
         self,
-        join_table: impl crate::query::bounds::TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        left: impl Into<ColumnRef<'a>>,
+        right: impl Into<ColumnRef<'a>>,
     ) -> Self {
-        // self._inner.sql.push_str(&format!(
-        //     " RIGHT JOIN {join_table} ON {} = {}",
-        //     col1.table_and_column_name(),
-        //     col2.table_and_column_name()
-        // ));
-        self
+        __impl::build_and_append_join_clause(self, JoinKind::Right, join_table, left, right)
     }
 
     fn full_join(
         self,
-        join_table: impl crate::query::bounds::TableMetadata<'a>,
-        col1: impl FieldIdentifier,
-        col2: impl FieldIdentifier,
+        join_table: impl Into<TableMetadata<'a>>,
+        left: impl Into<ColumnRef<'a>>,
+        right: impl Into<ColumnRef<'a>>,
     ) -> Self {
-        // self._inner.sql.push_str(&format!(
-        //     " FULL JOIN {join_table} ON {} = {}",
-        //     col1.table_and_column_name(),
-        //     col2.table_and_column_name()
-        // ));
+        __impl::build_and_append_join_clause(self, JoinKind::Full, join_table, left, right)
+    }
+
+    fn order_by<Z: FieldIdentifier + Into<ColumnRef<'a>>>(mut self, order_by: Z, desc: bool) -> Self {
+        self._inner.ast.order_by = Some(OrderByClause::new(order_by, desc));
         self
     }
 }
 
 impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     #[inline]
-    fn r#where(mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) -> Self {
-        self._inner.r#where(column_name, operator, value);
+    fn r#where(mut self, column_name: &'a str, operator: Comp) -> Self {
+        self._inner.r#where(column_name, operator);
         self
     }
 
@@ -149,10 +139,29 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         self._inner.or(column, op);
         self
     }
+}
 
-    #[inline]
-    fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
-        self._inner.order_by(order_by, desc);
-        self
+mod __impl {
+    use crate::query::operators::Comp;
+    use crate::query::querybuilder::SelectQueryBuilder;
+    use crate::query::querybuilder::syntax::column::ColumnRef;
+    use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
+    use crate::query::querybuilder::syntax::join::JoinKind::Left;
+    use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
+
+    pub(crate) fn build_and_append_join_clause<'a>(mut _self: SelectQueryBuilder<'a>, join_kind: JoinKind, target_table: impl Into<TableMetadata<'a>>, left: impl Into<ColumnRef<'a>>, right: impl Into<ColumnRef<'a>>) -> SelectQueryBuilder<'a> {
+        let join_clause = build_join_clause(join_kind, target_table, left, right);
+        _self._inner.ast.joins.push(join_clause);
+        _self
+    }
+
+    fn build_join_clause<'a>(kind: JoinKind, target_table: impl Into<TableMetadata<'a>>, left: impl Into<ColumnRef<'a>>, right: impl Into<ColumnRef<'a>>) -> JoinClause<'a> {
+        JoinClause {
+            kind: Left,
+            target_table: target_table.into(),
+            left: left.into(),
+            operator: Comp::Eq,
+            right: right.into()
+        }
     }
 }

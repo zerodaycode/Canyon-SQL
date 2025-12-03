@@ -1,16 +1,13 @@
 use crate::query::operators::Comp;
-use crate::query::parameters::QueryParameter;
-use crate::query::querybuilder::syntax::tokens::SqlToken;
+use crate::query::querybuilder::syntax::column::ColumnRef;
 
-pub struct ConditionClause<'a> {
-    // TODO: where are missing complex where usages, like in joins, so we should consider to add the table
-    // to the column like where table.column = ...
+#[derive(Clone)] pub struct ConditionClause<'a> {
     pub(crate) kind: ConditionClauseKind,
-    pub(crate) column_name: SqlToken<'a>,
+    pub(crate) column_name: ColumnRef<'a>,
     pub(crate) operator: Comp,
-    pub(crate) value: &'a dyn QueryParameter
+    pub(crate) value_index: usize,
 }
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Clone)]
 pub enum ConditionClauseKind {
     Where,
     And,

@@ -14,7 +14,6 @@ mod utils;
 use proc_macro::TokenStream as CompilerTokenStream;
 use quote::quote;
 use syn::{DeriveInput, Error, parse_macro_input};
-use canyon_core::connection::get_canyon_tokio_runtime;
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
 use crate::canyon_entity_macro::generate_canyon_entity_tokens;
@@ -26,7 +25,6 @@ use canyon_entities::{
     entity::CanyonEntity,
     manager_builder::{generate_enum_with_fields, generate_enum_with_fields_values},
 };
-use canyon_migrations::migrations::handler::Migrations;
 
 /// Macro for handling the entry point to the program.
 ///
@@ -138,12 +136,12 @@ pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStrea
         macro_data.unwrap()
     };
 
-    let table_name_res = helpers::table_schema_parser(&macro_data);
+    let table_schema_data_res = helpers::table_schema_parser(&macro_data);
 
-    if let Ok(ts_data) = table_name_res {
-        impl_crud_operations_trait_for_struct(&macro_data, &ts_data)
+    if let Ok(table_schema_data) = table_schema_data_res {
+        impl_crud_operations_trait_for_struct(&macro_data, &table_schema_data.sql())
     } else {
-        table_name_res.unwrap_err().into()
+        table_schema_data_res.unwrap_err().into()
     }
 }
 

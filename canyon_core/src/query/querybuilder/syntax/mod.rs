@@ -8,3 +8,5 @@ pub(crate) mod order;
 pub(crate) mod having;
 pub(crate) mod emitter;
 pub(crate) mod ast;
+mod symbol;
+mod keyword;

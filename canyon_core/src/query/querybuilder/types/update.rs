@@ -25,7 +25,7 @@ impl<'a> UpdateQueryBuilder<'a> {
     }
     
     pub fn new_for(
-        table_schema_data:  impl Into<TableMetadata<'a>>,
+        table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     {
@@ -35,7 +35,7 @@ impl<'a> UpdateQueryBuilder<'a> {
         })
     }
 
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn build<'b>(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
         // __impl::create_set_clause_columns_with_placeholders(&mut self);
         self._inner.build()
     }
@@ -83,8 +83,8 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     // }
 
     #[inline]
-    fn r#where(mut self, column_name: &'a str, operator: Comp, value: &'a dyn QueryParameter) -> Self {
-        self._inner.r#where(column_name, operator, value);
+    fn r#where(mut self, column_name: &'a str, operator: Comp) -> Self {
+        self._inner.r#where(column_name, operator);
         self
     }
 
@@ -123,12 +123,6 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     #[inline]
     fn or<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Comp) -> Self {
         self._inner.or(column, op);
-        self
-    }
-
-    #[inline]
-    fn order_by<Z: FieldIdentifier>(mut self, order_by: Z, desc: bool) -> Self {
-        self._inner.order_by(order_by, desc);
         self
     }
 }

@@ -1,15 +1,14 @@
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
-use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_delete_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata<'_>,
+    table_schema_data: &str,
 ) -> TokenStream {
     let delete_method_ops = generate_delete_method_tokens(macro_data, table_schema_data);
     let delete_entity_ops = generate_delete_entity_tokens(table_schema_data);
-    let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(&table_schema_data.sql());
+    let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
 
     quote! {
         #delete_method_ops
@@ -22,7 +21,7 @@ pub fn generate_delete_tokens(
 /// returning a result, indicating a possible failure querying the database
 pub fn generate_delete_method_tokens(
     macro_data: &MacroTokens,
-    table_schema_data: &TableMetadata<'_>,
+    table_schema_data: &str,
 ) -> TokenStream {
     let mut delete_ops_tokens = TokenStream::new();
 
@@ -84,7 +83,7 @@ pub fn generate_delete_method_tokens(
     delete_ops_tokens
 }
 
-pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata<'_>,) -> TokenStream {
+pub fn generate_delete_entity_tokens(table_schema_data: &str,) -> TokenStream {
     let delete_entity_signature = quote! {
         async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
@@ -105,8 +104,8 @@ pub fn generate_delete_entity_tokens(table_schema_data: &TableMetadata<'_>,) -> 
             Input: canyon_sql::connection::DbConnection + Send + 'canyon
     };
 
-    let delete_entity_body = __details::generate_delete_entity_body(&table_schema_data.sql());
-    let delete_entity_with_body = __details::generate_delete_entity_with_body(&table_schema_data.sql());
+    let delete_entity_body = __details::generate_delete_entity_body(table_schema_data);
+    let delete_entity_with_body = __details::generate_delete_entity_with_body(&table_schema_data);
 
     quote! {
         #delete_entity_signature { #delete_entity_body }

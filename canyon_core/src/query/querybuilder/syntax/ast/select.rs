@@ -4,28 +4,29 @@ use crate::query::querybuilder::syntax::emitter::{AsEmitBody, AsEmitFrom, AsEmit
 use crate::query::querybuilder::syntax::having::HavingClause;
 use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;
+use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
 
 #[derive(Default)]
 pub struct SelectAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
     pub joins: Vec<JoinClause<'a>>,
-    pub group_by: Vec<&'a str>,
-    pub having: Vec<HavingClause<'a>>,
-    pub order_by: Vec<OrderByClause<'a>>,
+    pub order_by: Option<OrderByClause<'a>>,
+    pub having: Option<HavingClause<'a>>,
+    pub group_by: Vec<ColumnRef<'a>>, // TODO: ColumnRef
     pub limit: Option<u64>, // TODO: strong typing
     pub offset: Option<u64>,
 }
 
 impl<'a> SelectAst<'a> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             columns: Vec::new(),
             joins: Vec::new(),
+            order_by: None,
             group_by: Vec::new(),
-            having: Vec::new(),
-            order_by: Vec::new(),
+            having: None,
             limit: None,
             offset: None,
         }
