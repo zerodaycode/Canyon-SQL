@@ -9,7 +9,15 @@ pub struct HavingClause<'a> {
 }
 
 impl<'a> HavingClause<'a> {
-    pub fn new<I: Into<ColumnRef<'a>>>(column: I, operator: Comp, value: &'a dyn QueryParameter) -> Self {
-        Self { column: column.into(), operator, value }
+    pub fn new<I: Into<ColumnRef<'a>>>(
+        column: I,
+        operator: Comp,
+        value: &'a dyn QueryParameter,
+    ) -> Self {
+        Self {
+            column: column.into(),
+            operator,
+            value,
+        }
     }
 }

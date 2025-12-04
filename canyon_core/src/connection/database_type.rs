@@ -70,7 +70,8 @@ pub enum DatabaseType {
     /// .where_("id", Comp::Eq, &42)
     /// .build()?; // resolved dynamically to the active database type
     /// ```
-    #[default] Deferred,
+    #[default]
+    Deferred,
 }
 
 impl Display for DatabaseType {

@@ -22,9 +22,8 @@ pub enum Comp {
     /// Operator "=<" less or equals than value
     LtEq,
     /// A "LIKE" comp operator
-    Like(LikeKind)
+    Like(LikeKind),
 }
-
 
 impl Display for Comp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -35,7 +34,7 @@ impl Display for Comp {
             Self::GtEq => ">=",
             Self::Lt => "<",
             Self::LtEq => "<=",
-            Self::Like(ref __kind) => "LIKE"
+            Self::Like(ref __kind) => "LIKE",
         };
         write!(f, "{}", op)
     }

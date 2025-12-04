@@ -1,31 +1,38 @@
 //! Contains the elements that makes part of the formal declaration
 //! of the behaviour of the Canyon-SQL QueryBuilder
 
-use std::error::Error;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
+use std::error::Error;
 
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 
 pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Creates an SQL `SET` clause by specifying the columns that must be updated in the sentence,
     /// but without adding any [`QueryParameter`] value to the internal querybuilder.
-    /// 
+    ///
     /// Is it the responsibility of the callee to pass the query values that will match the generated
     /// sql placeholders
-    /// 
+    ///
     /// Note: If there's values already on the querybuilder, and the only placeholders api is called,
     /// UB (provisionally) will occur, since we're refactoring the API's and these are subject to change
     /// at any time while in the v0.x.x
-    fn set<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
-          where Self: Sized;
+    fn set<I: Into<ColumnRef<'a>>>(
+        self,
+        columns: Vec<I>,
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    where
+        Self: Sized;
 
     /// Similar to [`Self::set`] but storing the underlying update values for each column in the
     /// internal values collection of the [`crate::query::querybuilder::QueryBuilder`]
-    fn set_values<Z, Q>(self, columns: &'a [(Z, Q)]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set_values<Z, Q>(
+        self,
+        columns: &'a [(Z, Q)],
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -36,7 +43,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
     /// If this method isn't invoked, the querybuilder will create a SELECT * FROM query
     fn with_columns<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Self;
-    
+
     /// Adds a *LEFT JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///
@@ -181,7 +188,11 @@ pub trait QueryBuilderOps<'a> {
     ///   the field name that maps the targeted column name
     /// * `values` - An array of [`QueryParameter`] with the values to filter
     ///   inside the `IN` operator
-    fn and_values_in<'b, Z, Q>(self, column: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn and_values_in<'b, Z, Q>(
+        self,
+        column: Z,
+        values: &'a [Q],
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -195,7 +206,11 @@ pub trait QueryBuilderOps<'a> {
     ///   the field name that maps the targeted column name
     /// * `values` - An array of [`QueryParameter`] with the values to filter
     ///   inside the `IN` operator
-    fn or_values_in<'b, Z, Q>(self, r#or: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn or_values_in<'b, Z, Q>(
+        self,
+        r#or: Z,
+        values: &'a [Q],
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,

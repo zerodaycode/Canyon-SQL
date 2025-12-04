@@ -1,5 +1,7 @@
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::{AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql};
+use crate::query::querybuilder::syntax::emitter::{
+    AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql,
+};
 use crate::query::querybuilder::syntax::tokens::SqlToken;
 
 pub struct UpdateAst<'a> {
@@ -36,16 +38,24 @@ impl<'a> Default for UpdateAst<'a> {
 
 impl<'a> UpdateAst<'a> {
     pub fn new() -> Self {
-        Self { columns: Vec::new() }
+        Self {
+            columns: Vec::new(),
+        }
     }
 }
 
 impl<'a> AsEmitKind<'a> for UpdateAst<'a> {
-    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> { Some(self as &dyn EmitKind<'a>) }
+    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> {
+        Some(self as &dyn EmitKind<'a>)
+    }
 }
 impl<'a> AsEmitFrom<'a> for UpdateAst<'a> {
-    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> { None }
+    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> {
+        None
+    }
 }
 impl<'a> AsEmitBody<'a> for UpdateAst<'a> {
-    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> { Some(self as &dyn EmitBody<'a>) }
+    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> {
+        Some(self as &dyn EmitBody<'a>)
+    }
 }

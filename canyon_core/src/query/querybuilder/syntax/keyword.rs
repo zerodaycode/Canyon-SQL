@@ -1,3 +1,1 @@
-pub enum Keyword {
-    
-}
+pub enum Keyword {}

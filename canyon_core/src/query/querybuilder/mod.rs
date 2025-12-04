@@ -1,5 +1,5 @@
 pub mod contracts;
-pub mod types;
 pub mod syntax;
+pub mod types;
 
 pub use self::{contracts::*, types::*};

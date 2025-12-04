@@ -3,13 +3,19 @@ use crate::query::querybuilder::syntax::tokens::SqlToken;
 
 // default impl returns None; concrete ASTs override to return Some(&self as &dyn ...)
 pub trait AsEmitKind<'a> {
-    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> { None }
+    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> {
+        None
+    }
 }
 pub trait AsEmitFrom<'a> {
-    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> { None }
+    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> {
+        None
+    }
 }
 pub trait AsEmitBody<'a> {
-    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> { None }
+    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> {
+        None
+    }
 }
 // pub trait AsEmitConditions<'a> {
 //     fn as_emit_conditions(&self) -> Option<&dyn EmitConditions<'a>> { None }
@@ -17,21 +23,27 @@ pub trait AsEmitBody<'a> {
 
 // The façade trait: ToSql groups phases.
 // Require AsEmit* so we can call as_emit_* on any AST type P.
-pub trait ToSql<'a>: AsEmitKind<'a> + AsEmitFrom<'a> + AsEmitBody<'a> /*+ AsEmitConditions<'a> */ {
+pub trait ToSql<'a>: AsEmitKind<'a> + AsEmitFrom<'a> + AsEmitBody<'a> {
     fn emit_all(
         &self,
         meta: &TableMetadata<'a>,
         //conditions: &[ConditionClause<'a>],
-        out: &mut Vec<SqlToken<'a>>
+        out: &mut Vec<SqlToken<'a>>,
     ) {
         // KIND
-        if let Some(k) = self.as_emit_kind() { k.emit_kind(out); }
+        if let Some(k) = self.as_emit_kind() {
+            k.emit_kind(out);
+        }
 
         // FROM
-        if let Some(f) = self.as_emit_from() { f.emit_from(meta, out); }
+        if let Some(f) = self.as_emit_from() {
+            f.emit_from(meta, out);
+        }
 
         // BODY
-        if let Some(b) = self.as_emit_body() { b.emit_body(out); }
+        if let Some(b) = self.as_emit_body() {
+            b.emit_body(out);
+        }
 
         // CONDITIONS (if AST wants to override condition emission)
         // if let Some(c) = self.as_emit_conditions() {
@@ -45,7 +57,6 @@ pub trait ToSql<'a>: AsEmitKind<'a> + AsEmitFrom<'a> + AsEmitBody<'a> /*+ AsEmit
     }
 }
 
-
 // ---------- AST Processor marker trait ----------
 pub trait AstProcessor: Default {
     // TODO: get base? as mut ref for convenience?
@@ -56,7 +67,7 @@ pub trait EmitKind<'a> {
     fn emit_kind(&self, out: &mut Vec<SqlToken<'a>>);
 }
 pub trait EmitFrom<'a> {
-    fn emit_from(&self, meta: &TableMetadata<'a>, out: &mut Vec<SqlToken<'a>>) ;
+    fn emit_from(&self, meta: &TableMetadata<'a>, out: &mut Vec<SqlToken<'a>>);
 }
 pub trait EmitBody<'a> {
     fn emit_body(&self, out: &mut Vec<SqlToken<'a>>);

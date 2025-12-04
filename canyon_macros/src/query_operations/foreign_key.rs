@@ -1,13 +1,13 @@
 use crate::utils::helpers::database_table_name_to_struct_ident;
 use crate::utils::macro_tokens::MacroTokens;
+use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 
 pub fn generate_find_by_fk_ops(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &str
+    table_schema_data: &str,
 ) -> TokenStream {
     let ty = &macro_data.ty;
 
@@ -134,7 +134,7 @@ fn generate_find_by_foreign_key_tokens(
 /// derive macro on the parent side of the relation
 fn generate_find_by_reverse_foreign_key_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &str
+    table_schema_data: &str,
 ) -> Vec<(TokenStream, TokenStream)> {
     let mut rev_fk_quotes: Vec<(TokenStream, TokenStream)> = Vec::new();
     let ty = macro_data.ty;

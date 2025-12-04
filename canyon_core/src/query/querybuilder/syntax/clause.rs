@@ -1,7 +1,8 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 
-#[derive(Clone)] pub struct ConditionClause<'a> {
+#[derive(Clone)]
+pub struct ConditionClause<'a> {
     pub(crate) kind: ConditionClauseKind,
     pub(crate) column_name: ColumnRef<'a>,
     pub(crate) operator: Comp,
@@ -12,7 +13,7 @@ pub enum ConditionClauseKind {
     Where,
     And,
     Or,
-    In
+    In,
 }
 
 impl AsRef<str> for ConditionClauseKind {

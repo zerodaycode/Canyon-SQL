@@ -1,4 +1,6 @@
-use crate::query::querybuilder::syntax::emitter::{AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql};
+use crate::query::querybuilder::syntax::emitter::{
+    AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql,
+};
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
 
@@ -26,15 +28,23 @@ impl Default for DeleteAst {
 }
 
 impl DeleteAst {
-    pub fn new() -> Self { Self{} }
+    pub fn new() -> Self {
+        Self {}
+    }
 }
 
 impl<'a> AsEmitKind<'a> for DeleteAst {
-    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> { Some(self as &dyn EmitKind<'a>) }
+    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> {
+        Some(self as &dyn EmitKind<'a>)
+    }
 }
 impl<'a> AsEmitFrom<'a> for DeleteAst {
-    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> { Some(self as &dyn EmitFrom<'a>) }
+    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> {
+        Some(self as &dyn EmitFrom<'a>)
+    }
 }
 impl<'a> AsEmitBody<'a> for DeleteAst {
-    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> { None }
+    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> {
+        None
+    }
 }

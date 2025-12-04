@@ -7,5 +7,10 @@ pub struct OrderByClause<'a> {
 }
 
 impl<'a> OrderByClause<'a> {
-    pub fn new<I: Into<ColumnRef<'a>>>(column: I, descending: bool) -> Self { Self { column: column.into(), descending } }
+    pub fn new<I: Into<ColumnRef<'a>>>(column: I, descending: bool) -> Self {
+        Self {
+            column: column.into(),
+            descending,
+        }
+    }
 }

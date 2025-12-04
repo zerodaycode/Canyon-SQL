@@ -3,10 +3,10 @@ use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
+use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
 use crate::query::querybuilder::types::TableMetadata;
 use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps};
 use std::error::Error;
-use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
 
 /// Contains the specific database operations associated with the
 /// *DELETE* SQL statements.
@@ -24,7 +24,7 @@ impl<'a> DeleteQueryBuilder<'a> {
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Self::new_for(table_schema_data, DatabaseType::Deferred)
     }
-    
+
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
@@ -42,7 +42,6 @@ impl<'a> DeleteQueryBuilder<'a> {
 impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
-
     #[inline]
     fn r#where(mut self, column_name: &'a str, operator: Comp) -> Self {
         self._inner.r#where(column_name, operator);
@@ -62,7 +61,11 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn and_values_in<'b, Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn and_values_in<'b, Z, Q>(
+        mut self,
+        r#and: Z,
+        values: &'a [Q],
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -72,7 +75,11 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn or_values_in<'b, Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn or_values_in<'b, Z, Q>(
+        mut self,
+        r#or: Z,
+        values: &'a [Q],
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,

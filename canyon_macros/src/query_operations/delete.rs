@@ -2,10 +2,7 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 
-pub fn generate_delete_tokens(
-    macro_data: &MacroTokens,
-    table_schema_data: &str,
-) -> TokenStream {
+pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
     let delete_method_ops = generate_delete_method_tokens(macro_data, table_schema_data);
     let delete_entity_ops = generate_delete_entity_tokens(table_schema_data);
     let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
@@ -83,7 +80,7 @@ pub fn generate_delete_method_tokens(
     delete_ops_tokens
 }
 
-pub fn generate_delete_entity_tokens(table_schema_data: &str,) -> TokenStream {
+pub fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStream {
     let delete_entity_signature = quote! {
         async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
@@ -174,9 +171,7 @@ mod __details {
         }
     }
 
-    pub(crate) fn generate_delete_entity_with_body(
-        table_schema_data: &str
-    ) -> TokenStream {
+    pub(crate) fn generate_delete_entity_with_body(table_schema_data: &str) -> TokenStream {
         let delete_entity_core_logic = generate_delete_entity_pk_body_logic(table_schema_data);
         let no_pk_err = consts::generate_no_pk_error();
 

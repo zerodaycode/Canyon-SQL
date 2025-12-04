@@ -27,10 +27,7 @@ pub fn generate_read_operations_tokens(
     }
 }
 
-fn generate_find_all_operations_tokens(
-    mapper_ty: &Ident,
-    table_schema_data: &str
-) -> TokenStream {
+fn generate_find_all_operations_tokens(mapper_ty: &Ident, table_schema_data: &str) -> TokenStream {
     let fa_stmt = format!("SELECT * FROM {table_schema_data}");
 
     let find_all = __details::find_all_generators::create_find_all_macro(mapper_ty, &fa_stmt);
@@ -77,7 +74,7 @@ fn generate_count_operations_tokens(table_schema_data: &str) -> TokenStream {
 
 fn generate_find_by_pk_operations_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &str
+    table_schema_data: &str,
 ) -> TokenStream {
     let ty = macro_data.ty;
     let mapper_ty = macro_data.retrieve_mapping_target_type().as_ref();

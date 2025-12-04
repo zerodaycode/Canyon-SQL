@@ -1,12 +1,14 @@
-use std::borrow::Cow;
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::{AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql};
+use crate::query::querybuilder::syntax::emitter::{
+    AsEmitBody, AsEmitFrom, AsEmitKind, AstProcessor, EmitBody, EmitFrom, EmitKind, ToSql,
+};
 use crate::query::querybuilder::syntax::having::HavingClause;
 use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
+use std::borrow::Cow;
 
 #[derive(Default)]
 pub struct SelectAst<'a> {
@@ -15,7 +17,7 @@ pub struct SelectAst<'a> {
     pub order_by: Option<OrderByClause<'a>>,
     pub having: Option<HavingClause<'a>>,
     pub group_by: Vec<ColumnRef<'a>>, // TODO: ColumnRef
-    pub limit: Option<u64>, // TODO: strong typing
+    pub limit: Option<u64>,           // TODO: strong typing
     pub offset: Option<u64>,
 }
 
@@ -44,7 +46,7 @@ impl<'a> EmitKind<'a> for SelectAst<'a> {
 }
 
 impl<'a> EmitFrom<'a> for SelectAst<'a> {
-    fn emit_from(&self, meta: &TableMetadata<'a>, out: &mut Vec<SqlToken<'a>>)  {
+    fn emit_from(&self, meta: &TableMetadata<'a>, out: &mut Vec<SqlToken<'a>>) {
         // columns
         if self.columns.is_empty() {
             out.push(SqlToken::Symbol(Symbol::Asterisk));
@@ -60,7 +62,6 @@ impl<'a> EmitFrom<'a> for SelectAst<'a> {
         // FROM
         out.push(SqlToken::new_keyword("FROM"));
         meta.to_tokens(out);
-
     }
 }
 impl<'a> EmitBody<'a> for SelectAst<'a> {
@@ -76,16 +77,21 @@ impl<'a> EmitBody<'a> for SelectAst<'a> {
     }
 }
 
-
 // tell the system that SelectAst supports these phases:
 impl<'a> AsEmitKind<'a> for SelectAst<'a> {
-    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> { Some(self as &dyn EmitKind<'a>) }
+    fn as_emit_kind(&self) -> Option<&dyn EmitKind<'a>> {
+        Some(self as &dyn EmitKind<'a>)
+    }
 }
 impl<'a> AsEmitFrom<'a> for SelectAst<'a> {
-    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> { Some(self as &dyn EmitFrom<'a>) }
+    fn as_emit_from(&self) -> Option<&dyn EmitFrom<'a>> {
+        Some(self as &dyn EmitFrom<'a>)
+    }
 }
 impl<'a> AsEmitBody<'a> for SelectAst<'a> {
-    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> { Some(self as &dyn EmitBody<'a>) }
+    fn as_emit_body(&self) -> Option<&dyn EmitBody<'a>> {
+        Some(self as &dyn EmitBody<'a>)
+    }
 }
 // impl<'a> AsEmitConditions<'a> for SelectAst<'a> {
 //     fn as_emit_conditions(&self) -> Option<&dyn EmitConditions<'a>> { Some(self as &dyn EmitConditions<'a>) }
