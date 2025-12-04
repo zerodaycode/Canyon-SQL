@@ -1,56 +1,60 @@
-// #[cfg(feature = "mysql")]
-// use crate::constants::MYSQL_DS;
-// #[cfg(feature = "mssql")]
-// use crate::constants::SQL_SERVER_DS;
-// use canyon_sql::connection::DatabaseType;
-//
-// /// Tests for the QueryBuilder available operations within Canyon.
-// ///
-// /// QueryBuilder are the way of obtain more flexibility that with
-// /// the default generated queries, essentially for build the queries
-// /// with the SQL filters
-// ///
-// use canyon_sql::query::operators::{Comp, Comp::*, LikeKind::{Full, Left, Right}};
-//
-// /// Tests for the QueryBuilder available operations within Canyon.
-// ///
-// /// QueryBuilder are the way of obtain more flexibility that with
-// /// the default generated queries, essentially for build the queries
-// /// with the SQL filters
-// ///
-// use canyon_sql::{
-//     crud::CrudOperations,
-//     query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
-// };
-//
-// use crate::tests_models::league::*;
-// use crate::tests_models::player::*;
-// use crate::tests_models::tournament::*;
-//
-// /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-// /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_generated_sql_by_the_select_querybuilder() {
-//     let fv = LeagueFieldValue::name("KOREA".to_string());
-//     let select_with_joins = League::select_query()
-//         .unwrap()
-//         .inner_join(
-//             TournamentTable::DbName,
-//             LeagueField::id,
-//             TournamentField::league,
-//         )
-//         .left_join(PlayerTable::DbName, TournamentField::id, PlayerField::id)
-//         .where_value(&LeagueFieldValue::id(7), Comp::Gt)
-//         .and(&fv, Comp::Eq)
-//         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
-//     // NOTE: We don't have in the docker the generated relationships
-//     // with the joins, so for now, we are just going to check that the
-//     // generated SQL by the SelectQueryBuilder<T> is the expected
-//     assert_eq!(
-//         select_with_joins.unwrap().read_sql(),
-//         "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league LEFT JOIN player ON tournament.id = player.id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
-//     )
-// }
+#[cfg(feature = "mysql")]
+use crate::constants::MYSQL_DS;
+#[cfg(feature = "mssql")]
+use crate::constants::SQL_SERVER_DS;
+use canyon_sql::connection::DatabaseType;
+
+/// Tests for the QueryBuilder available operations within Canyon.
+///
+/// QueryBuilder are the way of obtain more flexibility that with
+/// the default generated queries, essentially for build the queries
+/// with the SQL filters
+///
+use canyon_sql::query::operators::{
+    Comp,
+    Comp::*,
+    LikeKind::{Full, Left, Right},
+};
+
+/// Tests for the QueryBuilder available operations within Canyon.
+///
+/// QueryBuilder are the way of obtain more flexibility that with
+/// the default generated queries, essentially for build the queries
+/// with the SQL filters
+///
+use canyon_sql::{
+    crud::CrudOperations,
+    query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
+};
+
+use crate::tests_models::league::*;
+use crate::tests_models::player::*;
+use crate::tests_models::tournament::*;
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_generated_sql_by_the_select_querybuilder() {
+    let fv = LeagueFieldValue::name("KOREA".to_string());
+    let select_with_joins = League::select_query()
+        .unwrap()
+        .inner_join(
+            TournamentTable::DbName,
+            LeagueField::id,
+            TournamentField::league,
+        )
+        .left_join(PlayerTable::DbName, TournamentField::id, PlayerField::id)
+        .where_value(&LeagueFieldValue::id(7), Comp::Gt)
+        .and(&fv, Comp::Eq)
+        .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
+    // NOTE: We don't have in the docker the generated relationships
+    // with the joins, so for now, we are just going to check that the
+    // generated SQL by the SelectQueryBuilder<T> is the expected
+    assert_eq!(
+        select_with_joins.unwrap().sql().unwrap(),
+        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league LEFT JOIN player ON tournament.id = player.id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
+    )
+}
 //
 // /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 // /// with the parameters that modifies the base SQL to SELECT * FROM <entity>

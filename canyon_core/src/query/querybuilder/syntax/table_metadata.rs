@@ -1,13 +1,23 @@
-use std::borrow::Cow;
-use std::fmt::{Display, Formatter};
+use crate::query::bounds;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
+use std::borrow::Cow;
+use std::fmt::{Display, Formatter};
 
 #[derive(Clone, Default, Debug)]
 pub struct TableMetadata<'a> {
     pub schema: Option<Cow<'a, str>>,
     pub name: Cow<'a, str>,
-} // TODO: we can have those fields as Cow<'_> for max performance
+}
+
+impl<'a, T> From<T> for TableMetadata<'a>
+where
+    T: bounds::TableMetadata<'a>,
+{
+    fn from(value: T) -> Self {
+        Self::from(value.as_str()) // this covers the need of producing <table>.<column>
+    }
+}
 
 impl<'a> ToSqlTokens<'a> for TableMetadata<'a> {
     fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
@@ -38,13 +48,19 @@ impl<'a> From<&'a str> for TableMetadata<'a> {
     }
 }
 
-
 impl<'a> TableMetadata<'a> {
     pub fn new(table_name: &'a str) -> Self {
-        Self { schema: None, name: Cow::from(table_name) }
+        Self {
+            schema: None,
+            name: Cow::from(table_name),
+        }
     }
-    pub fn schema(&mut self, schema: String) { self.schema = Some(Cow::from(schema)); }
-    pub fn table_name(&mut self, table_name: String) { self.name = Cow::from(table_name) }
+    pub fn schema(&mut self, schema: String) {
+        self.schema = Some(Cow::from(schema));
+    }
+    pub fn table_name(&mut self, table_name: String) {
+        self.name = Cow::from(table_name)
+    }
 
     /// Returns an already formatted version of the schema and table of a target database table
     /// ready to be used in a SQL statement.
@@ -54,8 +70,10 @@ impl<'a> TableMetadata<'a> {
     /// and there's some heavy callee procedure
     pub fn sql(&self) -> String {
         match &self.schema {
-            Some(schema_name) => {format!("{}.{}", schema_name, self.name)}
-            None => self.name.to_string()
+            Some(schema_name) => {
+                format!("{}.{}", schema_name, self.name)
+            }
+            None => self.name.to_string(),
         }
     }
 }
@@ -63,8 +81,12 @@ impl<'a> TableMetadata<'a> {
 impl<'a> Display for TableMetadata<'a> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match &self.schema {
-            Some(schema_name) => {write!(f, "{}.{}", schema_name, self.name)}
-            None => {write!(f, "{}", self.name)}
+            Some(schema_name) => {
+                write!(f, "{}.{}", schema_name, self.name)
+            }
+            None => {
+                write!(f, "{}", self.name)
+            }
         }
     }
 }

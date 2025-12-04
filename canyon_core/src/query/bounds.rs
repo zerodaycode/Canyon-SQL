@@ -38,7 +38,7 @@ pub trait Inspectionable<'a> {
 }
 
 pub trait TableMetadata<'a>: std::fmt::Display {
-    fn as_str(&self) -> &'static str;
+    fn as_str(&self) -> &'a str;
 }
 
 /// Created for retrieve the field's name of a field of a struct, giving

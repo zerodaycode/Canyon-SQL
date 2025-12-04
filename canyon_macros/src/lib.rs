@@ -81,6 +81,7 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
 /// the tokio's current reactor
 #[proc_macro_attribute]
 pub fn canyon_tokio_test(
+    // TODO: with Result for using ? on tests?
     _meta: CompilerTokenStream,
     input: CompilerTokenStream,
 ) -> CompilerTokenStream {
@@ -119,6 +120,7 @@ pub fn canyon_tokio_test(
 #[proc_macro_attribute]
 pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
     let attrs = syn::parse_macro_input!(meta as syn::AttributeArgs);
+    // TODO: a table with table and schema fields maybe would have been more corret
     generate_canyon_entity_tokens(attrs, input).into()
 }
 
