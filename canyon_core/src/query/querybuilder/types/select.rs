@@ -5,8 +5,7 @@ use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::join::JoinKind::Left;
-use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
+use crate::query::querybuilder::syntax::join::JoinKind;
 use crate::query::querybuilder::syntax::order::OrderByClause;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps};
@@ -153,11 +152,11 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
 mod __impl {
     use crate::query::operators::Comp;
-    use crate::query::querybuilder::SelectQueryBuilder;
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::join::JoinKind::Left;
     use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
+    use crate::query::querybuilder::SelectQueryBuilder;
 
     pub(crate) fn build_and_append_join_clause<'a>(
         mut _self: SelectQueryBuilder<'a>,

@@ -72,6 +72,8 @@ pub trait EmitFrom<'a> {
 pub trait EmitBody<'a> {
     fn emit_body(&self, out: &mut Vec<SqlToken<'a>>);
 }
+
+pub trait Emit
 //
 //
 // // ---------- QueryEmitter enum ----------

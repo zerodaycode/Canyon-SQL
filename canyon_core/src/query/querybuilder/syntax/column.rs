@@ -120,69 +120,9 @@ mod __detail {
 }
 
 #[cfg(test)]
-mod tests {
+mod column_ref_from_str_tests {
     use super::ColumnRef;
-    use crate::query::querybuilder::syntax::column::__detail::find_case_insensitive_as;
 
-    // ------------------------------------------------------------
-    // Tests for find_case_insensitive_as
-    // ------------------------------------------------------------
-    #[test]
-    fn test_find_as_basic_uppercase() {
-        let idx = find_case_insensitive_as("col AS x").unwrap();
-        assert_eq!(&"col AS x"[idx..idx + 2], "AS");
-    }
-
-    #[test]
-    fn test_find_as_lowercase() {
-        let idx = find_case_insensitive_as("col as x").unwrap();
-        assert_eq!(&"col as x"[idx..idx + 2], "as");
-    }
-
-    #[test]
-    fn test_find_as_mixed_case() {
-        let idx = find_case_insensitive_as("col As x").unwrap();
-        assert_eq!(&"col As x"[idx..idx + 2], "As");
-    }
-
-    #[test]
-    fn test_find_as_with_multiple_spaces() {
-        let idx = find_case_insensitive_as("col   AS    x").unwrap();
-        assert_eq!(&"col   AS    x"[idx..idx + 2], "AS");
-    }
-
-    #[test]
-    fn test_find_as_requires_space_before_and_after() {
-        assert!(find_case_insensitive_as("colASx").is_none());
-        assert!(find_case_insensitive_as("col ASx").is_none());
-        assert!(find_case_insensitive_as("colAS x").is_none());
-        assert!(find_case_insensitive_as("ASx").is_none());
-        assert!(find_case_insensitive_as("xAS").is_none());
-    }
-
-    #[test]
-    fn test_find_as_at_start_or_end() {
-        assert!(find_case_insensitive_as(" AS x").is_some());
-        assert!(find_case_insensitive_as("x AS ").is_some());
-    }
-
-    #[test]
-    fn test_find_as_no_match() {
-        assert!(find_case_insensitive_as("column something").is_none());
-        assert!(find_case_insensitive_as("").is_none());
-        assert!(find_case_insensitive_as("a s").is_none());
-        assert!(find_case_insensitive_as("col AX x").is_none());
-    }
-
-    #[test]
-    fn test_find_as_with_table_column() {
-        let idx = find_case_insensitive_as("table.col as alias").unwrap();
-        assert_eq!(&"table.col as alias"[idx..idx + 2], "as");
-    }
-
-    // ------------------------------------------------------------
-    // Tests for From<&str> for ColumnRef
-    // ------------------------------------------------------------
     #[test]
     fn test_column_ref_simple_column() {
         let c = ColumnRef::from("name");
@@ -285,5 +225,63 @@ mod tests {
         assert_eq!(c.table, Some("users"));
         assert_eq!(c.column, "name");
         assert_eq!(c.alias, None);
+    }
+}
+
+#[cfg(test)]
+mod column_ref_alias_as_detection_tests {
+    use crate::query::querybuilder::syntax::column::__detail::find_case_insensitive_as;
+
+    #[test]
+    fn test_find_as_basic_uppercase() {
+        let idx = find_case_insensitive_as("col AS x").unwrap();
+        assert_eq!(&"col AS x"[idx..idx + 2], "AS");
+    }
+
+    #[test]
+    fn test_find_as_lowercase() {
+        let idx = find_case_insensitive_as("col as x").unwrap();
+        assert_eq!(&"col as x"[idx..idx + 2], "as");
+    }
+
+    #[test]
+    fn test_find_as_mixed_case() {
+        let idx = find_case_insensitive_as("col As x").unwrap();
+        assert_eq!(&"col As x"[idx..idx + 2], "As");
+    }
+
+    #[test]
+    fn test_find_as_with_multiple_spaces() {
+        let idx = find_case_insensitive_as("col   AS    x").unwrap();
+        assert_eq!(&"col   AS    x"[idx..idx + 2], "AS");
+    }
+
+    #[test]
+    fn test_find_as_requires_space_before_and_after() {
+        assert!(find_case_insensitive_as("colASx").is_none());
+        assert!(find_case_insensitive_as("col ASx").is_none());
+        assert!(find_case_insensitive_as("colAS x").is_none());
+        assert!(find_case_insensitive_as("ASx").is_none());
+        assert!(find_case_insensitive_as("xAS").is_none());
+    }
+
+    #[test]
+    fn test_find_as_at_start_or_end() {
+        assert!(find_case_insensitive_as(" AS x").is_some());
+        assert!(find_case_insensitive_as("x AS ").is_some());
+    }
+
+    #[test]
+    fn test_find_as_no_match() {
+        assert!(find_case_insensitive_as("column something").is_none());
+        assert!(find_case_insensitive_as("").is_none());
+        assert!(find_case_insensitive_as("a s").is_none());
+        assert!(find_case_insensitive_as("col AX x").is_none());
+    }
+
+    #[test]
+    fn test_find_as_with_table_column() {
+        let idx = find_case_insensitive_as("table.col as alias").unwrap();
+        assert_eq!(&"table.col as alias"[idx..idx + 2], "as");
     }
 }

@@ -94,4 +94,12 @@ impl DatabaseType {
             .get_default_db_type()
             .map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)
     }
+
+    pub fn get_placeholder_symbol(self) -> &'static str {
+        match self {
+            DatabaseType::SqlServer => "@P",
+            DatabaseType::MySQL => "?",
+            _ => "$", // postgres and default
+        }
+    }
 }

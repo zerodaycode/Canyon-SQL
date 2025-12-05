@@ -56,7 +56,6 @@ impl<'a> EmitFrom<'a> for SelectAst<'a> {
                     out.push(SqlToken::Symbol(Symbol::Comma));
                 }
                 col.to_tokens(out);
-                // out.push(SqlToken::new_ident(col));
             }
         }
         // FROM
@@ -65,15 +64,13 @@ impl<'a> EmitFrom<'a> for SelectAst<'a> {
     }
 }
 impl<'a> EmitBody<'a> for SelectAst<'a> {
-    fn emit_body(&self, _out: &mut Vec<SqlToken<'a>>) {
-        // optional: ORDER BY, LIMIT, etc. left for child builder
-
-        // joins (simplified)
-        // for j in &self.joins {
-        //     _out.push(SqlToken::new_keyword("LEFT JOIN")); // TODO: actual placeholder until
-        //     // we bring the JoinClauses
-        //     // TODO: out.push(SqlToken::new_ident(*j));
-        // }
+    fn emit_body(&self, out: &mut Vec<SqlToken<'a>>) {
+        for j in &self.joins {
+            j.to_tokens(out)
+        }
+        for c in &self._inner.conditions {
+            c.accept(self);
+        }
     }
 }
 

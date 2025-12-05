@@ -10,3 +10,4 @@ pub(crate) mod query_kind;
 mod symbol;
 pub mod table_metadata;
 pub(crate) mod tokens;
+pub(crate) mod writer;

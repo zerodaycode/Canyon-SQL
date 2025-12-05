@@ -1,5 +1,7 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::tokens::SqlToken::{Operator, Placeholder};
+use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlToken, ToSqlTokens};
 
 #[derive(Clone)]
 pub struct ConditionClause<'a> {
@@ -16,13 +18,33 @@ pub enum ConditionClauseKind {
     In,
 }
 
-impl AsRef<str> for ConditionClauseKind {
-    fn as_ref(&self) -> &str {
+impl ConditionClauseKind {
+    fn as_str(&self) -> &'static str {
         match self {
             ConditionClauseKind::Where => "WHERE",
             ConditionClauseKind::And => "AND",
             ConditionClauseKind::In => "IN",
             ConditionClauseKind::Or => "OR",
         }
+    }
+}
+
+impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
+    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
+
+        // Clause keyword
+        out.push(SqlToken::new_keyword(self.kind.as_str()));
+
+        // Column
+        self.column_name.to_tokens(out);
+
+        // Operator
+        out.push(Operator(self.operator));
+
+        // Value placeholder
+        out.push(Placeholder(match self.operator {
+            Comp::Like(kind) => PlaceholderKind::Like(kind, self.value_index),
+            _ => PlaceholderKind::Value(self.value_index)
+        }));
     }
 }

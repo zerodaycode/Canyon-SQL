@@ -275,6 +275,8 @@ fn _generate_multiple_insert_tokens(
         let pk_type = &pk_data.1;
 
         quote! {
+            canyon_sql::core::query::InsertQuerybuilder::new()
+            .with_columns
             mapped_fields = #column_names
                 .split(", ")
                 .map( |column_name| format!("\"{}\"", column_name))

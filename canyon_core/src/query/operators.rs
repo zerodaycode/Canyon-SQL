@@ -1,9 +1,6 @@
+use std::fmt::Display;
 use crate::connection::database_type::DatabaseType;
-use std::fmt::{Display, Formatter};
-
-pub trait Operator: Display {
-    fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String;
-}
+use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
 
 /// Enumerated type for represent the comparison operations
 /// in SQL sentences
@@ -34,9 +31,32 @@ impl Display for Comp {
             Self::GtEq => ">=",
             Self::Lt => "<",
             Self::LtEq => "<=",
-            Self::Like(ref __kind) => "LIKE",
+            Self::Like(ref __kind) => "LIKE"
         };
         write!(f, "{}", op)
+    }
+}
+
+impl<'a> ToSqlTokens<'a> for Comp {
+    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
+        match *self {
+            Comp::Eq => out.push(SqlToken::Symbol(Symbol::Equals)),
+            Comp::Neq => {
+                out.push(SqlToken::Symbol(Symbol::Not));
+                out.push(SqlToken::Symbol(Symbol::Equals))
+            }
+            Comp::Gt => out.push(SqlToken::Symbol(Symbol::RAngle)),
+            Comp::GtEq => {
+                out.push(SqlToken::Symbol(Symbol::RAngle));
+                out.push(SqlToken::Symbol(Symbol::Equals))
+            }
+            Comp::Lt => out.push(SqlToken::Symbol(Symbol::LAngle)),
+            Comp::LtEq => {
+                out.push(SqlToken::Symbol(Symbol::LAngle));
+                out.push(SqlToken::Symbol(Symbol::Equals))
+            }
+            Comp::Like(__kind) => out.push(SqlToken::new_keyword("LIKE"))
+        }
     }
 }
 
@@ -50,8 +70,8 @@ pub enum LikeKind {
     Right,
 }
 
-impl Operator for LikeKind {
-    fn as_str(&self, placeholder_counter: usize, datasource_type: &DatabaseType) -> String {
+impl LikeKind {
+    pub(crate) fn as_str(&self, placeholder_counter: usize, datasource_type: DatabaseType) -> String {
         let type_data_to_cast_str = match datasource_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => "VARCHAR",
@@ -75,19 +95,5 @@ impl Operator for LikeKind {
                 " LIKE CONCAT(CAST(${placeholder_counter} AS {type_data_to_cast_str}) ,'%')"
             ),
         }
-    }
-}
-
-impl Display for LikeKind {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match *self {
-                Self::Full => "Like::Full",
-                Self::Left => "Like::Left",
-                Self::Right => "Like::Right",
-            }
-        )
     }
 }

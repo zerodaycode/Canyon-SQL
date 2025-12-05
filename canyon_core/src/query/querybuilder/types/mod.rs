@@ -12,8 +12,9 @@ use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
 use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, TokenWriter};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
 use std::error::Error;
+use crate::query::querybuilder::syntax::writer::TokenWriter;
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a, P: AstProcessor + ToSql<'a> + 'a> {
@@ -52,7 +53,7 @@ impl<'a, P: AstProcessor + ToSql<'a> + 'a> QueryBuilder<'a, P> {
         self.ast.emit_all(&self.base_ast.table, &mut tokens);
         tokens.push(SqlToken::Symbol(Symbol::Semicolon)); // end with semicolon
 
-        let sql = TokenWriter::new().render(&tokens, &self.database_type)?;
+        let sql = TokenWriter::new().render(&tokens, self.database_type)?;
         println!("QB str!: {:?}", sql);
         Ok(sql)
     }
@@ -117,19 +118,8 @@ mod __impl {
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
-    use crate::query::querybuilder::syntax::tokens::SqlToken;
     use std::error::Error;
-    // pub(crate) fn write_from_clause<'a>(mut _self: QueryBuilder<P>) -> Result<QueryBuilder<P>, Box<dyn Error + Send + Sync + 'a>> {
-    //     if let Some(where_clause) = &_self.condition_clauses.first() {
-    //         write!(_self.sql,
-    //            " WHERE {} {}",
-    //            where_clause.column_name,
-    //            where_clause.operator
-    //         )?;
-    //         write_param_placeholder(_self.database_type, &mut _self.sql, _self.params.iter())?;
-    //     }
-    //     Ok(_self)
-    // }
+    use crate::query::querybuilder::types::__validators;
 
     pub(crate) fn generate_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
         _self: &mut QueryBuilder<'a, P>,
@@ -140,12 +130,11 @@ mod __impl {
     where
         Q: QueryParameter,
         Z: FieldIdentifier,
-        P: AstProcessor + ToSql<'a>, // Vec<&'a dyn QueryParameter>: Extend<&'a Q>
+        P: AstProcessor + ToSql<'a>,
     {
-        // let target_column = field.as_str();
-        // __validators::check_not_empty_in_clause_values(&_self.meta, target_column, values)?;
-        //
-        // _self.sql.push(' ');
+        let target_column = field.as_str();
+        __validators::check_not_empty_in_clause_values(&_self.base_ast.table, target_column, values)?;
+
         // _self.sql.push_str(conjunction_clause_kind.as_ref());
         // _self.sql.push(' ');
         // _self.sql.push_str(target_column);
@@ -162,9 +151,11 @@ mod __impl {
         // _self.sql.push_str(&placeholders);
         // _self.sql.push(')');
         //
-        // for value in values {
-        //     _self.params.push(value);
-        // }
+
+
+        for value in values {
+            _self.params.push(value);
+        }
 
         Ok(())
     }
@@ -174,8 +165,7 @@ mod __impl {
     pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: AstProcessor + ToSql<'a>>(
         _self: &'a QueryBuilder<'a, P>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
-        let _self = super::__validators::check_where_clause_position(_self)?;
-        Ok(())
+        __validators::check_where_clause_position(_self)
     }
 
     pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor + ToSql<'a>>(

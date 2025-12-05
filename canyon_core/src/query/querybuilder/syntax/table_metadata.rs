@@ -50,10 +50,7 @@ impl<'a> From<&'a str> for TableMetadata<'a> {
 
 impl<'a> TableMetadata<'a> {
     pub fn new(table_name: &'a str) -> Self {
-        Self {
-            schema: None,
-            name: Cow::from(table_name),
-        }
+        Self::from(table_name)
     }
     pub fn schema(&mut self, schema: String) {
         self.schema = Some(Cow::from(schema));
