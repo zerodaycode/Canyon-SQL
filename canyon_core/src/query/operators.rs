@@ -1,6 +1,7 @@
 use std::fmt::Display;
 use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::keyword::Keyword;
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens};
 
 /// Enumerated type for represent the comparison operations
 /// in SQL sentences
@@ -38,24 +39,24 @@ impl Display for Comp {
 }
 
 impl<'a> ToSqlTokens<'a> for Comp {
-    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
+    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
         match *self {
-            Comp::Eq => out.push(SqlToken::Symbol(Symbol::Equals)),
+            Comp::Eq => out.symbol(Symbol::Equals),
             Comp::Neq => {
-                out.push(SqlToken::Symbol(Symbol::Not));
-                out.push(SqlToken::Symbol(Symbol::Equals))
+                out.symbol(Symbol::Not);
+                out.symbol(Symbol::Equals)
             }
-            Comp::Gt => out.push(SqlToken::Symbol(Symbol::RAngle)),
+            Comp::Gt => out.symbol(Symbol::RAngle),
             Comp::GtEq => {
-                out.push(SqlToken::Symbol(Symbol::RAngle));
-                out.push(SqlToken::Symbol(Symbol::Equals))
+                out.symbol(Symbol::RAngle);
+                out.symbol(Symbol::Equals)
             }
-            Comp::Lt => out.push(SqlToken::Symbol(Symbol::LAngle)),
+            Comp::Lt => out.symbol(Symbol::LAngle),
             Comp::LtEq => {
-                out.push(SqlToken::Symbol(Symbol::LAngle));
-                out.push(SqlToken::Symbol(Symbol::Equals))
+                out.symbol(Symbol::LAngle);
+                out.symbol(Symbol::Equals)
             }
-            Comp::Like(__kind) => out.push(SqlToken::new_keyword("LIKE"))
+            Comp::Like(__kind) => out.keyword(Keyword::Like)
         }
     }
 }

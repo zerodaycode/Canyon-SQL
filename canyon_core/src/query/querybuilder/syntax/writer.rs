@@ -1,5 +1,5 @@
 use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::tokens::SqlToken;
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens};
 
 pub struct TokenWriter {}
 
@@ -8,7 +8,7 @@ impl TokenWriter {
 
     pub fn render(
         self,
-        tokens: &[SqlToken],
+        tokens: &SqlTokens,
         db: DatabaseType,
     ) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
@@ -38,7 +38,7 @@ mod __impl {
             SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
             SqlToken::Operator(op) => write!(f, " {}", op)?,
             SqlToken::Placeholder(ph_kind) => __detail::render_placeholder(ph_kind, f, db)?,
-            _ => {}
+            _ => todo!("unimplemented SqlToken: {:?}", token)
         };
         Ok(())
     }

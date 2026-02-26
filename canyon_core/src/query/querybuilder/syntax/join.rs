@@ -1,7 +1,8 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
 #[derive(Debug, Clone, Copy)]
 pub enum JoinKind {
@@ -50,12 +51,12 @@ impl<'a> JoinClause<'a> {
 }
 
 impl<'a> ToSqlTokens<'a> for JoinClause<'a> {
-    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        out.push(SqlToken::new_keyword(self.kind.as_str()));
+    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
+        out.ident(self.kind.as_str()); // NOTE: dubious
         self.target_table.to_tokens(out);
-        out.push(SqlToken::new_keyword("ON"));
+        out.keyword(Keyword::On);
         self.left.to_tokens(out);
-        out.push(SqlToken::Operator(self.operator));
+        out.operator(self.operator);
         self.right.to_tokens(out);
     }
 }
@@ -74,13 +75,14 @@ fn test_join_clause_basic() {
         right: "users.team_id".into(),
     };
 
-    let mut tokens = Vec::new();
+    let mut tokens = SqlTokens::default();
     join.to_tokens(&mut tokens);
 
     let expected = vec![
-        SqlToken::Keyword("INNER JOIN".into()),
+        SqlToken::Keyword(Keyword::Inner),
+        SqlToken::Keyword(Keyword::Join),
         SqlToken::Ident("users".into()),
-        SqlToken::Keyword("ON".into()),
+        SqlToken::Keyword(Keyword::On),
 
         SqlToken::Ident("t".into()),
         SqlToken::Symbol(Symbol::Dot),
@@ -93,5 +95,5 @@ fn test_join_clause_basic() {
         SqlToken::Ident("team_id".into()),
     ];
 
-    assert_eq!(tokens, expected);
+    assert_eq!(tokens.inner(), expected);
 }

@@ -10,24 +10,24 @@ use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
+use crate::query::querybuilder::syntax::emitter::AstProcessor;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol};
 use std::error::Error;
 use crate::query::querybuilder::syntax::writer::TokenWriter;
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, P: AstProcessor + ToSql<'a> + 'a> {
+pub struct QueryBuilder<'a, P: AstProcessor + 'a> {
     pub(crate) base_ast: BaseAst<'a>,
     pub(crate) ast: P,
     pub(crate) database_type: DatabaseType,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
 }
 
-unsafe impl<'a, P: AstProcessor + ToSql<'a>> Send for QueryBuilder<'a, P> {}
-unsafe impl<'a, P: AstProcessor + ToSql<'a>> Sync for QueryBuilder<'a, P> {}
+unsafe impl<'a, P: AstProcessor> Send for QueryBuilder<'a, P> {}
+unsafe impl<'a, P: AstProcessor> Sync for QueryBuilder<'a, P> {}
 
-impl<'a, P: AstProcessor + ToSql<'a> + 'a> QueryBuilder<'a, P> {
+impl<'a, P: AstProcessor + 'a> QueryBuilder<'a, P> {
     pub fn new(
         table_metadata: impl Into<TableMetadata<'a>>,
         ast: P,
@@ -49,12 +49,12 @@ impl<'a, P: AstProcessor + ToSql<'a> + 'a> QueryBuilder<'a, P> {
     fn sql<'b>(&self) -> Result<String, Box<dyn Error + Send + Sync + 'b>> {
         // __impl::check_invariants_over_condition_clauses(self)?;
 
-        let mut tokens = Vec::<SqlToken>::new();
-        self.ast.emit_all(&self.base_ast.table, &mut tokens);
-        tokens.push(SqlToken::Symbol(Symbol::Semicolon)); // end with semicolon
+        let mut tokens = SqlTokens::default();
+
+        __detail::run_emission_phase(self.database_type, &self.ast, &self.base_ast);
+        tokens.symbol(Symbol::Semicolon);
 
         let sql = TokenWriter::new().render(&tokens, self.database_type)?;
-        println!("QB str!: {:?}", sql);
         Ok(sql)
     }
 
@@ -111,14 +111,14 @@ impl<'a, P: AstProcessor + ToSql<'a> + 'a> QueryBuilder<'a, P> {
 }
 
 mod __impl {
+    use std::error::Error;
     use crate::query::bounds::FieldIdentifier;
     use crate::query::operators::Comp;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::column::ColumnRef;
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
-    use std::error::Error;
+    use crate::query::querybuilder::syntax::emitter::AstProcessor;
     use crate::query::querybuilder::types::__validators;
 
     pub(crate) fn generate_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
@@ -130,7 +130,7 @@ mod __impl {
     where
         Q: QueryParameter,
         Z: FieldIdentifier,
-        P: AstProcessor + ToSql<'a>,
+        P: AstProcessor,
     {
         let target_column = field.as_str();
         __validators::check_not_empty_in_clause_values(&_self.base_ast.table, target_column, values)?;
@@ -162,13 +162,13 @@ mod __impl {
 
     /// Quick standalone that acts as a façade for an orchestrator that just organizes a procedural way of testing
     /// that the constructed underlying query is syntactically correct
-    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: AstProcessor + ToSql<'a>>(
+    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: AstProcessor>(
         _self: &'a QueryBuilder<'a, P>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
         __validators::check_where_clause_position(_self)
     }
 
-    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor + ToSql<'a>>(
+    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor>(
         _self: &mut QueryBuilder<'a, P>,
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
@@ -187,6 +187,59 @@ mod __detail {
     use crate::connection::database_type::DatabaseType;
     use std::error::Error;
     use std::fmt::Write;
+    use crate::query::querybuilder::syntax::ast::BaseAst;
+    use crate::query::querybuilder::syntax::emitter::backends::MySqlEmitter;
+    use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
+
+    /// Executes the SQL emission phase for the given AST and database backend.
+    ///
+    /// This function selects the appropriate backend-specific emitter
+    /// based on `database_type` and delegates SQL generation to it.
+    ///
+    /// It acts as the orchestration boundary between:
+    /// - The backend-agnostic query representation (`ast`, `base_ast`)
+    /// - The backend-specific SQL emission strategy (`PgEmitter`, `MySqlEmitter`, etc.)
+    ///
+    /// # Parameters
+    ///
+    /// - `database_type`: Target database backend used to determine
+    ///   which SQL dialect implementation will be executed.
+    /// - `ast`: The query AST that describes the high-level structure
+    ///   of the query.
+    /// - `base_ast`: Shared base metadata required for emission,
+    ///   such as table information and condition clauses.
+    ///
+    /// # Behavior
+    ///
+    /// The function:
+    /// 1. Extracts the query kind from the AST.
+    /// 2. Instantiates the corresponding backend emitter.
+    /// 3. Executes the emission phase for that backend.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the provided database backend is not supported.
+    pub(super) fn run_emission_phase<'a, P: AstProcessor>(
+        database_type: DatabaseType,
+        ast: &P,
+        base_ast: &BaseAst,
+    ) {
+        let qk = ast.query_kind();
+        match database_type {
+            DatabaseType::PostgreSql => {
+                let mut emitter = PgEmitter::default();
+                emitter.emit(ast, base_ast);
+            }
+            DatabaseType::MySQL => {
+                let mut emitter = MySqlEmitter::default();
+                emitter.emit(ast, base_ast);
+            }
+            _ => {
+                todo!("unimplemented check ")
+            }
+        }
+    }
 
     /// Convenient standalone that helps us to interpolate the placeholder of the parameters of a SQL
     /// query directly into the passed in buffer, avoiding the need to construct and allocate temporary strings
@@ -221,14 +274,14 @@ mod __validators {
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
+    use crate::query::querybuilder::syntax::emitter::AstProcessor;
     use crate::query::querybuilder::types::__errors;
     use std::error::Error;
     use std::fmt::Display;
 
     /// For now, it's mandatory because we need to ensure what's the placeholder index which is the element
     /// that should swap with the where clause if isn't put in an incorrect order, no implementation ready
-    pub(crate) fn check_where_clause_position<'a, 'b, P: AstProcessor + ToSql<'a>>(
+    pub(crate) fn check_where_clause_position<'a, 'b, P: AstProcessor>(
         _self: &QueryBuilder<'a, P>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
         if let Some(condition_clause) = &_self.base_ast.conditions.first()
@@ -259,9 +312,6 @@ mod __errors {
     use std::error::Error;
     use std::fmt::Display;
     use std::io::ErrorKind;
-
-    use crate::query::querybuilder::QueryBuilder;
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, ToSql};
 
     pub(crate) fn where_clause_position<'a, 'b>() -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
         Err(std::io::Error::new(

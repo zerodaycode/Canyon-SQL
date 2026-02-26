@@ -1,6 +1,6 @@
 use crate::query::bounds;
 use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
@@ -20,12 +20,13 @@ where
 }
 
 impl<'a> ToSqlTokens<'a> for TableMetadata<'a> {
-    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
-        if let Some(s) = &self.schema {
-            out.push(SqlToken::Ident(s.clone()));
-            out.push(SqlToken::Symbol(Symbol::Dot));
+    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
+        // TODO: this trait should disappear and just return the tokens in an iterable
+        if let Some(schema) = &self.schema {
+            out.ident(schema.clone());
+            out.symbol(Symbol::Dot);
         };
-        out.push(SqlToken::Ident(self.name.clone()));
+        out.ident(self.name.clone());
     }
 }
 impl<'a> From<&'a str> for TableMetadata<'a> {

@@ -1,6 +1,8 @@
+use std::borrow::Cow;
 use crate::query::bounds::FieldIdentifier;
+use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRef<'a> {
@@ -25,17 +27,17 @@ impl<'a> From<&'a str> for ColumnRef<'a> {
 }
 
 impl<'a> ToSqlTokens<'a> for ColumnRef<'a> {
-    fn to_tokens(&self, out: &mut Vec<SqlToken<'a>>) {
+    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
         if let Some(table_ref) = self.table {
-            out.push(SqlToken::new_ident(table_ref));
-            out.push(SqlToken::Symbol(Dot))
+            out.ident(table_ref);
+            out.symbol(Dot)
         }
 
-        out.push(SqlToken::new_ident(self.column));
+        out.ident(self.column);
 
         if let Some(alias) = self.alias {
-            out.push(SqlToken::new_keyword("AS"));
-            out.push(SqlToken::new_ident(alias));
+            out.keyword(Keyword::As);
+            out.ident(alias);
         }
     }
 }
@@ -70,7 +72,7 @@ impl<'a> ColumnRef<'a> {
 mod __impl {
     use crate::query::querybuilder::syntax::column::{__detail, ColumnRef};
 
-    pub(crate) fn column_ref_from_str_ref(value: &'_ str) -> ColumnRef<'_> {
+    pub(crate) fn column_ref_from_str_ref(value: &str) -> ColumnRef {
         let trimmed = value.trim();
 
         let (before_alias, alias) = match __detail::find_case_insensitive_as(trimmed) {
