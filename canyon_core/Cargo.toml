@@ -31,6 +31,8 @@ bb8-postgres = "0.9.0"
 bb8-tiberius = "0.16.0"
 bb8 = "0.9.0"
 
+transient = "0.4.1"
+
 [features]
 postgres = ["tokio-postgres"]
 mssql = ["tiberius", "async-std"]

@@ -1,7 +1,7 @@
-use std::fmt::Display;
 use crate::connection::database_type::DatabaseType;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens};
+use std::fmt::Display;
 
 /// Enumerated type for represent the comparison operations
 /// in SQL sentences
@@ -32,7 +32,7 @@ impl Display for Comp {
             Self::GtEq => ">=",
             Self::Lt => "<",
             Self::LtEq => "<=",
-            Self::Like(ref __kind) => "LIKE"
+            Self::Like(ref __kind) => "LIKE",
         };
         write!(f, "{}", op)
     }
@@ -56,7 +56,7 @@ impl<'a> ToSqlTokens<'a> for Comp {
                 out.symbol(Symbol::LAngle);
                 out.symbol(Symbol::Equals)
             }
-            Comp::Like(__kind) => out.keyword(Keyword::Like)
+            Comp::Like(__kind) => out.keyword(Keyword::Like),
         }
     }
 }
@@ -72,7 +72,11 @@ pub enum LikeKind {
 }
 
 impl LikeKind {
-    pub(crate) fn as_str(&self, placeholder_counter: usize, datasource_type: DatabaseType) -> String {
+    pub(crate) fn as_str(
+        &self,
+        placeholder_counter: usize,
+        datasource_type: DatabaseType,
+    ) -> String {
         let type_data_to_cast_str = match datasource_type {
             #[cfg(feature = "postgres")]
             DatabaseType::PostgreSql => "VARCHAR",

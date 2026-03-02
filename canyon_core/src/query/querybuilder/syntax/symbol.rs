@@ -11,5 +11,5 @@ pub enum Symbol {
     Asterisk,
     LAngle,
     RAngle,
-    PercentSign
+    PercentSign,
 }

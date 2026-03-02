@@ -30,7 +30,6 @@ impl ConditionClauseKind {
 
 impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
     fn to_tokens(&self, out: &mut SqlTokens<'a>) {
-
         // Clause keyword
         out.ident(self.kind.as_str()); // NOTE: dubious
 
@@ -43,7 +42,7 @@ impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
         // Value placeholder
         out.placeholder(match self.operator {
             Comp::Like(kind) => PlaceholderKind::Like(kind, self.value_index),
-            _ => PlaceholderKind::Value(self.value_index)
+            _ => PlaceholderKind::Value(self.value_index),
         });
     }
 }

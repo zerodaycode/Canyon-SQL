@@ -4,8 +4,9 @@ use crate::query::querybuilder::syntax::having::HavingClause;
 use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;
 use crate::query::querybuilder::syntax::query_kind::QueryKind;
+use transient::Transient;
 
-#[derive(Default)]
+#[derive(Default, Transient)]
 pub struct SelectAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
     pub joins: Vec<JoinClause<'a>>,
@@ -30,7 +31,7 @@ impl<'a> SelectAst<'a> {
     }
 }
 
-impl<'a> AstProcessor for SelectAst<'a> {
+impl<'a> AstProcessor<'a> for SelectAst<'a> {
     fn query_kind(&self) -> QueryKind {
         QueryKind::Select
     }

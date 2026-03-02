@@ -1,8 +1,8 @@
-use std::borrow::Cow;
 use crate::query::bounds::FieldIdentifier;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRef<'a> {

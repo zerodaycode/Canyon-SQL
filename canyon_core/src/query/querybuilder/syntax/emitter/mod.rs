@@ -4,26 +4,35 @@ mod types;
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
 use crate::query::querybuilder::syntax::ast::insert::InsertAst;
-use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::ast::update::UpdateAst;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::emitter::types::select::EmitSelect;
 use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::SqlTokens;
-
+use transient::{Any, Inv};
 
 // ---------- AST Processor marker trait ----------
-pub trait AstProcessor: Default {
-    // TODO: get base? as mut ref for convenience?
+pub trait AstProcessor<'a>: Default + AsAstProcessor<'a> {
     fn query_kind(&self) -> QueryKind;
-} // TODO: maybe this and the other one are visitor related?
+}
+/// Base trait for downcasting all the implementors of [`AstProcessor`] when they are hidden
+/// behind an opaque type
+pub trait AsAstProcessor<'a>: Any<Inv<'a>> {
+    fn as_any(&self) -> &dyn Any<Inv<'a>>;
+}
 
-
-
+/// Blanket implementation for all the AST types
+impl<'a, T> AsAstProcessor<'a> for T
+where
+    T: AstProcessor<'a>,
+{
+    fn as_any(&self) -> &dyn Any<Inv<'a>> {
+        self
+    }
+}
 // #[allow(type_alias_bounds)]
-// type SelectStep<'a, E: SqlEmitter<'a, SelectAst<'a>> + 'a> = fn(&mut E, ast: &SelectAst<'a>, base_ast: &BaseAst);
-
+// type SelectStep<'a, E: SqlEmitter<'a, SelectAst<'a>> + 'a> = fn(&mut E, ast: &SelectAst<'a>, base_ast: &BaseAst<'a>);
 
 /// A strategy for emitting SQL text from a specific query AST type.
 ///
@@ -62,7 +71,10 @@ pub trait AstProcessor: Default {
 /// ```
 ///
 /// The example shows emission for a `SELECT` query in PostgreSQL.
-pub trait SqlEmitter<'a, P: AstProcessor> {
+pub trait SqlEmitter<'a>
+where
+    Self: 'a,
+{
     /// The [`SqlDialect`] used by this emitter.
     ///
     /// Each backend emitter selects a dialect type that implements
@@ -104,21 +116,28 @@ pub trait SqlEmitter<'a, P: AstProcessor> {
     /// emission writes: `SELECT ... FROM ... WHERE ...`. A backend
     /// emitter may choose to include or omit certain clauses (e.g.,
     /// `RETURNING`) depending on dialect support.
-    fn emit(
-        &mut self,
-        ast: &'a P,
-        base_ast: &'a BaseAst<'a>
-    );// TODO: should emit as the outer wrapper really return the emitter internal buffer?
+    fn emit(&mut self, ast: &impl AstProcessor<'a>, base_ast: &BaseAst<'a>)
+    where
+        Self: Sized,
+    {
+        // Default implementation delegates:
+        match ast.query_kind() {
+            QueryKind::Select => self.emit_select(ast, base_ast),
+            QueryKind::Insert => {}
+            QueryKind::Update => {}
+            QueryKind::Delete => {}
+        }
+    } // TODO: should emit as the outer wrapper really return the emitter internal buffer?
 }
 
-pub trait EmitInsert<'a>: SqlEmitter<'a, InsertAst<'a>> {
+pub trait EmitInsert<'a>: SqlEmitter<'a> {
     fn emit_insert(&mut self, ast: &'a InsertAst<'a>, meta: &TableMetadata<'a>);
 }
 
-pub trait EmitUpdate<'a>: SqlEmitter<'a, UpdateAst<'a>> {
+pub trait EmitUpdate<'a>: SqlEmitter<'a> {
     fn emit_update(&mut self, ast: &'a UpdateAst<'a>, meta: &TableMetadata<'a>);
 }
 
-pub trait EmitDelete<'a>: SqlEmitter<'a, DeleteAst> {
+pub trait EmitDelete<'a>: SqlEmitter<'a> {
     fn emit_delete(&mut self, ast: &'a DeleteAst, meta: &TableMetadata<'a>);
 }

@@ -6,10 +6,10 @@ pub enum Keyword {
     Insert,
     Update,
     Delete,
-    
+
     From,
     Into,
-    
+
     Join,
     Left,
     Right,
@@ -41,7 +41,7 @@ impl Display for Keyword {
             Keyword::Right => "RIGHT",
             Keyword::Inner => "INNER",
             Keyword::Outer => "OUTER",
-            Keyword::Full => "FULL"
+            Keyword::Full => "FULL",
         };
         write!(f, "{}", i)
     }

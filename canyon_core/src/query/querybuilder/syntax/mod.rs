@@ -1,6 +1,7 @@
 pub(crate) mod ast;
 pub(crate) mod clause;
 pub(crate) mod column;
+pub(crate) mod dialect;
 pub(crate) mod emitter;
 pub(crate) mod having;
 pub(crate) mod join;
@@ -11,6 +12,3 @@ mod symbol;
 pub mod table_metadata;
 pub(crate) mod tokens;
 pub(crate) mod writer;
-pub(crate) mod dialect;
-
-

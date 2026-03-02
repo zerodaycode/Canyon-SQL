@@ -11,23 +11,24 @@ use crate::query::query::Query;
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
 use crate::query::querybuilder::syntax::emitter::AstProcessor;
+use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol};
-use std::error::Error;
 use crate::query::querybuilder::syntax::writer::TokenWriter;
+use std::error::Error;
 
 /// Type for construct more complex queries than the classical CRUD ones.
-pub struct QueryBuilder<'a, P: AstProcessor + 'a> {
+pub struct QueryBuilder<'a, P: AstProcessor<'a> + 'a> {
     pub(crate) base_ast: BaseAst<'a>,
     pub(crate) ast: P,
     pub(crate) database_type: DatabaseType,
     pub(crate) params: Vec<&'a dyn QueryParameter>,
 }
 
-unsafe impl<'a, P: AstProcessor> Send for QueryBuilder<'a, P> {}
-unsafe impl<'a, P: AstProcessor> Sync for QueryBuilder<'a, P> {}
+unsafe impl<'a, P: AstProcessor<'a>> Send for QueryBuilder<'a, P> {}
+unsafe impl<'a, P: AstProcessor<'a>> Sync for QueryBuilder<'a, P> {}
 
-impl<'a, P: AstProcessor + 'a> QueryBuilder<'a, P> {
+impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
     pub fn new(
         table_metadata: impl Into<TableMetadata<'a>>,
         ast: P,
@@ -111,7 +112,6 @@ impl<'a, P: AstProcessor + 'a> QueryBuilder<'a, P> {
 }
 
 mod __impl {
-    use std::error::Error;
     use crate::query::bounds::FieldIdentifier;
     use crate::query::operators::Comp;
     use crate::query::parameters::QueryParameter;
@@ -120,6 +120,7 @@ mod __impl {
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::emitter::AstProcessor;
     use crate::query::querybuilder::types::__validators;
+    use std::error::Error;
 
     pub(crate) fn generate_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
         _self: &mut QueryBuilder<'a, P>,
@@ -130,10 +131,14 @@ mod __impl {
     where
         Q: QueryParameter,
         Z: FieldIdentifier,
-        P: AstProcessor,
+        P: AstProcessor<'a>,
     {
         let target_column = field.as_str();
-        __validators::check_not_empty_in_clause_values(&_self.base_ast.table, target_column, values)?;
+        __validators::check_not_empty_in_clause_values(
+            &_self.base_ast.table,
+            target_column,
+            values,
+        )?;
 
         // _self.sql.push_str(conjunction_clause_kind.as_ref());
         // _self.sql.push(' ');
@@ -152,7 +157,6 @@ mod __impl {
         // _self.sql.push(')');
         //
 
-
         for value in values {
             _self.params.push(value);
         }
@@ -162,13 +166,13 @@ mod __impl {
 
     /// Quick standalone that acts as a façade for an orchestrator that just organizes a procedural way of testing
     /// that the constructed underlying query is syntactically correct
-    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: AstProcessor>(
+    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: AstProcessor<'a>>(
         _self: &'a QueryBuilder<'a, P>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
         __validators::check_where_clause_position(_self)
     }
 
-    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor>(
+    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor<'a>>(
         _self: &mut QueryBuilder<'a, P>,
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
@@ -185,12 +189,12 @@ mod __impl {
 
 mod __detail {
     use crate::connection::database_type::DatabaseType;
-    use std::error::Error;
-    use std::fmt::Write;
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::emitter::backends::MySqlEmitter;
     use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
     use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
+    use std::error::Error;
+    use std::fmt::Write;
 
     /// Executes the SQL emission phase for the given AST and database backend.
     ///
@@ -220,11 +224,13 @@ mod __detail {
     /// # Panics
     ///
     /// Panics if the provided database backend is not supported.
-    pub(super) fn run_emission_phase<'a, P: AstProcessor>(
+    pub(super) fn run_emission_phase<'a, P>(
         database_type: DatabaseType,
         ast: &P,
-        base_ast: &BaseAst,
-    ) {
+        base_ast: &BaseAst<'a>,
+    ) where
+        P: AstProcessor<'a>,
+    {
         let qk = ast.query_kind();
         match database_type {
             DatabaseType::PostgreSql => {
@@ -281,7 +287,7 @@ mod __validators {
 
     /// For now, it's mandatory because we need to ensure what's the placeholder index which is the element
     /// that should swap with the where clause if isn't put in an incorrect order, no implementation ready
-    pub(crate) fn check_where_clause_position<'a, 'b, P: AstProcessor>(
+    pub(crate) fn check_where_clause_position<'a, 'b, P: AstProcessor<'a>>(
         _self: &QueryBuilder<'a, P>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
         if let Some(condition_clause) = &_self.base_ast.conditions.first()
