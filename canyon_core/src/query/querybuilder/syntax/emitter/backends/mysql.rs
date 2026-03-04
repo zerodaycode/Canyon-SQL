@@ -9,8 +9,4 @@ pub struct MySqlEmitter<'a> {
 
 impl<'a> SqlEmitter<'a> for MySqlEmitter<'a> {
     type Dialect = MySql;
-
-    fn tokens(&mut self) -> &mut SqlTokens<'a> {
-        &mut self.tokens
-    }
 }

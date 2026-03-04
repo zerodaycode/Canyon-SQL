@@ -83,15 +83,6 @@ where
     /// system.
     type Dialect: SqlDialect;
 
-    /// Mutable access to the internal SQL token buffer.
-    ///
-    /// SQL emission produces a sequence of tokens such as keywords,
-    /// symbols, identifiers, and parameter placeholders. Emitters write
-    /// these tokens into the buffer during `emit`. After emission is
-    /// complete, the buffer can be passed to a renderer to produce
-    /// a final SQL string.
-    fn tokens(&mut self) -> &mut SqlTokens<'a>;
-
     /// Emit SQL tokens for the given AST node and table metadata.
     ///
     /// This method is the central entry point for query emission.
@@ -116,28 +107,28 @@ where
     /// emission writes: `SELECT ... FROM ... WHERE ...`. A backend
     /// emitter may choose to include or omit certain clauses (e.g.,
     /// `RETURNING`) depending on dialect support.
-    fn emit(&mut self, ast: &impl AstProcessor<'a>, base_ast: &BaseAst<'a>)
+    fn emit(&mut self, ast: &impl AstProcessor<'a>, base_ast: &BaseAst<'a>) -> SqlTokens<'a>
     where
         Self: Sized,
     {
         // Default implementation delegates:
         match ast.query_kind() {
             QueryKind::Select => self.emit_select(ast, base_ast),
-            QueryKind::Insert => {}
-            QueryKind::Update => {}
-            QueryKind::Delete => {}
+            QueryKind::Insert => self.emit_select(ast, base_ast),
+            QueryKind::Update => self.emit_select(ast, base_ast),
+            QueryKind::Delete => self.emit_select(ast, base_ast),
         }
     } // TODO: should emit as the outer wrapper really return the emitter internal buffer?
 }
 
 pub trait EmitInsert<'a>: SqlEmitter<'a> {
-    fn emit_insert(&mut self, ast: &'a InsertAst<'a>, meta: &TableMetadata<'a>);
+    fn emit_insert(&mut self, ast: &'a InsertAst<'a>, meta: &TableMetadata<'a>) -> SqlTokens<'a>;
 }
 
 pub trait EmitUpdate<'a>: SqlEmitter<'a> {
-    fn emit_update(&mut self, ast: &'a UpdateAst<'a>, meta: &TableMetadata<'a>);
+    fn emit_update(&mut self, ast: &'a UpdateAst<'a>, meta: &TableMetadata<'a>) -> SqlTokens<'a>;
 }
 
 pub trait EmitDelete<'a>: SqlEmitter<'a> {
-    fn emit_delete(&mut self, ast: &'a DeleteAst, meta: &TableMetadata<'a>);
+    fn emit_delete(&mut self, ast: &'a DeleteAst, meta: &TableMetadata<'a>) -> SqlTokens<'a>;
 }

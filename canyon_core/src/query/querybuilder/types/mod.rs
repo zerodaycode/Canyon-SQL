@@ -48,7 +48,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
     }
 
     fn sql<'b>(&self) -> Result<String, Box<dyn Error + Send + Sync + 'b>> {
-        // __impl::check_invariants_over_condition_clauses(self)?;
+        __impl::check_invariants_over_condition_clauses(self)?;
 
         let mut tokens = SqlTokens::default();
 
@@ -167,7 +167,7 @@ mod __impl {
     /// Quick standalone that acts as a façade for an orchestrator that just organizes a procedural way of testing
     /// that the constructed underlying query is syntactically correct
     pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: AstProcessor<'a>>(
-        _self: &'a QueryBuilder<'a, P>,
+        _self: &QueryBuilder<'a, P>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
         __validators::check_where_clause_position(_self)
     }
@@ -231,7 +231,6 @@ mod __detail {
     ) where
         P: AstProcessor<'a>,
     {
-        let qk = ast.query_kind();
         match database_type {
             DatabaseType::PostgreSql => {
                 let mut emitter = PgEmitter::default();

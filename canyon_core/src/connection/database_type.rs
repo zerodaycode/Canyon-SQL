@@ -71,7 +71,7 @@ pub enum DatabaseType {
     /// .build()?; // resolved dynamically to the active database type
     /// ```
     #[default]
-    Deferred,
+    Deferred, // TODO: review if this is yet viable
 }
 
 impl Display for DatabaseType {
