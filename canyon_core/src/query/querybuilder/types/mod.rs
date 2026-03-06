@@ -11,9 +11,8 @@ use crate::query::query::Query;
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
 use crate::query::querybuilder::syntax::emitter::AstProcessor;
-use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol};
+use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol};
 use crate::query::querybuilder::syntax::writer::TokenWriter;
 use std::error::Error;
 
@@ -115,11 +114,11 @@ mod __impl {
     use crate::query::bounds::FieldIdentifier;
     use crate::query::operators::Comp;
     use crate::query::parameters::QueryParameter;
-    use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::emitter::AstProcessor;
     use crate::query::querybuilder::types::__validators;
+    use crate::query::querybuilder::QueryBuilder;
     use std::error::Error;
 
     pub(crate) fn generate_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
@@ -277,10 +276,10 @@ mod __detail {
 
 mod __validators {
     use crate::query::parameters::QueryParameter;
-    use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
     use crate::query::querybuilder::syntax::emitter::AstProcessor;
     use crate::query::querybuilder::types::__errors;
+    use crate::query::querybuilder::QueryBuilder;
     use std::error::Error;
     use std::fmt::Display;
 

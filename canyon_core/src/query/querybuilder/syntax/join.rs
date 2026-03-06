@@ -33,19 +33,19 @@ pub struct JoinClause<'a> {
 }
 
 impl<'a> JoinClause<'a> {
-    pub fn new<I: Into<ColumnRef<'a>>>(
+    pub const fn new(
         kind: JoinKind,
         target_table: TableMetadata<'a>,
-        left: I,
+        left: ColumnRef<'a>,
         operator: Comp,
-        right: I,
+        right: ColumnRef<'a>,
     ) -> Self {
         Self {
             kind,
             target_table,
-            left: left.into(),
+            left,
             operator,
-            right: right.into(),
+            right,
         }
     }
 }

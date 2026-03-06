@@ -1,5 +1,5 @@
 use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens};
+use crate::query::querybuilder::syntax::tokens::SqlTokens;
 
 pub struct TokenWriter {}
 
@@ -21,7 +21,7 @@ impl TokenWriter {
 
 mod __impl {
     use crate::connection::database_type::DatabaseType;
-    use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
+    use crate::query::querybuilder::syntax::tokens::SqlToken;
     use crate::query::querybuilder::syntax::writer::__detail;
     use std::fmt::Write;
 

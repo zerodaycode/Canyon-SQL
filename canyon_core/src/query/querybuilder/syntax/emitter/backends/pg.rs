@@ -1,5 +1,5 @@
 use crate::query::querybuilder::syntax::dialect::PgDialect;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
+use crate::query::querybuilder::syntax::emitter::SqlEmitter;
 use crate::query::querybuilder::syntax::tokens::SqlTokens;
 
 #[derive(Default)]

@@ -1,6 +1,6 @@
 use crate::connection::database_type::DatabaseType;
 use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol, ToSqlTokens};
 use std::fmt::Display;
 
 /// Enumerated type for represent the comparison operations

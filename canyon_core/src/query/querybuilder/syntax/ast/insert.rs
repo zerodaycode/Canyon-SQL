@@ -2,7 +2,7 @@ use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::emitter::AstProcessor;
 use crate::query::querybuilder::syntax::query_kind::QueryKind;
-use transient::{Any, Transient};
+use transient::Transient;
 
 #[derive(Default, Transient)]
 pub struct InsertAst<'a> {
