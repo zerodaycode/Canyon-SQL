@@ -9,6 +9,6 @@ pub(crate) fn emit_columns<'a>(columns: &Vec<ColumnRef<'a>>, tokens: &mut SqlTok
         if i > 0 {
             tokens.symbol(Comma);
         }
-        column.to_tokens(tokens); // TODO: change opt-out-in
+        tokens.extend(column.to_tokens());
     }
 }

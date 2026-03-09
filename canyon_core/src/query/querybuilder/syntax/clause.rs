@@ -1,6 +1,8 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlTokens, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{
+    PlaceholderKind, SqlToken, SqlTokens, ToSqlTokens,
+};
 
 #[derive(Clone)]
 pub struct ConditionClause<'a> {
@@ -29,12 +31,14 @@ impl ConditionClauseKind {
 }
 
 impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
-    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
+        let mut out = SqlTokens::with_capacity(4);
+
         // Clause keyword
         out.ident(self.kind.as_str()); // NOTE: dubious
 
         // Column
-        self.column_name.to_tokens(out);
+        out.extend(self.column_name.to_tokens());
 
         // Operator
         out.operator(self.operator);
@@ -44,5 +48,7 @@ impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
             Comp::Like(kind) => PlaceholderKind::Like(kind, self.value_index),
             _ => PlaceholderKind::Value(self.value_index),
         });
+
+        out
     }
 }

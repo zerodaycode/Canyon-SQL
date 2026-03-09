@@ -12,8 +12,8 @@ pub struct SelectAst<'a> {
     pub joins: Vec<JoinClause<'a>>,
     pub order_by: Option<OrderByClause<'a>>,
     pub having: Option<HavingClause<'a>>,
-    pub group_by: Vec<ColumnRef<'a>>, // TODO: ColumnRef
-    pub limit: Option<u64>,           // TODO: strong typing
+    pub group_by: Vec<ColumnRef<'a>>,
+    pub limit: Option<u64>, // TODO: strong typing
     pub offset: Option<u64>,
 }
 

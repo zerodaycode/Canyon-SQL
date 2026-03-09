@@ -1,6 +1,6 @@
 use crate::connection::database_type::DatabaseType;
 use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens};
 use std::fmt::Display;
 
 /// Enumerated type for represent the comparison operations
@@ -39,7 +39,9 @@ impl Display for Comp {
 }
 
 impl<'a> ToSqlTokens<'a> for Comp {
-    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
+        let mut out = SqlTokens::with_capacity(2);
+
         match *self {
             Comp::Eq => out.symbol(Symbol::Equals),
             Comp::Neq => {
@@ -58,6 +60,8 @@ impl<'a> ToSqlTokens<'a> for Comp {
             }
             Comp::Like(__kind) => out.keyword(Keyword::Like),
         }
+
+        out
     }
 }
 

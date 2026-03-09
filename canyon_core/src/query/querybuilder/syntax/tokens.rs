@@ -5,7 +5,7 @@ use crate::query::querybuilder::syntax::tokens::SqlToken::Ident;
 use std::borrow::Cow;
 
 pub trait ToSqlTokens<'a> {
-    fn to_tokens(&self, out: &mut SqlTokens<'a>);
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a;
 }
 
 /// 'newtype' (strong type) for the SqlToken container
@@ -36,6 +36,10 @@ impl<'a> SqlTokens<'a> {
     pub fn inner(self) -> Vec<SqlToken<'a>> {
         self.0
     }
+
+    pub fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
+    }
 }
 
 impl<'a> IntoIterator for SqlTokens<'a> {
@@ -62,6 +66,12 @@ impl<'a> IntoIterator for &'a mut SqlTokens<'a> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.iter_mut()
+    }
+}
+
+impl<'a> Extend<SqlToken<'a>> for SqlTokens<'a> {
+    fn extend<T: IntoIterator<Item = SqlToken<'a>>>(&mut self, iter: T) {
+        self.0.extend(iter);
     }
 }
 

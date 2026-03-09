@@ -2,7 +2,7 @@ use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
 #[derive(Debug, Clone, Copy)]
 pub enum JoinKind {
@@ -51,13 +51,17 @@ impl<'a> JoinClause<'a> {
 }
 
 impl<'a> ToSqlTokens<'a> for JoinClause<'a> {
-    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
+        let mut out = SqlTokens::with_capacity(6);
+
         out.ident(self.kind.as_str()); // NOTE: dubious
-        self.target_table.to_tokens(out);
+        out.extend(self.target_table.to_tokens());
         out.keyword(Keyword::On);
-        self.left.to_tokens(out);
+        out.extend(self.left.to_tokens());
         out.operator(self.operator);
-        self.right.to_tokens(out);
+        out.extend(self.right.to_tokens());
+
+        out
     }
 }
 #[test]
@@ -76,7 +80,7 @@ fn test_join_clause_basic() {
     };
 
     let mut tokens = SqlTokens::default();
-    join.to_tokens(&mut tokens);
+    tokens.extend(join.to_tokens());
 
     let expected = vec![
         SqlToken::Keyword(Keyword::Inner),

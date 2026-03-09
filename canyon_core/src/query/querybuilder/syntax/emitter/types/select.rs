@@ -1,5 +1,5 @@
-use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::ast::BaseAst;
+use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::SqlTokens;
@@ -36,8 +36,8 @@ pub trait EmitSelect<'a>: SqlEmitter<'a> {
 }
 
 mod __impl {
-    use crate::query::querybuilder::syntax::ast::select::SelectAst;
     use crate::query::querybuilder::syntax::ast::BaseAst;
+    use crate::query::querybuilder::syntax::ast::select::SelectAst;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
@@ -48,7 +48,6 @@ mod __impl {
 
     pub(crate) fn emit_from<'a>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
         tokens.keyword(Keyword::From);
-        base_ast.table.to_tokens(tokens);
-        // TODO: the out opt-in params
+        tokens.extend(base_ast.table.to_tokens());
     }
 }

@@ -1,7 +1,5 @@
 use crate::query::bounds::FieldIdentifier;
-use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
-use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRef<'a> {
@@ -26,18 +24,10 @@ impl<'a> From<&'a str> for ColumnRef<'a> {
 }
 
 impl<'a> ToSqlTokens<'a> for ColumnRef<'a> {
-    fn to_tokens(&self, out: &mut SqlTokens<'a>) {
-        if let Some(table_ref) = self.table {
-            out.ident(table_ref);
-            out.symbol(Dot)
-        }
-
-        out.ident(self.column);
-
-        if let Some(alias) = self.alias {
-            out.keyword(Keyword::As);
-            out.ident(alias);
-        }
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
+        let mut out = SqlTokens::with_capacity(__detail::calculate_column_ref_capacity(self));
+        __impl::generate_column_ref_tokens(self, &mut out);
+        out
     }
 }
 
@@ -70,6 +60,9 @@ impl<'a> ColumnRef<'a> {
 
 mod __impl {
     use crate::query::querybuilder::syntax::column::{__detail, ColumnRef};
+    use crate::query::querybuilder::syntax::keyword::Keyword;
+    use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
+    use crate::query::querybuilder::syntax::tokens::SqlTokens;
 
     pub(crate) fn column_ref_from_str_ref(value: &str) -> ColumnRef<'_> {
         let trimmed = value.trim();
@@ -94,9 +87,25 @@ mod __impl {
             alias,
         }
     }
+
+    pub(crate) fn generate_column_ref_tokens<'a>(__self: &ColumnRef<'a>, out: &mut SqlTokens<'a>) {
+        if let Some(table_ref) = __self.table {
+            out.ident(table_ref);
+            out.symbol(Dot)
+        }
+
+        out.ident(__self.column);
+
+        if let Some(alias) = __self.alias {
+            out.keyword(Keyword::As);
+            out.ident(alias);
+        }
+    }
 }
 
 mod __detail {
+    use crate::query::querybuilder::syntax::column::ColumnRef;
+
     pub(crate) fn find_case_insensitive_as(s: &str) -> Option<usize> {
         let bytes = s.as_bytes();
         for i in 0..bytes.len().saturating_sub(2) {
@@ -117,6 +126,17 @@ mod __detail {
             }
         }
         None
+    }
+
+    pub(crate) fn calculate_column_ref_capacity(__self: &ColumnRef) -> usize {
+        let mut counter = 1; // at least the column name
+        if __self.table.is_some() {
+            counter += 2; // table name + dot
+        }
+        if __self.alias.is_some() {
+            counter += 2; // AS + alias name
+        }
+        counter
     }
 }
 
