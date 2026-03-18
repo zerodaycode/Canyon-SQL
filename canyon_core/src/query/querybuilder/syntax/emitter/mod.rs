@@ -121,10 +121,6 @@ where
     } // TODO: should emit as the outer wrapper really return the emitter internal buffer?
 }
 
-pub trait EmitInsert<'a>: SqlEmitter<'a> {
-    fn emit_insert(&mut self, ast: &'a InsertAst<'a>, meta: &TableMetadata<'a>) -> SqlTokens<'a>;
-}
-
 pub trait EmitUpdate<'a>: SqlEmitter<'a> {
     fn emit_update(&mut self, ast: &'a UpdateAst<'a>, meta: &TableMetadata<'a>) -> SqlTokens<'a>;
 }

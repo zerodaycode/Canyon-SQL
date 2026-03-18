@@ -23,10 +23,10 @@ where
 
         tokens.keyword(Keyword::Select);
 
-        __impl::emit_columns(select_ast, &mut tokens);
+        __impl::emit_columns::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_from(base_ast, &mut tokens);
         __impl::emit_joins(select_ast, &mut tokens);
-        __impl::emit_group_by(select_ast, &mut tokens);
+        __impl::emit_group_by::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_having(select_ast, &mut tokens);
         __impl::emit_order_by(select_ast, &mut tokens);
         __impl::emit_limit(select_ast, &mut tokens);
@@ -71,12 +71,13 @@ pub trait EmitSelect<'a>: SqlEmitter<'a> {
 mod __impl {
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::ast::select::SelectAst;
+    use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
-    pub(crate) fn emit_columns<'a>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
-        helpers::emit_columns(&ast.columns, tokens)
+    pub(crate) fn emit_columns<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+        helpers::emit_columns::<D>(&ast.columns, tokens)
     }
 
     pub(crate) fn emit_from<'a>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
@@ -90,10 +91,10 @@ mod __impl {
         }
     }
 
-    pub(crate) fn emit_group_by<'a>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_group_by<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
         if let Some(group_by) = &ast.group_by {
             tokens.keyword(Keyword::GroupBy);
-            helpers::emit_columns(&group_by, tokens);
+            helpers::emit_columns::<D>(group_by, tokens);
         }
     }
 
@@ -166,7 +167,6 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-
         assert_eq!(sql, "SELECT id, name FROM users");
     }
 
@@ -184,7 +184,6 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-
         assert_eq!(
             sql,
             "SELECT id FROM users ORDER BY id DESC LIMIT 10 OFFSET 20"
@@ -202,7 +201,6 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-
         assert_eq!(sql, "SELECT * FROM users");
     }
 
@@ -218,7 +216,6 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-
         assert_eq!(sql, "SELECT country FROM users GROUP BY country");
     }
 
@@ -266,7 +263,6 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-
         assert_eq!(
             sql,
             "SELECT users.id, profiles.bio, roles.name \
