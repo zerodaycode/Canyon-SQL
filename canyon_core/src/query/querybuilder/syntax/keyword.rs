@@ -33,6 +33,7 @@ pub enum Keyword {
     OrderBy,
     Desc,
     Offset,
+    Values,
 }
 
 impl Display for Keyword {
@@ -65,6 +66,7 @@ impl Display for Keyword {
             Keyword::Limit => "LIMIT",
             Keyword::OrderBy => "ORDER BY",
             Keyword::Offset => "OFFSET",
+            Keyword::Values => "VALUES",
         };
         write!(f, "{}", i)
     }

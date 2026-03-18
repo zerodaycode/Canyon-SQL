@@ -1,6 +1,8 @@
-use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens};
+use crate::query::querybuilder::syntax::{
+    dialect::SqlDialect,
+    keyword::Keyword,
+    tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens},
+};
 use std::fmt::Display;
 
 /// Enumerated type for represent the comparison operations
@@ -76,20 +78,8 @@ pub enum LikeKind {
 }
 
 impl LikeKind {
-    pub(crate) fn as_str(
-        &self,
-        placeholder_counter: usize,
-        datasource_type: DatabaseType,
-    ) -> String {
-        let type_data_to_cast_str = match datasource_type {
-            #[cfg(feature = "postgres")]
-            DatabaseType::PostgreSql => "VARCHAR",
-            #[cfg(feature = "mssql")]
-            DatabaseType::SqlServer => "VARCHAR",
-            #[cfg(feature = "mysql")]
-            DatabaseType::MySQL => "CHAR",
-            _ => panic!("Provisional LIKE"),
-        };
+    pub(crate) fn as_str<D: SqlDialect>(&self, placeholder_counter: usize) -> String {
+        let type_data_to_cast_str = D::PLACEHOLDER_DATA_TYPE;
 
         match *self {
             Self::Full => {

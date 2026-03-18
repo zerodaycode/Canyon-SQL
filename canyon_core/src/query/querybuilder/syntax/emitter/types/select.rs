@@ -91,7 +91,10 @@ mod __impl {
         }
     }
 
-    pub(crate) fn emit_group_by<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_group_by<'a, D: SqlDialect>(
+        ast: &SelectAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         if let Some(group_by) = &ast.group_by {
             tokens.keyword(Keyword::GroupBy);
             helpers::emit_columns::<D>(group_by, tokens);
@@ -128,16 +131,23 @@ mod __impl {
 
 #[cfg(test)]
 mod tests {
-    use crate::connection::database_type::DatabaseType;
-    use crate::query::operators::Comp;
-    use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::ast::select::SelectAst;
-    use crate::query::querybuilder::syntax::column::ColumnRef;
-    use crate::query::querybuilder::syntax::dialect::StandardDialect;
-    use crate::query::querybuilder::syntax::emitter::SqlEmitter;
-    use crate::query::querybuilder::syntax::emitter::types::select::EmitSelect;
-    use crate::query::querybuilder::syntax::order::OrderByClause;
-    use crate::query::querybuilder::syntax::writer::TokenWriter;
+    use crate::{
+        query::{
+            operators::Comp,
+            querybuilder::{
+                syntax::{
+                    ast::BaseAst,
+                    ast::select::SelectAst,
+                    column::ColumnRef,
+                    dialect::StandardDialect,
+                    emitter::SqlEmitter,
+                    emitter::types::select::EmitSelect,
+                    order::OrderByClause,
+                    writer::TokenWriter
+                }
+            }
+        }
+    };
 
     struct TestEmitter;
     impl<'a> SqlEmitter<'a> for TestEmitter {
@@ -152,7 +162,7 @@ mod tests {
         let mut emitter = TestEmitter;
         let tokens = emitter.emit_select(ast, base_ast);
         TokenWriter::new()
-            .render(&tokens, DatabaseType::Deferred)
+            .render::<TestEmitter>(&tokens)
             .unwrap()
     }
 

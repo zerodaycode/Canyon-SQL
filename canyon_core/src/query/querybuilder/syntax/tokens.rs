@@ -1,7 +1,12 @@
-use crate::query::operators::{Comp, LikeKind};
-use crate::query::querybuilder::syntax::keyword::Keyword;
-pub(crate) use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::tokens::SqlToken::{Ident, Number};
+pub(crate) use crate::query::{
+    operators::{Comp, LikeKind},
+    querybuilder::syntax::{
+        dialect::PlaceholderSymbol,
+        keyword::Keyword,
+        symbol::Symbol,
+        tokens::SqlToken::{Ident, Number},
+    },
+};
 use std::borrow::Cow;
 
 pub trait ToSqlTokens<'a> {
@@ -97,11 +102,11 @@ pub enum NumberKind {
     F64(f64),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum PlaceholderKind {
-    Value(usize),
-    Like(LikeKind, usize),
-    Range(usize, usize),
+    Value(usize),          // $1, ? , @P1
+    Like(LikeKind, usize), // for LIKE placeholders, we need to know the kind of LIKE (e.g., starts with, ends with, contains) and the index of the placeholder
+    Range(usize, usize), // for range placeholders, we need to know the start and end index of the range (e.g., for BETWEEN ? AND ?, we need to know the indices of both placeholders)
 }
 
 impl<'a> SqlToken<'a> {

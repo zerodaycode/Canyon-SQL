@@ -3,17 +3,24 @@ pub mod select;
 pub mod update;
 
 pub use self::{delete::*, select::*, update::*};
-use crate::connection::database_type::DatabaseType;
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Comp;
-use crate::query::parameters::QueryParameter;
-use crate::query::query::Query;
-use crate::query::querybuilder::syntax::ast::BaseAst;
-use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
-use crate::query::querybuilder::syntax::emitter::AstProcessor;
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol};
-use crate::query::querybuilder::syntax::writer::TokenWriter;
+use crate::{
+    query::{
+        querybuilder::{
+            syntax::{
+                ast::BaseAst,
+                clause::ConditionClauseKind,
+                emitter::AstProcessor,
+                table_metadata::TableMetadata,
+                tokens::{SqlTokens, Symbol},
+            }
+        },
+        query::Query,
+        parameters::QueryParameter,
+        operators::Comp,
+        bounds::{FieldIdentifier, FieldValueIdentifier},
+    },
+    connection::database_type::DatabaseType,
+};
 use std::error::Error;
 
 /// Type for construct more complex queries than the classical CRUD ones.
@@ -54,7 +61,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         __detail::run_emission_phase(self.database_type, &self.ast, &self.base_ast);
         tokens.symbol(Symbol::Semicolon);
 
-        let sql = TokenWriter::new().render(&tokens, self.database_type)?;
+        let sql = __detail::run_render_phase(&tokens, self.database_type)?;
         Ok(sql)
     }
 
@@ -189,9 +196,11 @@ mod __impl {
 mod __detail {
     use crate::connection::database_type::DatabaseType;
     use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::emitter::backends::MySqlEmitter;
+    use crate::query::querybuilder::syntax::emitter::backends::{MySqlEmitter, SqlServerEmitter};
     use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
     use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
+    use crate::query::querybuilder::syntax::tokens::SqlTokens;
+    use crate::query::querybuilder::syntax::writer::TokenWriter;
     use std::error::Error;
     use std::fmt::Write;
 
@@ -271,6 +280,19 @@ mod __detail {
 
     fn _calculate_param_placeholder_count_value(container: impl Iterator) -> usize {
         container.count()
+    }
+
+    pub(crate) fn run_render_phase(
+        tokens: &SqlTokens,
+        db: DatabaseType,
+    ) -> Result<String, Box<dyn Error + Send + Sync>> {
+        let writer = TokenWriter::new();
+        match db {
+            DatabaseType::PostgreSql | DatabaseType::Deferred => writer.render::<PgEmitter>(tokens),
+            DatabaseType::MySQL => writer.render::<MySqlEmitter>(tokens),
+            DatabaseType::SqlServer => writer.render::<SqlServerEmitter>(tokens),
+        }
+        .map_err(|e| e.into())
     }
 }
 

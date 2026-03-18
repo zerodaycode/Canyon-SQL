@@ -1,5 +1,13 @@
-use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::tokens::SqlTokens;
+use crate::{
+    query::{
+        querybuilder::{
+            syntax::{
+                emitter::SqlEmitter,
+                tokens::SqlTokens
+            }
+        }
+    }
+};
 
 pub struct TokenWriter {}
 
@@ -8,11 +16,11 @@ impl TokenWriter {
         Self {}
     }
 
-    pub fn render(self, tokens: &SqlTokens, db: DatabaseType) -> Result<String, std::fmt::Error> {
+    pub fn render<'a, E: SqlEmitter<'a>>(self, tokens: &SqlTokens) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
 
         for tok in tokens {
-            __impl::output_token_to_string_buffer(tok, db, &mut out)?; // TODO: split, for db and others (maybe)
+            __impl::output_token_to_string_buffer::<E::Dialect>(tok, &mut out)?;
         }
 
         Ok(out.trim_start().to_string())
@@ -20,14 +28,21 @@ impl TokenWriter {
 }
 
 mod __impl {
-    use crate::connection::database_type::DatabaseType;
-    use crate::query::querybuilder::syntax::tokens::SqlToken;
-    use crate::query::querybuilder::syntax::writer::__detail;
+    use crate::{
+        query::{
+            querybuilder::{
+                syntax::{
+                    dialect::SqlDialect,
+                    tokens::SqlToken,
+                    writer::__detail
+                }
+            }
+        }
+    };
     use std::fmt::Write;
 
-    pub(crate) fn output_token_to_string_buffer(
+    pub(crate) fn output_token_to_string_buffer<D: SqlDialect>(
         token: &SqlToken,
-        db: DatabaseType,
         f: &mut String,
     ) -> Result<(), std::fmt::Error> {
         let _: () = match token {
@@ -35,7 +50,7 @@ mod __impl {
             SqlToken::Ident(s) => write!(f, " {}", s)?,
             SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
             SqlToken::Operator(op) => write!(f, " {}", op)?,
-            SqlToken::Placeholder(ph_kind) => __detail::render_placeholder(ph_kind, f, db)?,
+            SqlToken::Placeholder(ph_kind) => __detail::render_placeholder::<D>(ph_kind, f)?,
             SqlToken::WhiteSpace => write!(f, " ")?,
             SqlToken::Number(num) => write!(f, " {}", num)?,
         };
@@ -44,9 +59,18 @@ mod __impl {
 }
 
 mod __detail {
-    use crate::connection::database_type::DatabaseType;
-    use crate::query::querybuilder::syntax::symbol::Symbol;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
+    use crate::{
+        connection::database_type::DatabaseType,
+        query::{
+            querybuilder::{
+                syntax::{
+                    symbol::Symbol,
+                    dialect::SqlDialect,
+                    tokens::PlaceholderKind
+                }
+            }
+        }
+    };
     use std::fmt::Write;
 
     pub(crate) fn render_symbol(sym: &Symbol, f: &mut String) -> Result<(), std::fmt::Error> {
@@ -67,27 +91,25 @@ mod __detail {
         Ok(())
     }
 
-    pub(crate) fn render_placeholder(
+    pub(crate) fn render_placeholder<D: SqlDialect>(
         ph_kind: &PlaceholderKind,
         f: &mut String,
-        db: DatabaseType,
     ) -> Result<(), std::fmt::Error> {
         match ph_kind {
-            PlaceholderKind::Value(v) => write_value_placeholder(*v, f, db),
-            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", like_kind.as_str(*v, db)),
+            PlaceholderKind::Value(v) => write_value_placeholder::<D>(*v, f),
+            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", like_kind.as_str::<D>(*v)),
             PlaceholderKind::Range(start, end) => {
-                write!(f, "{}", generate_range_of_placeholders(*start, *end, db)?)
+                write!(f, "{}", generate_range_of_placeholders::<D>(*start, *end)?)
             }
         }?;
         Ok(())
     }
 
-    fn generate_range_of_placeholders(
+    fn generate_range_of_placeholders<D: SqlDialect>(
         start: usize,
         end: usize,
-        db: DatabaseType,
     ) -> Result<String, std::fmt::Error> {
-        let capacity = match db {
+        let capacity = match D::DB {
             DatabaseType::MySQL => 1,
             _ => 2,
         } * end; // TODO: custom struct to ensure that the range is correct for computing the capacity?
@@ -96,7 +118,7 @@ mod __detail {
         let mut iter = (start..end).peekable();
 
         while let Some(idx) = iter.next() {
-            write_value_placeholder(idx, &mut out_buffer, db)?;
+            write_value_placeholder::<D>(idx, &mut out_buffer)?;
 
             if iter.peek().is_some() {
                 // Write comma *only if* there's another element coming
@@ -107,15 +129,13 @@ mod __detail {
         Ok(out_buffer)
     }
 
-    fn write_value_placeholder(
+    fn write_value_placeholder<D: SqlDialect>(
         idx_value: usize,
         f: &mut String,
-        db: DatabaseType,
     ) -> Result<(), std::fmt::Error> {
-        let placeholder_symbol = db.get_placeholder_symbol();
-        match db {
-            DatabaseType::SqlServer => write!(f, " {}{}", placeholder_symbol, idx_value),
-            DatabaseType::MySQL => write!(f, " ?"),
+        let placeholder_symbol = D::PLACEHOLDER_SYMBOL;
+        match D::DB {
+            DatabaseType::MySQL => write!(f, " {}", placeholder_symbol),
             _ => write!(f, " {}{}", placeholder_symbol, idx_value),
         }
     }

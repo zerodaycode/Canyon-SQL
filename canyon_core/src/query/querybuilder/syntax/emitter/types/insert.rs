@@ -1,10 +1,12 @@
-use crate::query::querybuilder::syntax::ast::BaseAst;
-use crate::query::querybuilder::syntax::ast::insert::InsertAst;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
-use crate::query::querybuilder::syntax::emitter::types::helpers;
-use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::tokens::SqlTokens;
+use crate::query::querybuilder::syntax::{
+    ast::BaseAst,
+    ast::insert::InsertAst,
+    emitter::types::helpers,
+    emitter::{AstProcessor, SqlEmitter},
+    keyword::Keyword,
+    symbol::Symbol,
+    tokens::SqlTokens,
+};
 
 impl<'a, T> EmitInsert<'a> for T
 where
@@ -13,7 +15,7 @@ where
     fn emit_insert(
         &mut self,
         ast: &impl AstProcessor<'a>,
-        _base_ast: &BaseAst<'a>,
+        base_ast: &mut BaseAst<'a>,
     ) -> SqlTokens<'a> {
         let mut tokens = SqlTokens::default();
 
@@ -28,23 +30,40 @@ where
         helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens);
         tokens.symbol(Symbol::RParen);
 
+        tokens.keyword(Keyword::Values);
+        tokens.symbol(Symbol::LParen);
+        helpers::emit_placeholders::<T>(&ast.columns, base_ast, &mut tokens);
+        tokens.symbol(Symbol::RParen);
+
+        __impl::emit_returning::<T>(ast, &mut tokens);
+
         tokens
     }
 }
 
 pub trait EmitInsert<'a>: SqlEmitter<'a> {
-    fn emit_insert(&mut self,
-                   ast: &impl AstProcessor<'a>,
-                   base_ast: &BaseAst<'a>) -> SqlTokens<'a>;
+    fn emit_insert(
+        &mut self,
+        ast: &impl AstProcessor<'a>,
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a>;
 }
 
 pub(crate) mod __impl {
-    use crate::query::querybuilder::syntax::ast::insert::InsertAst;
-    use crate::query::querybuilder::syntax::dialect::SqlDialect;
-    use crate::query::querybuilder::syntax::emitter::SqlEmitter;
-    use crate::query::querybuilder::syntax::emitter::types::helpers;
-    use crate::query::querybuilder::syntax::keyword::Keyword;
-    use crate::query::querybuilder::syntax::tokens::SqlTokens;
+    use crate::{
+        query::{
+            querybuilder::{
+                syntax::{
+                    ast::insert::InsertAst,
+                    dialect::SqlDialect,
+                    emitter::SqlEmitter,
+                    emitter::types::helpers,
+                    keyword::Keyword,
+                    tokens::{PlaceholderKind, SqlToken, SqlTokens}
+                }
+            }
+        }
+    };
 
     pub(crate) fn emit_returning<'a, E: SqlEmitter<'a>>(
         ast: &InsertAst<'a>,
@@ -55,6 +74,6 @@ pub(crate) mod __impl {
         }
         tokens.keyword(Keyword::Returning);
         // add the columns
-        helpers::emit_columns::<E::Dialect>(&ast.columns, tokens)
+        helpers::emit_columns::<E::Dialect>(&ast.returning_columns, tokens)
     }
 }

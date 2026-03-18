@@ -1,6 +1,8 @@
 use crate::query::operators::Comp;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::dialect;
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::{
     PlaceholderKind, SqlToken, SqlTokens, ToSqlTokens,
@@ -9,19 +11,15 @@ use crate::query::querybuilder::syntax::tokens::{
 pub struct HavingClause<'a> {
     pub column: ColumnRef<'a>,
     pub operator: Comp,
-    pub value: &'a dyn QueryParameter, // TODO: shouldn't this be a placeholder?
+    pub value_index: PlaceholderKind, // TODO: shouldn't this be a placeholder?
 }
 
 impl<'a> HavingClause<'a> {
-    pub fn new<I: Into<ColumnRef<'a>>>(
-        column: I,
-        operator: Comp,
-        value: &'a dyn QueryParameter,
-    ) -> Self {
+    pub fn new<I: Into<ColumnRef<'a>>>(column: I, operator: Comp, value_index: usize) -> Self {
         Self {
             column: column.into(),
             operator,
-            value,
+            value_index: PlaceholderKind::Value(value_index),
         }
     }
 }
@@ -33,7 +31,7 @@ impl<'a> ToSqlTokens<'a> for HavingClause<'a> {
         out.keyword(Keyword::Having);
         out.extend(self.column.to_tokens());
         out.operator(self.operator);
-        out.placeholder(PlaceholderKind::Value(0)); // TODO: value index
+        out.placeholder(self.value_index);
 
         out
     }

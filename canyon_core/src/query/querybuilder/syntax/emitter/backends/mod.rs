@@ -4,7 +4,8 @@ mod pg;
 pub use pg::PgEmitter;
 #[cfg(feature = "mssql")]
 mod mssql;
-// #[cfg(feature = "postgres")] pub use mssql::;
+#[cfg(feature = "mssql")]
+pub use mssql::SqlServerEmitter;
 #[cfg(feature = "mysql")]
 mod mysql;
 #[cfg(feature = "mysql")]

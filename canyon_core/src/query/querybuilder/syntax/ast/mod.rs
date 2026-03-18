@@ -11,6 +11,7 @@ use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 pub struct BaseAst<'a> {
     pub table: TableMetadata<'a>,
     pub conditions: Vec<ConditionClause<'a>>,
+    pub bind_index: usize,
 }
 
 impl<'a> BaseAst<'a> {
@@ -18,6 +19,12 @@ impl<'a> BaseAst<'a> {
         Self {
             table: table.into(),
             conditions: Vec::new(),
+            bind_index: 1,
         }
+    }
+
+    pub const fn next_placeholder_index(&mut self) -> usize {
+        self.bind_index += 1;
+        self.bind_index
     }
 }
