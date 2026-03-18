@@ -1,5 +1,6 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::{
     PlaceholderKind, SqlToken, SqlTokens, ToSqlTokens,
 };
@@ -11,7 +12,7 @@ pub struct ConditionClause<'a> {
     pub(crate) operator: Comp,
     pub(crate) value_index: usize,
 }
-#[derive(Eq, PartialEq, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum ConditionClauseKind {
     Where,
     And,
@@ -19,13 +20,13 @@ pub enum ConditionClauseKind {
     In,
 }
 
-impl ConditionClauseKind {
-    fn as_str(&self) -> &'static str {
-        match self {
-            ConditionClauseKind::Where => "WHERE",
-            ConditionClauseKind::And => "AND",
-            ConditionClauseKind::In => "IN",
-            ConditionClauseKind::Or => "OR",
+impl From<ConditionClauseKind> for Keyword {
+    fn from(keyword: ConditionClauseKind) -> Self {
+        match keyword {
+            ConditionClauseKind::Where => Keyword::Where,
+            ConditionClauseKind::And => Keyword::And,
+            ConditionClauseKind::Or => Keyword::Or,
+            ConditionClauseKind::In => Keyword::In,
         }
     }
 }
@@ -35,7 +36,7 @@ impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
         let mut out = SqlTokens::with_capacity(4);
 
         // Clause keyword
-        out.ident(self.kind.as_str()); // NOTE: dubious
+        out.keyword(self.kind.into());
 
         // Column
         out.extend(self.column_name.to_tokens());

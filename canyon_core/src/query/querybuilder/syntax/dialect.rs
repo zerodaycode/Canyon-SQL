@@ -7,6 +7,9 @@ pub trait SqlDialect {
     // const IDENT_QUOTING: IdentQuoting;
 }
 
+pub struct StandardDialect;
+impl SqlDialect for StandardDialect {}
+
 #[cfg(feature = "postgres")]
 pub struct PgDialect;
 #[cfg(feature = "postgres")]

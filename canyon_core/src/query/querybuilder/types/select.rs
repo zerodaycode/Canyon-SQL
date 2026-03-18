@@ -154,7 +154,6 @@ mod __impl {
     use crate::query::operators::Comp;
     use crate::query::querybuilder::SelectQueryBuilder;
     use crate::query::querybuilder::syntax::column::ColumnRef;
-    use crate::query::querybuilder::syntax::join::JoinKind::Left;
     use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 
@@ -177,7 +176,7 @@ mod __impl {
         right: impl Into<ColumnRef<'a>>,
     ) -> JoinClause<'a> {
         JoinClause {
-            kind: Left,
+            kind,
             target_table: target_table.into(),
             left: left.into(),
             operator: Comp::Eq,

@@ -123,7 +123,7 @@ mod __impl {
 
     pub(crate) fn generate_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
         _self: &mut QueryBuilder<'a, P>,
-        conjunction_clause_kind: ConditionClauseKind,
+        _conjunction_clause_kind: ConditionClauseKind,
         field: Z,
         values: &'a [Q],
     ) -> Result<(), Box<dyn Error + Send + Sync>>
@@ -248,7 +248,7 @@ mod __detail {
     /// Convenient standalone that helps us to interpolate the placeholder of the parameters of a SQL
     /// query directly into the passed in buffer, avoiding the need to construct and allocate temporary strings
     /// for such purpose
-    pub(crate) fn write_param_placeholder(
+    pub(crate) fn _write_param_placeholder(
         db_type: DatabaseType,
         buffer: &mut String,
         params: impl Iterator,
@@ -257,19 +257,19 @@ mod __detail {
             DatabaseType::PostgreSql => write!(
                 buffer,
                 "${}",
-                calculate_param_placeholder_count_value(params)
+                _calculate_param_placeholder_count_value(params)
             ),
             DatabaseType::SqlServer => write!(
                 buffer,
                 "@P{}",
-                calculate_param_placeholder_count_value(params)
+                _calculate_param_placeholder_count_value(params)
             ),
             DatabaseType::MySQL => write!(buffer, "?"),
             _ => panic!("Provisional (placeholder)"),
         }?)
     }
 
-    fn calculate_param_placeholder_count_value(container: impl Iterator) -> usize {
+    fn _calculate_param_placeholder_count_value(container: impl Iterator) -> usize {
         container.count()
     }
 }
@@ -317,7 +317,7 @@ mod __errors {
     use std::fmt::Display;
     use std::io::ErrorKind;
 
-    pub(crate) fn where_clause_position<'a, 'b>() -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+    pub(crate) fn where_clause_position<'a>() -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
         Err(std::io::Error::new(
             // TODO: CanyonError
             ErrorKind::Unsupported,

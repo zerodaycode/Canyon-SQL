@@ -10,15 +10,17 @@ pub enum JoinKind {
     Left,
     Right,
     Full,
+    FullOuter,
 }
 
-impl JoinKind {
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            JoinKind::Inner => "INNER JOIN",
-            JoinKind::Left => "LEFT JOIN",
-            JoinKind::Right => "RIGHT JOIN",
-            JoinKind::Full => "FULL JOIN",
+impl From<JoinKind> for Keyword {
+    fn from(join_kind: JoinKind) -> Self {
+        match join_kind {
+            JoinKind::Inner => Keyword::Inner,
+            JoinKind::Left => Keyword::Left,
+            JoinKind::Right => Keyword::Right,
+            JoinKind::Full => Keyword::Full,
+            JoinKind::FullOuter => Keyword::FullOuter,
         }
     }
 }
@@ -54,7 +56,7 @@ impl<'a> ToSqlTokens<'a> for JoinClause<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(6);
 
-        out.ident(self.kind.as_str()); // NOTE: dubious
+        out.keyword(self.kind.into());
         out.extend(self.target_table.to_tokens());
         out.keyword(Keyword::On);
         out.extend(self.left.to_tokens());
@@ -69,15 +71,13 @@ fn test_join_clause_basic() {
     use crate::query::operators::Comp;
     use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
 
-    let mock_value = 99;
-
-    let join = JoinClause {
-        kind: JoinKind::Inner,
-        target_table: TableMetadata::new("users"),
-        left: ColumnRef::from("t.id"),
-        operator: Comp::Eq,
-        right: "users.team_id".into(),
-    };
+    let join = JoinClause::new(
+        JoinKind::Inner,
+        TableMetadata::new("users"),
+        ColumnRef::from("t.id"),
+        Comp::Eq,
+        "users.team_id".into(),
+    );
 
     let mut tokens = SqlTokens::default();
     tokens.extend(join.to_tokens());

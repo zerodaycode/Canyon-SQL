@@ -16,11 +16,23 @@ pub enum Keyword {
     Inner,
     Outer,
     Full,
+    FullOuter,
 
     On,
     As,
     Like,
     Returning,
+
+    Where,
+    And,
+    Or,
+    In,
+    GroupBy,
+    Having,
+    Limit,
+    OrderBy,
+    Desc,
+    Offset,
 }
 
 impl Display for Keyword {
@@ -42,6 +54,17 @@ impl Display for Keyword {
             Keyword::Inner => "INNER",
             Keyword::Outer => "OUTER",
             Keyword::Full => "FULL",
+            Keyword::FullOuter => "FULL OUTER",
+            Keyword::Where => "WHERE",
+            Keyword::And => "AND",
+            Keyword::Or => "OR",
+            Keyword::In => "IN",
+            Keyword::Desc => "DESC",
+            Keyword::GroupBy => "GROUP BY",
+            Keyword::Having => "HAVING",
+            Keyword::Limit => "LIMIT",
+            Keyword::OrderBy => "ORDER BY",
+            Keyword::Offset => "OFFSET",
         };
         write!(f, "{}", i)
     }

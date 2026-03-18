@@ -36,7 +36,8 @@ mod __impl {
             SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
             SqlToken::Operator(op) => write!(f, " {}", op)?,
             SqlToken::Placeholder(ph_kind) => __detail::render_placeholder(ph_kind, f, db)?,
-            _ => todo!("unimplemented SqlToken: {:?}", token),
+            SqlToken::WhiteSpace => write!(f, " ")?,
+            SqlToken::Number(num) => write!(f, " {}", num)?,
         };
         Ok(())
     }

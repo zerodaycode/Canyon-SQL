@@ -142,7 +142,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 mod __impl {
     use crate::query::querybuilder::UpdateQueryBuilder;
 
-    pub(super) fn create_set_clause_columns_with_placeholders(_self: &mut UpdateQueryBuilder) {
+    pub(super) fn _create_set_clause_columns_with_placeholders(_self: &mut UpdateQueryBuilder) {
         let mut set_clause = String::new();
         set_clause.push_str(" SET ");
 
