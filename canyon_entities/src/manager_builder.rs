@@ -24,7 +24,7 @@ pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> TokenStream {
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new(&(String::from(&struct_name) + "Table"), Span::call_site());
-    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name);
+    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name); // TODO: same as the other to-do, we need some way of know what's the db name if it's changed in the canyon_entity macro
 
     let generics = &canyon_entity.generics;
     let visibility = &canyon_entity.vis;
@@ -95,12 +95,14 @@ pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> Toke
 /// of the field name.
 pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     let struct_name = canyon_entity.struct_name.to_string();
-    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name);
+    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name); // TODO: this could be a bug, because the macros may let the user change the target table name, so it won't be accurate here
 
     let enum_name = Ident::new((struct_name + "Field").as_str(), Span::call_site());
 
     let fields_names = &canyon_entity.get_fields_as_enum_variants();
     let match_arms_str = &canyon_entity.create_match_arm_for_get_variant_as_str(&enum_name);
+    let match_arms_column_ref =
+        &canyon_entity.create_match_arm_for_column_ref(&enum_name, &db_target_table_name);
 
     let visibility = &canyon_entity.vis;
     let generics = &canyon_entity.generics;
@@ -148,8 +150,10 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
 
         impl #generics canyon_sql::query::bounds::FieldIdentifier for #generics #enum_name #generics {
             #[inline(always)]
-            fn table_and_column_name(&self) -> String {
-                format!("{}.{}", #db_target_table_name, self.as_str())
+            fn as_column_ref(&self) -> canyon_sql::query::ColumnRef<'static> {
+                match self {
+                    #(#match_arms_column_ref),*
+                }
             }
 
             fn as_str(&self) -> &'static str {

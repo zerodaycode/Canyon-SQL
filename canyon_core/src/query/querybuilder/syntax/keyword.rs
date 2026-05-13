@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Keyword {
     Select,
     Insert,
@@ -34,6 +34,7 @@ pub enum Keyword {
     Desc,
     Offset,
     Values,
+    Set,
 }
 
 impl Display for Keyword {
@@ -67,6 +68,7 @@ impl Display for Keyword {
             Keyword::OrderBy => "ORDER BY",
             Keyword::Offset => "OFFSET",
             Keyword::Values => "VALUES",
+            Keyword::Set => "SET",
         };
         write!(f, "{}", i)
     }

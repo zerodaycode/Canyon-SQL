@@ -1,6 +1,5 @@
 use crate::utils::helpers::database_table_name_to_struct_ident;
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;

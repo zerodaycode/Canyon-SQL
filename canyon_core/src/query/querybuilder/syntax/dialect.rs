@@ -12,13 +12,14 @@ pub trait SqlDialect {
     const DB: DatabaseType;
     const SUPPORTS_RETURNING: bool = true;
     const _SUPPORTS_LIMIT_OFFSET: bool = true;
-    const IDENT_QUOTING: IdentQuoting = IdentQuoting::DoubleQuote;
+    const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::DoubleQuote;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::DollarNumbered;
-    const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::VARCHAR;
+    const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Varchar;
 }
 
 /// Safe assuming that Canyon's default is PostgreSQL,
 /// which is the most widely used and standards-compliant database among the supported ones.
+#[allow(dead_code)]
 pub struct StandardDialect;
 impl SqlDialect for StandardDialect {
     const DB: DatabaseType = PostgreSql;
@@ -29,7 +30,7 @@ pub struct PgDialect;
 #[cfg(feature = "postgres")]
 impl SqlDialect for PgDialect {
     const DB: DatabaseType = PostgreSql;
-    const IDENT_QUOTING: IdentQuoting = IdentQuoting::DoubleQuote;
+    const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::DoubleQuote;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::DollarNumbered;
 }
 
@@ -39,7 +40,7 @@ pub struct MsSql;
 impl SqlDialect for MsSql {
     const DB: DatabaseType = SqlServer;
     const SUPPORTS_RETURNING: bool = false;
-    const IDENT_QUOTING: IdentQuoting = IdentQuoting::Bracket;
+    const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Bracket;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::AtPNumbered;
 }
 
@@ -48,9 +49,9 @@ pub struct MySql;
 #[cfg(feature = "mysql")]
 impl SqlDialect for MySql {
     const DB: DatabaseType = MySQL;
-    const IDENT_QUOTING: IdentQuoting = IdentQuoting::Backtick;
+    const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Backtick;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::QuestionMark;
-    const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::CHAR;
+    const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Char;
 }
 
 /// Identifier quoting strategy for a SQL dialect.
@@ -65,7 +66,7 @@ impl SqlDialect for MySql {
 /// - MySQL: `` `ident` ``
 /// - SQL Server: `[ident]`
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum IdentQuoting {
+pub enum IdentQuotingStyle {
     /// ANSI SQL style, used by PostgreSQL and as the generic default.
     DoubleQuote,
     /// MySQL style.
@@ -74,23 +75,43 @@ pub enum IdentQuoting {
     Bracket,
 }
 
-impl IdentQuoting {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IdentQuoting {
+    DoubleQuote,
+    Backtick,
+    OpeningBracket,
+    ClosingBracket,
+}
+
+impl IdentQuotingStyle {
     #[inline]
-    pub const fn opening(self) -> &'static str {
+    pub const fn opening(self) -> IdentQuoting {
         match self {
-            Self::DoubleQuote => "\"",
-            Self::Backtick => "`",
-            Self::Bracket => "[",
+            Self::DoubleQuote => IdentQuoting::DoubleQuote,
+            Self::Backtick => IdentQuoting::Backtick,
+            Self::Bracket => IdentQuoting::OpeningBracket,
         }
     }
 
     #[inline]
-    pub const fn closing(self) -> &'static str {
+    pub const fn closing(self) -> IdentQuoting {
         match self {
+            Self::DoubleQuote => IdentQuoting::DoubleQuote,
+            Self::Backtick => IdentQuoting::Backtick,
+            Self::Bracket => IdentQuoting::ClosingBracket,
+        }
+    }
+}
+
+impl Display for IdentQuoting {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let t = match self {
             Self::DoubleQuote => "\"",
             Self::Backtick => "`",
-            Self::Bracket => "]",
-        }
+            Self::OpeningBracket => "[",
+            Self::ClosingBracket => "]",
+        };
+        write!(f, "{}", t)
     }
 }
 
@@ -104,7 +125,7 @@ pub enum PlaceholderSymbol {
     /// @p1, @p2, @p3
     AtPNumbered,
     /// :1, :2, :3
-    ColonNumbered,
+    _ColonNumbered,
 }
 
 impl Display for PlaceholderSymbol {
@@ -113,7 +134,7 @@ impl Display for PlaceholderSymbol {
             Self::QuestionMark => "?",
             Self::DollarNumbered => "$",
             Self::AtPNumbered => "@P",
-            Self::ColonNumbered => ":",
+            Self::_ColonNumbered => ":",
         };
         write!(f, "{}", symbol)
     }
@@ -122,15 +143,15 @@ impl Display for PlaceholderSymbol {
 /// Represents the syntax style for parameter placeholders in prepared statements.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PlaceholderDatatype {
-    VARCHAR,
-    CHAR,
+    Varchar,
+    Char,
 }
 
 impl Display for PlaceholderDatatype {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let datatype = match self {
-            Self::VARCHAR => "VARCHAR",
-            Self::CHAR => "CHAR",
+            Self::Varchar => "VARCHAR",
+            Self::Char => "CHAR",
         };
         write!(f, "{}", datatype)
     }

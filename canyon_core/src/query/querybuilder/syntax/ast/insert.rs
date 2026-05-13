@@ -1,7 +1,6 @@
-use crate::query::parameters::QueryParameter;
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::AstProcessor;
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
+pub(crate) use crate::query::querybuilder::syntax::{
+    column::ColumnRef, emitter::AstProcessor, query_kind::QueryKind,
+};
 use transient::Transient;
 
 #[derive(Default, Transient)]
@@ -17,7 +16,7 @@ impl<'a> AstProcessor<'a> for InsertAst<'a> {
 }
 
 impl<'a> InsertAst<'a> {
-    pub const fn new() -> Self {
+    pub const fn _new() -> Self {
         Self {
             columns: Vec::new(),
             returning_columns: Vec::new(),

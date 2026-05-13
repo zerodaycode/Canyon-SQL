@@ -1,4 +1,5 @@
 use crate::query::bounds;
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
@@ -19,7 +20,7 @@ where
     }
 }
 
-impl<'a> ToSqlTokens<'a> for TableMetadata<'a> {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for TableMetadata<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(3);
         if let Some(schema) = &self.schema {

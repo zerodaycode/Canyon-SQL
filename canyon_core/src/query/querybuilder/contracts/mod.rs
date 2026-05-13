@@ -141,19 +141,6 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 /// without mixing types or polluting everything into
 /// just one type.
 pub trait QueryBuilderOps<'a> {
-    /// Returns a read-only reference to the underlying SQL sentence,
-    /// with the same lifetime as self
-    // fn read_sql(&'a self) -> &'a str;
-
-    // /// Public interface for append the content of a slice to the end of
-    // /// the underlying SQL sentence.
-    // ///
-    // /// This mutator will allow the user to wire SQL code to the already
-    // /// generated one
-    // ///
-    // /// * `sql` - The [`&str`] to be wired in the SQL
-    // fn push_sql(self, sql: &str);
-
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///
     /// * `column` - An [`&str`] that will provide the target column name

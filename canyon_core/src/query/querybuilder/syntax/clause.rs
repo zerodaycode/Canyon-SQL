@@ -1,5 +1,6 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::{
     PlaceholderKind, SqlToken, SqlTokens, ToSqlTokens,
@@ -31,7 +32,7 @@ impl From<ConditionClauseKind> for Keyword {
     }
 }
 
-impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(4);
 
@@ -39,10 +40,16 @@ impl<'a> ToSqlTokens<'a> for ConditionClause<'a> {
         out.keyword(self.kind.into());
 
         // Column
-        out.extend(self.column_name.to_tokens());
+        out.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(
+            &self.column_name,
+        ));
+
+        out.whitespace();
 
         // Operator
         out.operator(self.operator);
+
+        out.whitespace();
 
         // Value placeholder
         out.placeholder(match self.operator {

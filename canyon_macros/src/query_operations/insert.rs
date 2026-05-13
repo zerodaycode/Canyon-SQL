@@ -1,5 +1,4 @@
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use proc_macro2::TokenStream;
 use quote::quote;
 

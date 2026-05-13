@@ -1,12 +1,9 @@
 use crate::query::querybuilder::syntax::dialect::MsSql;
 use crate::query::querybuilder::syntax::emitter::SqlEmitter;
-use crate::query::querybuilder::syntax::tokens::SqlTokens;
 
 #[derive(Default)]
-pub struct SqlServerEmitter<'a> {
-    tokens: SqlTokens<'a>,
-}
+pub struct SqlServerEmitter {}
 
-impl<'a> SqlEmitter<'a> for SqlServerEmitter<'a> {
+impl SqlEmitter<'_> for SqlServerEmitter {
     type Dialect = MsSql;
 }

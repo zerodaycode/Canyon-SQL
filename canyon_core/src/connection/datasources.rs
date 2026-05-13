@@ -123,6 +123,7 @@ impl DatasourceConfig {
 
     pub fn has_migrations_enabled(&self) -> bool {
         if let Some(migrations) = self.properties.migrations {
+            // Option<Migrations>
             migrations.has_migrations_enabled()
         } else {
             false

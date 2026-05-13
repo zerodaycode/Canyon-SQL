@@ -33,7 +33,7 @@ impl<'a> SelectQueryBuilder<'a> {
         })
     }
 
-    pub fn sql(&self) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn sql(&mut self) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.sql()
     }
 

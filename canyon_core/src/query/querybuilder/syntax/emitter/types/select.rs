@@ -24,11 +24,14 @@ where
         tokens.keyword(Keyword::Select);
 
         __impl::emit_columns::<T::Dialect>(select_ast, &mut tokens);
-        __impl::emit_from(base_ast, &mut tokens);
-        __impl::emit_joins(select_ast, &mut tokens);
+        __impl::emit_from::<T::Dialect>(base_ast, &mut tokens);
+        __impl::emit_joins::<T::Dialect>(select_ast, &mut tokens);
+
+        // TODO: conditional clauses
+
         __impl::emit_group_by::<T::Dialect>(select_ast, &mut tokens);
-        __impl::emit_having(select_ast, &mut tokens);
-        __impl::emit_order_by(select_ast, &mut tokens);
+        __impl::emit_having::<T::Dialect>(select_ast, &mut tokens);
+        __impl::emit_order_by::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_limit(select_ast, &mut tokens);
         __impl::emit_offset(select_ast, &mut tokens);
 
@@ -73,21 +76,28 @@ mod __impl {
     use crate::query::querybuilder::syntax::ast::select::SelectAst;
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
+    use crate::query::querybuilder::syntax::having::HavingClause;
+    use crate::query::querybuilder::syntax::join::JoinClause;
     use crate::query::querybuilder::syntax::keyword::Keyword;
+    use crate::query::querybuilder::syntax::order::OrderByClause;
+    use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
     pub(crate) fn emit_columns<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
-        helpers::emit_columns::<D>(&ast.columns, tokens)
+        helpers::emit_columns::<D>(&ast.columns, tokens);
     }
 
-    pub(crate) fn emit_from<'a>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_from<'a, D: SqlDialect>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
         tokens.keyword(Keyword::From);
-        tokens.extend(base_ast.table.to_tokens());
+        tokens.extend(<TableMetadata<'_> as ToSqlTokens<'_, D>>::to_tokens(
+            &base_ast.table,
+        ));
+        tokens.whitespace();
     }
 
-    pub(crate) fn emit_joins<'a>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_joins<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
         for join in &ast.joins {
-            tokens.extend(join.to_tokens());
+            tokens.extend(<JoinClause<'_> as ToSqlTokens<'_, D>>::to_tokens(join));
         }
     }
 
@@ -101,16 +111,21 @@ mod __impl {
         }
     }
 
-    pub(crate) fn emit_having<'a>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_having<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
         if let Some(having) = &ast.having {
             tokens.keyword(Keyword::Having);
-            tokens.extend(having.to_tokens());
+            tokens.extend(<HavingClause<'_> as ToSqlTokens<'_, D>>::to_tokens(having));
         }
     }
 
-    pub(crate) fn emit_order_by<'a>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_order_by<'a, D: SqlDialect>(
+        ast: &SelectAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         if let Some(order_by) = &ast.order_by {
-            tokens.extend(order_by.to_tokens());
+            tokens.extend(<OrderByClause<'_> as ToSqlTokens<'_, D>>::to_tokens(
+                order_by,
+            ));
         }
     }
 
@@ -131,22 +146,13 @@ mod __impl {
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        query::{
-            operators::Comp,
-            querybuilder::{
-                syntax::{
-                    ast::BaseAst,
-                    ast::select::SelectAst,
-                    column::ColumnRef,
-                    dialect::StandardDialect,
-                    emitter::SqlEmitter,
-                    emitter::types::select::EmitSelect,
-                    order::OrderByClause,
-                    writer::TokenWriter
-                }
-            }
-        }
+    use crate::query::{
+        operators::Comp,
+        querybuilder::syntax::{
+            ast::BaseAst, ast::select::SelectAst, column::ColumnRef, dialect::StandardDialect,
+            emitter::SqlEmitter, emitter::types::select::EmitSelect, order::OrderByClause,
+            writer::TokenWriter,
+        },
     };
 
     struct TestEmitter;
@@ -160,10 +166,8 @@ mod tests {
 
     fn render<'a>(ast: &SelectAst<'a>, base_ast: &BaseAst<'a>) -> String {
         let mut emitter = TestEmitter;
-        let tokens = emitter.emit_select(ast, base_ast);
-        TokenWriter::new()
-            .render::<TestEmitter>(&tokens)
-            .unwrap()
+        let mut tokens = emitter.emit_select(ast, base_ast);
+        TokenWriter::new().render::<TestEmitter>(&mut tokens).unwrap()
     }
 
     #[test]

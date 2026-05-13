@@ -1,7 +1,7 @@
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 pub(crate) use crate::query::{
     operators::{Comp, LikeKind},
     querybuilder::syntax::{
-        dialect::PlaceholderSymbol,
         keyword::Keyword,
         symbol::Symbol,
         tokens::SqlToken::{Ident, Number},
@@ -9,7 +9,7 @@ pub(crate) use crate::query::{
 };
 use std::borrow::Cow;
 
-pub trait ToSqlTokens<'a> {
+pub trait ToSqlTokens<'a, D: SqlDialect> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a;
 }
 
@@ -42,12 +42,39 @@ impl<'a> SqlTokens<'a> {
         self.0.push(SqlToken::Placeholder(pl_kind))
     }
 
+    /// Adds a [`SqlToken::WhiteSpace`] to the output buffer
+    pub fn whitespace(&mut self) {
+        self.0.push(SqlToken::WhiteSpace)
+    }
+
     pub fn inner(self) -> Vec<SqlToken<'a>> {
         self.0
     }
 
     pub fn with_capacity(capacity: usize) -> Self {
         Self(Vec::with_capacity(capacity))
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn first(&self) -> Option<&SqlToken<'a>> {
+        self.0.first()
+    }
+    
+    pub fn last(&self) -> Option<&SqlToken<'a>> {
+        self.0.last()
+    }
+    
+    pub fn remove_last_if<F>(&mut self, predicate: F) -> Option<SqlToken<'a>>
+    where
+        F: FnOnce(&SqlToken<'a>) -> bool,
+    {
+        if let Some(last) = self.0.last() && predicate(last) {
+            return self.0.pop();
+        }
+        None
     }
 }
 
@@ -84,7 +111,7 @@ impl<'a> Extend<SqlToken<'a>> for SqlTokens<'a> {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum SqlToken<'a> {
     Keyword(Keyword), // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
     WhiteSpace,
@@ -95,24 +122,16 @@ pub enum SqlToken<'a> {
     Placeholder(PlaceholderKind), // $1, ? , @P1
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum NumberKind {
     Integer(usize),
-    F32(f32),
-    F64(f64),
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum PlaceholderKind {
     Value(usize),          // $1, ? , @P1
     Like(LikeKind, usize), // for LIKE placeholders, we need to know the kind of LIKE (e.g., starts with, ends with, contains) and the index of the placeholder
     Range(usize, usize), // for range placeholders, we need to know the start and end index of the range (e.g., for BETWEEN ? AND ?, we need to know the indices of both placeholders)
-}
-
-impl<'a> SqlToken<'a> {
-    pub(crate) fn new_ident(kw: &'a str) -> Self {
-        Ident(Cow::from(kw))
-    }
 }
 
 mod __impl {
@@ -137,24 +156,10 @@ mod __impl {
         }
     }
 
-    impl From<f32> for NumberKind {
-        fn from(value: f32) -> Self {
-            NumberKind::F32(value)
-        }
-    }
-
-    impl From<f64> for NumberKind {
-        fn from(value: f64) -> Self {
-            NumberKind::F64(value)
-        }
-    }
-
     impl Display for NumberKind {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             match self {
                 NumberKind::Integer(i) => write!(f, "{}", i),
-                NumberKind::F32(f32_val) => write!(f, "{}", f32_val),
-                NumberKind::F64(f64_val) => write!(f, "{}", f64_val),
             }
         }
     }

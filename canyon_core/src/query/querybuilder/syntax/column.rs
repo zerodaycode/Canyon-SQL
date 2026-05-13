@@ -1,4 +1,5 @@
 use crate::query::bounds::FieldIdentifier;
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
 #[derive(Debug, Clone, Default)]
@@ -10,10 +11,10 @@ pub struct ColumnRef<'a> {
 
 impl<'a, T> From<T> for ColumnRef<'a>
 where
-    T: FieldIdentifier,
+    T: FieldIdentifier + 'a,
 {
     fn from(value: T) -> Self {
-        Self::from(value.as_str())
+        value.as_column_ref()
     }
 }
 
@@ -23,10 +24,10 @@ impl<'a> From<&'a str> for ColumnRef<'a> {
     }
 }
 
-impl<'a> ToSqlTokens<'a> for ColumnRef<'a> {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ColumnRef<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(__detail::calculate_column_ref_capacity(self));
-        __impl::generate_column_ref_tokens(self, &mut out);
+        __impl::generate_column_ref_tokens::<D>(self, &mut out);
         out
     }
 }
@@ -60,6 +61,8 @@ impl<'a> ColumnRef<'a> {
 
 mod __impl {
     use crate::query::querybuilder::syntax::column::{__detail, ColumnRef};
+    use crate::query::querybuilder::syntax::dialect::SqlDialect;
+    use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
@@ -88,17 +91,20 @@ mod __impl {
         }
     }
 
-    pub(crate) fn generate_column_ref_tokens<'a>(__self: &ColumnRef<'a>, out: &mut SqlTokens<'a>) {
+    pub(crate) fn generate_column_ref_tokens<'a, D: SqlDialect>(
+        __self: &ColumnRef<'a>,
+        out: &mut SqlTokens<'a>,
+    ) {
         if let Some(table_ref) = __self.table {
-            out.ident(table_ref);
+            helpers::push_quoted_ident::<D>(table_ref, out);
             out.symbol(Dot)
         }
 
-        out.ident(__self.column);
+        helpers::push_quoted_ident::<D>(__self.column, out);
 
         if let Some(alias) = __self.alias {
             out.keyword(Keyword::As);
-            out.ident(alias);
+            helpers::push_quoted_ident::<D>(alias, out);
         }
     }
 }

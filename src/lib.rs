@@ -52,6 +52,8 @@ pub mod query {
     pub use canyon_core::query::operators;
     pub use canyon_core::query::parameters::QueryParameter;
     pub use canyon_core::query::*;
+
+    pub use canyon_core::query::ColumnRef;
 }
 
 /// Reexport the available database clients within Canyon

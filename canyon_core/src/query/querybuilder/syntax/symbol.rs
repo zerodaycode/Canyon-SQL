@@ -1,4 +1,6 @@
-#[derive(Debug, Clone, PartialEq)]
+use crate::query::querybuilder::syntax::dialect::IdentQuoting;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Symbol {
     Not,
     LParen,
@@ -12,4 +14,22 @@ pub enum Symbol {
     LAngle,
     RAngle,
     PercentSign,
+    Quote,
+    DoubleQuote,
+    Backtick,
+    LBracket,
+    RBracket,
+    Backslash,
+
+    Empty, //<-- Special symbol to represent an empty symbol, used for cases where we want to represent the absence of a symbol without using Option<Symbol>
+}
+
+impl From<IdentQuoting> for Symbol {
+    fn from(quoting: IdentQuoting) -> Self {
+        match quoting {
+            IdentQuoting::DoubleQuote => Symbol::DoubleQuote,
+            IdentQuoting::Backtick => Symbol::Backtick,
+            IdentQuoting::OpeningBracket | IdentQuoting::ClosingBracket => Symbol::LBracket, // We can use LBracket to represent both opening and closing brackets since they are rendered the same way
+        }
+    }
 }

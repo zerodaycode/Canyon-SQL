@@ -60,7 +60,6 @@ use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
 
 // Apply the macro to implement DbConnection for &str and str
-use crate::impl_db_connection_for_str;
 impl_db_connection_for_str!(str);
 impl_db_connection_for_str!(&str);
 

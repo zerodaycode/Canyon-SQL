@@ -7,7 +7,7 @@ use std::fmt::Display;
 
 /// Enumerated type for represent the comparison operations
 /// in SQL sentences
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Comp {
     /// Operator "=" equals
     Eq,
@@ -40,7 +40,7 @@ impl Display for Comp {
     }
 }
 
-impl<'a> ToSqlTokens<'a> for Comp {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for Comp {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(2);
 
@@ -67,7 +67,7 @@ impl<'a> ToSqlTokens<'a> for Comp {
     }
 }
 
-#[derive(Debug, PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum LikeKind {
     /// Operator "LIKE"  as '%pattern%'
     Full,

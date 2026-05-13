@@ -1,7 +1,7 @@
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
-use tiberius::ToSql;
 
 #[derive(Debug, Clone, Default)]
 pub struct OrderByClause<'a> {
@@ -18,12 +18,14 @@ impl<'a> OrderByClause<'a> {
     }
 }
 
-impl<'a> ToSqlTokens<'a> for OrderByClause<'a> {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for OrderByClause<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(3);
 
         out.keyword(Keyword::OrderBy);
-        out.extend(self.column.to_tokens());
+        out.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(
+            &self.column,
+        ));
         if self.descending {
             out.keyword(Keyword::Desc);
         }

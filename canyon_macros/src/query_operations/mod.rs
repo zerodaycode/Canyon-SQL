@@ -5,7 +5,6 @@ use crate::query_operations::read::generate_read_operations_tokens;
 use crate::query_operations::update::generate_update_tokens;
 use crate::utils::helpers::compute_crud_ops_mapping_target_type_with_generics;
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 use proc_macro2::TokenStream;
 use quote::quote;
 

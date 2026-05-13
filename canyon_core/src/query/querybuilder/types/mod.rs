@@ -4,22 +4,17 @@ pub mod update;
 
 pub use self::{delete::*, select::*, update::*};
 use crate::{
-    query::{
-        querybuilder::{
-            syntax::{
-                ast::BaseAst,
-                clause::ConditionClauseKind,
-                emitter::AstProcessor,
-                table_metadata::TableMetadata,
-                tokens::{SqlTokens, Symbol},
-            }
-        },
-        query::Query,
-        parameters::QueryParameter,
-        operators::Comp,
-        bounds::{FieldIdentifier, FieldValueIdentifier},
-    },
     connection::database_type::DatabaseType,
+    query::{
+        bounds::{FieldIdentifier, FieldValueIdentifier},
+        operators::Comp,
+        parameters::QueryParameter,
+        query::Query,
+        querybuilder::syntax::{
+            ast::BaseAst, clause::ConditionClauseKind, emitter::AstProcessor,
+            table_metadata::TableMetadata, tokens::Symbol,
+        },
+    },
 };
 use std::error::Error;
 
@@ -48,20 +43,18 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         })
     }
 
-    pub fn build<'b>(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
+    pub fn build<'b>(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
         let sql = self.sql()?;
         Ok(Query::new(sql, self.params)) // TODO, get rid out of query?
     }
 
-    fn sql<'b>(&self) -> Result<String, Box<dyn Error + Send + Sync + 'b>> {
+    fn sql<'b>(&mut self) -> Result<String, Box<dyn Error + Send + Sync + 'b>> {
         __impl::check_invariants_over_condition_clauses(self)?;
 
-        let mut tokens = SqlTokens::default();
+        let mut tokens =
+            __detail::run_emission_phase(self.database_type, &self.ast, &mut self.base_ast);
 
-        __detail::run_emission_phase(self.database_type, &self.ast, &self.base_ast);
-        tokens.symbol(Symbol::Semicolon);
-
-        let sql = __detail::run_render_phase(&tokens, self.database_type)?;
+        let sql = __detail::run_render_phase(&mut tokens, self.database_type)?;
         Ok(sql)
     }
 
@@ -146,23 +139,6 @@ mod __impl {
             values,
         )?;
 
-        // _self.sql.push_str(conjunction_clause_kind.as_ref());
-        // _self.sql.push(' ');
-        // _self.sql.push_str(target_column);
-        // _self.sql.push_str(" IN "); // TODO: was for reference, this is wrong
-        // _self.sql.push_str(ConditionClauseKind::In.as_ref());
-        // _self.sql.push_str(" (");
-        //
-        // let start = _self.params.len();
-        // let placeholders = (0..values.len())
-        //     .map(|i| format!("${}", start + i + 1))
-        //     .collect::<Vec<_>>()
-        //     .join(", ");
-        //
-        // _self.sql.push_str(&placeholders);
-        // _self.sql.push(')');
-        //
-
         for value in values {
             _self.params.push(value);
         }
@@ -196,8 +172,8 @@ mod __impl {
 mod __detail {
     use crate::connection::database_type::DatabaseType;
     use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::emitter::backends::{MySqlEmitter, SqlServerEmitter};
     use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
+    use crate::query::querybuilder::syntax::emitter::backends::{MySqlEmitter, SqlServerEmitter};
     use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
@@ -235,21 +211,24 @@ mod __detail {
     pub(super) fn run_emission_phase<'a, P>(
         database_type: DatabaseType,
         ast: &P,
-        base_ast: &BaseAst<'a>,
-    ) where
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a>
+    where
         P: AstProcessor<'a>,
     {
         match database_type {
-            DatabaseType::PostgreSql => {
+            DatabaseType::PostgreSql | DatabaseType::Deferred => {
+                // TODO: review the semantics of this assumption
                 let mut emitter = PgEmitter::default();
-                emitter.emit(ast, base_ast);
+                emitter.emit(ast, base_ast)
             }
             DatabaseType::MySQL => {
                 let mut emitter = MySqlEmitter::default();
-                emitter.emit(ast, base_ast);
+                emitter.emit(ast, base_ast)
             }
-            _ => {
-                todo!("unimplemented check ")
+            DatabaseType::SqlServer => {
+                let mut emitter = SqlServerEmitter::default();
+                emitter.emit(ast, base_ast)
             }
         }
     }
@@ -282,8 +261,8 @@ mod __detail {
         container.count()
     }
 
-    pub(crate) fn run_render_phase(
-        tokens: &SqlTokens,
+    pub(crate) fn run_render_phase<'a>(
+        tokens: &'a mut SqlTokens<'a>,
         db: DatabaseType,
     ) -> Result<String, Box<dyn Error + Send + Sync>> {
         let writer = TokenWriter::new();

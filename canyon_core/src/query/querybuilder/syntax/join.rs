@@ -1,5 +1,6 @@
 use crate::query::operators::Comp;
 use crate::query::querybuilder::syntax::column::ColumnRef;
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
@@ -52,23 +53,32 @@ impl<'a> JoinClause<'a> {
     }
 }
 
-impl<'a> ToSqlTokens<'a> for JoinClause<'a> {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for JoinClause<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(6);
 
         out.keyword(self.kind.into());
-        out.extend(self.target_table.to_tokens());
+        out.keyword(Keyword::Join);
+        out.extend(<TableMetadata<'_> as ToSqlTokens<'_, D>>::to_tokens(
+            &self.target_table,
+        ));
+        out.whitespace();
         out.keyword(Keyword::On);
-        out.extend(self.left.to_tokens());
+        out.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(&self.left));
+        out.whitespace();
         out.operator(self.operator);
-        out.extend(self.right.to_tokens());
-
+        out.whitespace();
+        out.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(
+            &self.right,
+        ));
+        out.whitespace();
         out
     }
 }
 #[test]
 fn test_join_clause_basic() {
     use crate::query::operators::Comp;
+    use crate::query::querybuilder::syntax::dialect::StandardDialect;
     use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
 
     let join = JoinClause::new(
@@ -80,20 +90,40 @@ fn test_join_clause_basic() {
     );
 
     let mut tokens = SqlTokens::default();
-    tokens.extend(join.to_tokens());
+    tokens.extend(<JoinClause<'_> as ToSqlTokens<'_, StandardDialect>>::to_tokens(&join));
 
     let expected = vec![
         SqlToken::Keyword(Keyword::Inner),
         SqlToken::Keyword(Keyword::Join),
         SqlToken::Ident("users".into()),
+        SqlToken::WhiteSpace,
         SqlToken::Keyword(Keyword::On),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("t".into()),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Symbol(Symbol::Dot),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("id".into()),
-        SqlToken::Symbol(Symbol::Equals),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
+        SqlToken::WhiteSpace,
+        SqlToken::Operator(Comp::Eq),
+        SqlToken::WhiteSpace,
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("users".into()),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Symbol(Symbol::Dot),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("team_id".into()),
+        SqlToken::Symbol(Symbol::Backslash),
+        SqlToken::Symbol(Symbol::DoubleQuote),
+        SqlToken::WhiteSpace,
     ];
 
     assert_eq!(tokens.inner(), expected);

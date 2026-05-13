@@ -1,4 +1,5 @@
 use crate::query::parameters::QueryParameter;
+use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::rows::FromSqlOwnedValue;
 
 /// Contract that provides a way to Canyon to inspect certain property or values at runtime.
@@ -66,11 +67,7 @@ pub trait TableMetadata<'a>: std::fmt::Display {
 pub trait FieldIdentifier: std::fmt::Display {
     fn as_str(&self) -> &'static str;
 
-    /// Returns a formatted string as `{<table_name>.<column_name>}`.
-    ///
-    /// This is useful during queries generations for example, in join statements, when you
-    /// alias other defined names, etc.
-    fn table_and_column_name(&self) -> String;
+    fn as_column_ref(&self) -> ColumnRef<'static>;
 }
 
 /// Represents some kind of introspection to make the implementors

@@ -1,13 +1,6 @@
-use crate::{
-    query::{
-        querybuilder::{
-            syntax::{
-                emitter::SqlEmitter,
-                tokens::SqlTokens
-            }
-        }
-    }
-};
+use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
+use crate::query::querybuilder::syntax::symbol::Symbol;
+use crate::query::querybuilder::syntax::tokens::SqlToken;
 
 pub struct TokenWriter {}
 
@@ -16,28 +9,29 @@ impl TokenWriter {
         Self {}
     }
 
-    pub fn render<'a, E: SqlEmitter<'a>>(self, tokens: &SqlTokens) -> Result<String, std::fmt::Error> {
+    pub fn render<'a, E: SqlEmitter<'a>>(
+        self,
+        tokens: &'a mut SqlTokens<'a>,
+    ) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
+
+        if let Some(whitespace) = tokens.last() {
+            tokens.remove_last_if(|t| t.eq(&SqlToken::WhiteSpace));
+        }
+
+        tokens.symbol(Symbol::Semicolon);
 
         for tok in tokens {
             __impl::output_token_to_string_buffer::<E::Dialect>(tok, &mut out)?;
         }
 
-        Ok(out.trim_start().to_string())
+        Ok(out.to_string())
     }
 }
 
 mod __impl {
-    use crate::{
-        query::{
-            querybuilder::{
-                syntax::{
-                    dialect::SqlDialect,
-                    tokens::SqlToken,
-                    writer::__detail
-                }
-            }
-        }
+    use crate::query::querybuilder::syntax::{
+        dialect::SqlDialect, tokens::SqlToken, writer::__detail,
     };
     use std::fmt::Write;
 
@@ -46,13 +40,13 @@ mod __impl {
         f: &mut String,
     ) -> Result<(), std::fmt::Error> {
         let _: () = match token {
-            SqlToken::Keyword(s) => write!(f, " {}", s)?,
-            SqlToken::Ident(s) => write!(f, " {}", s)?,
+            SqlToken::Keyword(s) => write!(f, "{} ", s)?,
+            SqlToken::Ident(s) => write!(f, "{}", s)?,
             SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
-            SqlToken::Operator(op) => write!(f, " {}", op)?,
+            SqlToken::Operator(op) => write!(f, "{}", op)?,
             SqlToken::Placeholder(ph_kind) => __detail::render_placeholder::<D>(ph_kind, f)?,
             SqlToken::WhiteSpace => write!(f, " ")?,
-            SqlToken::Number(num) => write!(f, " {}", num)?,
+            SqlToken::Number(num) => write!(f, "{}", num)?,
         };
         Ok(())
     }
@@ -61,15 +55,9 @@ mod __impl {
 mod __detail {
     use crate::{
         connection::database_type::DatabaseType,
-        query::{
-            querybuilder::{
-                syntax::{
-                    symbol::Symbol,
-                    dialect::SqlDialect,
-                    tokens::PlaceholderKind
-                }
-            }
-        }
+        query::querybuilder::syntax::{
+            dialect::SqlDialect, symbol::Symbol, tokens::PlaceholderKind,
+        },
     };
     use std::fmt::Write;
 
@@ -77,16 +65,23 @@ mod __detail {
         let _: () = match sym {
             Symbol::Not => write!(f, "!")?,
             Symbol::Comma => write!(f, ",")?,
-            Symbol::LParen => write!(f, " (")?,
+            Symbol::LParen => write!(f, "(")?,
             Symbol::RParen => write!(f, ")")?,
             Symbol::Dot => write!(f, ".")?,
             Symbol::Semicolon => write!(f, ";")?,
-            Symbol::Equals => write!(f, " =")?,
-            Symbol::Asterisk => write!(f, " *")?,
+            Symbol::Equals => write!(f, "=")?,
+            Symbol::Asterisk => write!(f, "*")?,
             Symbol::Apostrophe => write!(f, "'")?,
-            Symbol::LAngle => write!(f, " <")?,
-            Symbol::RAngle => write!(f, " >")?,
-            Symbol::PercentSign => write!(f, " %")?,
+            Symbol::LAngle => write!(f, "<")?,
+            Symbol::RAngle => write!(f, ">")?,
+            Symbol::PercentSign => write!(f, "%")?,
+            Symbol::Quote => write!(f, "'")?,
+            Symbol::DoubleQuote => write!(f, "\"")?,
+            Symbol::Backtick => write!(f, "`")?,
+            Symbol::LBracket => write!(f, "[")?,
+            Symbol::RBracket => write!(f, "]")?,
+            Symbol::Backslash => write!(f, "\\")?,
+            Symbol::Empty => write!(f, "")?,
         };
         Ok(())
     }
@@ -121,7 +116,6 @@ mod __detail {
             write_value_placeholder::<D>(idx, &mut out_buffer)?;
 
             if iter.peek().is_some() {
-                // Write comma *only if* there's another element coming
                 write!(&mut out_buffer, ", ")?;
             }
         }
@@ -135,8 +129,8 @@ mod __detail {
     ) -> Result<(), std::fmt::Error> {
         let placeholder_symbol = D::PLACEHOLDER_SYMBOL;
         match D::DB {
-            DatabaseType::MySQL => write!(f, " {}", placeholder_symbol),
-            _ => write!(f, " {}{}", placeholder_symbol, idx_value),
+            DatabaseType::MySQL => write!(f, "{}", placeholder_symbol),
+            _ => write!(f, "{}{}", placeholder_symbol, idx_value),
         }
     }
 }
