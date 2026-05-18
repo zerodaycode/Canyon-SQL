@@ -34,7 +34,6 @@ impl DbConnection for PostgresConnector {
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
     ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
-        println!("Postgres query rows: {:?}", stmt);
         let r = self
             .get_pooled()
             .await?
@@ -71,7 +70,6 @@ impl DbConnection for PostgresConnector {
     where
         R: RowMapper,
     {
-        println!("Postgres query one: {}", stmt);
         let result = self
             .get_pooled()
             .await?

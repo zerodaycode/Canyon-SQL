@@ -52,7 +52,9 @@ pub(crate) fn emit_placeholders<'a>(
 mod tests {
     use super::*;
     use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::dialect::{IdentQuotingStyle, PlaceholderSymbol, StandardDialect};
+    use crate::query::querybuilder::syntax::dialect::{
+        IdentQuotingStyle, PlaceholderSymbol, StandardDialect,
+    };
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
     use std::borrow::Cow;
 
@@ -133,8 +135,9 @@ mod tests {
     #[test]
     fn push_quoted_ident_with_standard_dialect() {
         let mut tokens = SqlTokens::default();
+        // TODO: this isn't taking in consideration the scape quotes, care
         push_quoted_ident::<StandardDialect>("users", &mut tokens);
-        assert_eq!(tokens.inner(), get_users_test_expr_values("\""));
+        assert_eq!(tokens.inner(), get_columns_test_expr_values::<StandardDialect>(&["users"]));
     }
 
     #[cfg(feature = "postgres")]
@@ -142,15 +145,28 @@ mod tests {
     fn push_quoted_ident_with_postgres() {
         let mut tokens = SqlTokens::default();
         push_quoted_ident::<PgDialect>("users", &mut tokens);
-        assert_eq!(tokens.inner(), get_users_test_expr_values("\""));
+        assert_eq!(tokens.inner(), get_columns_test_expr_values::<PgDialect>(&["users"]));
     }
 
-    fn get_users_test_expr_values(lit: &'static str) -> Vec<SqlToken<'static>> {
-        vec![
-            SqlToken::Ident(Cow::from(lit)),
-            SqlToken::Ident(Cow::from("users")),
-            SqlToken::Ident(Cow::from(lit)),
-        ]
+    fn get_columns_test_expr_values<D: SqlDialect>(lits: &[&'static str], ) -> Vec<SqlToken<'static>> {
+        let mut tokens = Vec::with_capacity(lits.len().saturating_mul(5));
+
+        for (idx, lit) in lits.iter().enumerate() {
+            tokens.extend([
+                D::IDENT_QUOTING.opening().into(),
+                SqlToken::Ident(Cow::Borrowed(*lit)),
+                D::IDENT_QUOTING.closing().into(),
+            ]);
+
+            if idx + 1 < lits.len() {
+                tokens.extend([
+                    SqlToken::Symbol(Comma),
+                    SqlToken::WhiteSpace,
+                ]);
+            }
+        }
+
+        tokens
     }
 
     #[cfg(feature = "mysql")]
@@ -158,7 +174,7 @@ mod tests {
     fn push_quoted_ident_with_mysql() {
         let mut tokens = SqlTokens::default();
         push_quoted_ident::<MySql>("users", &mut tokens);
-        assert_eq!(tokens.inner(), get_users_test_expr_values("`"));
+        assert_eq!(tokens.inner(), get_columns_test_expr_values::<MySql>(&["users"]));
     }
 
     #[cfg(feature = "mssql")]
@@ -168,20 +184,19 @@ mod tests {
         push_quoted_ident::<MsSql>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Ident(Cow::from("[")),
-                SqlToken::Ident(Cow::from("users")),
-                SqlToken::Ident(Cow::from("]")),
-            ]
+            get_columns_test_expr_values::<MsSql>(&["users"])
         );
     }
 
     #[test]
-    fn emit_columns_with_empty_vec_emits_nothing() {
+    fn emit_columns_with_empty_vec_emits_asterisk() {
         let columns = vec![];
         let mut tokens = SqlTokens::default();
         emit_columns::<StandardDialect>(&columns, &mut tokens);
-        assert!(tokens.is_empty());
+        assert_eq!(
+            tokens.inner(),
+            vec![SqlToken::Symbol(Symbol::Asterisk), SqlToken::WhiteSpace]
+        );
     }
 
     #[test]
@@ -191,11 +206,7 @@ mod tests {
         emit_columns::<StandardDialect>(&columns, &mut tokens);
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Ident(Cow::from("name")),
-                SqlToken::Ident(Cow::from("\"")),
-            ]
+            get_columns_test_expr_values::<StandardDialect>(&["name"])
         );
     }
 
@@ -208,21 +219,7 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Ident(Cow::from("id")),
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Ident(Cow::from("name")),
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Ident(Cow::from("email")),
-                SqlToken::Ident(Cow::from("\"")),
-            ]
+            get_columns_test_expr_values::<StandardDialect>(&["id", "name", "email"])
         );
     }
 
@@ -236,16 +233,7 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Ident(Cow::from("`")),
-                SqlToken::Ident(Cow::from("id")),
-                SqlToken::Ident(Cow::from("`")),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Ident(Cow::from("`")),
-                SqlToken::Ident(Cow::from("name")),
-                SqlToken::Ident(Cow::from("`")),
-            ]
+            get_columns_test_expr_values::<MySql>(&["id", "name"])
         );
     }
 
@@ -259,16 +247,7 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Ident(Cow::from("[")),
-                SqlToken::Ident(Cow::from("id")),
-                SqlToken::Ident(Cow::from("]")),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Ident(Cow::from("[")),
-                SqlToken::Ident(Cow::from("name")),
-                SqlToken::Ident(Cow::from("]")),
-            ]
+            get_columns_test_expr_values::<MsSql>(&["id", "name"])
         );
     }
 
@@ -284,16 +263,7 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Ident(Cow::from("id")),
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Ident(Cow::from("\"")),
-                SqlToken::Ident(Cow::from("name")),
-                SqlToken::Ident(Cow::from("\"")),
-            ]
+            get_columns_test_expr_values::<StandardDialect>(&["id", "name"])
         );
     }
 
@@ -332,10 +302,7 @@ mod tests {
 
         emit_placeholders(&columns, &mut base_ast, &mut tokens);
 
-        assert_eq!(
-            tokens.inner(),
-            get_placeholders_test_expr_values_3()
-        );
+        assert_eq!(tokens.inner(), get_placeholders_test_expr_values_3());
         assert_eq!(base_ast.bind_index, 3);
     }
 
@@ -348,10 +315,7 @@ mod tests {
 
         emit_placeholders(&columns, &mut base_ast, &mut tokens);
 
-        assert_eq!(
-            tokens.inner(),
-            get_placeholders_test_expr_values()
-        );
+        assert_eq!(tokens.inner(), get_placeholders_test_expr_values());
         assert_eq!(base_ast.bind_index, 2);
         assert_eq!(
             PgDialect::PLACEHOLDER_SYMBOL,
@@ -368,10 +332,7 @@ mod tests {
 
         emit_placeholders(&columns, &mut base_ast, &mut tokens);
 
-        assert_eq!(
-            tokens.inner(),
-            get_placeholders_test_expr_values()
-        );
+        assert_eq!(tokens.inner(), get_placeholders_test_expr_values());
         assert_eq!(base_ast.bind_index, 2);
         assert_eq!(MySql::PLACEHOLDER_SYMBOL, PlaceholderSymbol::QuestionMark);
     }
@@ -386,12 +347,12 @@ mod tests {
     }
 
     fn get_placeholders_test_expr_values_3() -> Vec<SqlToken<'static>> {
-    let mut v = vec![];
+        let mut v = vec![];
         v.extend(get_placeholders_test_expr_values());
-            v.extend(vec![
+        v.extend(vec![
             SqlToken::Symbol(Comma),
             SqlToken::WhiteSpace,
-            SqlToken::Placeholder(PlaceholderKind::Value(3))
+            SqlToken::Placeholder(PlaceholderKind::Value(3)),
         ]);
         v
     }

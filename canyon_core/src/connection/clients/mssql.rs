@@ -153,7 +153,7 @@ pub(crate) mod sqlserver_query_launcher {
         params: &[&'a dyn QueryParameter],
     ) -> Query<'a> {
         let mut stmt = String::from(stmt);
-        println!("Detected query mssql: {stmt}");
+
         if stmt.contains("RETURNING") {
             // TODO: when the InsertQuerybuilder with a api on the builder for the returning clause
             let c = stmt.clone();

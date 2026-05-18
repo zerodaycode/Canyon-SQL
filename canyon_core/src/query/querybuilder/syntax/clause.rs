@@ -29,7 +29,7 @@ impl From<ConditionClauseKind> for Keyword {
             ConditionClauseKind::Where => Keyword::Where,
             ConditionClauseKind::And | ConditionClauseKind::AndValuesIn => Keyword::And,
             ConditionClauseKind::Or | ConditionClauseKind::OrValuesIn => Keyword::Or,
-            ConditionClauseKind::In => Keyword::In
+            ConditionClauseKind::In => Keyword::In,
         }
     }
 }

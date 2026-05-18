@@ -1,6 +1,6 @@
-use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::SqlToken;
+use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
 
 pub struct TokenWriter {}
 
@@ -15,7 +15,7 @@ impl TokenWriter {
     ) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
 
-        if let Some(whitespace) = tokens.last() {
+        if let Some(SqlToken::WhiteSpace) = tokens.last() {
             tokens.remove_last_if(|t| t.eq(&SqlToken::WhiteSpace));
         }
 
@@ -94,7 +94,11 @@ mod __detail {
             PlaceholderKind::Value(v) => write_value_placeholder::<D>(*v, f),
             PlaceholderKind::Like(like_kind, v) => write!(f, "{}", like_kind.as_str::<D>(*v)),
             PlaceholderKind::Range(start, end) => {
-                write!(f, "({})", generate_range_of_placeholders::<D>(*start, *end)?)
+                write!(
+                    f,
+                    "({})",
+                    generate_range_of_placeholders::<D>(*start, *end)?
+                )
             }
         }?;
         Ok(())

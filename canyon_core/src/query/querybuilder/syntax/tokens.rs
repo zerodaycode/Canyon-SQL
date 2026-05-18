@@ -1,6 +1,6 @@
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 pub(crate) use crate::query::{
-    operators::{Operator, LikeKind},
+    operators::{LikeKind, Operator},
     querybuilder::syntax::{
         keyword::Keyword,
         symbol::Symbol,
@@ -62,16 +62,18 @@ impl<'a> SqlTokens<'a> {
     pub fn first(&self) -> Option<&SqlToken<'a>> {
         self.0.first()
     }
-    
+
     pub fn last(&self) -> Option<&SqlToken<'a>> {
         self.0.last()
     }
-    
+
     pub fn remove_last_if<F>(&mut self, predicate: F) -> Option<SqlToken<'a>>
     where
         F: FnOnce(&SqlToken<'a>) -> bool,
     {
-        if let Some(last) = self.0.last() && predicate(last) {
+        if let Some(last) = self.0.last()
+            && predicate(last)
+        {
             return self.0.pop();
         }
         None
@@ -118,7 +120,7 @@ pub enum SqlToken<'a> {
     Ident(Cow<'a, str>),          // a raw literal value
     Number(NumberKind),           // a raw literal numeric value
     Symbol(Symbol),               // =, ( ) , .
-    Operator(Operator),               // Comp::Eq, Comp::GtEq...
+    Operator(Operator),           // Comp::Eq, Comp::GtEq...
     Placeholder(PlaceholderKind), // $1, ? , @P1
 }
 
@@ -132,6 +134,39 @@ pub enum PlaceholderKind {
     Value(usize),          // $1, ? , @P1
     Like(LikeKind, usize), // for LIKE placeholders, we need to know the kind of LIKE (e.g., starts with, ends with, contains) and the index of the placeholder
     Range(usize, usize), // for range placeholders, we need to know the start and end index of the range (e.g., for BETWEEN ? AND ?, we need to know the indices of both placeholders)
+}
+
+mod __impl_sql_token {
+    use crate::query::querybuilder::syntax::dialect::IdentQuoting;
+    use super::*;
+
+    // impl<'a> From<Keyword> for SqlToken<'a> {
+    //     fn from(keyword: Keyword) -> Self {
+    //         SqlToken::Keyword(keyword)
+    //     }
+    // }
+    // 
+    // impl<'a> From<Symbol> for SqlToken<'a> {
+    //     fn from(symbol: Symbol) -> Self {
+    //         SqlToken::Symbol(symbol)
+    //     }
+    // }
+    // 
+    // impl<'a> From<Operator> for SqlToken<'a> {
+    //     fn from(operator: Operator) -> Self {
+    //         SqlToken::Operator(operator)
+    //     }
+    // }
+    impl<'a> From<IdentQuoting> for SqlToken<'a> {
+        fn from(quoting: IdentQuoting) -> Self {
+            match quoting {
+                IdentQuoting::Backtick => SqlToken::Symbol(Symbol::Backtick),
+                IdentQuoting::DoubleQuote => SqlToken::Symbol(Symbol::DoubleQuote),
+                IdentQuoting::OpeningBracket => SqlToken::Symbol(Symbol::LBracket), // Note: we use LBracket for both [ and ] since they are used in pairs
+                IdentQuoting::ClosingBracket => SqlToken::Symbol(Symbol::RBracket), // Note: we use LBracket for both [ and ] since they are used in pairs
+            }
+        }
+    }
 }
 
 mod __impl {

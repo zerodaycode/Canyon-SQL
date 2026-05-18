@@ -37,7 +37,6 @@ where
         __impl::emit_order_by::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_limit(select_ast, &mut tokens);
         __impl::emit_offset(select_ast, &mut tokens);
-        println!("Generated SQL Tokens: {:#?}", tokens);
 
         tokens
     }
@@ -171,7 +170,9 @@ mod tests {
     fn render<'a>(ast: &SelectAst<'a>, base_ast: &BaseAst<'a>) -> String {
         let mut emitter = TestEmitter;
         let mut tokens = emitter.emit_select(ast, base_ast);
-        TokenWriter::new().render::<TestEmitter>(&mut tokens).unwrap()
+        TokenWriter::new()
+            .render::<TestEmitter>(&mut tokens)
+            .unwrap()
     }
 
     #[test]

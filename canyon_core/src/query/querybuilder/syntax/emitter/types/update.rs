@@ -79,12 +79,12 @@ mod tests {
     use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::dialect::MsSql;
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     #[derive(Default)]
     struct TestUpdateEmitter;
