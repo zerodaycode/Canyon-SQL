@@ -334,15 +334,7 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(1)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(2)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(3)),
-            ]
+            get_placeholders_test_expr_values_3()
         );
         assert_eq!(base_ast.bind_index, 3);
     }
@@ -358,12 +350,7 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(1)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(2)),
-            ]
+            get_placeholders_test_expr_values()
         );
         assert_eq!(base_ast.bind_index, 2);
         assert_eq!(
@@ -383,15 +370,30 @@ mod tests {
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(1)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(2)),
-            ]
+            get_placeholders_test_expr_values()
         );
         assert_eq!(base_ast.bind_index, 2);
         assert_eq!(MySql::PLACEHOLDER_SYMBOL, PlaceholderSymbol::QuestionMark);
+    }
+
+    fn get_placeholders_test_expr_values() -> Vec<SqlToken<'static>> {
+        vec![
+            SqlToken::Placeholder(PlaceholderKind::Value(1)),
+            SqlToken::Symbol(Comma),
+            SqlToken::WhiteSpace,
+            SqlToken::Placeholder(PlaceholderKind::Value(2)),
+        ]
+    }
+
+    fn get_placeholders_test_expr_values_3() -> Vec<SqlToken<'static>> {
+    let mut v = vec![];
+        v.extend(get_placeholders_test_expr_values());
+            v.extend(vec![
+            SqlToken::Symbol(Comma),
+            SqlToken::WhiteSpace,
+            SqlToken::Placeholder(PlaceholderKind::Value(3))
+        ]);
+        v
     }
 
     #[cfg(feature = "mssql")]

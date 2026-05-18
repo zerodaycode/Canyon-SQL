@@ -94,7 +94,7 @@ mod __detail {
             PlaceholderKind::Value(v) => write_value_placeholder::<D>(*v, f),
             PlaceholderKind::Like(like_kind, v) => write!(f, "{}", like_kind.as_str::<D>(*v)),
             PlaceholderKind::Range(start, end) => {
-                write!(f, "{}", generate_range_of_placeholders::<D>(*start, *end)?)
+                write!(f, "({})", generate_range_of_placeholders::<D>(*start, *end)?)
             }
         }?;
         Ok(())

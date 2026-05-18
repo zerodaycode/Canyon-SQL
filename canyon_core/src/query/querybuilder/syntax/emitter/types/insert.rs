@@ -107,9 +107,9 @@ mod tests {
         base_ast: &mut BaseAst<'a>,
     ) -> String {
         let mut emitter = TestInsertEmitter;
-        let tokens = emitter.emit_insert(&ast.0, base_ast);
+        let mut tokens = emitter.emit_insert(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestInsertEmitter>(&tokens)
+            .render::<TestInsertEmitter>(&mut tokens)
             .unwrap()
     }
 
@@ -118,9 +118,9 @@ mod tests {
         base_ast: &mut BaseAst<'a>,
     ) -> String {
         let mut emitter = TestInsertEmitterNoReturning;
-        let tokens = emitter.emit_insert(&ast.0, base_ast);
+        let mut tokens = emitter.emit_insert(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestInsertEmitterNoReturning>(&tokens)
+            .render::<TestInsertEmitterNoReturning>(&mut tokens)
             .unwrap()
     }
 

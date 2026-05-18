@@ -76,7 +76,7 @@ pub(crate) mod __impl {
 #[cfg(test)]
 mod tests {
     use super::EmitUpdate;
-    use crate::query::operators::Comp;
+    use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::dialect::MsSql;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
@@ -84,6 +84,7 @@ mod tests {
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     #[derive(Default)]
     struct TestUpdateEmitter;
@@ -103,17 +104,17 @@ mod tests {
 
     fn render_standard<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitter;
-        let tokens = emitter.emit_update(&ast.0, base_ast);
+        let mut tokens = emitter.emit_update(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestUpdateEmitter>(&tokens)
+            .render::<TestUpdateEmitter>(&mut tokens)
             .unwrap()
     }
 
     fn render_mssql<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitterMsSql;
-        let tokens = emitter.emit_update(&ast.0, base_ast);
+        let mut tokens = emitter.emit_update(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestUpdateEmitterMsSql>(&tokens)
+            .render::<TestUpdateEmitterMsSql>(&mut tokens)
             .unwrap()
     }
 
@@ -173,8 +174,8 @@ mod tests {
         base_ast.conditions.push(ConditionClause {
             kind: ConditionClauseKind::Where,
             column_name: Default::default(),
-            operator: Comp::Eq,
-            value_index: 3,
+            operator: Operator::Eq,
+            value_indexes: PlaceholderKind::Value(3),
         });
 
         let sql = render_standard(&ast, &mut base_ast);
@@ -215,8 +216,8 @@ mod tests {
         base_ast.conditions.push(ConditionClause {
             kind: ConditionClauseKind::Where,
             column_name: Default::default(),
-            operator: Comp::Eq,
-            value_index: 3,
+            operator: Operator::Eq,
+            value_indexes: PlaceholderKind::Value(3),
         });
 
         let sql = render_standard(&ast, &mut base_ast);

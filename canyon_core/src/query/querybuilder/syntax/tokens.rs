@@ -1,6 +1,6 @@
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 pub(crate) use crate::query::{
-    operators::{Comp, LikeKind},
+    operators::{Operator, LikeKind},
     querybuilder::syntax::{
         keyword::Keyword,
         symbol::Symbol,
@@ -30,7 +30,7 @@ impl<'a> SqlTokens<'a> {
         self.0.push(SqlToken::Keyword(kw))
     }
 
-    pub fn operator(&mut self, op: Comp) {
+    pub fn operator(&mut self, op: Operator) {
         self.0.push(SqlToken::Operator(op))
     }
 
@@ -118,7 +118,7 @@ pub enum SqlToken<'a> {
     Ident(Cow<'a, str>),          // a raw literal value
     Number(NumberKind),           // a raw literal numeric value
     Symbol(Symbol),               // =, ( ) , .
-    Operator(Comp),               // Comp::Eq, Comp::GtEq...
+    Operator(Operator),               // Comp::Eq, Comp::GtEq...
     Placeholder(PlaceholderKind), // $1, ? , @P1
 }
 

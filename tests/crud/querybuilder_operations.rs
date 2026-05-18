@@ -11,8 +11,8 @@ use canyon_sql::connection::DatabaseType;
 /// with the SQL filters
 ///
 use canyon_sql::query::operators::{
-    Comp,
-    Comp::*,
+    Operator,
+    Operator::*,
     LikeKind::{Full, Left, Right},
 };
 
@@ -46,8 +46,8 @@ fn test_generated_sql_by_the_select_querybuilder() {
             TournamentField::league,
         )
         .left_join(PlayerTable::DbName, TournamentField::id, PlayerField::id)
-        .where_value(&LeagueFieldValue::id(7), Comp::Gt)
-        .and(&fv, Comp::Eq)
+        .where_value(&LeagueFieldValue::id(7), Operator::Gt)
+        .and(&fv, Operator::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the

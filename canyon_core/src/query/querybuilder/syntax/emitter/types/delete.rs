@@ -51,6 +51,7 @@ mod tests {
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::delete::DeleteAst, dialect::StandardDialect, emitter::SqlEmitter,
     };
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     #[derive(Default)]
     struct TestDeleteEmitter;
@@ -66,17 +67,17 @@ mod tests {
 
     fn render_standard<'a>(ast: &SelectlessDeleteAst, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestDeleteEmitter;
-        let tokens = emitter.emit_delete(&ast.0, base_ast);
+        let mut tokens = emitter.emit_delete(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestDeleteEmitter>(&tokens)
+            .render::<TestDeleteEmitter>(&mut tokens)
             .unwrap()
     }
 
     fn render_mssql<'a>(ast: &SelectlessDeleteAst, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestDeleteEmitterMsSql;
-        let tokens = emitter.emit_delete(&ast.0, base_ast);
+        let mut tokens = emitter.emit_delete(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestDeleteEmitterMsSql>(&tokens)
+            .render::<TestDeleteEmitterMsSql>(&mut tokens)
             .unwrap()
     }
 
@@ -118,7 +119,7 @@ mod tests {
 
     #[test]
     fn emits_delete_with_where_condition() {
-        use crate::query::operators::Comp;
+        use crate::query::operators::Operator;
         use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
 
         let ast = SelectlessDeleteAst::new(DeleteAst::default());
@@ -131,8 +132,8 @@ mod tests {
         base_ast.conditions.push(ConditionClause {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
-            operator: Comp::Eq,
-            value_index: 1,
+            operator: Operator::Eq,
+            value_indexes: PlaceholderKind::Value(1),
         });
 
         let sql = render_standard(&ast, &mut base_ast);

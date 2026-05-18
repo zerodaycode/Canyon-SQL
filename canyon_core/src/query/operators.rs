@@ -5,10 +5,10 @@ use crate::query::querybuilder::syntax::{
 };
 use std::fmt::Display;
 
-/// Enumerated type for represent the comparison operations
+/// Enumerated type for represent the available operators
 /// in SQL sentences
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum Comp {
+pub enum Operator {
     /// Operator "=" equals
     Eq,
     /// Operator "!=" not equals
@@ -23,9 +23,11 @@ pub enum Comp {
     LtEq,
     /// A "LIKE" comp operator
     Like(LikeKind),
+    /// Operator "IN" for value in (value1, value2, ...)
+    In,
 }
 
-impl Display for Comp {
+impl Display for Operator {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let op = match *self {
             Self::Eq => "=",
@@ -35,32 +37,34 @@ impl Display for Comp {
             Self::Lt => "<",
             Self::LtEq => "<=",
             Self::Like(ref __kind) => "LIKE",
+            Self::In => "IN",
         };
         write!(f, "{}", op)
     }
 }
 
-impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for Comp {
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for Operator {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(2);
 
         match *self {
-            Comp::Eq => out.symbol(Symbol::Equals),
-            Comp::Neq => {
+            Operator::Eq => out.symbol(Symbol::Equals),
+            Operator::Neq => {
                 out.symbol(Symbol::Not);
                 out.symbol(Symbol::Equals)
             }
-            Comp::Gt => out.symbol(Symbol::RAngle),
-            Comp::GtEq => {
+            Operator::Gt => out.symbol(Symbol::RAngle),
+            Operator::GtEq => {
                 out.symbol(Symbol::RAngle);
                 out.symbol(Symbol::Equals)
             }
-            Comp::Lt => out.symbol(Symbol::LAngle),
-            Comp::LtEq => {
+            Operator::Lt => out.symbol(Symbol::LAngle),
+            Operator::LtEq => {
                 out.symbol(Symbol::LAngle);
                 out.symbol(Symbol::Equals)
             }
-            Comp::Like(__kind) => out.keyword(Keyword::Like),
+            Operator::Like(__kind) => out.keyword(Keyword::Like),
+            Operator::In => out.keyword(Keyword::In),
         }
 
         out

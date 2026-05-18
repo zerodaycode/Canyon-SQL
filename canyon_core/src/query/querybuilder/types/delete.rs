@@ -1,6 +1,6 @@
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Comp;
+use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
@@ -43,19 +43,19 @@ impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for no
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline]
-    fn r#where(mut self, column_name: &'a str, operator: Comp) -> Self {
+    fn r#where(mut self, column_name: &'a str, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);
         self
     }
 
     #[inline]
-    fn where_value<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: Comp) -> Self {
+    fn where_value<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: Operator) -> Self {
         self._inner.where_value(r#where, op);
         self
     }
 
     #[inline]
-    fn and<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Comp) -> Self {
+    fn and<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Operator) -> Self {
         self._inner.and(column, op);
         self
     }
@@ -89,7 +89,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn or<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Comp) -> Self {
+    fn or<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Operator) -> Self {
         self._inner.or(column, op);
         self
     }

@@ -7,7 +7,7 @@ use crate::{
     connection::database_type::DatabaseType,
     query::{
         bounds::{FieldIdentifier, FieldValueIdentifier},
-        operators::Comp,
+        operators::Operator,
         parameters::QueryParameter,
         query::Query,
         querybuilder::syntax::{
@@ -17,6 +17,8 @@ use crate::{
     },
 };
 use std::error::Error;
+use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
+use crate::query::querybuilder::types::__impl::create_condition_clause;
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a, P: AstProcessor<'a> + 'a> {
@@ -58,20 +60,20 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Ok(sql)
     }
 
-    fn r#where(&mut self, column_name: &'a str, operator: Comp) {
-        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator);
+    fn r#where(&mut self, column_name: &'a str, operator: Operator) {
+        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator, PlaceholderKind::Value(self.params.len()));
     }
 
-    pub fn where_value<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Comp) {
+    pub fn where_value<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Operator) {
         let (column_name, value) = r#where.value();
         self.params.push(value);
-        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator);
+        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator, PlaceholderKind::Value(self.params.len()));
     }
 
-    pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, operator: Comp) {
+    pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, operator: Operator) {
         let (column_name, value) = r#and.value();
         self.params.push(value);
-        __impl::create_condition_clause(self, ConditionClauseKind::And, column_name, operator);
+        __impl::create_condition_clause(self, ConditionClauseKind::And, column_name, operator, PlaceholderKind::Value(self.params.len()));
     }
 
     pub fn and_values_in<'b, Z, Q>(
@@ -83,7 +85,9 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        __impl::generate_values_in_for_and_or_or_clause(
+        let params_actual_idx = self.params.len();
+        create_condition_clause(self, ConditionClauseKind::AndValuesIn, field.as_str(), Operator::In, PlaceholderKind::Range(params_actual_idx, params_actual_idx + values.len()));
+        __impl::add_values_in_for_and_or_or_clause(
             self,
             ConditionClauseKind::And,
             field,
@@ -100,19 +104,19 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        __impl::generate_values_in_for_and_or_or_clause(self, ConditionClauseKind::Or, r#or, values)
+        __impl::add_values_in_for_and_or_or_clause(self, ConditionClauseKind::Or, r#or, values)
     }
 
-    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, operator: Comp) {
+    pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, operator: Operator) {
         let (column_name, value) = r#or.value();
         self.params.push(value);
-        __impl::create_condition_clause(self, ConditionClauseKind::And, column_name, operator);
+        __impl::create_condition_clause(self, ConditionClauseKind::Or, column_name, operator, PlaceholderKind::Value(self.params.len()));
     }
 }
 
 mod __impl {
     use crate::query::bounds::FieldIdentifier;
-    use crate::query::operators::Comp;
+    use crate::query::operators::Operator;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
@@ -120,8 +124,9 @@ mod __impl {
     use crate::query::querybuilder::syntax::emitter::AstProcessor;
     use crate::query::querybuilder::types::__validators;
     use std::error::Error;
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
-    pub(crate) fn generate_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
+    pub(crate) fn add_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
         _self: &mut QueryBuilder<'a, P>,
         _conjunction_clause_kind: ConditionClauseKind,
         field: Z,
@@ -158,13 +163,14 @@ mod __impl {
         _self: &mut QueryBuilder<'a, P>,
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
-        operator: Comp,
+        operator: Operator,
+        value_indexes: PlaceholderKind,
     ) {
         _self.base_ast.conditions.push(ConditionClause {
             kind,
             column_name: column_name.into(),
             operator,
-            value_index: _self.params.len(),
+            value_indexes,
         });
     }
 }

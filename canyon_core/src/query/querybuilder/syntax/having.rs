@@ -1,4 +1,4 @@
-use crate::query::operators::Comp;
+use crate::query::operators::Operator;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
@@ -8,12 +8,12 @@ use crate::query::querybuilder::syntax::tokens::{
 
 pub struct HavingClause<'a> {
     pub column: ColumnRef<'a>,
-    pub operator: Comp,
+    pub operator: Operator,
     pub value_index: PlaceholderKind, // TODO: shouldn't this be a placeholder?
 }
 
 impl<'a> HavingClause<'a> {
-    pub fn _new<I: Into<ColumnRef<'a>>>(column: I, operator: Comp, value_index: usize) -> Self {
+    pub fn _new<I: Into<ColumnRef<'a>>>(column: I, operator: Operator, value_index: usize) -> Self {
         Self {
             column: column.into(),
             operator,
@@ -21,7 +21,7 @@ impl<'a> HavingClause<'a> {
         }
     }
 
-    pub const fn _new_const(column: ColumnRef<'a>, operator: Comp, value_index: usize) -> Self {
+    pub const fn _new_const(column: ColumnRef<'a>, operator: Operator, value_index: usize) -> Self {
         Self {
             column,
             operator,

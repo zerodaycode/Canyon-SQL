@@ -1,4 +1,4 @@
-use crate::query::operators::Comp;
+use crate::query::operators::Operator;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
@@ -10,24 +10,26 @@ use crate::query::querybuilder::syntax::tokens::{
 pub struct ConditionClause<'a> {
     pub(crate) kind: ConditionClauseKind,
     pub(crate) column_name: ColumnRef<'a>,
-    pub(crate) operator: Comp,
-    pub(crate) value_index: usize,
+    pub(crate) operator: Operator,
+    pub(crate) value_indexes: PlaceholderKind,
 }
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
 pub enum ConditionClauseKind {
     Where,
     And,
-    Or,
     In,
+    Or,
+    AndValuesIn,
+    OrValuesIn,
 }
 
 impl From<ConditionClauseKind> for Keyword {
     fn from(keyword: ConditionClauseKind) -> Self {
         match keyword {
             ConditionClauseKind::Where => Keyword::Where,
-            ConditionClauseKind::And => Keyword::And,
-            ConditionClauseKind::Or => Keyword::Or,
-            ConditionClauseKind::In => Keyword::In,
+            ConditionClauseKind::And | ConditionClauseKind::AndValuesIn => Keyword::And,
+            ConditionClauseKind::Or | ConditionClauseKind::OrValuesIn => Keyword::Or,
+            ConditionClauseKind::In => Keyword::In
         }
     }
 }
@@ -51,11 +53,10 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
 
         out.whitespace();
 
-        // Value placeholder
-        out.placeholder(match self.operator {
-            Comp::Like(kind) => PlaceholderKind::Like(kind, self.value_index),
-            _ => PlaceholderKind::Value(self.value_index),
-        });
+        // Value(s) placeholder(s)
+        out.placeholder(self.value_indexes);
+
+        out.whitespace();
 
         out
     }

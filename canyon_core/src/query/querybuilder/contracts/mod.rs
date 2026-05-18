@@ -2,7 +2,7 @@
 //! of the behaviour of the Canyon-SQL QueryBuilder
 
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Comp;
+use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
@@ -150,7 +150,7 @@ pub trait QueryBuilderOps<'a> {
     ///  It will generate a SQL statement with the where constraint value generated as a placeholder,
     /// depending on the underlying database driver and the number of elements already added to the
     /// querybuilder
-    fn r#where(self, column: &'a str, op: Comp) -> Self;
+    fn r#where(self, column: &'a str, op: Operator) -> Self;
 
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///
@@ -158,7 +158,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn where_value<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
+    fn where_value<Z: FieldValueIdentifier>(self, column: &'a Z, op: Operator) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query.
     ///
@@ -166,7 +166,7 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn and<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
+    fn and<Z: FieldValueIdentifier>(self, column: &'a Z, op: Operator) -> Self;
 
     /// Generates an `AND` SQL clause for constraint the query that's being constructed
     ///
@@ -209,5 +209,5 @@ pub trait QueryBuilderOps<'a> {
     ///   column name and the value for the filter
     /// * `op` - Any element that implements [`Operator`] for create the comparison
     ///   or equality binary operator
-    fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: Comp) -> Self;
+    fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: Operator) -> Self;
 }

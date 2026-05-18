@@ -1,8 +1,9 @@
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::ast::select::SelectAst;
+use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
 use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::tokens::SqlTokens;
+use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
 /// Blanket implementation for all the SqlEmitter implementors that are able to generate
 /// SELECT like SQL clauses
@@ -27,13 +28,16 @@ where
         __impl::emit_from::<T::Dialect>(base_ast, &mut tokens);
         __impl::emit_joins::<T::Dialect>(select_ast, &mut tokens);
 
-        // TODO: conditional clauses
+        base_ast.conditions.iter().for_each(|cond| {
+            tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(cond));
+        });
 
         __impl::emit_group_by::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_having::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_order_by::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_limit(select_ast, &mut tokens);
         __impl::emit_offset(select_ast, &mut tokens);
+        println!("Generated SQL Tokens: {:#?}", tokens);
 
         tokens
     }
@@ -147,7 +151,7 @@ mod __impl {
 #[cfg(test)]
 mod tests {
     use crate::query::{
-        operators::Comp,
+        operators::Operator,
         querybuilder::syntax::{
             ast::BaseAst, ast::select::SelectAst, column::ColumnRef, dialect::StandardDialect,
             emitter::SqlEmitter, emitter::types::select::EmitSelect, order::OrderByClause,
@@ -245,28 +249,28 @@ mod tests {
                 JoinKind::Inner,
                 "profiles".into(),
                 col("users.id"),
-                Comp::Eq,
+                Operator::Eq,
                 col("profiles.user_id"),
             ),
             JoinClause::new(
                 JoinKind::Left,
                 "roles".into(),
                 col("users.role_id"),
-                Comp::Eq,
+                Operator::Eq,
                 col("roles.id"),
             ),
             JoinClause::new(
                 JoinKind::Right,
                 "teams".into(),
                 col("users.team_id"),
-                Comp::Eq,
+                Operator::Eq,
                 col("teams.id"),
             ),
             JoinClause::new(
                 JoinKind::FullOuter,
                 "permissions".into(),
                 col("users.id"),
-                Comp::Eq,
+                Operator::Eq,
                 col("permissions.user_id"),
             ),
         ];
