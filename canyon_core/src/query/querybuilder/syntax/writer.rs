@@ -1,6 +1,10 @@
+use std::borrow::Cow;
+use crate::query::ColumnRef;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::SqlToken;
 use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
+use crate::query::querybuilder::syntax::dialect::{MsSql, SqlDialect};
+use crate::query::querybuilder::syntax::emitter::types::helpers::{emit_columns, push_quoted_ident};
 
 pub struct TokenWriter {}
 
@@ -136,5 +140,66 @@ mod __detail {
             DatabaseType::MySQL => write!(f, "{}", placeholder_symbol),
             _ => write!(f, "{}{}", placeholder_symbol, idx_value),
         }
+    }
+}
+
+mod tests {
+    use super::*;
+
+    #[cfg(feature = "mssql")]
+    #[test]
+    fn mssql_ident_quoting_opening_and_closing_convert_to_expected_symbols() {
+        use crate::query::querybuilder::syntax::symbol::Symbol;
+
+        let opening: Symbol = MsSql::IDENT_QUOTING.opening().into();
+        let closing: Symbol = MsSql::IDENT_QUOTING.closing().into();
+
+        assert_eq!(opening, Symbol::LBracket);
+        assert_eq!(closing, Symbol::RBracket);
+        assert_ne!(opening, closing);
+    }
+
+    #[cfg(feature = "mssql")]
+    #[test]
+    fn push_quoted_ident_with_mssql_emits_left_ident_right_bracket_sequence() {
+        let mut tokens = SqlTokens::default();
+        push_quoted_ident::<MsSql>("users", &mut tokens);
+
+        assert_eq!(
+            tokens.inner(),
+            vec![
+                SqlToken::Symbol(Symbol::LBracket),
+                SqlToken::Ident(Cow::Borrowed("users")),
+                SqlToken::Symbol(Symbol::RBracket),
+            ]
+        );
+    }
+
+    #[cfg(feature = "mssql")]
+    #[test]
+    fn emit_columns_with_mssql_emits_balanced_brackets_for_every_identifier() {
+        let columns = vec![ColumnRef::from("id"), ColumnRef::from("name"), ColumnRef::from("email")];
+        let mut tokens = SqlTokens::default();
+
+        emit_columns::<MsSql>(&columns, &mut tokens);
+
+        assert_eq!(
+            tokens.inner(),
+            vec![
+                SqlToken::Symbol(Symbol::LBracket),
+                SqlToken::Ident(Cow::Borrowed("id")),
+                SqlToken::Symbol(Symbol::RBracket),
+                SqlToken::Symbol(Symbol::Comma),
+                SqlToken::WhiteSpace,
+                SqlToken::Symbol(Symbol::LBracket),
+                SqlToken::Ident(Cow::Borrowed("name")),
+                SqlToken::Symbol(Symbol::RBracket),
+                SqlToken::Symbol(Symbol::Comma),
+                SqlToken::WhiteSpace,
+                SqlToken::Symbol(Symbol::LBracket),
+                SqlToken::Ident(Cow::Borrowed("email")),
+                SqlToken::Symbol(Symbol::RBracket),
+            ]
+        );
     }
 }

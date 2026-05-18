@@ -14,7 +14,7 @@ use crate::{
         query::Query,
         querybuilder::syntax::{
             ast::BaseAst, clause::ConditionClauseKind, emitter::AstProcessor,
-            table_metadata::TableMetadata, tokens::Symbol,
+            table_metadata::TableMetadata
         },
     },
 };

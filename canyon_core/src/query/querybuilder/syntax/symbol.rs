@@ -29,7 +29,8 @@ impl From<IdentQuoting> for Symbol {
         match quoting {
             IdentQuoting::DoubleQuote => Symbol::DoubleQuote,
             IdentQuoting::Backtick => Symbol::Backtick,
-            IdentQuoting::OpeningBracket | IdentQuoting::ClosingBracket => Symbol::LBracket, // We can use LBracket to represent both opening and closing brackets since they are rendered the same way
+            IdentQuoting::OpeningBracket => Symbol::LBracket,
+            IdentQuoting::ClosingBracket => Symbol::RBracket,
         }
     }
 }
