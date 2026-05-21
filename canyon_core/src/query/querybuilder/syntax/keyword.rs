@@ -35,6 +35,9 @@ pub enum Keyword {
     Offset,
     Values,
     Set,
+    Not,
+    Cast,
+    Concat,
 }
 
 impl Display for Keyword {
@@ -69,6 +72,9 @@ impl Display for Keyword {
             Keyword::Offset => "OFFSET",
             Keyword::Values => "VALUES",
             Keyword::Set => "SET",
+            Keyword::Not => "NOT",
+            Keyword::Cast => "CAST",
+            Keyword::Concat => "CONCAT",
         };
         write!(f, "{}", i)
     }

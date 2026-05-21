@@ -1,10 +1,6 @@
-use std::borrow::Cow;
-use crate::query::ColumnRef;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::SqlToken;
 use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
-use crate::query::querybuilder::syntax::dialect::{MsSql, SqlDialect};
-use crate::query::querybuilder::syntax::emitter::types::helpers::{emit_columns, push_quoted_ident};
 
 pub struct TokenWriter {}
 
@@ -56,6 +52,7 @@ mod __impl {
     }
 }
 
+
 mod __detail {
     use crate::{
         connection::database_type::DatabaseType,
@@ -96,7 +93,7 @@ mod __detail {
     ) -> Result<(), std::fmt::Error> {
         match ph_kind {
             PlaceholderKind::Value(v) => write_value_placeholder::<D>(*v, f),
-            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", like_kind.as_str::<D>(*v)),
+            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", *v),
             PlaceholderKind::Range(start, end) => {
                 write!(
                     f,
@@ -143,8 +140,16 @@ mod __detail {
     }
 }
 
-mod tests {
-    use super::*;
+// TODO: this test brings value to the codebase? aren't already enought the ones on helpers.rs?
+#[cfg(test)]
+#[cfg(feature = "mssql")]
+mod mssql_tests {
+    use crate::query::querybuilder::syntax::dialect::{MsSql, SqlDialect};
+    use crate::query::querybuilder::syntax::emitter::types::helpers::{emit_columns, push_quoted_ident};
+    use crate::query::querybuilder::syntax::symbol::Symbol;
+    use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens};
+    use crate::query::ColumnRef;
+    use std::borrow::Cow;
 
     #[cfg(feature = "mssql")]
     #[test]
@@ -178,28 +183,39 @@ mod tests {
     #[cfg(feature = "mssql")]
     #[test]
     fn emit_columns_with_mssql_emits_balanced_brackets_for_every_identifier() {
-        let columns = vec![ColumnRef::from("id"), ColumnRef::from("name"), ColumnRef::from("email")];
+        let columns = get_columns_mock();
         let mut tokens = SqlTokens::default();
-
         emit_columns::<MsSql>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),
-            vec![
-                SqlToken::Symbol(Symbol::LBracket),
-                SqlToken::Ident(Cow::Borrowed("id")),
-                SqlToken::Symbol(Symbol::RBracket),
-                SqlToken::Symbol(Symbol::Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Symbol(Symbol::LBracket),
-                SqlToken::Ident(Cow::Borrowed("name")),
-                SqlToken::Symbol(Symbol::RBracket),
-                SqlToken::Symbol(Symbol::Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Symbol(Symbol::LBracket),
-                SqlToken::Ident(Cow::Borrowed("email")),
-                SqlToken::Symbol(Symbol::RBracket),
-            ]
+            get_columns_assert_values(MsSql::IDENT_QUOTING.opening().into(), MsSql::IDENT_QUOTING.closing().into())
         );
+    }
+
+    fn get_columns_mock() -> Vec<ColumnRef<'static>> {
+        vec![
+            ColumnRef::from("id"),
+            ColumnRef::from("name"),
+            ColumnRef::from("email"),
+        ]
+    }
+
+    fn get_columns_assert_values(opening: Symbol, closing: Symbol) -> Vec<SqlToken<'static>> {
+        vec![
+            SqlToken::Symbol(opening),
+            SqlToken::Ident(Cow::Borrowed("id")),
+            SqlToken::Symbol(closing),
+            SqlToken::Symbol(Symbol::Comma),
+            SqlToken::WhiteSpace,
+            SqlToken::Symbol(opening),
+            SqlToken::Ident(Cow::Borrowed("name")),
+            SqlToken::Symbol(closing),
+            SqlToken::Symbol(Symbol::Comma),
+            SqlToken::WhiteSpace,
+            SqlToken::Symbol(opening),
+            SqlToken::Ident(Cow::Borrowed("email")),
+            SqlToken::Symbol(closing),
+        ]
     }
 }

@@ -34,7 +34,6 @@ impl<'a> UpdateQueryBuilder<'a> {
     }
 
     pub fn build<'b>(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
-        // __impl::create_set_clause_columns_with_placeholders(&mut self);
         self._inner.build()
     }
 }
@@ -76,16 +75,6 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
-    // #[inline]
-    // fn read_sql(&'a self) -> &'a str {
-    //     self._inner.build().unwrap().sql.as_str()
-    // }
-
-    // #[inline(always)]
-    // fn push_sql(mut self, sql: &str) {
-    //     self._inner.sql.push_str(sql);
-    // }
-
     #[inline]
     fn r#where(mut self, column_name: &'a str, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);
@@ -136,23 +125,6 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     fn or<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Operator) -> Self {
         self._inner.or(column, op);
         self
-    }
-}
-
-mod __impl {
-    use crate::query::querybuilder::UpdateQueryBuilder;
-
-    pub(super) fn _create_set_clause_columns_with_placeholders(_self: &mut UpdateQueryBuilder) {
-        let mut set_clause = String::new();
-        set_clause.push_str(" SET ");
-
-        for (idx, column) in _self.columns.iter().enumerate() {
-            set_clause.push_str(&format!("{} = ${}", column, _self._inner.params.len() + 1));
-
-            if idx < _self.columns.len() - 1 {
-                set_clause.push_str(", ");
-            }
-        }
     }
 }
 

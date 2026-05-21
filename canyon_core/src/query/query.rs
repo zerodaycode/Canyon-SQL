@@ -57,8 +57,3 @@ impl<'a> Query<'a> {
     }
 }
 
-impl PartialEq<&str> for Query<'_> {
-    fn eq(&self, other: &&str) -> bool {
-        self.sql == *other
-    }
-}

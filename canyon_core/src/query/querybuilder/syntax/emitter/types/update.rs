@@ -67,7 +67,9 @@ pub(crate) mod __impl {
                 tokens.whitespace();
             }
             tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(col));
+            tokens.whitespace();
             tokens.symbol(Symbol::Equals);
+            tokens.whitespace();
             tokens.placeholder(PlaceholderKind::Value(base_ast.next_placeholder_index()));
         }
     }
@@ -79,12 +81,12 @@ mod tests {
     use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::dialect::MsSql;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     #[derive(Default)]
     struct TestUpdateEmitter;
@@ -138,7 +140,7 @@ mod tests {
 
         let sql = render_standard(&ast, &mut base_ast);
 
-        assert_eq!(sql.trim(), "UPDATE users SET \"name\" = $1");
+        assert_eq!(sql, "UPDATE users SET \"name\" = $1;");
     }
 
     #[test]
@@ -155,8 +157,8 @@ mod tests {
         let sql = render_standard(&ast, &mut base_ast);
 
         assert_eq!(
-            sql.trim(),
-            "UPDATE users SET \"name\" = $1, \"email\" = $2, \"updated_at\" = $3"
+            sql,
+            "UPDATE users SET \"name\" = $1, \"email\" = $2, \"updated_at\" = $3;"
         );
     }
 
@@ -173,7 +175,7 @@ mod tests {
 
         base_ast.conditions.push(ConditionClause {
             kind: ConditionClauseKind::Where,
-            column_name: Default::default(),
+            column_name: "id".into(),
             operator: Operator::Eq,
             value_indexes: PlaceholderKind::Value(3),
         });
@@ -182,7 +184,7 @@ mod tests {
 
         assert_eq!(
             sql.trim(),
-            "UPDATE users SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3"
+            "UPDATE users SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3;"
         );
     }
 
@@ -199,7 +201,7 @@ mod tests {
 
         let sql = render_mssql(&ast, &mut base_ast);
 
-        assert_eq!(sql.trim(), "UPDATE users SET [name] = @P1, [email] = @P2");
+        assert_eq!(sql.trim(), "UPDATE users SET [name] = @P1, [email] = @P2;");
     }
 
     #[test]
@@ -215,7 +217,7 @@ mod tests {
 
         base_ast.conditions.push(ConditionClause {
             kind: ConditionClauseKind::Where,
-            column_name: Default::default(),
+            column_name: "id".into(),
             operator: Operator::Eq,
             value_indexes: PlaceholderKind::Value(3),
         });
@@ -224,7 +226,7 @@ mod tests {
 
         assert_eq!(
             sql.trim(),
-            "UPDATE users SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3"
+            "UPDATE users SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3;"
         );
     }
 }

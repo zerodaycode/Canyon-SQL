@@ -186,7 +186,7 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-        assert_eq!(sql, "SELECT id, name FROM users");
+        assert_eq!(sql, "SELECT \"id\", \"name\" FROM \"users\";");
     }
 
     #[test]
@@ -205,14 +205,14 @@ mod tests {
         let sql = render(&ast, &base_ast);
         assert_eq!(
             sql,
-            "SELECT id FROM users ORDER BY id DESC LIMIT 10 OFFSET 20"
+            "SELECT id FROM users ORDER BY id DESC LIMIT 10 OFFSET 20;"
         );
     }
 
     #[test]
     fn emits_select_without_optional_clauses() {
         let mut ast = SelectAst::new();
-        ast.columns = vec![col("*")];
+        ast.columns = vec![];
 
         let base_ast = BaseAst {
             table: "users".into(),
@@ -220,14 +220,14 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-        assert_eq!(sql, "SELECT * FROM users");
+        assert_eq!(sql, "SELECT * FROM \"users\";");
     }
 
     #[test]
     fn emits_group_by_when_present() {
         let mut ast = SelectAst::new();
-        ast.columns = vec![col("country")];
-        ast.group_by = Some(vec![col("country")]);
+        ast.columns = vec![col("users.country")];
+        ast.group_by = Some(vec![col("users.country")]);
 
         let base_ast = BaseAst {
             table: "users".into(),
@@ -235,7 +235,7 @@ mod tests {
         };
 
         let sql = render(&ast, &base_ast);
-        assert_eq!(sql, "SELECT country FROM users GROUP BY country");
+        assert_eq!(sql, "SELECT country FROM users GROUP BY country;");
     }
 
     #[test]

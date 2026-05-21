@@ -56,7 +56,6 @@ mod tests {
         IdentQuotingStyle, PlaceholderSymbol, StandardDialect,
     };
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-    use std::borrow::Cow;
 
     #[cfg(feature = "mssql")]
     use crate::query::querybuilder::syntax::dialect::MsSql;
@@ -137,7 +136,10 @@ mod tests {
         let mut tokens = SqlTokens::default();
         // TODO: this isn't taking in consideration the scape quotes, care
         push_quoted_ident::<StandardDialect>("users", &mut tokens);
-        assert_eq!(tokens.inner(), get_columns_test_expr_values::<StandardDialect>(&["users"]));
+        assert_eq!(
+            tokens.inner(),
+            get_columns_test_expr_values::<StandardDialect>(&["users"])
+        );
     }
 
     #[cfg(feature = "postgres")]
@@ -145,20 +147,20 @@ mod tests {
     fn push_quoted_ident_with_postgres() {
         let mut tokens = SqlTokens::default();
         push_quoted_ident::<PgDialect>("users", &mut tokens);
-        assert_eq!(tokens.inner(), get_columns_test_expr_values::<PgDialect>(&["users"]));
+        assert_eq!(
+            tokens.inner(),
+            get_columns_test_expr_values::<PgDialect>(&["users"])
+        );
     }
 
-    fn get_columns_test_expr_values<D: SqlDialect>(lits: &[&'static str], ) -> Vec<SqlToken<'static>> {
-        let mut tokens = Vec::with_capacity(lits.len().saturating_mul(5));
+    fn get_columns_test_expr_values<D: SqlDialect>(
+        literals: &[&'static str],
+    ) -> Vec<SqlToken<'static>> {
+        let mut tokens = SqlTokens::default();
 
-        for (idx, lit) in lits.iter().enumerate() {
-            tokens.extend([
-                D::IDENT_QUOTING.opening().into(),
-                SqlToken::Ident(Cow::Borrowed(*lit)),
-                D::IDENT_QUOTING.closing().into(),
-            ]);
-
-            if idx + 1 < lits.len() {
+        for (idx, lit) in literals.iter().enumerate() {
+            push_quoted_ident::<D>(lit, &mut tokens);
+            if idx + 1 < literals.len() {
                 tokens.extend([
                     SqlToken::Symbol(Comma),
                     SqlToken::WhiteSpace,
@@ -166,7 +168,7 @@ mod tests {
             }
         }
 
-        tokens
+        tokens.inner()
     }
 
     #[cfg(feature = "mysql")]
@@ -174,7 +176,10 @@ mod tests {
     fn push_quoted_ident_with_mysql() {
         let mut tokens = SqlTokens::default();
         push_quoted_ident::<MySql>("users", &mut tokens);
-        assert_eq!(tokens.inner(), get_columns_test_expr_values::<MySql>(&["users"]));
+        assert_eq!(
+            tokens.inner(),
+            get_columns_test_expr_values::<MySql>(&["users"])
+        );
     }
 
     #[cfg(feature = "mssql")]

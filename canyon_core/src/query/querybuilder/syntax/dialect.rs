@@ -13,16 +13,17 @@ pub trait SqlDialect {
     const SUPPORTS_RETURNING: bool = true;
     const _SUPPORTS_LIMIT_OFFSET: bool = true;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::DoubleQuote;
+    const ESCAPE_QUOTED_IDENT_DELIMITER: bool = false;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::DollarNumbered;
     const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Varchar;
 }
 
 /// Safe assuming that Canyon's default is PostgreSQL,
 /// which is the most widely used and standards-compliant database among the supported ones.
-#[allow(dead_code)]
 pub struct StandardDialect;
 impl SqlDialect for StandardDialect {
     const DB: DatabaseType = PostgreSql;
+    const ESCAPE_QUOTED_IDENT_DELIMITER: bool = true;
 }
 
 #[cfg(feature = "postgres")]
@@ -31,6 +32,8 @@ pub struct PgDialect;
 impl SqlDialect for PgDialect {
     const DB: DatabaseType = PostgreSql;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::DoubleQuote;
+    const ESCAPE_QUOTED_IDENT_DELIMITER: bool = true;
+
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::DollarNumbered;
 }
 
@@ -145,6 +148,15 @@ impl Display for PlaceholderSymbol {
 pub enum PlaceholderDatatype {
     Varchar,
     Char,
+}
+
+impl From<PlaceholderDatatype> for &'static str {
+    fn from(datatype: PlaceholderDatatype) -> Self {
+        match datatype {
+            PlaceholderDatatype::Varchar => "VARCHAR",
+            PlaceholderDatatype::Char => "CHAR",
+        }
+    }
 }
 
 impl Display for PlaceholderDatatype {

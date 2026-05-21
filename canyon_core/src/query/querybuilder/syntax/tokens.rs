@@ -137,26 +137,9 @@ pub enum PlaceholderKind {
 }
 
 mod __impl_sql_token {
-    use crate::query::querybuilder::syntax::dialect::IdentQuoting;
     use super::*;
+    use crate::query::querybuilder::syntax::dialect::IdentQuoting;
 
-    // impl<'a> From<Keyword> for SqlToken<'a> {
-    //     fn from(keyword: Keyword) -> Self {
-    //         SqlToken::Keyword(keyword)
-    //     }
-    // }
-    // 
-    // impl<'a> From<Symbol> for SqlToken<'a> {
-    //     fn from(symbol: Symbol) -> Self {
-    //         SqlToken::Symbol(symbol)
-    //     }
-    // }
-    // 
-    // impl<'a> From<Operator> for SqlToken<'a> {
-    //     fn from(operator: Operator) -> Self {
-    //         SqlToken::Operator(operator)
-    //     }
-    // }
     impl<'a> From<IdentQuoting> for SqlToken<'a> {
         fn from(quoting: IdentQuoting) -> Self {
             match quoting {

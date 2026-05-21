@@ -71,8 +71,8 @@ pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool
 pub fn table_schema_parser<'a>(
     macro_data: &MacroTokens<'_>,
 ) -> Result<TableMetadata<'a>, TokenStream> {
-    let mut table_name: Option<String> = None;
-    let mut schema: Option<String> = None;
+    let mut table_name: Option<&str> = None;
+    let mut schema: Option<&str> = None;
 
     for attr in macro_data.attrs {
         let mut segments = attr.path.segments.iter();
@@ -104,8 +104,8 @@ pub fn table_schema_parser<'a>(
 
 fn parse_canyon_entity_attr(
     attr: &Attribute,
-    schema: &mut Option<String>,
-    table_name: &mut Option<String>,
+    schema: &mut Option<&str>,
+    table_name: &mut Option<&str>,
 ) -> Result<(), TokenStream> {
     if attr
         .path
@@ -124,9 +124,9 @@ fn parse_canyon_entity_attr(
                     match &nv.lit {
                         syn::Lit::Str(s) => {
                             if identifier == "table_name" {
-                                *table_name = Some(s.value());
+                                *table_name = Some(s.value().as_str());
                             } else if identifier == "schema" {
-                                *schema = Some(s.value());
+                                *schema = Some(&*s.value());
                             } else {
                                 return Err(
                                     syn::Error::new_spanned(

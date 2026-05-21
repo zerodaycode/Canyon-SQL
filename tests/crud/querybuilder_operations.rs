@@ -83,12 +83,12 @@ fn test_generated_sql_by_the_select_querybuilder() {
 fn test_crud_find_with_querybuilder_and_fulllike() {
     // Find all the leagues with "LC" in their name
     let binding = LeagueFieldValue::name("LEC".to_string());
-    let mut filtered_leagues_result = League::select_query()
+    let filtered_leagues_result = League::select_query()
         .unwrap()
         .where_value(&binding, Like(Full));
 
     assert_eq!(
-        filtered_leagues_result.build().unwrap(),
+        filtered_leagues_result.build().unwrap().sql,
         "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
     )
 }

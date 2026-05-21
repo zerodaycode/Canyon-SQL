@@ -4,11 +4,12 @@ use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
+use crate::query::querybuilder::syntax::emitter::types::helpers::push_quoted_ident;
 
 #[derive(Clone, Default, Debug)]
 pub struct TableMetadata<'a> {
-    pub schema: Option<Cow<'a, str>>,
-    pub name: Cow<'a, str>,
+    pub schema: Option<&'a str>,
+    pub name: &'a str,
 }
 
 impl<'a, T> From<T> for TableMetadata<'a>
@@ -24,11 +25,11 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for TableMetadata<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(3);
         if let Some(schema) = &self.schema {
-            out.ident(schema.clone());
+            push_quoted_ident::<D>(schema, &mut out);
             out.symbol(Symbol::Dot);
         };
-        out.ident(self.name.clone());
-        out.into_iter()
+        push_quoted_ident::<D>(self.name, &mut out);
+        out
     }
 }
 impl<'a> From<&'a str> for TableMetadata<'a> {
@@ -39,13 +40,13 @@ impl<'a> From<&'a str> for TableMetadata<'a> {
     fn from(value: &'a str) -> Self {
         if let Some((schema, table)) = value.split_once('.') {
             TableMetadata {
-                schema: Some(Cow::from(schema)),
-                name: Cow::from(table),
+                schema: Some(schema),
+                name: table,
             }
         } else {
             TableMetadata {
                 schema: None,
-                name: Cow::from(value),
+                name: value,
             }
         }
     }
@@ -55,11 +56,11 @@ impl<'a> TableMetadata<'a> {
     pub fn new(table_name: &'a str) -> Self {
         Self::from(table_name)
     }
-    pub fn schema(&mut self, schema: String) {
-        self.schema = Some(Cow::from(schema));
+    pub fn schema(&mut self, schema: &'a str) {
+        self.schema = Some(schema);
     }
-    pub fn table_name(&mut self, table_name: String) {
-        self.name = Cow::from(table_name)
+    pub fn table_name(&mut self, table_name: &'a str) {
+        self.name = table_name;
     }
 
     /// Returns an already formatted version of the schema and table of a target database table

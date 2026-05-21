@@ -47,11 +47,11 @@ pub trait EmitDelete<'a>: SqlEmitter<'a> {
 mod tests {
     use super::EmitDelete;
     use crate::query::querybuilder::syntax::dialect::MsSql;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::delete::DeleteAst, dialect::StandardDialect, emitter::SqlEmitter,
     };
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     #[derive(Default)]
     struct TestDeleteEmitter;
@@ -100,7 +100,7 @@ mod tests {
 
         let sql = render_standard(&ast, &mut base_ast);
 
-        assert_eq!(sql.trim(), "DELETE FROM users");
+        assert_eq!(sql.trim(), "DELETE FROM users;");
     }
 
     #[test]
@@ -114,7 +114,7 @@ mod tests {
 
         let sql = render_mssql(&ast, &mut base_ast);
 
-        assert_eq!(sql.trim(), "DELETE FROM users");
+        assert_eq!(sql.trim(), "DELETE FROM users;");
     }
 
     #[test]
@@ -138,6 +138,6 @@ mod tests {
 
         let sql = render_standard(&ast, &mut base_ast);
 
-        assert_eq!(sql.trim(), "DELETE FROM users WHERE \"id\" = $1");
+        assert_eq!(sql.trim(), "DELETE FROM users WHERE \"id\" = $1;");
     }
 }

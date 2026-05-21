@@ -148,7 +148,7 @@ mod tests {
         let sql = render_with_returning(&ast, &mut base_ast);
         assert_eq!(
             sql,
-            "INSERT INTO users (\"id\", \"name\") VALUES ($1, $2) RETURNING \"id\""
+            "INSERT INTO users (\"id\", \"name\") VALUES ($1, $2) RETURNING \"id\";"
         );
     }
 
@@ -167,7 +167,7 @@ mod tests {
         let sql = render_without_returning(&ast, &mut base_ast);
         assert_eq!(
             sql.trim(),
-            "INSERT INTO users ([id], [name]) VALUES (@P1, @P2)"
+            "INSERT INTO users ([id], [name]) VALUES (@P1, @P2);"
         );
     }
 
@@ -186,7 +186,7 @@ mod tests {
         let sql = render_with_returning(&ast, &mut base_ast);
         assert_eq!(
             sql.trim(),
-            "INSERT INTO users (\"name\", \"email\") VALUES ($1, $2) RETURNING \"id\", \"created_at\""
+            "INSERT INTO users (\"name\", \"email\") VALUES ($1, $2) RETURNING \"id\", \"created_at\";"
         );
     }
 
@@ -204,6 +204,6 @@ mod tests {
         };
 
         let sql = render_with_returning(&ast, &mut base_ast);
-        assert_eq!(sql.trim(), "INSERT INTO users (\"name\") VALUES ($1)");
+        assert_eq!(sql.trim(), "INSERT INTO users (\"name\") VALUES ($1);");
     }
 }
