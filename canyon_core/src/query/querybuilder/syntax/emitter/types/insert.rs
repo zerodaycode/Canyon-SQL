@@ -18,7 +18,7 @@ where
         &mut self,
         ast: &impl AstProcessor<'a>,
         base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a> {
+    ) -> SqlTokens<'a>{
         let mut tokens = SqlTokens::default();
 
         let ast = transient::Downcast::downcast_ref::<InsertAst>(ast.as_any()).expect(
@@ -109,7 +109,7 @@ mod tests {
         let mut emitter = TestInsertEmitter;
         let mut tokens = emitter.emit_insert(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestInsertEmitter>(&mut tokens)
+            .render::<TestInsertEmitter>(tokens)
             .unwrap()
     }
 
@@ -120,7 +120,7 @@ mod tests {
         let mut emitter = TestInsertEmitterNoReturning;
         let mut tokens = emitter.emit_insert(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestInsertEmitterNoReturning>(&mut tokens)
+            .render::<TestInsertEmitterNoReturning>(tokens)
             .unwrap()
     }
 

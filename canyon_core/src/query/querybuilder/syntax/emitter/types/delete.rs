@@ -27,7 +27,7 @@ where
             tokens.whitespace();
             for cond in &base_ast.conditions {
                 tokens
-                    .extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(cond));
+                    .extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&cond));
             }
         }
 
@@ -69,7 +69,7 @@ mod tests {
         let mut emitter = TestDeleteEmitter;
         let mut tokens = emitter.emit_delete(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestDeleteEmitter>(&mut tokens)
+            .render::<TestDeleteEmitter>(tokens)
             .unwrap()
     }
 
@@ -77,7 +77,7 @@ mod tests {
         let mut emitter = TestDeleteEmitterMsSql;
         let mut tokens = emitter.emit_delete(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestDeleteEmitterMsSql>(&mut tokens)
+            .render::<TestDeleteEmitterMsSql>(tokens)
             .unwrap()
     }
 
@@ -113,7 +113,6 @@ mod tests {
         };
 
         let sql = render_mssql(&ast, &mut base_ast);
-
         assert_eq!(sql.trim(), "DELETE FROM users;");
     }
 

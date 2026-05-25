@@ -14,7 +14,7 @@ where
     fn emit_select(
         &mut self,
         ast: &impl AstProcessor<'a>,
-        base_ast: &BaseAst<'a>,
+        base_ast: &mut BaseAst<'a>,
     ) -> SqlTokens<'a> {
         let mut tokens = SqlTokens::default();
 
@@ -28,9 +28,9 @@ where
         __impl::emit_from::<T::Dialect>(base_ast, &mut tokens);
         __impl::emit_joins::<T::Dialect>(select_ast, &mut tokens);
 
-        base_ast.conditions.iter().for_each(|cond| {
-            tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(cond));
-        });
+        for condition in &base_ast.conditions {
+            tokens.extend(<ConditionClause<'a> as ToSqlTokens<'a, T::Dialect>>::to_tokens(condition));
+        }
 
         __impl::emit_group_by::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_having::<T::Dialect>(select_ast, &mut tokens);
@@ -70,8 +70,11 @@ where
 /// Implementors normally do not override this method and instead rely on the
 /// default blanket implementation.
 pub trait EmitSelect<'a>: SqlEmitter<'a> {
-    fn emit_select(&mut self, ast: &impl AstProcessor<'a>, base_ast: &BaseAst<'a>)
-    -> SqlTokens<'a>;
+    fn emit_select(
+        &mut self,
+        ast: &impl AstProcessor<'a>,
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a>;
 }
 
 mod __impl {
@@ -92,7 +95,7 @@ mod __impl {
 
     pub(crate) fn emit_from<'a, D: SqlDialect>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
         tokens.keyword(Keyword::From);
-        tokens.extend(<TableMetadata<'_> as ToSqlTokens<'_, D>>::to_tokens(
+        tokens.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &base_ast.table,
         ));
         tokens.whitespace();
@@ -100,7 +103,7 @@ mod __impl {
 
     pub(crate) fn emit_joins<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
         for join in &ast.joins {
-            tokens.extend(<JoinClause<'_> as ToSqlTokens<'_, D>>::to_tokens(join));
+            tokens.extend(<JoinClause<'a> as ToSqlTokens<'a, D>>::to_tokens(join));
         }
     }
 
@@ -167,11 +170,11 @@ mod tests {
         ColumnRef::from(name)
     }
 
-    fn render<'a>(ast: &SelectAst<'a>, base_ast: &BaseAst<'a>) -> String {
+    fn render<'a>(ast: &SelectAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestEmitter;
-        let mut tokens = emitter.emit_select(ast, base_ast);
+        let tokens = emitter.emit_select(ast, base_ast);
         TokenWriter::new()
-            .render::<TestEmitter>(&mut tokens)
+            .render::<TestEmitter>(tokens)
             .unwrap()
     }
 
@@ -180,12 +183,12 @@ mod tests {
         let mut ast = SelectAst::new();
         ast.columns = vec![col("id"), col("name")];
 
-        let base_ast = BaseAst {
+        let mut base_ast = BaseAst {
             table: "users".into(),
             ..Default::default()
         };
 
-        let sql = render(&ast, &base_ast);
+        let sql = render(&ast, &mut base_ast);
         assert_eq!(sql, "SELECT \"id\", \"name\" FROM \"users\";");
     }
 
@@ -197,12 +200,12 @@ mod tests {
         ast.limit = Some(10);
         ast.offset = Some(20);
 
-        let base_ast = BaseAst {
+        let mut base_ast = BaseAst {
             table: "users".into(),
             ..Default::default()
         };
 
-        let sql = render(&ast, &base_ast);
+        let sql = render(&ast, &mut base_ast);
         assert_eq!(
             sql,
             "SELECT id FROM users ORDER BY id DESC LIMIT 10 OFFSET 20;"
@@ -214,12 +217,12 @@ mod tests {
         let mut ast = SelectAst::new();
         ast.columns = vec![];
 
-        let base_ast = BaseAst {
+        let mut base_ast = BaseAst {
             table: "users".into(),
             ..Default::default()
         };
 
-        let sql = render(&ast, &base_ast);
+        let sql = render(&ast, &mut base_ast);
         assert_eq!(sql, "SELECT * FROM \"users\";");
     }
 
@@ -229,12 +232,12 @@ mod tests {
         ast.columns = vec![col("users.country")];
         ast.group_by = Some(vec![col("users.country")]);
 
-        let base_ast = BaseAst {
+        let mut base_ast = BaseAst {
             table: "users".into(),
             ..Default::default()
         };
 
-        let sql = render(&ast, &base_ast);
+        let sql = render(&ast, &mut base_ast);
         assert_eq!(sql, "SELECT country FROM users GROUP BY country;");
     }
 
@@ -276,12 +279,12 @@ mod tests {
             ),
         ];
 
-        let base_ast = BaseAst {
+        let mut base_ast = BaseAst {
             table: "users".into(),
             ..Default::default()
         };
 
-        let sql = render(&ast, &base_ast);
+        let sql = render(&ast, &mut base_ast);
         assert_eq!(
             sql,
             "SELECT users.id, profiles.bio, roles.name \

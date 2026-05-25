@@ -6,6 +6,8 @@ use crate::query::querybuilder::syntax::{
     emitter::types::select::EmitSelect, query_kind::QueryKind, tokens::SqlTokens,
 };
 use transient::{Any, Inv};
+use crate::query::querybuilder::syntax::emitter::types::delete::EmitDelete;
+use crate::query::querybuilder::syntax::emitter::types::update::EmitUpdate;
 
 // ---------- AST Processor marker trait ----------
 pub trait AstProcessor<'a>: Default + AsAstProcessor<'a> {
@@ -106,12 +108,11 @@ where
     where
         Self: Sized,
     {
-        // Default implementation delegates:
         match ast.query_kind() {
             QueryKind::Select => self.emit_select(ast, base_ast),
             QueryKind::Insert => self.emit_insert(ast, base_ast),
-            QueryKind::Update => self.emit_select(ast, base_ast),
-            QueryKind::Delete => self.emit_select(ast, base_ast),
+            QueryKind::Update => self.emit_update(ast, base_ast),
+            QueryKind::Delete => self.emit_delete(ast, base_ast),
         }
     }
 }

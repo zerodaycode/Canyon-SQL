@@ -11,7 +11,7 @@ impl TokenWriter {
 
     pub fn render<'a, E: SqlEmitter<'a>>(
         self,
-        tokens: &'a mut SqlTokens<'a>,
+        mut tokens: SqlTokens<'a>,
     ) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
 
@@ -21,11 +21,11 @@ impl TokenWriter {
 
         tokens.symbol(Symbol::Semicolon);
 
-        for tok in tokens {
+        for tok in tokens.into_iter() {
             __impl::output_token_to_string_buffer::<E::Dialect>(tok, &mut out)?;
         }
 
-        Ok(out.to_string())
+        Ok(out)
     }
 }
 
@@ -36,7 +36,7 @@ mod __impl {
     use std::fmt::Write;
 
     pub(crate) fn output_token_to_string_buffer<D: SqlDialect>(
-        token: &SqlToken,
+        token: SqlToken,
         f: &mut String,
     ) -> Result<(), std::fmt::Error> {
         let _: () = match token {
@@ -62,7 +62,7 @@ mod __detail {
     };
     use std::fmt::Write;
 
-    pub(crate) fn render_symbol(sym: &Symbol, f: &mut String) -> Result<(), std::fmt::Error> {
+    pub(crate) fn render_symbol(sym: Symbol, f: &mut String) -> Result<(), std::fmt::Error> {
         let _: () = match sym {
             Symbol::Not => write!(f, "!")?,
             Symbol::Comma => write!(f, ",")?,
@@ -88,17 +88,17 @@ mod __detail {
     }
 
     pub(crate) fn render_placeholder<D: SqlDialect>(
-        ph_kind: &PlaceholderKind,
+        ph_kind: PlaceholderKind,
         f: &mut String,
     ) -> Result<(), std::fmt::Error> {
         match ph_kind {
-            PlaceholderKind::Value(v) => write_value_placeholder::<D>(*v, f),
-            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", *v),
+            PlaceholderKind::Value(v) => write_value_placeholder::<D>(v, f),
+            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", v),
             PlaceholderKind::Range(start, end) => {
                 write!(
                     f,
                     "({})",
-                    generate_range_of_placeholders::<D>(*start, *end)?
+                    generate_range_of_placeholders::<D>(start, end)?
                 )
             }
         }?;
@@ -168,7 +168,7 @@ mod mssql_tests {
     #[test]
     fn push_quoted_ident_with_mssql_emits_left_ident_right_bracket_sequence() {
         let mut tokens = SqlTokens::default();
-        push_quoted_ident::<MsSql>("users", &mut tokens);
+        push_quoted_ident::<MsSql, &str>("users", &mut tokens);
 
         assert_eq!(
             tokens.inner(),

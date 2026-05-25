@@ -34,7 +34,7 @@ impl<'a> DeleteQueryBuilder<'a> {
         })
     }
 
-    pub fn build<'b>(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()
     }
 }

@@ -1,7 +1,7 @@
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::ast::update::UpdateAst;
-use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
+use crate::query::querybuilder::syntax::emitter::types::helpers;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
@@ -14,7 +14,7 @@ where
         &mut self,
         ast: &impl AstProcessor<'a>,
         base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a> {
+    ) -> SqlTokens<'a>{
         let mut tokens = SqlTokens::default();
         let ast = transient::Downcast::downcast_ref::<UpdateAst>(ast.as_any()).expect(
             "[emitUpdate] - Handle this propagating result and introducing custom error types",
@@ -29,12 +29,7 @@ where
         __impl::emit_set_clause::<T::Dialect>(&ast.columns, base_ast, &mut tokens);
         tokens.whitespace();
 
-        if !base_ast.conditions.is_empty() {
-            for cond in &base_ast.conditions {
-                tokens
-                    .extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(cond));
-            }
-        }
+        helpers::add_clause_conditions::<T::Dialect>(base_ast, &mut tokens);
 
         tokens
     }
@@ -106,17 +101,17 @@ mod tests {
 
     fn render_standard<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitter;
-        let mut tokens = emitter.emit_update(&ast.0, base_ast);
+        let tokens = emitter.emit_update(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestUpdateEmitter>(&mut tokens)
+            .render::<TestUpdateEmitter>(tokens)
             .unwrap()
     }
 
     fn render_mssql<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitterMsSql;
-        let mut tokens = emitter.emit_update(&ast.0, base_ast);
+        let tokens = emitter.emit_update(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestUpdateEmitterMsSql>(&mut tokens)
+            .render::<TestUpdateEmitterMsSql>(tokens)
             .unwrap()
     }
 

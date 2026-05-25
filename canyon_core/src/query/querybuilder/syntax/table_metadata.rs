@@ -1,15 +1,15 @@
 use crate::query::bounds;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
+use crate::query::querybuilder::syntax::emitter::types::helpers::push_quoted_ident;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
-use crate::query::querybuilder::syntax::emitter::types::helpers::push_quoted_ident;
 
 #[derive(Clone, Default, Debug)]
 pub struct TableMetadata<'a> {
-    pub schema: Option<&'a str>,
-    pub name: &'a str,
+    pub schema: Option<Cow<'a, str>>,
+    pub name: Cow<'a, str>,
 }
 
 impl<'a, T> From<T> for TableMetadata<'a>
@@ -24,14 +24,17 @@ where
 impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for TableMetadata<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(3);
+
         if let Some(schema) = &self.schema {
-            push_quoted_ident::<D>(schema, &mut out);
+            push_quoted_ident::<D, _>(schema.clone(), &mut out);
             out.symbol(Symbol::Dot);
         };
-        push_quoted_ident::<D>(self.name, &mut out);
+
+        push_quoted_ident::<D, _>(self.name.clone(), &mut out);
         out
     }
 }
+
 impl<'a> From<&'a str> for TableMetadata<'a> {
     /// Creates a new [`TableMetadata<'a>`] from a string slice.
     ///
@@ -39,14 +42,33 @@ impl<'a> From<&'a str> for TableMetadata<'a> {
     /// we assume that the client is just creating a [`Self`] from the passed in string
     fn from(value: &'a str) -> Self {
         if let Some((schema, table)) = value.split_once('.') {
-            TableMetadata {
-                schema: Some(schema),
-                name: table,
+            Self {
+                schema: Some(Cow::Borrowed(schema)),
+                name: Cow::Borrowed(table),
             }
         } else {
-            TableMetadata {
+            Self {
                 schema: None,
-                name: value,
+                name: Cow::Borrowed(value),
+            }
+        }
+    }
+}
+
+impl From<String> for TableMetadata<'static> {
+    /// Creates a new [`TableMetadata`] from an owned string.
+    ///
+    /// If the string contains a dot, we split it into owned schema and table name components.
+    fn from(value: String) -> Self {
+        if let Some((schema, table)) = value.split_once('.') {
+            Self {
+                schema: Some(Cow::Owned(schema.to_owned())),
+                name: Cow::Owned(table.to_owned()),
+            }
+        } else {
+            Self {
+                schema: None,
+                name: Cow::Owned(value),
             }
         }
     }
@@ -56,11 +78,19 @@ impl<'a> TableMetadata<'a> {
     pub fn new(table_name: &'a str) -> Self {
         Self::from(table_name)
     }
-    pub fn schema(&mut self, schema: &'a str) {
-        self.schema = Some(schema);
+
+    pub fn schema<S>(&mut self, schema: S)
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        self.schema = Some(schema.into());
     }
-    pub fn table_name(&mut self, table_name: &'a str) {
-        self.name = table_name;
+
+    pub fn table_name<S>(&mut self, table_name: S)
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        self.name = table_name.into();
     }
 
     /// Returns an already formatted version of the schema and table of a target database table

@@ -59,16 +59,16 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for JoinClause<'a> {
 
         out.keyword(self.kind.into());
         out.keyword(Keyword::Join);
-        out.extend(<TableMetadata<'_> as ToSqlTokens<'_, D>>::to_tokens(
+        out.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &self.target_table,
         ));
         out.whitespace();
         out.keyword(Keyword::On);
-        out.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(&self.left));
+        out.extend(<ColumnRef<'a> as ToSqlTokens<'a, D>>::to_tokens(&self.left));
         out.whitespace();
         out.operator(self.operator);
         out.whitespace();
-        out.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(
+        out.extend(<ColumnRef<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &self.right,
         ));
         out.whitespace();

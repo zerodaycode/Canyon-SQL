@@ -43,18 +43,25 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         })
     }
 
-    pub fn build<'b>(mut self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'b>> {
-        let sql = self.sql()?;
-        Ok(Query::new(sql, self.params)) // TODO, get rid out of query?
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        let Self {
+            mut base_ast,
+            ast,
+            database_type,
+            params,
+        } = self;
+
+        let sql = __detail::sql(database_type, &ast, &mut base_ast)?;
+        Ok(Query::new(sql, params)) // TODO, get rid out of query?
     }
 
-    fn sql<'b>(&mut self) -> Result<String, Box<dyn Error + Send + Sync + 'b>> {
+    fn sql(&mut self) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         __impl::check_invariants_over_condition_clauses(self)?;
 
-        let mut tokens =
+        let tokens =
             __detail::run_emission_phase(self.database_type, &self.ast, &mut self.base_ast);
 
-        let sql = __detail::run_render_phase(&mut tokens, self.database_type)?;
+        let sql = __detail::run_render_phase(tokens, self.database_type)?;
         Ok(sql)
     }
 
@@ -188,6 +195,17 @@ mod __impl {
 }
 
 mod __detail {
+    pub(super) fn sql<'a, P>(
+        database_type: DatabaseType,
+        ast: &P,
+        base_ast: &mut BaseAst<'a>,
+    ) -> Result<String, Box<dyn Error + Send + Sync + 'a>>
+    where
+        P: AstProcessor<'a>,
+    {
+        let tokens = run_emission_phase(database_type, ast, base_ast);
+        run_render_phase(tokens, database_type)
+    }
     use crate::connection::database_type::DatabaseType;
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
@@ -229,7 +247,7 @@ mod __detail {
     pub(super) fn run_emission_phase<'a, P>(
         database_type: DatabaseType,
         ast: &P,
-        base_ast: &mut BaseAst<'a>,
+        base_ast: &mut BaseAst<'a>, 
     ) -> SqlTokens<'a>
     where
         P: AstProcessor<'a>,
@@ -280,9 +298,9 @@ mod __detail {
     }
 
     pub(crate) fn run_render_phase<'a>(
-        tokens: &'a mut SqlTokens<'a>,
+        tokens: SqlTokens<'a>,
         db: DatabaseType,
-    ) -> Result<String, Box<dyn Error + Send + Sync>> {
+    ) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         let writer = TokenWriter::new();
         match db {
             DatabaseType::PostgreSql | DatabaseType::Deferred => writer.render::<PgEmitter>(tokens),

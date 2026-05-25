@@ -1,14 +1,20 @@
 //! Standalone functions that shares the same behaviour for different AST kinds
 
+use std::borrow::Cow;
 use crate::query::querybuilder::syntax::ast::BaseAst;
+use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
-use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlTokens};
+use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlTokens, ToSqlTokens};
 
 /// Helper function to push a quoted identifier (like table or column names) into the token stream
-pub fn push_quoted_ident<'a, D: SqlDialect>(element: &'a str, tokens: &mut SqlTokens<'a>) {
+pub fn push_quoted_ident<'a, D, S>(element: S, tokens: &mut SqlTokens<'a>) 
+where
+    D: SqlDialect,
+    S: Into<Cow<'a, str>>,
+{
     let q = D::IDENT_QUOTING;
     tokens.symbol(q.opening().into());
     tokens.ident(element);
@@ -31,7 +37,7 @@ pub(crate) fn emit_columns<'a, D: SqlDialect>(
             tokens.symbol(Comma);
             tokens.whitespace();
         }
-        push_quoted_ident::<D>(column.column, tokens);
+        push_quoted_ident::<D, &str>(column.column, tokens);
     }
 }
 
@@ -48,6 +54,15 @@ pub(crate) fn emit_placeholders<'a>(
         tokens.placeholder(PlaceholderKind::Value(base_ast.next_placeholder_index()));
     }
 }
+
+pub(crate) fn add_clause_conditions<'a, D: SqlDialect>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    if !base_ast.conditions.is_empty() {
+        for cond in &base_ast.conditions {
+            tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, D>>::to_tokens(cond));
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -135,7 +150,7 @@ mod tests {
     fn push_quoted_ident_with_standard_dialect() {
         let mut tokens = SqlTokens::default();
         // TODO: this isn't taking in consideration the scape quotes, care
-        push_quoted_ident::<StandardDialect>("users", &mut tokens);
+        push_quoted_ident::<StandardDialect, &str>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
             get_columns_test_expr_values::<StandardDialect>(&["users"])
@@ -146,7 +161,7 @@ mod tests {
     #[test]
     fn push_quoted_ident_with_postgres() {
         let mut tokens = SqlTokens::default();
-        push_quoted_ident::<PgDialect>("users", &mut tokens);
+        push_quoted_ident::<PgDialect, &str>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
             get_columns_test_expr_values::<PgDialect>(&["users"])
@@ -159,7 +174,7 @@ mod tests {
         let mut tokens = SqlTokens::default();
 
         for (idx, lit) in literals.iter().enumerate() {
-            push_quoted_ident::<D>(lit, &mut tokens);
+            push_quoted_ident::<D, &str>(lit, &mut tokens);
             if idx + 1 < literals.len() {
                 tokens.extend([
                     SqlToken::Symbol(Comma),
@@ -175,7 +190,7 @@ mod tests {
     #[test]
     fn push_quoted_ident_with_mysql() {
         let mut tokens = SqlTokens::default();
-        push_quoted_ident::<MySql>("users", &mut tokens);
+        push_quoted_ident::<MySql, &str>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
             get_columns_test_expr_values::<MySql>(&["users"])
@@ -186,7 +201,7 @@ mod tests {
     #[test]
     fn push_quoted_ident_with_mssql() {
         let mut tokens = SqlTokens::default();
-        push_quoted_ident::<MsSql>("users", &mut tokens);
+        push_quoted_ident::<MsSql, &str>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
             get_columns_test_expr_values::<MsSql>(&["users"])

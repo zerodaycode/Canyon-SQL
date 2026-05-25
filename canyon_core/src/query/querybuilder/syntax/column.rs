@@ -96,15 +96,15 @@ mod __impl {
         out: &mut SqlTokens<'a>,
     ) {
         if let Some(table_ref) = __self.table {
-            helpers::push_quoted_ident::<D>(table_ref, out);
+            helpers::push_quoted_ident::<D, _>(table_ref, out);
             out.symbol(Dot)
         }
 
-        helpers::push_quoted_ident::<D>(__self.column, out);
+        helpers::push_quoted_ident::<D, _>(__self.column, out);
 
         if let Some(alias) = __self.alias {
             out.keyword(Keyword::As);
-            helpers::push_quoted_ident::<D>(alias, out);
+            helpers::push_quoted_ident::<D, _>(alias, out);
         }
     }
 }

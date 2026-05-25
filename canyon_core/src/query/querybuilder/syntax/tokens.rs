@@ -4,7 +4,7 @@ pub(crate) use crate::query::{
     querybuilder::syntax::{
         keyword::Keyword,
         symbol::Symbol,
-        tokens::SqlToken::{Ident, Number},
+        tokens::SqlToken::Number,
     },
 };
 use std::borrow::Cow;
@@ -18,8 +18,12 @@ pub trait ToSqlTokens<'a, D: SqlDialect> {
 pub struct SqlTokens<'a>(Vec<SqlToken<'a>>);
 impl<'a> SqlTokens<'a> {
     // our custom internal APIs over the underlying wrapped collection
-    pub fn ident<I: Into<Cow<'a, str>>>(&mut self, ident: I) {
-        self.0.push(Ident(ident.into()))
+    pub fn ident<S>(&mut self, ident: S) -> &mut Self
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        self.0.push(SqlToken::Ident(ident.into()));
+        self
     }
 
     pub fn numeric<N: Into<NumberKind>>(&mut self, num: N) {
@@ -112,6 +116,13 @@ impl<'a> Extend<SqlToken<'a>> for SqlTokens<'a> {
         self.0.extend(iter);
     }
 }
+
+impl<'a> Extend<SqlToken<'a>> for &'a mut SqlTokens<'a> {
+    fn extend<T: IntoIterator<Item = SqlToken<'a>>>(&mut self, iter: T) {
+        self.0.extend(iter);
+    }
+}
+
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SqlToken<'a> {
