@@ -21,8 +21,13 @@ impl TokenWriter {
 
         tokens.symbol(Symbol::Semicolon);
 
+        let mut placeholder_counter = 1usize;
         for tok in tokens.into_iter() {
-            __impl::output_token_to_string_buffer::<E::Dialect>(tok, &mut out)?;
+            __impl::output_token_to_string_buffer::<E::Dialect>(
+                tok,
+                &mut out,
+                &mut placeholder_counter,
+            )?;
         }
 
         Ok(out)
@@ -38,13 +43,17 @@ mod __impl {
     pub(crate) fn output_token_to_string_buffer<D: SqlDialect>(
         token: SqlToken,
         f: &mut String,
+        placeholder_counter: &mut usize,
     ) -> Result<(), std::fmt::Error> {
         let _: () = match token {
             SqlToken::Keyword(s) => write!(f, "{} ", s)?,
             SqlToken::Ident(s) => write!(f, "{}", s)?,
             SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
             SqlToken::Operator(op) => write!(f, "{}", op)?,
-            SqlToken::Placeholder(ph_kind) => __detail::render_placeholder::<D>(ph_kind, f)?,
+            SqlToken::Placeholder => {
+                __detail::write_value_placeholder::<D>(placeholder_counter, f)?;
+                *placeholder_counter += 1;
+            }
             SqlToken::WhiteSpace => write!(f, " ")?,
             SqlToken::Number(num) => write!(f, "{}", num)?,
         };
@@ -55,9 +64,7 @@ mod __impl {
 mod __detail {
     use crate::{
         connection::database_type::DatabaseType,
-        query::querybuilder::syntax::{
-            dialect::SqlDialect, symbol::Symbol, tokens::PlaceholderKind,
-        },
+        query::querybuilder::syntax::{dialect::SqlDialect, symbol::Symbol},
     };
     use std::fmt::Write;
 
@@ -86,52 +93,17 @@ mod __detail {
         Ok(())
     }
 
-    pub(crate) fn render_placeholder<D: SqlDialect>(
-        ph_kind: PlaceholderKind,
-        f: &mut String,
-    ) -> Result<(), std::fmt::Error> {
-        match ph_kind {
-            PlaceholderKind::Value(v) => write_value_placeholder::<D>(v, f),
-            PlaceholderKind::Like(_like_kind, v) => write!(f, "{}", v), // TODO: this is a temporary solution, we should implement the correct rendering of the like patterns with the placeholders
-            PlaceholderKind::Range(start, end) => {
-                write!(f, "({})", generate_range_of_placeholders::<D>(start, end)?)
-            }
-        }?;
-        Ok(())
-    }
-
-    fn generate_range_of_placeholders<D: SqlDialect>(
-        start: usize,
-        end: usize,
-    ) -> Result<String, std::fmt::Error> {
-        let capacity = match D::DB {
-            DatabaseType::MySQL => 1,
-            _ => 2,
-        } * end; // TODO: custom struct to ensure that the range is correct for computing the capacity?
-        let mut out_buffer = String::with_capacity(capacity);
-
-        let mut iter = (start..end).peekable();
-
-        while let Some(idx) = iter.next() {
-            write_value_placeholder::<D>(idx, &mut out_buffer)?;
-
-            if iter.peek().is_some() {
-                write!(&mut out_buffer, ", ")?;
-            }
-        }
-
-        Ok(out_buffer)
-    }
-
-    fn write_value_placeholder<D: SqlDialect>(
-        idx_value: usize,
+    pub(crate) fn write_value_placeholder<D: SqlDialect>(
+        placeholder_counter: &mut usize,
         f: &mut String,
     ) -> Result<(), std::fmt::Error> {
         let placeholder_symbol = D::PLACEHOLDER_SYMBOL;
-        match D::DB {
+        let _ = match D::DB {
             DatabaseType::MySQL => write!(f, "{}", placeholder_symbol),
-            _ => write!(f, "{}{}", placeholder_symbol, idx_value),
-        }
+            _ => write!(f, "{}{}", placeholder_symbol, placeholder_counter),
+        };
+
+        Ok(())
     }
 }
 

@@ -1,17 +1,16 @@
 use crate::query::operators::Operator;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
+use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
 use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::tokens::{
-    PlaceholderKind, SqlToken, SqlTokens, ToSqlTokens,
-};
+use crate::query::querybuilder::syntax::symbol::Symbol;
+use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
-#[derive(Clone)]
 pub struct ConditionClause<'a> {
     pub(crate) kind: ConditionClauseKind,
     pub(crate) column_name: ColumnRef<'a>,
     pub(crate) operator: Operator,
-    pub(crate) value_indexes: PlaceholderKind,
+    pub(crate) value_indexes: Range,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -54,8 +53,20 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
 
         out.whitespace();
 
-        // Value(s) placeholder(s)
-        out.placeholder(self.value_indexes);
+        if self.value_indexes.is_range() {
+            out.symbol(Symbol::LParen);
+            let mut indexes = (&self.value_indexes).into_iter().peekable();
+            while indexes.next().is_some() {
+                out.placeholder();
+                if indexes.peek().is_some() {
+                    out.symbol(Symbol::Comma);
+                    out.whitespace();
+                }
+            }
+            out.symbol(Symbol::RParen);
+        } else {
+            out.placeholder();
+        }
 
         out.whitespace();
 

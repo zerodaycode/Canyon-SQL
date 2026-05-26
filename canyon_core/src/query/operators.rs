@@ -2,7 +2,7 @@ use crate::query::querybuilder::syntax::dialect::PlaceholderDatatype;
 use crate::query::querybuilder::syntax::{
     dialect::SqlDialect,
     keyword::Keyword,
-    tokens::{PlaceholderKind, SqlToken, SqlTokens, Symbol, ToSqlTokens},
+    tokens::{SqlToken, SqlTokens, Symbol, ToSqlTokens},
 };
 use std::borrow::Cow;
 use std::fmt::Display;
@@ -96,12 +96,12 @@ impl LikeKind {
     fn push_casted_placeholder<D: SqlDialect>(out: &mut SqlTokens) {
         out.keyword(Keyword::Cast);
         out.symbol(Symbol::LParen);
-        out.placeholder(PlaceholderKind::Value(1));
+        out.placeholder();
         out.whitespace();
         out.keyword(Keyword::As);
         out.whitespace();
         out.ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
-            D::PLACEHOLDER_DATA_TYPE.into(),
+            D::PLACEHOLDER_DATA_TYPE,
         )));
         out.symbol(Symbol::RParen);
     }
@@ -183,12 +183,12 @@ mod tests {
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Cast),
             SqlToken::Symbol(Symbol::LParen),
-            SqlToken::Placeholder(PlaceholderKind::Value(1)),
+            SqlToken::Placeholder,
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
             SqlToken::WhiteSpace,
             SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
-                D::PLACEHOLDER_DATA_TYPE.into(),
+                D::PLACEHOLDER_DATA_TYPE,
             ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::Comma),
@@ -213,12 +213,12 @@ mod tests {
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Cast),
             SqlToken::Symbol(Symbol::LParen),
-            SqlToken::Placeholder(PlaceholderKind::Value(1)),
+            SqlToken::Placeholder,
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
             SqlToken::WhiteSpace,
             SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
-                D::PLACEHOLDER_DATA_TYPE.into(),
+                D::PLACEHOLDER_DATA_TYPE,
             ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::RParen),
@@ -233,12 +233,12 @@ mod tests {
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Keyword(Keyword::Cast),
             SqlToken::Symbol(Symbol::LParen),
-            SqlToken::Placeholder(PlaceholderKind::Value(1)),
+            SqlToken::Placeholder,
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
             SqlToken::WhiteSpace,
             SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
-                D::PLACEHOLDER_DATA_TYPE.into(),
+                D::PLACEHOLDER_DATA_TYPE,
             ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::Comma),

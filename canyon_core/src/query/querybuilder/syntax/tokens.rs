@@ -1,6 +1,6 @@
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 pub(crate) use crate::query::{
-    operators::{LikeKind, Operator},
+    operators::Operator,
     querybuilder::syntax::{keyword::Keyword, symbol::Symbol, tokens::SqlToken::Number},
 };
 use std::borrow::Cow;
@@ -38,8 +38,8 @@ impl<'a> SqlTokens<'a> {
         self.0.push(SqlToken::Symbol(sym))
     }
 
-    pub fn placeholder(&mut self, pl_kind: PlaceholderKind) {
-        self.0.push(SqlToken::Placeholder(pl_kind))
+    pub fn placeholder(&mut self) {
+        self.0.push(SqlToken::Placeholder)
     }
 
     /// Adds a [`SqlToken::WhiteSpace`] to the output buffer
@@ -123,23 +123,16 @@ impl<'a> Extend<SqlToken<'a>> for &'a mut SqlTokens<'a> {
 pub enum SqlToken<'a> {
     Keyword(Keyword), // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
     WhiteSpace,
-    Ident(Cow<'a, str>),          // a raw literal value
-    Number(NumberKind),           // a raw literal numeric value
-    Symbol(Symbol),               // =, ( ) , .
-    Operator(Operator),           // Comp::Eq, Comp::GtEq...
-    Placeholder(PlaceholderKind), // $1, ? , @P1
+    Ident(Cow<'a, str>), // a raw literal value
+    Number(NumberKind),  // a raw literal numeric value
+    Symbol(Symbol),      // =, ( ) , .
+    Operator(Operator),  // Comp::Eq, Comp::GtEq...
+    Placeholder,         // $1, ? , @P1
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum NumberKind {
     Integer(usize),
-}
-
-#[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum PlaceholderKind {
-    Value(usize),          // $1, ? , @P1
-    Like(LikeKind, usize), // for LIKE placeholders, we need to know the kind of LIKE (e.g., starts with, ends with, contains) and the index of the placeholder
-    Range(usize, usize), // for range placeholders, we need to know the start and end index of the range (e.g., for BETWEEN ? AND ?, we need to know the indices of both placeholders)
 }
 
 mod __impl_sql_token {

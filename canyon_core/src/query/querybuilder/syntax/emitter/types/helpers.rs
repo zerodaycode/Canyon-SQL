@@ -6,8 +6,47 @@ use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
-use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlTokens, ToSqlTokens};
+use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
+
+pub(crate) struct Range(usize, Option<usize>);
+impl Range {
+    pub(crate) const fn new(start: usize, end: usize) -> Self {
+        Self(start, Some(end))
+    }
+
+    /// Creates a new unbounded range starting from the given index.
+    ///
+    /// Here `None` does not mean infinity. It represents a single-value range:
+    /// `[start, start]`.
+    pub(crate) const fn new_unbounded(start: usize) -> Self {
+        Self(start, None)
+    }
+
+    pub(crate) const fn is_range(&self) -> bool {
+        self.1.is_some()
+    }
+
+    pub(crate) const fn start(&self) -> usize {
+        self.0
+    }
+
+    pub(crate) const fn end(&self) -> usize {
+        match self.1 {
+            Some(end) => end,
+            None => self.0,
+        }
+    }
+}
+
+impl<'a> IntoIterator for &'a Range {
+    type Item = usize;
+    type IntoIter = std::ops::Range<usize>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.start()..self.end()
+    }
+}
 
 /// Helper function to push a quoted identifier (like table or column names) into the token stream
 pub fn push_quoted_ident<'a, D, S>(element: S, tokens: &mut SqlTokens<'a>)
@@ -56,7 +95,7 @@ pub(crate) fn emit_placeholders<'a>(
             tokens.symbol(Comma);
             tokens.whitespace();
         }
-        tokens.placeholder(PlaceholderKind::Value(base_ast.next_placeholder_index()));
+        tokens.placeholder();
     }
 }
 
@@ -86,13 +125,12 @@ mod tests {
     use crate::query::querybuilder::syntax::dialect::MySql;
     #[cfg(feature = "postgres")]
     use crate::query::querybuilder::syntax::dialect::PgDialect;
-    use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlToken};
+    use crate::query::querybuilder::syntax::tokens::SqlToken;
 
     fn make_base_ast<'a>() -> BaseAst<'a> {
         BaseAst {
             table: TableMetadata::from("users"),
             conditions: vec![],
-            bind_index: 0,
         }
     }
 
@@ -308,82 +346,12 @@ mod tests {
         assert_eq!(tokens.inner(), expected);
     }
 
-    #[test]
-    fn emit_placeholders_with_empty_vec_emits_nothing_and_keeps_bind_index() {
-        let columns = vec![];
-        let mut base_ast = make_base_ast();
-        let mut tokens = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
-
-        assert!(tokens.is_empty());
-        assert_eq!(base_ast.bind_index, 0);
-    }
-
-    #[test]
-    fn emit_placeholders_with_single_column_emits_first_placeholder() {
-        let columns = vec![make_column("name")];
-        let mut base_ast = make_base_ast();
-        let mut tokens = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
-
-        assert_eq!(
-            tokens.inner(),
-            vec![SqlToken::Placeholder(PlaceholderKind::Value(1))]
-        );
-        assert_eq!(base_ast.bind_index, 1);
-    }
-
-    #[test]
-    fn emit_placeholders_with_many_columns_emits_comma_separated_placeholders() {
-        let columns = vec![make_column("id"), make_column("name"), make_column("email")];
-        let mut base_ast = make_base_ast();
-        let mut tokens = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
-
-        assert_eq!(tokens.inner(), get_placeholders_test_expr_values_3());
-        assert_eq!(base_ast.bind_index, 3);
-    }
-
-    #[cfg(feature = "postgres")]
-    #[test]
-    fn emit_placeholders_with_postgres_uses_dollar_numbering() {
-        let columns = vec![make_column("id"), make_column("name")];
-        let mut base_ast = make_base_ast();
-        let mut tokens = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
-
-        assert_eq!(tokens.inner(), get_placeholders_test_expr_values());
-        assert_eq!(base_ast.bind_index, 2);
-        assert_eq!(
-            PgDialect::PLACEHOLDER_SYMBOL,
-            PlaceholderSymbol::DollarNumbered
-        );
-    }
-
-    #[cfg(feature = "mysql")]
-    #[test]
-    fn emit_placeholders_with_mysql_uses_question_marks() {
-        let columns = vec![make_column("id"), make_column("name")];
-        let mut base_ast = make_base_ast();
-        let mut tokens = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
-
-        assert_eq!(tokens.inner(), get_placeholders_test_expr_values());
-        assert_eq!(base_ast.bind_index, 2);
-        assert_eq!(MySql::PLACEHOLDER_SYMBOL, PlaceholderSymbol::QuestionMark);
-    }
-
     fn get_placeholders_test_expr_values() -> Vec<SqlToken<'static>> {
         vec![
-            SqlToken::Placeholder(PlaceholderKind::Value(1)),
+            SqlToken::Placeholder,
             SqlToken::Symbol(Comma),
             SqlToken::WhiteSpace,
-            SqlToken::Placeholder(PlaceholderKind::Value(2)),
+            SqlToken::Placeholder,
         ]
     }
 
@@ -393,7 +361,7 @@ mod tests {
         v.extend(vec![
             SqlToken::Symbol(Comma),
             SqlToken::WhiteSpace,
-            SqlToken::Placeholder(PlaceholderKind::Value(3)),
+            SqlToken::Placeholder,
         ]);
         v
     }
@@ -403,96 +371,30 @@ mod tests {
     fn emit_placeholders_with_mssql_uses_at_p_numbering() {
         let columns = vec![make_column("id"), make_column("name"), make_column("email")];
         let mut base_ast = make_base_ast();
-        let mut tokens = SqlTokens::default();
 
+        let mut tokens = SqlTokens::default();
         emit_placeholders(&columns, &mut base_ast, &mut tokens);
+        let tokens_vec = tokens.inner();
 
         assert_eq!(
-            tokens.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(1)),
+            &tokens_vec,
+            &vec![
+                SqlToken::Placeholder,
                 SqlToken::Symbol(Comma),
                 SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(2)),
+                SqlToken::Placeholder,
                 SqlToken::Symbol(Comma),
                 SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(3)),
+                SqlToken::Placeholder,
             ]
         );
-        assert_eq!(base_ast.bind_index, 3);
+        assert_eq!(
+            tokens_vec
+                .iter()
+                .filter(|t| (*t).eq(&SqlToken::Placeholder))
+                .count(),
+            3
+        );
         assert_eq!(MsSql::PLACEHOLDER_SYMBOL, PlaceholderSymbol::AtPNumbered);
-    }
-
-    #[test]
-    fn emit_placeholders_respects_existing_bind_index_offset() {
-        let columns = vec![make_column("id"), make_column("name")];
-        let mut base_ast = make_base_ast();
-        base_ast.bind_index = 4;
-        let mut tokens = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
-
-        assert_eq!(
-            tokens.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(5)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(6)),
-            ]
-        );
-        assert_eq!(base_ast.bind_index, 6);
-    }
-
-    #[test]
-    fn emit_placeholders_can_continue_from_previous_state() {
-        let columns = vec![make_column("id"), make_column("name")];
-        let mut base_ast = make_base_ast();
-        let mut first = SqlTokens::default();
-        let mut second = SqlTokens::default();
-
-        emit_placeholders(&columns, &mut base_ast, &mut first);
-        emit_placeholders(&columns, &mut base_ast, &mut second);
-
-        assert_eq!(
-            first.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(1)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(2)),
-            ]
-        );
-        assert_eq!(
-            second.inner(),
-            vec![
-                SqlToken::Placeholder(PlaceholderKind::Value(3)),
-                SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
-                SqlToken::Placeholder(PlaceholderKind::Value(4)),
-            ]
-        );
-        assert_eq!(base_ast.bind_index, 4);
-    }
-
-    #[test]
-    fn base_ast_new_starts_bind_index_at_one() {
-        let ast = BaseAst::new("users");
-
-        assert_eq!(ast.bind_index, 1);
-        assert_eq!(ast.table.to_string(), "users");
-        assert!(ast.conditions.is_empty());
-    }
-
-    #[test]
-    fn next_placeholder_index_increments_and_returns_new_index() {
-        let mut ast = BaseAst::new("users");
-
-        let first = ast.next_placeholder_index();
-        let second = ast.next_placeholder_index();
-
-        assert_eq!(first, 2);
-        assert_eq!(second, 3);
-        assert_eq!(ast.bind_index, 3);
     }
 }

@@ -47,9 +47,7 @@ pub(crate) mod __impl {
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
-    use crate::query::querybuilder::syntax::tokens::{
-        PlaceholderKind, SqlTokens, Symbol, ToSqlTokens,
-    };
+    use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol, ToSqlTokens};
 
     pub(crate) fn emit_set_clause<'a, D: SqlDialect>(
         columns: &[ColumnRef<'a>],
@@ -65,7 +63,7 @@ pub(crate) mod __impl {
             tokens.whitespace();
             tokens.symbol(Symbol::Equals);
             tokens.whitespace();
-            tokens.placeholder(PlaceholderKind::Value(base_ast.next_placeholder_index()));
+            tokens.placeholder();
         }
     }
 }
@@ -76,7 +74,7 @@ mod tests {
     use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::dialect::MsSql;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
+    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
@@ -172,7 +170,7 @@ mod tests {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,
-            value_indexes: PlaceholderKind::Value(3),
+            value_indexes: Range::new_unbounded(3),
         });
 
         let sql = render_standard(&ast, &mut base_ast);
@@ -214,7 +212,7 @@ mod tests {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,
-            value_indexes: PlaceholderKind::Value(3),
+            value_indexes: Range::new_unbounded(3),
         });
 
         let sql = render_standard(&ast, &mut base_ast);

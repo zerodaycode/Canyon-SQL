@@ -3,6 +3,7 @@ pub mod select;
 pub mod update;
 
 pub use self::{delete::*, select::*, update::*};
+use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
 use crate::{
     connection::database_type::DatabaseType,
     query::{
@@ -96,7 +97,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
             ConditionClauseKind::And,
             field.as_str(),
             Operator::In,
-            (actual_params_len, actual_params_len + values.len()),
+            Range::new(actual_params_len, actual_params_len + values.len()),
         );
         __impl::add_values_in_for_and_or_or_clause(self, ConditionClauseKind::And, field, values)
     }
@@ -116,7 +117,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
             ConditionClauseKind::And,
             r#or.as_str(),
             Operator::In,
-            (actual_params_len, actual_params_len + values.len()),
+            Range::new(actual_params_len, actual_params_len + values.len()),
         );
         __impl::add_values_in_for_and_or_or_clause(self, ConditionClauseKind::Or, r#or, values)
     }
@@ -136,7 +137,7 @@ mod __impl {
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::emitter::AstProcessor;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
+    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::types::__validators;
     use std::error::Error;
 
@@ -183,12 +184,7 @@ mod __impl {
             kind,
             column_name: column_name.into(),
             operator,
-            value_indexes: match operator {
-                Operator::Like(like_kind) | Operator::NotLike(like_kind) => {
-                    PlaceholderKind::Like(like_kind, _self.params.len())
-                }
-                _ => PlaceholderKind::Value(_self.params.len()),
-            },
+            value_indexes: Range::new_unbounded(_self.params.len()),
         });
     }
 
@@ -197,13 +193,13 @@ mod __impl {
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
         operator: Operator,
-        value_indexes_range: (usize, usize),
+        value_indexes_range: Range,
     ) {
         _self.base_ast.conditions.push(ConditionClause {
             kind,
             column_name: column_name.into(),
             operator,
-            value_indexes: PlaceholderKind::Range(value_indexes_range.0, value_indexes_range.1),
+            value_indexes: value_indexes_range,
         });
     }
 }

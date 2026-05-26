@@ -27,7 +27,7 @@ where
             tokens.whitespace();
             for cond in &base_ast.conditions {
                 tokens
-                    .extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&cond));
+                    .extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(cond));
             }
         }
 
@@ -47,7 +47,7 @@ pub trait EmitDelete<'a>: SqlEmitter<'a> {
 mod tests {
     use super::EmitDelete;
     use crate::query::querybuilder::syntax::dialect::MsSql;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
+    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::delete::DeleteAst, dialect::StandardDialect, emitter::SqlEmitter,
@@ -131,7 +131,7 @@ mod tests {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,
-            value_indexes: PlaceholderKind::Value(1),
+            value_indexes: Range::new_unbounded(3),
         });
 
         let sql = render_standard(&ast, &mut base_ast);

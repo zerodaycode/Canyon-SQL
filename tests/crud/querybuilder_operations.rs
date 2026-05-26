@@ -49,7 +49,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
 
     assert_eq!(
         select_with_joins.unwrap().sql().unwrap(),
-        "SELECT * FROM league INNER JOIN tournament ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN player ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"id\" > $1 AND \"name\" = $2 AND \"name\" IN ($2, $3);"
+        "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"id\" > $1 AND \"name\" = $2 AND \"name\" IN ($3, $4);"
     )
 }
 
