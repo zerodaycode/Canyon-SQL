@@ -74,11 +74,9 @@ pub fn table_schema_parser<'a>(
     let mut schema: Option<Cow<'_, str>> = None;
 
     for attr in macro_data.attrs {
-        let mut segments = attr.path.segments.iter();
-        if segments.any(|seg| seg.ident == "canyon_macros" || seg.ident == "canyon_entity") {
+        if __impl::is_canyon_entity_attr(attr) {
             parse_canyon_entity_attr(attr, &mut schema, &mut table_name)?;
         }
-        // TODO: if segments because we could parse here the canyon_crud proc_macro_attr
     }
 
     let mut table_meta = TableMetadata::default();
@@ -105,10 +103,6 @@ fn parse_canyon_entity_attr(
     schema: &mut Option<Cow<'_, str>>,
     table_name: &mut Option<Cow<'_, str>>,
 ) -> Result<(), TokenStream> {
-    if !__impl::is_canyon_entity_attr(attr) {
-        return Ok(());
-    }
-
     for name_value in __impl::parse_canyon_entity_args(attr)? {
         let key = __impl::name_value_key(&name_value)?;
         let value = __impl::string_literal_value(&name_value)?;
@@ -132,13 +126,17 @@ mod __impl {
     pub(super) fn is_canyon_entity_attr(attr: &Attribute) -> bool {
         attr.path
             .segments
-            .iter()
-            .any(|segment| segment.ident == "canyon_macros" || segment.ident == "canyon_entity")
+            .last()
+            .is_some_and(|segment| segment.ident == "canyon_entity")
     }
 
     pub(super) fn parse_canyon_entity_args(
         attr: &Attribute,
     ) -> Result<Punctuated<MetaNameValue, Token![,]>, TokenStream> {
+        if attr.tokens.is_empty() {
+            return Ok(Punctuated::new());
+        }
+
         attr.parse_args_with(Punctuated::parse_terminated)
             .map_err(syn::Error::into_compile_error)
     }
