@@ -1,4 +1,4 @@
-use crate::query::operators::Operator;
+use crate::query::operators::{LikeKind, Operator};
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
@@ -10,7 +10,7 @@ pub struct ConditionClause<'a> {
     pub(crate) kind: ConditionClauseKind,
     pub(crate) column_name: ColumnRef<'a>,
     pub(crate) operator: Operator,
-    pub(crate) value_indexes: Range,
+    pub(crate) value_indexes: Option<Range>,
 }
 
 #[derive(Eq, PartialEq, Copy, Clone, Debug)]
@@ -51,25 +51,50 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
         // Operator
         out.operator(self.operator);
 
-        out.whitespace();
-
-        if self.value_indexes.is_range() {
-            out.symbol(Symbol::LParen);
-            let mut indexes = (&self.value_indexes).into_iter().peekable();
-            while indexes.next().is_some() {
-                out.placeholder();
-                if indexes.peek().is_some() {
-                    out.symbol(Symbol::Comma);
+        match self.operator {
+            Operator::Like(kind) | Operator::NotLike(kind) => {
+                let like_tokens = <LikeKind as ToSqlTokens<'_, D>>::to_tokens(&kind);
+                out.extend(like_tokens);
+            }
+            _ => {
+                if let Some(ref range) = self.value_indexes
+                    && range.is_range()
+                {
+                    __impl::output_range_of_placeholders::<D>(range, &mut out);
+                } else {
                     out.whitespace();
+                    out.placeholder();
                 }
             }
-            out.symbol(Symbol::RParen);
-        } else {
-            out.placeholder();
         }
 
         out.whitespace();
 
         out
+    }
+}
+
+mod __impl {
+    use crate::query::operators::Operator;
+    use crate::query::querybuilder::syntax::dialect::SqlDialect;
+    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
+    use crate::query::querybuilder::syntax::symbol::Symbol;
+    use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
+
+    pub(crate) fn output_range_of_placeholders<D: SqlDialect>(
+        range: &Range,
+        out: &mut SqlTokens<'_>,
+    ) {
+        out.whitespace();
+        out.symbol(Symbol::LParen);
+        let mut indexes = range.into_iter().peekable();
+        while indexes.next().is_some() {
+            out.placeholder();
+            if indexes.peek().is_some() {
+                out.symbol(Symbol::Comma);
+                out.whitespace();
+            }
+        }
+        out.symbol(Symbol::RParen);
     }
 }

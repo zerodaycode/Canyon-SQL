@@ -131,7 +131,7 @@ mod tests {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,
-            value_indexes: Range::new_unbounded(3),
+            value_indexes: Some(Range::new_unbounded(3)),
         });
 
         let sql = render_standard(&ast, &mut base_ast);

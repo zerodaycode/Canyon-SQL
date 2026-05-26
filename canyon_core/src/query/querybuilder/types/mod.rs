@@ -184,7 +184,7 @@ mod __impl {
             kind,
             column_name: column_name.into(),
             operator,
-            value_indexes: Range::new_unbounded(_self.params.len()),
+            value_indexes: Some(Range::new_unbounded(_self.params.len())),
         });
     }
 
@@ -199,7 +199,7 @@ mod __impl {
             kind,
             column_name: column_name.into(),
             operator,
-            value_indexes: value_indexes_range,
+            value_indexes: Some(value_indexes_range),
         });
     }
 }

@@ -89,9 +89,10 @@ fn test_crud_find_with_querybuilder_and_fulllike() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql,
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
+        "SELECT * FROM \"league\" WHERE \"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR), '%');"
     )
 }
+
 //
 // /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 // /// with the parameters that modifies the base SQL to SELECT * FROM <entity>

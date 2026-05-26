@@ -51,8 +51,7 @@ mod __impl {
             SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
             SqlToken::Operator(op) => write!(f, "{}", op)?,
             SqlToken::Placeholder => {
-                __detail::write_value_placeholder::<D>(placeholder_counter, f)?;
-                *placeholder_counter += 1;
+                __detail::write_value_placeholder::<D>(placeholder_counter, f)?
             }
             SqlToken::WhiteSpace => write!(f, " ")?,
             SqlToken::Number(num) => write!(f, "{}", num)?,
@@ -62,6 +61,9 @@ mod __impl {
 }
 
 mod __detail {
+    use crate::query::operators::Operator;
+    use crate::query::querybuilder::syntax::tokens::ToSqlTokens;
+    use crate::query::querybuilder::syntax::writer::__impl::output_token_to_string_buffer;
     use crate::{
         connection::database_type::DatabaseType,
         query::querybuilder::syntax::{dialect::SqlDialect, symbol::Symbol},
@@ -102,6 +104,8 @@ mod __detail {
             DatabaseType::MySQL => write!(f, "{}", placeholder_symbol),
             _ => write!(f, "{}{}", placeholder_symbol, placeholder_counter),
         };
+
+        *placeholder_counter += 1;
 
         Ok(())
     }

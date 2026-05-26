@@ -50,7 +50,7 @@ impl Display for Operator {
 
 impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for Operator {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
-        let mut out = SqlTokens::with_capacity(16);
+        let mut out = SqlTokens::default();
 
         match *self {
             Self::Eq => out.symbol(Symbol::Equals),
@@ -99,7 +99,6 @@ impl LikeKind {
         out.placeholder();
         out.whitespace();
         out.keyword(Keyword::As);
-        out.whitespace();
         out.ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
             D::PLACEHOLDER_DATA_TYPE,
         )));
@@ -124,7 +123,6 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for LikeKind {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(19);
 
-        out.keyword(Keyword::Like);
         out.whitespace();
         out.keyword(Keyword::Concat);
         out.symbol(Symbol::LParen);
