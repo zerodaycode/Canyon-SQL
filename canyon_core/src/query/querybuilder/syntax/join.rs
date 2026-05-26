@@ -95,7 +95,9 @@ fn test_join_clause_basic() {
     let expected = vec![
         SqlToken::Keyword(Keyword::Inner),
         SqlToken::Keyword(Keyword::Join),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("users".into()),
+        SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::WhiteSpace,
         SqlToken::Keyword(Keyword::On),
         SqlToken::Symbol(Symbol::DoubleQuote),

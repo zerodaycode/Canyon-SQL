@@ -1,6 +1,5 @@
 //! Standalone functions that shares the same behaviour for different AST kinds
 
-use std::borrow::Cow;
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::column::ColumnRef;
@@ -8,9 +7,10 @@ use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
 use crate::query::querybuilder::syntax::tokens::{PlaceholderKind, SqlTokens, ToSqlTokens};
+use std::borrow::Cow;
 
 /// Helper function to push a quoted identifier (like table or column names) into the token stream
-pub fn push_quoted_ident<'a, D, S>(element: S, tokens: &mut SqlTokens<'a>) 
+pub fn push_quoted_ident<'a, D, S>(element: S, tokens: &mut SqlTokens<'a>)
 where
     D: SqlDialect,
     S: Into<Cow<'a, str>>,
@@ -25,6 +25,7 @@ where
 pub(crate) fn emit_columns<'a, D: SqlDialect>(
     columns: &Vec<ColumnRef<'a>>,
     tokens: &mut SqlTokens<'a>,
+    ending_whitespace: bool,
 ) {
     if columns.is_empty() {
         tokens.symbol(Symbol::Asterisk);
@@ -37,7 +38,11 @@ pub(crate) fn emit_columns<'a, D: SqlDialect>(
             tokens.symbol(Comma);
             tokens.whitespace();
         }
-        push_quoted_ident::<D, &str>(column.column, tokens);
+        tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(column));
+    }
+
+    if ending_whitespace {
+        tokens.whitespace();
     }
 }
 
@@ -55,7 +60,10 @@ pub(crate) fn emit_placeholders<'a>(
     }
 }
 
-pub(crate) fn add_clause_conditions<'a, D: SqlDialect>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+pub(crate) fn add_clause_conditions<'a, D: SqlDialect>(
+    base_ast: &BaseAst<'a>,
+    tokens: &mut SqlTokens<'a>,
+) {
     if !base_ast.conditions.is_empty() {
         for cond in &base_ast.conditions {
             tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, D>>::to_tokens(cond));
@@ -89,11 +97,7 @@ mod tests {
     }
 
     fn make_column(column: &'_ str) -> ColumnRef<'_> {
-        ColumnRef {
-            table: None,
-            column,
-            alias: None,
-        }
+        ColumnRef::from(column)
     }
 
     fn make_qualified_column<'a>(
@@ -102,7 +106,7 @@ mod tests {
         alias: Option<&'a str>,
     ) -> ColumnRef<'a> {
         ColumnRef {
-            table: Some(table),
+            table: (!table.is_empty()).then_some(table),
             column,
             alias,
         }
@@ -168,19 +172,27 @@ mod tests {
         );
     }
 
+    fn get_emit_columns_expected_values<D: SqlDialect>(
+        literals: &[&'static str],
+    ) -> Vec<SqlToken<'static>> {
+        let mut tokens = get_columns_test_expr_values::<D>(literals);
+        tokens.push(SqlToken::WhiteSpace);
+        tokens
+    }
+
     fn get_columns_test_expr_values<D: SqlDialect>(
         literals: &[&'static str],
     ) -> Vec<SqlToken<'static>> {
         let mut tokens = SqlTokens::default();
 
         for (idx, lit) in literals.iter().enumerate() {
-            push_quoted_ident::<D, &str>(lit, &mut tokens);
-            if idx + 1 < literals.len() {
-                tokens.extend([
-                    SqlToken::Symbol(Comma),
-                    SqlToken::WhiteSpace,
-                ]);
+            if idx > 0 {
+                tokens.symbol(Comma);
+                tokens.whitespace();
             }
+            tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(
+                &make_column(lit),
+            ));
         }
 
         tokens.inner()
@@ -212,7 +224,7 @@ mod tests {
     fn emit_columns_with_empty_vec_emits_asterisk() {
         let columns = vec![];
         let mut tokens = SqlTokens::default();
-        emit_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
         assert_eq!(
             tokens.inner(),
             vec![SqlToken::Symbol(Symbol::Asterisk), SqlToken::WhiteSpace]
@@ -220,40 +232,50 @@ mod tests {
     }
 
     #[test]
-    fn emit_columns_with_one_column_quotes_only_column_name() {
-        let columns = vec![make_qualified_column("users", "name", Some("username"))];
+    fn emit_columns_with_one_column_quotes_only_column_name_and_emit_column_alias() {
+        let columns = vec![make_qualified_column("user", "name", Some("username"))];
         let mut tokens = SqlTokens::default();
-        emit_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
         assert_eq!(
             tokens.inner(),
-            get_columns_test_expr_values::<StandardDialect>(&["name"])
+            get_columns_test_expr_values::<StandardDialect>(&["user.name as username"])
         );
     }
 
     #[test]
     fn emit_columns_with_many_columns_separates_with_comma_and_space() {
-        let columns = vec![make_column("id"), make_column("name"), make_column("email")];
+        let columns = vec![
+            make_qualified_column("users", "id", None),
+            make_qualified_column("users", "name", None),
+            make_qualified_column("users", "email", None),
+        ];
         let mut tokens = SqlTokens::default();
-
-        emit_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
 
         assert_eq!(
             tokens.inner(),
-            get_columns_test_expr_values::<StandardDialect>(&["id", "name", "email"])
+            get_columns_test_expr_values::<StandardDialect>(&[
+                "users.id",
+                "users.name",
+                "users.email"
+            ])
         );
     }
 
     #[cfg(feature = "mysql")]
     #[test]
     fn emit_columns_with_mysql_uses_backticks() {
-        let columns = vec![make_column("id"), make_column("name")];
+        let columns = vec![
+            make_qualified_column("users", "id", None),
+            make_qualified_column("users", "name", None),
+        ];
         let mut tokens = SqlTokens::default();
 
-        emit_columns::<MySql>(&columns, &mut tokens);
+        emit_columns::<MySql>(&columns, &mut tokens, false);
 
         assert_eq!(
             tokens.inner(),
-            get_columns_test_expr_values::<MySql>(&["id", "name"])
+            get_columns_test_expr_values::<MySql>(&["users.id", "users.name"])
         );
     }
 
@@ -261,9 +283,9 @@ mod tests {
     #[test]
     fn emit_columns_with_mssql_uses_brackets() {
         let columns = vec![make_column("id"), make_column("name")];
-        let mut tokens = SqlTokens::default();
 
-        emit_columns::<MsSql>(&columns, &mut tokens);
+        let mut tokens = SqlTokens::default();
+        emit_columns::<MsSql>(&columns, &mut tokens, false);
 
         assert_eq!(
             tokens.inner(),
@@ -274,17 +296,16 @@ mod tests {
     #[test]
     fn emit_columns_ignores_table_and_alias_and_only_emits_column_names() {
         let columns = vec![
-            make_qualified_column("users", "id", Some("user_id")),
-            make_qualified_column("accounts", "name", Some("account_name")),
+            make_qualified_column("user", "id", None),
+            make_qualified_column("account", "name", None),
         ];
         let mut tokens = SqlTokens::default();
+        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
 
-        emit_columns::<StandardDialect>(&columns, &mut tokens);
+        let expected =
+            get_columns_test_expr_values::<StandardDialect>(&["user.id", "account.name"]);
 
-        assert_eq!(
-            tokens.inner(),
-            get_columns_test_expr_values::<StandardDialect>(&["id", "name"])
-        );
+        assert_eq!(tokens.inner(), expected);
     }
 
     #[test]

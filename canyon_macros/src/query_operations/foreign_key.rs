@@ -1,8 +1,8 @@
 use crate::utils::macro_tokens::MacroTokens;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
+use canyon_entities::helpers::database_table_name_to_struct_ident;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use canyon_entities::helpers::database_table_name_to_struct_ident;
 
 pub fn generate_find_by_fk_ops(
     macro_data: &MacroTokens<'_>,

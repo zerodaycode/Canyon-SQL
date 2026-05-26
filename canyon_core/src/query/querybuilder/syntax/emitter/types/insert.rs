@@ -18,7 +18,7 @@ where
         &mut self,
         ast: &impl AstProcessor<'a>,
         base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a>{
+    ) -> SqlTokens<'a> {
         let mut tokens = SqlTokens::default();
 
         let ast = transient::Downcast::downcast_ref::<InsertAst>(ast.as_any()).expect(
@@ -33,7 +33,7 @@ where
         tokens.whitespace();
 
         tokens.symbol(Symbol::LParen);
-        helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens);
+        helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens, false);
         tokens.symbol(Symbol::RParen);
         tokens.whitespace();
 
@@ -72,7 +72,7 @@ pub(crate) mod __impl {
         }
         tokens.keyword(Keyword::Returning);
         // add the columns
-        helpers::emit_columns::<E::Dialect>(&ast.returning_columns, tokens)
+        helpers::emit_columns::<E::Dialect>(&ast.returning_columns, tokens, false)
     }
 }
 
@@ -107,7 +107,7 @@ mod tests {
         base_ast: &mut BaseAst<'a>,
     ) -> String {
         let mut emitter = TestInsertEmitter;
-        let mut tokens = emitter.emit_insert(&ast.0, base_ast);
+        let tokens = emitter.emit_insert(&ast.0, base_ast);
         TokenWriter::new()
             .render::<TestInsertEmitter>(tokens)
             .unwrap()
@@ -118,7 +118,7 @@ mod tests {
         base_ast: &mut BaseAst<'a>,
     ) -> String {
         let mut emitter = TestInsertEmitterNoReturning;
-        let mut tokens = emitter.emit_insert(&ast.0, base_ast);
+        let tokens = emitter.emit_insert(&ast.0, base_ast);
         TokenWriter::new()
             .render::<TestInsertEmitterNoReturning>(tokens)
             .unwrap()
@@ -148,7 +148,7 @@ mod tests {
         let sql = render_with_returning(&ast, &mut base_ast);
         assert_eq!(
             sql,
-            "INSERT INTO users (\"id\", \"name\") VALUES ($1, $2) RETURNING \"id\";"
+            "INSERT INTO \"users\" (\"id\", \"name\") VALUES ($1, $2) RETURNING \"id\";"
         );
     }
 
@@ -167,7 +167,7 @@ mod tests {
         let sql = render_without_returning(&ast, &mut base_ast);
         assert_eq!(
             sql.trim(),
-            "INSERT INTO users ([id], [name]) VALUES (@P1, @P2);"
+            "INSERT INTO [users] ([id], [name]) VALUES (@P1, @P2);"
         );
     }
 
@@ -186,7 +186,7 @@ mod tests {
         let sql = render_with_returning(&ast, &mut base_ast);
         assert_eq!(
             sql.trim(),
-            "INSERT INTO users (\"name\", \"email\") VALUES ($1, $2) RETURNING \"id\", \"created_at\";"
+            "INSERT INTO \"users\" (\"name\", \"email\") VALUES ($1, $2) RETURNING \"id\", \"created_at\";"
         );
     }
 
@@ -204,6 +204,6 @@ mod tests {
         };
 
         let sql = render_with_returning(&ast, &mut base_ast);
-        assert_eq!(sql.trim(), "INSERT INTO users (\"name\") VALUES ($1);");
+        assert_eq!(sql.trim(), "INSERT INTO \"users\" (\"name\") VALUES ($1);");
     }
 }

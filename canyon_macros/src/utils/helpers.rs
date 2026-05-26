@@ -1,11 +1,11 @@
 use super::macro_tokens::MacroTokens;
 use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
+pub(crate) use canyon_entities::helpers::default_database_table_name_from_entity_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::borrow::Cow;
 use std::fmt::Write;
 use syn::{Attribute, Field, Fields, Type, TypeGenerics, Visibility};
-use std::borrow::Cow;
-pub(crate) use canyon_entities::helpers::default_database_table_name_from_entity_name;
 
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
 /// returns a [`TokenStream`] with the final `RowMapper` implementor.
@@ -130,9 +130,10 @@ mod __impl {
     use syn::{Attribute, MetaNameValue, Token, punctuated::Punctuated};
 
     pub(super) fn is_canyon_entity_attr(attr: &Attribute) -> bool {
-        attr.path.segments.iter().any(|segment| {
-            segment.ident == "canyon_macros" || segment.ident == "canyon_entity"
-        })
+        attr.path
+            .segments
+            .iter()
+            .any(|segment| segment.ident == "canyon_macros" || segment.ident == "canyon_entity")
     }
 
     pub(super) fn parse_canyon_entity_args(
@@ -171,8 +172,6 @@ mod __impl {
         .into_compile_error()
     }
 }
-
-
 
 #[cfg(test)]
 mod tests_for_parse_struct_field_attributes {

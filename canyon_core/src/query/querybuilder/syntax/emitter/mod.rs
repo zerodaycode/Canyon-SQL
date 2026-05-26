@@ -1,13 +1,13 @@
 pub(crate) mod backends;
 pub(crate) mod types;
 
+use crate::query::querybuilder::syntax::emitter::types::delete::EmitDelete;
+use crate::query::querybuilder::syntax::emitter::types::update::EmitUpdate;
 use crate::query::querybuilder::syntax::{
     ast::BaseAst, dialect::SqlDialect, emitter::types::insert::EmitInsert,
     emitter::types::select::EmitSelect, query_kind::QueryKind, tokens::SqlTokens,
 };
 use transient::{Any, Inv};
-use crate::query::querybuilder::syntax::emitter::types::delete::EmitDelete;
-use crate::query::querybuilder::syntax::emitter::types::update::EmitUpdate;
 
 // ---------- AST Processor marker trait ----------
 pub trait AstProcessor<'a>: Default + AsAstProcessor<'a> {

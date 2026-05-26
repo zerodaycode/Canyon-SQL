@@ -56,7 +56,6 @@ pub fn database_table_name_to_struct_ident(name: &str) -> Ident {
     Ident::new(&struct_name, Span::call_site())
 }
 
-
 #[cfg(test)]
 mod default_table_name_from_entity_name_tests {
     use crate::helpers::default_database_table_name_from_entity_name;

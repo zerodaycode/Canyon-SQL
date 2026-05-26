@@ -1,3 +1,4 @@
+use crate::query::querybuilder::syntax::dialect::PlaceholderDatatype;
 use crate::query::querybuilder::syntax::{
     dialect::SqlDialect,
     keyword::Keyword,
@@ -5,7 +6,6 @@ use crate::query::querybuilder::syntax::{
 };
 use std::borrow::Cow;
 use std::fmt::Display;
-use crate::query::querybuilder::syntax::dialect::PlaceholderDatatype;
 
 /// Enumerated type for represent the available operators
 /// in SQL sentences
@@ -100,7 +100,9 @@ impl LikeKind {
         out.whitespace();
         out.keyword(Keyword::As);
         out.whitespace();
-        out.ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(D::PLACEHOLDER_DATA_TYPE.into())));
+        out.ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
+            D::PLACEHOLDER_DATA_TYPE.into(),
+        )));
         out.symbol(Symbol::RParen);
     }
 
@@ -185,7 +187,9 @@ mod tests {
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
             SqlToken::WhiteSpace,
-            SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(D::PLACEHOLDER_DATA_TYPE.into()))),
+            SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
+                D::PLACEHOLDER_DATA_TYPE.into(),
+            ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::Comma),
             SqlToken::WhiteSpace,
@@ -213,7 +217,9 @@ mod tests {
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
             SqlToken::WhiteSpace,
-            SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(D::PLACEHOLDER_DATA_TYPE.into()))),
+            SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
+                D::PLACEHOLDER_DATA_TYPE.into(),
+            ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::RParen),
         ]
@@ -231,7 +237,9 @@ mod tests {
             SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
             SqlToken::WhiteSpace,
-            SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(D::PLACEHOLDER_DATA_TYPE.into()))),
+            SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
+                D::PLACEHOLDER_DATA_TYPE.into(),
+            ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::Comma),
             SqlToken::WhiteSpace,
@@ -281,10 +289,7 @@ mod tests {
     #[cfg(feature = "postgres")]
     #[test]
     fn not_like_operator_emits_not_like_instead_of_not_equals() {
-        let mut expected = vec![
-            SqlToken::Keyword(Keyword::Not),
-            SqlToken::WhiteSpace,
-        ];
+        let mut expected = vec![SqlToken::Keyword(Keyword::Not), SqlToken::WhiteSpace];
         expected.extend(full_like_tokens::<PgDialect>());
         assert_eq!(
             tokens::<PgDialect, _>(Operator::NotLike(LikeKind::Full)),

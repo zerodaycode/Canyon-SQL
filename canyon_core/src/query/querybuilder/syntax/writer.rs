@@ -52,7 +52,6 @@ mod __impl {
     }
 }
 
-
 mod __detail {
     use crate::{
         connection::database_type::DatabaseType,
@@ -93,13 +92,9 @@ mod __detail {
     ) -> Result<(), std::fmt::Error> {
         match ph_kind {
             PlaceholderKind::Value(v) => write_value_placeholder::<D>(v, f),
-            PlaceholderKind::Like(like_kind, v) => write!(f, "{}", v),
+            PlaceholderKind::Like(_like_kind, v) => write!(f, "{}", v), // TODO: this is a temporary solution, we should implement the correct rendering of the like patterns with the placeholders
             PlaceholderKind::Range(start, end) => {
-                write!(
-                    f,
-                    "({})",
-                    generate_range_of_placeholders::<D>(start, end)?
-                )
+                write!(f, "({})", generate_range_of_placeholders::<D>(start, end)?)
             }
         }?;
         Ok(())
@@ -144,11 +139,13 @@ mod __detail {
 #[cfg(test)]
 #[cfg(feature = "mssql")]
 mod mssql_tests {
+    use crate::query::ColumnRef;
     use crate::query::querybuilder::syntax::dialect::{MsSql, SqlDialect};
-    use crate::query::querybuilder::syntax::emitter::types::helpers::{emit_columns, push_quoted_ident};
+    use crate::query::querybuilder::syntax::emitter::types::helpers::{
+        emit_columns, push_quoted_ident,
+    };
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens};
-    use crate::query::ColumnRef;
     use std::borrow::Cow;
 
     #[cfg(feature = "mssql")]
@@ -185,11 +182,14 @@ mod mssql_tests {
     fn emit_columns_with_mssql_emits_balanced_brackets_for_every_identifier() {
         let columns = get_columns_mock();
         let mut tokens = SqlTokens::default();
-        emit_columns::<MsSql>(&columns, &mut tokens);
+        emit_columns::<MsSql>(&columns, &mut tokens, false);
 
         assert_eq!(
             tokens.inner(),
-            get_columns_assert_values(MsSql::IDENT_QUOTING.opening().into(), MsSql::IDENT_QUOTING.closing().into())
+            get_columns_assert_values(
+                MsSql::IDENT_QUOTING.opening().into(),
+                MsSql::IDENT_QUOTING.closing().into()
+            )
         );
     }
 

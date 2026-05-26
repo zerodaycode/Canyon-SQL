@@ -1,11 +1,7 @@
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 pub(crate) use crate::query::{
     operators::{LikeKind, Operator},
-    querybuilder::syntax::{
-        keyword::Keyword,
-        symbol::Symbol,
-        tokens::SqlToken::Number,
-    },
+    querybuilder::syntax::{keyword::Keyword, symbol::Symbol, tokens::SqlToken::Number},
 };
 use std::borrow::Cow;
 
@@ -122,7 +118,6 @@ impl<'a> Extend<SqlToken<'a>> for &'a mut SqlTokens<'a> {
         self.0.extend(iter);
     }
 }
-
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SqlToken<'a> {

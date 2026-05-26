@@ -1,7 +1,7 @@
 use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::ast::update::UpdateAst;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
 use crate::query::querybuilder::syntax::emitter::types::helpers;
+use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
@@ -14,7 +14,7 @@ where
         &mut self,
         ast: &impl AstProcessor<'a>,
         base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a>{
+    ) -> SqlTokens<'a> {
         let mut tokens = SqlTokens::default();
         let ast = transient::Downcast::downcast_ref::<UpdateAst>(ast.as_any()).expect(
             "[emitUpdate] - Handle this propagating result and introducing custom error types",
@@ -76,12 +76,12 @@ mod tests {
     use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::dialect::MsSql;
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     #[derive(Default)]
     struct TestUpdateEmitter;
@@ -135,7 +135,7 @@ mod tests {
 
         let sql = render_standard(&ast, &mut base_ast);
 
-        assert_eq!(sql, "UPDATE users SET \"name\" = $1;");
+        assert_eq!(sql, "UPDATE \"users\" SET \"name\" = $1;");
     }
 
     #[test]
@@ -153,7 +153,7 @@ mod tests {
 
         assert_eq!(
             sql,
-            "UPDATE users SET \"name\" = $1, \"email\" = $2, \"updated_at\" = $3;"
+            "UPDATE \"users\" SET \"name\" = $1, \"email\" = $2, \"updated_at\" = $3;"
         );
     }
 
@@ -178,8 +178,8 @@ mod tests {
         let sql = render_standard(&ast, &mut base_ast);
 
         assert_eq!(
-            sql.trim(),
-            "UPDATE users SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3;"
+            sql,
+            "UPDATE \"users\" SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3;"
         );
     }
 
@@ -196,7 +196,7 @@ mod tests {
 
         let sql = render_mssql(&ast, &mut base_ast);
 
-        assert_eq!(sql.trim(), "UPDATE users SET [name] = @P1, [email] = @P2;");
+        assert_eq!(sql, "UPDATE [users] SET [name] = @P1, [email] = @P2;");
     }
 
     #[test]
@@ -220,8 +220,8 @@ mod tests {
         let sql = render_standard(&ast, &mut base_ast);
 
         assert_eq!(
-            sql.trim(),
-            "UPDATE users SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3;"
+            sql,
+            "UPDATE \"users\" SET \"name\" = $1, \"email\" = $2 WHERE \"id\" = $3;"
         );
     }
 }

@@ -66,7 +66,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
     }
 
     fn r#where(&mut self, column_name: &'a str, operator: Operator) {
-        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator, );
+        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator);
     }
 
     pub fn where_value<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Operator) {
@@ -91,7 +91,13 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Q: QueryParameter,
     {
         let actual_params_len = self.params.len() + self.params.len();
-        __impl::create_ranged_condition_clause(self, ConditionClauseKind::And, field.as_str(), Operator::In, (actual_params_len, actual_params_len + values.len()));
+        __impl::create_ranged_condition_clause(
+            self,
+            ConditionClauseKind::And,
+            field.as_str(),
+            Operator::In,
+            (actual_params_len, actual_params_len + values.len()),
+        );
         __impl::add_values_in_for_and_or_or_clause(self, ConditionClauseKind::And, field, values)
     }
 
@@ -105,7 +111,13 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Q: QueryParameter,
     {
         let actual_params_len = self.params.len() + self.params.len();
-        __impl::create_ranged_condition_clause(self, ConditionClauseKind::And, r#or.as_str(), Operator::In, (actual_params_len, actual_params_len + values.len()));
+        __impl::create_ranged_condition_clause(
+            self,
+            ConditionClauseKind::And,
+            r#or.as_str(),
+            Operator::In,
+            (actual_params_len, actual_params_len + values.len()),
+        );
         __impl::add_values_in_for_and_or_or_clause(self, ConditionClauseKind::Or, r#or, values)
     }
 
@@ -124,9 +136,9 @@ mod __impl {
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::emitter::AstProcessor;
+    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
     use crate::query::querybuilder::types::__validators;
     use std::error::Error;
-    use crate::query::querybuilder::syntax::tokens::PlaceholderKind;
 
     pub(crate) fn add_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
         _self: &mut QueryBuilder<'a, P>,
@@ -165,16 +177,18 @@ mod __impl {
         _self: &mut QueryBuilder<'a, P>,
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
-        operator: Operator
+        operator: Operator,
     ) {
         _self.base_ast.conditions.push(ConditionClause {
             kind,
             column_name: column_name.into(),
             operator,
             value_indexes: match operator {
-            Operator::Like(like_kind) | Operator::NotLike(like_kind) => PlaceholderKind::Like(like_kind, _self.params.len()),
-            _ => PlaceholderKind::Value(_self.params.len()),
-        }
+                Operator::Like(like_kind) | Operator::NotLike(like_kind) => {
+                    PlaceholderKind::Like(like_kind, _self.params.len())
+                }
+                _ => PlaceholderKind::Value(_self.params.len()),
+            },
         });
     }
 
@@ -183,7 +197,7 @@ mod __impl {
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
         operator: Operator,
-        value_indexes_range: (usize, usize)
+        value_indexes_range: (usize, usize),
     ) {
         _self.base_ast.conditions.push(ConditionClause {
             kind,
@@ -247,7 +261,7 @@ mod __detail {
     pub(super) fn run_emission_phase<'a, P>(
         database_type: DatabaseType,
         ast: &P,
-        base_ast: &mut BaseAst<'a>, 
+        base_ast: &mut BaseAst<'a>,
     ) -> SqlTokens<'a>
     where
         P: AstProcessor<'a>,
