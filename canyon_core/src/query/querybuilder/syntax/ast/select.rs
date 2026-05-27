@@ -9,6 +9,8 @@ use transient::Transient;
 #[derive(Default, Transient)]
 pub struct SelectAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
+    pub is_count_query: bool,
+    pub with_distinct: bool,
     pub joins: Vec<JoinClause<'a>>,
     pub order_by: Option<OrderByClause<'a>>,
     pub having: Option<HavingClause<'a>>,
@@ -21,6 +23,8 @@ impl<'a> SelectAst<'a> {
     pub const fn new() -> Self {
         Self {
             columns: Vec::new(),
+            is_count_query: false,
+            with_distinct: false,
             joins: Vec::new(),
             order_by: None,
             group_by: None,

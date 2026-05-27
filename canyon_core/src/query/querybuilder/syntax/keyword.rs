@@ -38,6 +38,8 @@ pub enum Keyword {
     Not,
     Cast,
     Concat,
+    Distinct,
+    Count,
 }
 
 impl Display for Keyword {
@@ -75,6 +77,8 @@ impl Display for Keyword {
             Keyword::Not => "NOT",
             Keyword::Cast => "CAST",
             Keyword::Concat => "CONCAT",
+            Keyword::Distinct => "DISTINCT",
+            Keyword::Count => "COUNT",
         };
         write!(f, "{}", i)
     }

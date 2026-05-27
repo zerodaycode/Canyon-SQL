@@ -44,6 +44,12 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// If this method isn't invoked, the querybuilder will create a SELECT * FROM query
     fn with_columns<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Self;
 
+    /// Adds a `DISTINCT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
+    fn with_distinct(self) -> Self;
+
+        /// Adds a `COUNT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
+    fn count(self) -> Self;
+
     /// Adds a *LEFT JOIN* SQL statement to the underlying
     /// `Sql Statement` held by the [`QueryBuilder`], where:
     ///

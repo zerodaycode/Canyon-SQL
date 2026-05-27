@@ -23,6 +23,7 @@ where
         );
 
         tokens.keyword(Keyword::Select);
+        __impl::emit_distinct(select_ast, &mut tokens);
 
         __impl::emit_columns::<T::Dialect>(select_ast, &mut tokens);
         __impl::emit_from::<T::Dialect>(base_ast, &mut tokens);
@@ -87,11 +88,20 @@ mod __impl {
     use crate::query::querybuilder::syntax::join::JoinClause;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::order::OrderByClause;
+    use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
     pub(crate) fn emit_columns<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
+        let is_count_query = ast.is_count_query;
+        if is_count_query {
+            tokens.keyword(Keyword::Count);
+            tokens.symbol(Symbol::LParen);
+        }
         helpers::emit_columns::<D>(&ast.columns, tokens);
+        if is_count_query {
+            tokens.symbol(Symbol::RParen);
+        }
     }
 
     pub(crate) fn emit_from<'a, D: SqlDialect>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
@@ -146,6 +156,12 @@ mod __impl {
         if let Some(offset) = ast.offset {
             tokens.keyword(Keyword::Offset);
             tokens.numeric(offset);
+        }
+    }
+
+    pub(crate) fn emit_distinct(ast: &SelectAst, tokens: &mut SqlTokens) {
+        if ast.with_distinct {
+            tokens.keyword(Keyword::Distinct);
         }
     }
 }

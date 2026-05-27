@@ -1,6 +1,7 @@
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
+use canyon_core::query::querybuilder::{SelectQueryBuilder, SelectQueryBuilderOps};
 
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
@@ -14,7 +15,7 @@ pub fn generate_read_operations_tokens(
         .as_ref()
         .unwrap_or(ty);
 
-    let find_all_tokens = generate_find_all_operations_tokens(mapper_ty, table_schema_data);
+    let find_all_tokens = generate_find_all_operations_tokens(mapper_ty, table_schema_data, macro_data);
     let count_tokens = generate_count_operations_tokens(table_schema_data);
     let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, table_schema_data);
     let read_querybuilder_ops = generate_select_querybuilder_tokens(table_schema_data);
@@ -27,8 +28,13 @@ pub fn generate_read_operations_tokens(
     }
 }
 
-fn generate_find_all_operations_tokens(mapper_ty: &Ident, table_schema_data: &str) -> TokenStream {
-    let fa_stmt = format!("SELECT * FROM {table_schema_data}");
+fn generate_find_all_operations_tokens(mapper_ty: &Ident, table_schema_data: &str, macro_data: &MacroTokens) -> TokenStream {
+    let binding = SelectQueryBuilder::new(table_schema_data)
+        .expect("Failed to create SelectQueryBuilder for find_all macro")
+        .with_columns(macro_data.get_struct_fields().map(|f| f.to_string()).collect())
+        .build()
+        .expect("Failed to build SelectQueryBuilder for find_all macro");
+    let fa_stmt = binding.sql();
 
     let find_all = __details::find_all_generators::create_find_all_macro(mapper_ty, &fa_stmt);
     let find_all_with =
@@ -63,6 +69,11 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
 
 fn generate_count_operations_tokens(table_schema_data: &str) -> TokenStream {
     let count_stmt = format!("SELECT COUNT(*) FROM {table_schema_data}");
+    let count_smt = SelectQueryBuilder::new(table_schema_data)
+        .expect("Failed to create SelectQueryBuilder for count macro")
+
+        .build()
+        .expect("Failed to build SelectQueryBuilder for count macro");
     let count = __details::count_generators::create_count_macro(&count_stmt);
     let count_with = __details::count_generators::create_count_with_macro(&count_stmt);
 

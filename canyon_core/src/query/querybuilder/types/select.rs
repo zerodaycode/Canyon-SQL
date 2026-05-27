@@ -44,6 +44,16 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         self
     }
 
+    fn with_distinct(mut self) -> Self {
+        self._inner.ast.with_distinct = true;
+        self
+    }
+
+    fn count(mut self) -> Self {
+        self._inner.ast.is_count_query = true;
+        self
+    }
+
     fn left_join(
         self,
         join_table: impl Into<TableMetadata<'a>>,

@@ -1,12 +1,13 @@
+use std::borrow::Cow;
 use crate::query::bounds::FieldIdentifier;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRef<'a> {
-    pub table: Option<&'a str>,
-    pub column: &'a str,
-    pub alias: Option<&'a str>,
+    pub table: Option<Cow<'a, str>>,
+    pub column: Cow<'a, str>,
+    pub alias: Option<Cow<'a, str>>,
 }
 
 impl<'a, T> From<T> for ColumnRef<'a>
@@ -24,6 +25,27 @@ impl<'a> From<&'a str> for ColumnRef<'a> {
     }
 }
 
+impl From<String> for ColumnRef<'static> {
+    fn from(value: String) -> Self {
+        __impl::column_ref_from_string(value)
+    }
+}
+
+impl<'a> From<&'a String> for ColumnRef<'a> {
+    fn from(value: &'a String) -> Self {
+        __impl::column_ref_from_str_ref(value.as_str())
+    }
+}
+
+impl<'a> From<Cow<'a, str>> for ColumnRef<'a> {
+    fn from(value: Cow<'a, str>) -> Self {
+        match value {
+            Cow::Borrowed(value) => __impl::column_ref_from_str_ref(value),
+            Cow::Owned(value) => __impl::column_ref_from_string(value),
+        }
+    }
+}
+
 impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ColumnRef<'a> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(__detail::calculate_column_ref_capacity(self));
@@ -33,9 +55,9 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ColumnRef<'a> {
 }
 
 impl<'a> ColumnRef<'a> {
-    pub const fn new(column_name: &'a str) -> Self {
+    pub fn new(column_name: &'a str) -> Self {
         Self {
-            column: column_name,
+            column: Cow::Borrowed(column_name),
             table: None,
             alias: None,
         }
@@ -45,7 +67,12 @@ impl<'a> ColumnRef<'a> {
     ///
     /// Ex: SELECT * FROM <table>.<column> as <alias>
     pub fn table(mut self, table: &'a str) -> Self {
-        self.table = Some(table);
+        self.table = Some(Cow::Borrowed(table));
+        self
+    }
+
+    pub fn table_owned(mut self, table: String) -> Self {
+        self.table = Some(Cow::Owned(table));
         self
     }
 
@@ -54,12 +81,18 @@ impl<'a> ColumnRef<'a> {
     ///
     /// Ex: SELECT * FROM <table>.<column> as <alias>
     pub fn alias(mut self, alias: &'a str) -> Self {
-        self.alias = Some(alias);
+        self.alias = Some(Cow::Borrowed(alias));
+        self
+    }
+
+    pub fn alias_owned(mut self, alias: String) -> Self {
+        self.alias = Some(Cow::Owned(alias));
         self
     }
 }
 
 mod __impl {
+    use std::borrow::Cow;
     use crate::query::querybuilder::syntax::column::{__detail, ColumnRef};
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
@@ -74,14 +107,14 @@ mod __impl {
             Some(idx) => {
                 let (left, right) = trimmed.split_at(idx);
                 let right = right[2..].trim_start();
-                (left.trim(), Some(right.trim()))
+                (left.trim(), Some(Cow::Borrowed(right.trim())))
             }
             None => (trimmed, None),
         };
 
         let (table, column) = match before_alias.split_once('.') {
-            Some((tbl, col)) => (Some(tbl.trim()), col.trim()),
-            None => (None, before_alias.trim()),
+            Some((tbl, col)) => (Some(Cow::Borrowed(tbl.trim())), Cow::Borrowed(col.trim())),
+            None => (None, Cow::Borrowed(before_alias.trim())),
         };
 
         ColumnRef {
@@ -91,20 +124,44 @@ mod __impl {
         }
     }
 
+    pub(crate) fn column_ref_from_string(value: String) -> ColumnRef<'static> {
+        let trimmed = value.trim();
+
+        let (before_alias, alias) = match __detail::find_case_insensitive_as(trimmed) {
+            Some(idx) => {
+                let (left, right) = trimmed.split_at(idx);
+                let right = right[2..].trim_start();
+                (left.trim(), Some(right.trim().to_owned()))
+            }
+            None => (trimmed, None),
+        };
+
+        let (table, column) = match before_alias.split_once('.') {
+            Some((tbl, col)) => (Some(tbl.trim().to_owned()), col.trim().to_owned()),
+            None => (None, before_alias.trim().to_owned()),
+        };
+
+        ColumnRef {
+            table: table.map(Cow::Owned),
+            column: Cow::Owned(column),
+            alias: alias.map(Cow::Owned),
+        }
+    }
+
     pub(crate) fn generate_column_ref_tokens<'a, D: SqlDialect>(
         __self: &ColumnRef<'a>,
         out: &mut SqlTokens<'a>,
     ) {
-        if let Some(table_ref) = __self.table {
-            helpers::push_quoted_ident::<D, _>(table_ref, out);
+        if let Some(table_ref) = &__self.table {
+            helpers::push_quoted_ident::<D, _>(table_ref.clone(), out);
             out.symbol(Dot)
         }
 
-        helpers::push_quoted_ident::<D, _>(__self.column, out);
+        helpers::push_quoted_ident::<D, _>(__self.column.clone(), out);
 
-        if let Some(alias) = __self.alias {
+        if let Some(alias) = &__self.alias {
             out.keyword(Keyword::As);
-            helpers::push_quoted_ident::<D, _>(alias, out);
+            helpers::push_quoted_ident::<D, _>(alias.clone(), out);
         }
     }
 }
@@ -149,109 +206,143 @@ mod __detail {
 #[cfg(test)]
 mod column_ref_from_str_tests {
     use super::ColumnRef;
+    use std::borrow::Cow;
 
     #[test]
     fn test_column_ref_simple_column() {
         let c = ColumnRef::from("name");
-        assert_eq!(c.table, None);
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, None);
+        assert_eq!(c.table.as_deref(), None);
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), None);
     }
 
     #[test]
     fn test_column_ref_table_column() {
         let c = ColumnRef::from("users.name");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, None);
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), None);
     }
 
     #[test]
     fn test_column_ref_with_alias_uppercase_as() {
         let c = ColumnRef::from("users.name AS n");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, Some("n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 
     #[test]
     fn test_column_ref_with_alias_lowercase_as() {
         let c = ColumnRef::from("users.name as n");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, Some("n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 
     #[test]
     fn test_column_ref_with_alias_mixed_case_as() {
         let c = ColumnRef::from("users.name As n");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, Some("n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 
     #[test]
     fn test_column_ref_multiple_spaces_around_as() {
         let c = ColumnRef::from("users.name   AS    n");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, Some("n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 
     #[test]
     fn test_column_ref_alias_without_table() {
         let c = ColumnRef::from("name AS n");
-        assert_eq!(c.table, None);
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, Some("n"));
+        assert_eq!(c.table.as_deref(), None);
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 
     #[test]
     fn test_column_ref_no_alias_when_as_not_valid() {
         let c = ColumnRef::from("nameASn");
-        assert_eq!(c.table, None);
-        assert_eq!(c.column, "nameASn");
-        assert_eq!(c.alias, None);
+        assert_eq!(c.table.as_deref(), None);
+        assert_eq!(c.column.as_ref(), "nameASn");
+        assert_eq!(c.alias.as_deref(), None);
     }
 
     #[test]
     fn test_column_ref_trim_whitespace() {
         let c = ColumnRef::from("   users.name AS n   ");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, Some("n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 
     #[test]
     fn test_column_ref_alias_complex() {
         let c = ColumnRef::from("users.full_name AS fullNameAlias");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "full_name");
-        assert_eq!(c.alias, Some("fullNameAlias"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "full_name");
+        assert_eq!(c.alias.as_deref(), Some("fullNameAlias"));
     }
 
     #[test]
     fn test_column_ref_no_table_but_alias() {
         let c = ColumnRef::from("email AS e");
-        assert_eq!(c.table, None);
-        assert_eq!(c.column, "email");
-        assert_eq!(c.alias, Some("e"));
+        assert_eq!(c.table.as_deref(), None);
+        assert_eq!(c.column.as_ref(), "email");
+        assert_eq!(c.alias.as_deref(), Some("e"));
     }
 
     #[test]
     fn test_column_ref_only_column_and_spaces() {
         let c = ColumnRef::from("   column_name   ");
-        assert_eq!(c.table, None);
-        assert_eq!(c.column, "column_name");
-        assert_eq!(c.alias, None);
+        assert_eq!(c.table.as_deref(), None);
+        assert_eq!(c.column.as_ref(), "column_name");
+        assert_eq!(c.alias.as_deref(), None);
     }
 
     #[test]
     fn test_column_ref_only_table_column_with_spaces() {
         let c = ColumnRef::from("   users . name   ");
-        assert_eq!(c.table, Some("users"));
-        assert_eq!(c.column, "name");
-        assert_eq!(c.alias, None);
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), None);
+    }
+
+    #[test]
+    fn test_column_ref_from_owned_string() {
+        let c = ColumnRef::from(String::from("users.name AS n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
+    }
+
+    #[test]
+    fn test_column_ref_from_string_ref() {
+        let value = String::from("users.name AS n");
+        let c = ColumnRef::from(&value);
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
+    }
+
+    #[test]
+    fn test_column_ref_from_owned_cow() {
+        let c = ColumnRef::from(Cow::Owned(String::from("users.name AS n")));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
+    }
+
+    #[test]
+    fn test_column_ref_from_borrowed_cow() {
+        let c = ColumnRef::from(Cow::Borrowed("users.name AS n"));
+        assert_eq!(c.table.as_deref(), Some("users"));
+        assert_eq!(c.column.as_ref(), "name");
+        assert_eq!(c.alias.as_deref(), Some("n"));
     }
 }
 

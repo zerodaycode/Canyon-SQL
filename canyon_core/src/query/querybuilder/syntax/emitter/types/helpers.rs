@@ -133,9 +133,9 @@ mod tests {
         alias: Option<&'a str>,
     ) -> ColumnRef<'a> {
         ColumnRef {
-            table: (!table.is_empty()).then_some(table),
-            column,
-            alias,
+            table: (!table.is_empty()).then_some(Cow::Borrowed(table)),
+            column: Cow::Borrowed(column),
+            alias: alias.map(Cow::Borrowed),
         }
     }
 

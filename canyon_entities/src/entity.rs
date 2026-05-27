@@ -102,8 +102,8 @@ impl CanyonEntity {
 
                 quote! {
                     #enum_name::#field_name => canyon_sql::query::ColumnRef {
-                        table: Some(#db_table_name),
-                        column: #field_name_as_str,
+                        table: Some(std::borrow::Cow::Borrowed(#db_table_name)),
+                        column: std::borrow::Cow::from(#field_name_as_str),
                         alias: None
                     }
                 }
@@ -147,8 +147,8 @@ impl CanyonEntity {
 
                 quote! {
                     #enum_name::#field_name(v) => (canyon_sql::query::ColumnRef {
-                        table: Some(#db_table_name),
-                        column: #field_name_as_string,
+                        table: Some(std::borrow::Cow::Borrowed(#db_table_name)),
+                        column: std::borrow::Cow::from(#field_name_as_string),
                         alias: None
                     }, v as &dyn canyon_sql::query::QueryParameter)
                 }
