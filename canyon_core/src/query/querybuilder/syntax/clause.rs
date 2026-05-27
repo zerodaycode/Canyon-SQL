@@ -46,8 +46,6 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
             &self.column_name,
         ));
 
-
-
         // Operator
         out.operator(self.operator);
 
@@ -62,13 +60,10 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
                 {
                     __impl::output_range_of_placeholders::<D>(range, &mut out);
                 } else {
-
                     out.placeholder();
                 }
             }
         }
-
-
 
         out
     }
@@ -85,14 +80,12 @@ mod __impl {
         range: &Range,
         out: &mut SqlTokens<'_>,
     ) {
-
         out.symbol(Symbol::LParen);
         let mut indexes = range.into_iter().peekable();
         while indexes.next().is_some() {
             out.placeholder();
             if indexes.peek().is_some() {
                 out.symbol(Symbol::Comma);
-
             }
         }
         out.symbol(Symbol::RParen);

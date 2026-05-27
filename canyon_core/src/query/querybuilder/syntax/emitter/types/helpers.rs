@@ -63,7 +63,7 @@ where
 /// Helper function to emit a list of columns, separated by commas
 pub(crate) fn emit_columns<'a, D: SqlDialect>(
     columns: &Vec<ColumnRef<'a>>,
-    tokens: &mut SqlTokens<'a>
+    tokens: &mut SqlTokens<'a>,
 ) {
     if columns.is_empty() {
         tokens.symbol(Symbol::Asterisk);
@@ -87,7 +87,6 @@ pub(crate) fn emit_placeholders<'a>(
     for (i, _) in columns.iter().enumerate() {
         if i > 0 {
             tokens.symbol(Comma);
-
         }
         tokens.placeholder();
     }
@@ -248,10 +247,7 @@ mod tests {
         let columns = vec![];
         let mut tokens = SqlTokens::default();
         emit_columns::<StandardDialect>(&columns, &mut tokens);
-        assert_eq!(
-            tokens.inner(),
-            vec![SqlToken::Symbol(Symbol::Asterisk)]
-        );
+        assert_eq!(tokens.inner(), vec![SqlToken::Symbol(Symbol::Asterisk)]);
     }
 
     #[test]
@@ -342,10 +338,7 @@ mod tests {
     fn get_placeholders_test_expr_values_3() -> Vec<SqlToken<'static>> {
         let mut v = vec![];
         v.extend(get_placeholders_test_expr_values());
-        v.extend(vec![
-            SqlToken::Symbol(Comma),
-            SqlToken::Placeholder,
-        ]);
+        v.extend(vec![SqlToken::Symbol(Comma), SqlToken::Placeholder]);
         v
     }
 

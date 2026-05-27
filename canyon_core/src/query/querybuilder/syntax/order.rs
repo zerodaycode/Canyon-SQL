@@ -27,7 +27,6 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for OrderByClause<'a> {
             &self.column,
         ));
         if self.descending {
-
             out.keyword(Keyword::Desc);
         }
 

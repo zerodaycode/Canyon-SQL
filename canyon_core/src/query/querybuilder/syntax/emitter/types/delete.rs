@@ -24,7 +24,6 @@ where
             .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
 
         if !base_ast.conditions.is_empty() {
-
             for cond in &base_ast.conditions {
                 tokens
                     .extend(<ConditionClause<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(cond));

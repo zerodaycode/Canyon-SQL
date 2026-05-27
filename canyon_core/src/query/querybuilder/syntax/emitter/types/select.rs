@@ -99,7 +99,6 @@ mod __impl {
         tokens.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &base_ast.table,
         ));
-
     }
 
     pub(crate) fn emit_joins<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
@@ -140,7 +139,6 @@ mod __impl {
         if let Some(limit) = ast.limit {
             tokens.keyword(Keyword::Limit);
             tokens.numeric(limit);
-
         }
     }
 
@@ -148,7 +146,6 @@ mod __impl {
         if let Some(offset) = ast.offset {
             tokens.keyword(Keyword::Offset);
             tokens.numeric(offset);
-
         }
     }
 }

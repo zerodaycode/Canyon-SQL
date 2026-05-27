@@ -15,8 +15,8 @@ use std::fmt::Debug;
 /// columns instead of just using * (in this case, is the same, unless we introduce new annotations like #[skip_mapping]
 #[derive(Debug)]
 pub struct Query<'a> {
-    pub sql: String,
-    pub params: Vec<&'a dyn QueryParameter>,
+    sql: String,
+    params: Vec<&'a dyn QueryParameter>,
 }
 
 impl AsRef<str> for Query<'_> {
@@ -31,6 +31,11 @@ impl<'a> Query<'a> {
     /// potentially saving re-allocations when the query is created
     pub fn new(sql: String, params: Vec<&'a dyn QueryParameter>) -> Query<'a> {
         Self { sql, params }
+    }
+
+    /// Returns the SQL sentence of the query
+    pub const fn sql(&self) -> &str {
+        self.sql.as_str()
     }
 
     /// Launches the generated query against the database assuming the default

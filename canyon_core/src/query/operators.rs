@@ -115,14 +115,12 @@ impl LikeKind {
     #[inline]
     fn push_comma_sep(out: &mut SqlTokens) {
         out.symbol(Symbol::Comma);
-
     }
 }
 
 impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for LikeKind {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(19);
-
 
         out.keyword(Keyword::Concat);
         out.symbol(Symbol::LParen);

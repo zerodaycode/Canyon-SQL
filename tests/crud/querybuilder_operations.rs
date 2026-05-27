@@ -48,7 +48,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
 
     assert_eq!(
-        select_with_joins.unwrap().sql().unwrap(),
+        select_with_joins.unwrap().build().unwrap().sql(),
         "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"id\" > $1 AND \"name\" = $2 AND \"name\" IN ($3, $4);"
     )
 }
@@ -88,46 +88,45 @@ fn test_crud_find_with_querybuilder_and_fulllike() {
         .where_value(&binding, Like(Full));
 
     assert_eq!(
-        filtered_leagues_result.build().unwrap().sql,
+        filtered_leagues_result.build().unwrap().sql(),
         "SELECT * FROM \"league\" WHERE \"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR), '%');"
     )
 }
 
-//
-// /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-// /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
-// #[cfg(feature = "mssql")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
-//     // Find all the leagues with "LC" in their name
-//     let fv = LeagueFieldValue::name("LEC".to_string());
-//     let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
-//         .unwrap()
-//         .where_value(&fv, Like(Full));
-//
-//     assert_eq!(
-//         filtered_leagues_result.read_sql(),
-//         "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
-//     )
-// }
-//
-// /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-// /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
-// #[cfg(feature = "mysql")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
-//     // Find all the leagues with "LC" in their name
-//     let fv = LeagueFieldValue::name("LEC".to_string());
-//     let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
-//         .unwrap()
-//         .where_value(&fv, Like(Full));
-//
-//     assert_eq!(
-//         filtered_leagues_result.read_sql(),
-//         "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS CHAR) ,'%')"
-//     )
-// }
-//
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
+    // Find all the leagues with "LC" in their name
+    let fv = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result = League::select_query_with(DatabaseType::SqlServer)
+        .unwrap()
+        .where_value(&fv, Like(Full));
+
+    assert_eq!(
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM [league] WHERE [name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR), '%');"
+    )
+}
+
+/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
+/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
+#[cfg(feature = "mysql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
+    // Find all the leagues with "LC" in their name
+    let fv = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result = League::select_query_with(DatabaseType::MySQL)
+        .unwrap()
+        .where_value(&fv, Like(Full));
+
+    assert_eq!(
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM `league` WHERE `name` LIKE CONCAT ('%', CAST (? AS CHAR), '%');"
+    )
+}
+
 // /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 // /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 // #[cfg(feature = "postgres")]

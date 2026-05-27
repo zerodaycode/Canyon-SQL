@@ -14,8 +14,6 @@ impl TokenWriter {
         mut tokens: SqlTokens<'a>,
     ) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
-
-
         tokens.symbol(Symbol::Semicolon);
 
         let mut placeholder_counter = 1usize;
@@ -71,22 +69,29 @@ mod __impl {
             return false;
         };
 
-        wants_leading_space(current)
-            && !suppresses_trailing_space(previous)
-            && !is_quoted_ident_boundary(previous, current)
+        if is_quoted_ident_boundary(previous, current) || suppresses_trailing_space(previous) {
+            return false;
+        }
+
+        wants_leading_space_after(previous, current)
     }
 
-    fn wants_leading_space(token: &SqlToken<'_>) -> bool {
+    fn wants_leading_space_after(_previous: &SqlToken<'_>, current: &SqlToken<'_>) -> bool {
         matches!(
-            token,
+            current,
             SqlToken::Keyword(_)
                 | SqlToken::Ident(_)
                 | SqlToken::Number(_)
                 | SqlToken::Placeholder
                 | SqlToken::Operator(_)
-                | SqlToken::Symbol(Symbol::Asterisk)
-                | SqlToken::Symbol(Symbol::LParen)
-                | SqlToken::Symbol(Symbol::Quote | Symbol::DoubleQuote | Symbol::Backtick)
+                | SqlToken::Symbol(
+                    Symbol::Asterisk
+                        | Symbol::LParen
+                        | Symbol::Quote
+                        | Symbol::DoubleQuote
+                        | Symbol::Backtick
+                        | Symbol::LBracket,
+                )
         )
     }
 
@@ -116,7 +121,6 @@ mod __impl {
         )
     }
 }
-
 
 mod __detail {
     use crate::{
@@ -248,21 +252,13 @@ mod mssql_tests {
     }
 }
 
-
 #[cfg(test)]
 mod spacing_tests {
     use super::*;
     use crate::query::operators::Operator;
-    use crate::query::querybuilder::syntax::dialect::StandardDialect;
+    use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
-
-    #[derive(Default)]
-    struct TestEmitter;
-
-    impl<'a> SqlEmitter<'a> for TestEmitter {
-        type Dialect = StandardDialect;
-    }
 
     #[test]
     fn render_spaces_select_from_where_and_operators_without_whitespace_tokens() {
@@ -281,7 +277,7 @@ mod spacing_tests {
         tokens.placeholder();
 
         let sql = TokenWriter::new()
-            .render::<TestEmitter>(tokens)
+            .render::<PgEmitter>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(sql, "SELECT * FROM \"league\" WHERE \"id\" > $1;");
@@ -304,7 +300,7 @@ mod spacing_tests {
         tokens.symbol(Symbol::DoubleQuote);
 
         let sql = TokenWriter::new()
-            .render::<TestEmitter>(tokens)
+            .render::<PgEmitter>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(sql, "SELECT \"league\".\"id\" FROM \"league\";");
@@ -321,9 +317,47 @@ mod spacing_tests {
         tokens.symbol(Symbol::RParen);
 
         let sql = TokenWriter::new()
-            .render::<TestEmitter>(tokens)
+            .render::<PgEmitter>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(sql, "IN ($1, $2);");
+    }
+
+    #[test]
+    fn render_spaces_function_call_parentheses_and_in_parentheses() {
+        let mut tokens = SqlTokens::default();
+        tokens.keyword(Keyword::Like);
+        tokens.keyword(Keyword::Concat);
+        tokens.symbol(Symbol::LParen);
+        tokens.symbol(Symbol::Quote);
+        tokens.symbol(Symbol::PercentSign);
+        tokens.symbol(Symbol::Quote);
+        tokens.symbol(Symbol::Comma);
+        tokens.keyword(Keyword::Cast);
+        tokens.symbol(Symbol::LParen);
+        tokens.placeholder();
+        tokens.keyword(Keyword::As);
+        tokens.ident("VARCHAR");
+        tokens.symbol(Symbol::RParen);
+        tokens.symbol(Symbol::Comma);
+        tokens.symbol(Symbol::Quote);
+        tokens.symbol(Symbol::PercentSign);
+        tokens.symbol(Symbol::Quote);
+        tokens.symbol(Symbol::RParen);
+        tokens.keyword(Keyword::In);
+        tokens.symbol(Symbol::LParen);
+        tokens.placeholder();
+        tokens.symbol(Symbol::Comma);
+        tokens.placeholder();
+        tokens.symbol(Symbol::RParen);
+
+        let sql = TokenWriter::new()
+            .render::<PgEmitter>(tokens)
+            .expect("failed to render SQL");
+
+        assert_eq!(
+            sql,
+            "LIKE CONCAT ('%', CAST ($1 AS VARCHAR), '%') IN ($2, $3);"
+        );
     }
 }

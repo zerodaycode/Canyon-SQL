@@ -123,10 +123,10 @@ impl<'a> Extend<SqlToken<'a>> for &'a mut SqlTokens<'a> {
 pub enum SqlToken<'a> {
     Keyword(Keyword), // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
     Ident(Cow<'a, str>), // a raw literal value
-    Number(NumberKind),  // a raw literal numeric value
-    Symbol(Symbol),      // =, ( ) , .
-    Operator(Operator),  // Comp::Eq, Comp::GtEq...
-    Placeholder,         // $1, ? , @P1
+    Number(NumberKind), // a raw literal numeric value
+    Symbol(Symbol),   // =, ( ) , .
+    Operator(Operator), // Comp::Eq, Comp::GtEq...
+    Placeholder,      // $1, ? , @P1
 }
 
 #[derive(Debug, PartialEq, Eq)]

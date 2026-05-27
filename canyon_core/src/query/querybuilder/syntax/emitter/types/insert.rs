@@ -31,17 +31,14 @@ where
         tokens
             .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
 
-
         tokens.symbol(Symbol::LParen);
         helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens);
         tokens.symbol(Symbol::RParen);
-
 
         tokens.keyword(Keyword::Values);
         tokens.symbol(Symbol::LParen);
         helpers::emit_placeholders(&ast.columns, base_ast, &mut tokens);
         tokens.symbol(Symbol::RParen);
-
 
         __impl::emit_returning::<T>(ast, &mut tokens);
 

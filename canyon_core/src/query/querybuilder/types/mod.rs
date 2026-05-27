@@ -57,8 +57,6 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
     }
 
     fn sql(&mut self) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
-        __impl::check_invariants_over_condition_clauses(self)?;
-
         let tokens =
             __detail::run_emission_phase(self.database_type, &self.ast, &mut self.base_ast);
 
@@ -205,6 +203,16 @@ mod __impl {
 }
 
 mod __detail {
+    use crate::connection::database_type::DatabaseType;
+    use crate::query::querybuilder::syntax::ast::BaseAst;
+    use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
+    use crate::query::querybuilder::syntax::emitter::backends::{MySqlEmitter, SqlServerEmitter};
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
+    use crate::query::querybuilder::syntax::tokens::SqlTokens;
+    use crate::query::querybuilder::syntax::writer::TokenWriter;
+    use std::error::Error;
+    use std::fmt::Write;
+
     pub(super) fn sql<'a, P>(
         database_type: DatabaseType,
         ast: &P,
@@ -216,15 +224,6 @@ mod __detail {
         let tokens = run_emission_phase(database_type, ast, base_ast);
         run_render_phase(tokens, database_type)
     }
-    use crate::connection::database_type::DatabaseType;
-    use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
-    use crate::query::querybuilder::syntax::emitter::backends::{MySqlEmitter, SqlServerEmitter};
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
-    use crate::query::querybuilder::syntax::tokens::SqlTokens;
-    use crate::query::querybuilder::syntax::writer::TokenWriter;
-    use std::error::Error;
-    use std::fmt::Write;
 
     /// Executes the SQL emission phase for the given AST and database backend.
     ///

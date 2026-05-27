@@ -113,7 +113,7 @@ fn test_join_clause_basic() {
         SqlToken::Symbol(Symbol::Dot),
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("team_id".into()),
-        SqlToken::Symbol(Symbol::DoubleQuote)
+        SqlToken::Symbol(Symbol::DoubleQuote),
     ];
 
     assert_eq!(tokens.inner(), expected);
