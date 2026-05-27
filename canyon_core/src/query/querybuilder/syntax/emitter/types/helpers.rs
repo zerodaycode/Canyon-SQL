@@ -63,25 +63,19 @@ where
 /// Helper function to emit a list of columns, separated by commas
 pub(crate) fn emit_columns<'a, D: SqlDialect>(
     columns: &Vec<ColumnRef<'a>>,
-    tokens: &mut SqlTokens<'a>,
-    ending_whitespace: bool,
+    tokens: &mut SqlTokens<'a>
 ) {
     if columns.is_empty() {
         tokens.symbol(Symbol::Asterisk);
-        tokens.whitespace();
+
         return;
     }
 
     for (i, column) in columns.iter().enumerate() {
         if i > 0 {
             tokens.symbol(Comma);
-            tokens.whitespace();
         }
         tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(column));
-    }
-
-    if ending_whitespace {
-        tokens.whitespace();
     }
 }
 
@@ -93,7 +87,7 @@ pub(crate) fn emit_placeholders<'a>(
     for (i, _) in columns.iter().enumerate() {
         if i > 0 {
             tokens.symbol(Comma);
-            tokens.whitespace();
+
         }
         tokens.placeholder();
     }
@@ -210,14 +204,6 @@ mod tests {
         );
     }
 
-    fn get_emit_columns_expected_values<D: SqlDialect>(
-        literals: &[&'static str],
-    ) -> Vec<SqlToken<'static>> {
-        let mut tokens = get_columns_test_expr_values::<D>(literals);
-        tokens.push(SqlToken::WhiteSpace);
-        tokens
-    }
-
     fn get_columns_test_expr_values<D: SqlDialect>(
         literals: &[&'static str],
     ) -> Vec<SqlToken<'static>> {
@@ -226,7 +212,6 @@ mod tests {
         for (idx, lit) in literals.iter().enumerate() {
             if idx > 0 {
                 tokens.symbol(Comma);
-                tokens.whitespace();
             }
             tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(
                 &make_column(lit),
@@ -262,10 +247,10 @@ mod tests {
     fn emit_columns_with_empty_vec_emits_asterisk() {
         let columns = vec![];
         let mut tokens = SqlTokens::default();
-        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
+        emit_columns::<StandardDialect>(&columns, &mut tokens);
         assert_eq!(
             tokens.inner(),
-            vec![SqlToken::Symbol(Symbol::Asterisk), SqlToken::WhiteSpace]
+            vec![SqlToken::Symbol(Symbol::Asterisk)]
         );
     }
 
@@ -273,7 +258,7 @@ mod tests {
     fn emit_columns_with_one_column_quotes_only_column_name_and_emit_column_alias() {
         let columns = vec![make_qualified_column("user", "name", Some("username"))];
         let mut tokens = SqlTokens::default();
-        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
+        emit_columns::<StandardDialect>(&columns, &mut tokens);
         assert_eq!(
             tokens.inner(),
             get_columns_test_expr_values::<StandardDialect>(&["user.name as username"])
@@ -288,7 +273,7 @@ mod tests {
             make_qualified_column("users", "email", None),
         ];
         let mut tokens = SqlTokens::default();
-        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
+        emit_columns::<StandardDialect>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),
@@ -309,7 +294,7 @@ mod tests {
         ];
         let mut tokens = SqlTokens::default();
 
-        emit_columns::<MySql>(&columns, &mut tokens, false);
+        emit_columns::<MySql>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),
@@ -323,7 +308,7 @@ mod tests {
         let columns = vec![make_column("id"), make_column("name")];
 
         let mut tokens = SqlTokens::default();
-        emit_columns::<MsSql>(&columns, &mut tokens, false);
+        emit_columns::<MsSql>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),
@@ -338,7 +323,7 @@ mod tests {
             make_qualified_column("account", "name", None),
         ];
         let mut tokens = SqlTokens::default();
-        emit_columns::<StandardDialect>(&columns, &mut tokens, false);
+        emit_columns::<StandardDialect>(&columns, &mut tokens);
 
         let expected =
             get_columns_test_expr_values::<StandardDialect>(&["user.id", "account.name"]);
@@ -350,7 +335,6 @@ mod tests {
         vec![
             SqlToken::Placeholder,
             SqlToken::Symbol(Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Placeholder,
         ]
     }
@@ -360,7 +344,6 @@ mod tests {
         v.extend(get_placeholders_test_expr_values());
         v.extend(vec![
             SqlToken::Symbol(Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Placeholder,
         ]);
         v
@@ -381,10 +364,8 @@ mod tests {
             &vec![
                 SqlToken::Placeholder,
                 SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
                 SqlToken::Placeholder,
                 SqlToken::Symbol(Comma),
-                SqlToken::WhiteSpace,
                 SqlToken::Placeholder,
             ]
         );

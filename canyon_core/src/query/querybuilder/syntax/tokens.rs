@@ -42,11 +42,6 @@ impl<'a> SqlTokens<'a> {
         self.0.push(SqlToken::Placeholder)
     }
 
-    /// Adds a [`SqlToken::WhiteSpace`] to the output buffer
-    pub fn whitespace(&mut self) {
-        self.0.push(SqlToken::WhiteSpace)
-    }
-
     pub fn inner(self) -> Vec<SqlToken<'a>> {
         self.0
     }
@@ -77,6 +72,11 @@ impl<'a> SqlTokens<'a> {
             return self.0.pop();
         }
         None
+    }
+
+    #[inline]
+    pub fn iter(&self) -> std::slice::Iter<'_, SqlToken<'a>> {
+        self.0.iter()
     }
 }
 
@@ -122,7 +122,6 @@ impl<'a> Extend<SqlToken<'a>> for &'a mut SqlTokens<'a> {
 #[derive(Debug, PartialEq, Eq)]
 pub enum SqlToken<'a> {
     Keyword(Keyword), // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
-    WhiteSpace,
     Ident(Cow<'a, str>), // a raw literal value
     Number(NumberKind),  // a raw literal numeric value
     Symbol(Symbol),      // =, ( ) , .

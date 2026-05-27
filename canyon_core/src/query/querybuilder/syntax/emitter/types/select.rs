@@ -91,7 +91,7 @@ mod __impl {
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
     pub(crate) fn emit_columns<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
-        helpers::emit_columns::<D>(&ast.columns, tokens, true);
+        helpers::emit_columns::<D>(&ast.columns, tokens);
     }
 
     pub(crate) fn emit_from<'a, D: SqlDialect>(base_ast: &BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
@@ -99,7 +99,7 @@ mod __impl {
         tokens.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &base_ast.table,
         ));
-        tokens.whitespace();
+
     }
 
     pub(crate) fn emit_joins<'a, D: SqlDialect>(ast: &SelectAst<'a>, tokens: &mut SqlTokens<'a>) {
@@ -114,7 +114,7 @@ mod __impl {
     ) {
         if let Some(group_by) = &ast.group_by {
             tokens.keyword(Keyword::GroupBy);
-            helpers::emit_columns::<D>(group_by, tokens, true);
+            helpers::emit_columns::<D>(group_by, tokens);
         }
     }
 
@@ -140,7 +140,7 @@ mod __impl {
         if let Some(limit) = ast.limit {
             tokens.keyword(Keyword::Limit);
             tokens.numeric(limit);
-            tokens.whitespace();
+
         }
     }
 
@@ -148,7 +148,7 @@ mod __impl {
         if let Some(offset) = ast.offset {
             tokens.keyword(Keyword::Offset);
             tokens.numeric(offset);
-            tokens.whitespace();
+
         }
     }
 }

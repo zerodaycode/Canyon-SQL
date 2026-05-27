@@ -62,16 +62,16 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for JoinClause<'a> {
         out.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &self.target_table,
         ));
-        out.whitespace();
+
         out.keyword(Keyword::On);
         out.extend(<ColumnRef<'a> as ToSqlTokens<'a, D>>::to_tokens(&self.left));
-        out.whitespace();
+
         out.operator(self.operator);
-        out.whitespace();
+
         out.extend(<ColumnRef<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &self.right,
         ));
-        out.whitespace();
+
         out
     }
 }
@@ -98,7 +98,6 @@ fn test_join_clause_basic() {
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("users".into()),
         SqlToken::Symbol(Symbol::DoubleQuote),
-        SqlToken::WhiteSpace,
         SqlToken::Keyword(Keyword::On),
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("t".into()),
@@ -107,17 +106,14 @@ fn test_join_clause_basic() {
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("id".into()),
         SqlToken::Symbol(Symbol::DoubleQuote),
-        SqlToken::WhiteSpace,
         SqlToken::Operator(Operator::Eq),
-        SqlToken::WhiteSpace,
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("users".into()),
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Symbol(Symbol::Dot),
         SqlToken::Symbol(Symbol::DoubleQuote),
         SqlToken::Ident("team_id".into()),
-        SqlToken::Symbol(Symbol::DoubleQuote),
-        SqlToken::WhiteSpace,
+        SqlToken::Symbol(Symbol::DoubleQuote)
     ];
 
     assert_eq!(tokens.inner(), expected);

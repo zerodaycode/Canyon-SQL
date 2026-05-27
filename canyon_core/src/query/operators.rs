@@ -71,7 +71,7 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for Operator {
             Self::Like(kind) => out.extend(<LikeKind as ToSqlTokens<'_, D>>::to_tokens(&kind)),
             Self::NotLike(kind) => {
                 out.keyword(Keyword::Not);
-                out.whitespace();
+
                 out.extend(<LikeKind as ToSqlTokens<'_, D>>::to_tokens(&kind));
             }
             Self::In => out.keyword(Keyword::In),
@@ -97,7 +97,7 @@ impl LikeKind {
         out.keyword(Keyword::Cast);
         out.symbol(Symbol::LParen);
         out.placeholder();
-        out.whitespace();
+
         out.keyword(Keyword::As);
         out.ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
             D::PLACEHOLDER_DATA_TYPE,
@@ -115,7 +115,7 @@ impl LikeKind {
     #[inline]
     fn push_comma_sep(out: &mut SqlTokens) {
         out.symbol(Symbol::Comma);
-        out.whitespace();
+
     }
 }
 
@@ -123,7 +123,7 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for LikeKind {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
         let mut out = SqlTokens::with_capacity(19);
 
-        out.whitespace();
+
         out.keyword(Keyword::Concat);
         out.symbol(Symbol::LParen);
 
@@ -171,26 +171,21 @@ mod tests {
     fn full_like_tokens<D: SqlDialect>() -> Vec<SqlToken<'static>> {
         vec![
             SqlToken::Keyword(Keyword::Like),
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Concat),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Symbol(Symbol::Quote),
             SqlToken::Symbol(Symbol::PercentSign),
             SqlToken::Symbol(Symbol::Quote),
             SqlToken::Symbol(Symbol::Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Cast),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Placeholder,
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
-            SqlToken::WhiteSpace,
             SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
                 D::PLACEHOLDER_DATA_TYPE,
             ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Symbol(Symbol::Quote),
             SqlToken::Symbol(Symbol::PercentSign),
             SqlToken::Symbol(Symbol::Quote),
@@ -201,20 +196,16 @@ mod tests {
     fn left_like_tokens<D: SqlDialect>() -> Vec<SqlToken<'static>> {
         vec![
             SqlToken::Keyword(Keyword::Like),
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Concat),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Symbol(Symbol::Quote),
             SqlToken::Symbol(Symbol::PercentSign),
             SqlToken::Symbol(Symbol::Quote),
             SqlToken::Symbol(Symbol::Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Cast),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Placeholder,
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
-            SqlToken::WhiteSpace,
             SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
                 D::PLACEHOLDER_DATA_TYPE,
             ))),
@@ -226,21 +217,17 @@ mod tests {
     fn right_like_tokens<D: SqlDialect>() -> Vec<SqlToken<'static>> {
         vec![
             SqlToken::Keyword(Keyword::Like),
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::Concat),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Keyword(Keyword::Cast),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Placeholder,
-            SqlToken::WhiteSpace,
             SqlToken::Keyword(Keyword::As),
-            SqlToken::WhiteSpace,
             SqlToken::Ident(Cow::from(<PlaceholderDatatype as Into<&str>>::into(
                 D::PLACEHOLDER_DATA_TYPE,
             ))),
             SqlToken::Symbol(Symbol::RParen),
             SqlToken::Symbol(Symbol::Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Symbol(Symbol::Quote),
             SqlToken::Symbol(Symbol::PercentSign),
             SqlToken::Symbol(Symbol::Quote),
@@ -287,7 +274,7 @@ mod tests {
     #[cfg(feature = "postgres")]
     #[test]
     fn not_like_operator_emits_not_like_instead_of_not_equals() {
-        let mut expected = vec![SqlToken::Keyword(Keyword::Not), SqlToken::WhiteSpace];
+        let mut expected = vec![SqlToken::Keyword(Keyword::Not)];
         expected.extend(full_like_tokens::<PgDialect>());
         assert_eq!(
             tokens::<PgDialect, _>(Operator::NotLike(LikeKind::Full)),

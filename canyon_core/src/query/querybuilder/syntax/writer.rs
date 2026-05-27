@@ -1,6 +1,8 @@
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::SqlToken;
 use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
+use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
+use crate::query::querybuilder::syntax::keyword::Keyword;
 
 pub struct TokenWriter {}
 
@@ -15,19 +17,24 @@ impl TokenWriter {
     ) -> Result<String, std::fmt::Error> {
         let mut out = String::new();
 
-        if let Some(SqlToken::WhiteSpace) = tokens.last() {
-            tokens.remove_last_if(|t| t.eq(&SqlToken::WhiteSpace));
-        }
 
         tokens.symbol(Symbol::Semicolon);
 
         let mut placeholder_counter = 1usize;
-        for tok in tokens.into_iter() {
+        let mut previous: Option<&SqlToken<'a>> = None;
+
+        for token in tokens.iter() {
+            if __impl::requires_space_between(previous, token) {
+                out.push(' ');
+            }
+
             __impl::output_token_to_string_buffer::<E::Dialect>(
-                tok,
+                token,
                 &mut out,
                 &mut placeholder_counter,
             )?;
+
+            previous = Some(token);
         }
 
         Ok(out)
@@ -36,34 +43,163 @@ impl TokenWriter {
 
 mod __impl {
     use crate::query::querybuilder::syntax::{
-        dialect::SqlDialect, tokens::SqlToken, writer::__detail,
+        dialect::SqlDialect, symbol::Symbol, tokens::SqlToken, writer::__detail,
     };
     use std::fmt::Write;
 
     pub(crate) fn output_token_to_string_buffer<D: SqlDialect>(
-        token: SqlToken,
+        token: &SqlToken<'_>,
         f: &mut String,
         placeholder_counter: &mut usize,
     ) -> Result<(), std::fmt::Error> {
         let _: () = match token {
-            SqlToken::Keyword(s) => write!(f, "{} ", s)?,
+            SqlToken::Keyword(s) => write!(f, "{}", s)?,
             SqlToken::Ident(s) => write!(f, "{}", s)?,
-            SqlToken::Symbol(sym) => __detail::render_symbol(sym, f)?,
+            SqlToken::Symbol(sym) => __detail::render_symbol(*sym, f)?,
             SqlToken::Operator(op) => write!(f, "{}", op)?,
             SqlToken::Placeholder => {
                 __detail::write_value_placeholder::<D>(placeholder_counter, f)?
             }
-            SqlToken::WhiteSpace => write!(f, " ")?,
             SqlToken::Number(num) => write!(f, "{}", num)?,
         };
         Ok(())
     }
+
+    pub(crate) fn requires_space_between(
+        previous: Option<&SqlToken<'_>>,
+        current: &SqlToken<'_>,
+    ) -> bool {
+        let Some(previous) = previous else {
+            return false;
+        };
+
+        if is_quote_ident_boundary(previous, current) {
+            return false;
+        }
+
+        if is_no_space_before(current) || is_no_space_after(previous) {
+            return false;
+        }
+
+        is_space_after(previous) || is_space_before(current)
+    }
+
+    fn is_quote_ident_boundary(previous: &SqlToken<'_>, current: &SqlToken<'_>) -> bool {
+        matches!(previous, SqlToken::Symbol(Symbol::Quote | Symbol::DoubleQuote | Symbol::Backtick))
+            && matches!(current, SqlToken::Ident(_))
+            || matches!(previous, SqlToken::Ident(_))
+            && matches!(current, SqlToken::Symbol(Symbol::Quote | Symbol::DoubleQuote | Symbol::Backtick))
+    }
+
+    fn is_space_before(token: &SqlToken<'_>) -> bool {
+        matches!(
+            token,
+            SqlToken::Keyword(_)
+                | SqlToken::Ident(_)
+                | SqlToken::Number(_)
+                | SqlToken::Placeholder
+                | SqlToken::Operator(_)
+                | SqlToken::Symbol(Symbol::Asterisk)
+                | SqlToken::Symbol(Symbol::LParen)
+        )
+    }
+
+    fn is_space_after(token: &SqlToken<'_>) -> bool {
+        matches!(
+            token,
+            SqlToken::Keyword(_)
+                | SqlToken::Ident(_)
+                | SqlToken::Number(_)
+                | SqlToken::Placeholder
+                | SqlToken::Operator(_)
+                | SqlToken::Symbol(Symbol::Comma)
+                | SqlToken::Symbol(Symbol::Asterisk)
+                | SqlToken::Symbol(Symbol::RParen)
+                | SqlToken::Symbol(Symbol::RBracket)
+        )
+    }
+
+    fn is_no_space_before(token: &SqlToken<'_>) -> bool {
+        matches!(
+            token,
+            SqlToken::Symbol(Symbol::Comma)
+                | SqlToken::Symbol(Symbol::Dot)
+                | SqlToken::Symbol(Symbol::Semicolon)
+                | SqlToken::Symbol(Symbol::RParen)
+                | SqlToken::Symbol(Symbol::RBracket)
+                | SqlToken::Symbol(Symbol::PercentSign)
+        )
+    }
+
+    fn is_no_space_after(token: &SqlToken<'_>) -> bool {
+        matches!(
+            token,
+            SqlToken::Symbol(Symbol::Dot)
+                | SqlToken::Symbol(Symbol::LParen)
+                | SqlToken::Symbol(Symbol::LBracket)
+                | SqlToken::Symbol(Symbol::PercentSign)
+                | SqlToken::Symbol(Symbol::Backslash)
+        )
+    }
+}
+
+#[cfg(test)]
+mod spacing_tests {
+    use super::*;
+    use crate::query::operators::Operator;
+    use crate::query::querybuilder::syntax::dialect::StandardDialect;
+    use crate::query::querybuilder::syntax::keyword::Keyword;
+    use crate::query::querybuilder::syntax::tokens::SqlTokens;
+
+    #[derive(Default)]
+    struct TestEmitter;
+
+    impl<'a> SqlEmitter<'a> for TestEmitter {
+        type Dialect = StandardDialect;
+    }
+
+    #[test]
+    fn render_spaces_select_from_where_and_operators_without_whitespace_tokens() {
+        let mut tokens = SqlTokens::default();
+        tokens.keyword(Keyword::Select);
+        tokens.symbol(Symbol::Asterisk);
+        tokens.keyword(Keyword::From);
+        tokens.symbol(Symbol::DoubleQuote);
+        tokens.ident("league");
+        tokens.symbol(Symbol::DoubleQuote);
+        tokens.keyword(Keyword::Where);
+        tokens.symbol(Symbol::DoubleQuote);
+        tokens.ident("id");
+        tokens.symbol(Symbol::DoubleQuote);
+        tokens.operator(Operator::Gt);
+        tokens.placeholder();
+
+        let sql = TokenWriter::new()
+            .render::<TestEmitter>(tokens)
+            .expect("failed to render SQL");
+
+        assert_eq!(sql, "SELECT * FROM \"league\" WHERE \"id\" > $1;");
+    }
+
+    #[test]
+    fn render_spaces_commas_function_calls_and_parentheses_without_trailing_comma_space() {
+        let mut tokens = SqlTokens::default();
+        tokens.keyword(Keyword::In);
+        tokens.symbol(Symbol::LParen);
+        tokens.placeholder();
+        tokens.symbol(Symbol::Comma);
+        tokens.placeholder();
+        tokens.symbol(Symbol::RParen);
+
+        let sql = TokenWriter::new()
+            .render::<TestEmitter>(tokens)
+            .expect("failed to render SQL");
+
+        assert_eq!(sql, "IN ($1, $2);");
+    }
 }
 
 mod __detail {
-    use crate::query::operators::Operator;
-    use crate::query::querybuilder::syntax::tokens::ToSqlTokens;
-    use crate::query::querybuilder::syntax::writer::__impl::output_token_to_string_buffer;
     use crate::{
         connection::database_type::DatabaseType,
         query::querybuilder::syntax::{dialect::SqlDialect, symbol::Symbol},
@@ -158,7 +294,7 @@ mod mssql_tests {
     fn emit_columns_with_mssql_emits_balanced_brackets_for_every_identifier() {
         let columns = get_columns_mock();
         let mut tokens = SqlTokens::default();
-        emit_columns::<MsSql>(&columns, &mut tokens, false);
+        emit_columns::<MsSql>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),
@@ -183,15 +319,36 @@ mod mssql_tests {
             SqlToken::Ident(Cow::Borrowed("id")),
             SqlToken::Symbol(closing),
             SqlToken::Symbol(Symbol::Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Symbol(opening),
             SqlToken::Ident(Cow::Borrowed("name")),
             SqlToken::Symbol(closing),
             SqlToken::Symbol(Symbol::Comma),
-            SqlToken::WhiteSpace,
             SqlToken::Symbol(opening),
             SqlToken::Ident(Cow::Borrowed("email")),
             SqlToken::Symbol(closing),
         ]
     }
+}
+
+#[test]
+fn render_does_not_insert_spaces_inside_quoted_identifiers() {
+    let mut tokens = SqlTokens::default();
+    tokens.keyword(Keyword::Select);
+    tokens.symbol(Symbol::DoubleQuote);
+    tokens.ident("league");
+    tokens.symbol(Symbol::DoubleQuote);
+    tokens.symbol(Symbol::Dot);
+    tokens.symbol(Symbol::DoubleQuote);
+    tokens.ident("id");
+    tokens.symbol(Symbol::DoubleQuote);
+    tokens.keyword(Keyword::From);
+    tokens.symbol(Symbol::DoubleQuote);
+    tokens.ident("league");
+    tokens.symbol(Symbol::DoubleQuote);
+
+    let sql = TokenWriter::new()
+        .render::<PgEmitter>(tokens)
+        .expect("failed to render SQL");
+
+    assert_eq!(sql, "SELECT \"league\".\"id\" FROM \"league\";");
 }

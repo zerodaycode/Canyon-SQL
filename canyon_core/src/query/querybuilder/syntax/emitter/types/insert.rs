@@ -30,18 +30,18 @@ where
 
         tokens
             .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
-        tokens.whitespace();
+
 
         tokens.symbol(Symbol::LParen);
-        helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens, false);
+        helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens);
         tokens.symbol(Symbol::RParen);
-        tokens.whitespace();
+
 
         tokens.keyword(Keyword::Values);
         tokens.symbol(Symbol::LParen);
         helpers::emit_placeholders(&ast.columns, base_ast, &mut tokens);
         tokens.symbol(Symbol::RParen);
-        tokens.whitespace();
+
 
         __impl::emit_returning::<T>(ast, &mut tokens);
 
@@ -72,7 +72,7 @@ pub(crate) mod __impl {
         }
         tokens.keyword(Keyword::Returning);
         // add the columns
-        helpers::emit_columns::<E::Dialect>(&ast.returning_columns, tokens, false)
+        helpers::emit_columns::<E::Dialect>(&ast.returning_columns, tokens)
     }
 }
 

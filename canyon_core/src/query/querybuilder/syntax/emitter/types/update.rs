@@ -23,11 +23,11 @@ where
         tokens.keyword(Keyword::Update);
         tokens
             .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
-        tokens.whitespace();
+
 
         tokens.keyword(Keyword::Set);
         __impl::emit_set_clause::<T::Dialect>(&ast.columns, base_ast, &mut tokens);
-        tokens.whitespace();
+
 
         helpers::add_clause_conditions::<T::Dialect>(base_ast, &mut tokens);
 
@@ -57,12 +57,12 @@ pub(crate) mod __impl {
         for (i, col) in columns.iter().enumerate() {
             if i > 0 {
                 tokens.symbol(Symbol::Comma);
-                tokens.whitespace();
+
             }
             tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(col));
-            tokens.whitespace();
+
             tokens.symbol(Symbol::Equals);
-            tokens.whitespace();
+
             tokens.placeholder();
         }
     }
