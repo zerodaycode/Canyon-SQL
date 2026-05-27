@@ -137,6 +137,7 @@ impl CanyonEntity {
     pub fn create_match_arm_for_relate_fields_with_values(
         &self,
         enum_name: &Ident,
+        db_table_name: &str,
     ) -> Vec<TokenStream> {
         self.fields
             .iter()
@@ -145,7 +146,11 @@ impl CanyonEntity {
                 let field_name_as_string = f.name.to_string();
 
                 quote! {
-                    #enum_name::#field_name(v) => (#field_name_as_string, v as &dyn canyon_sql::query::QueryParameter)
+                    #enum_name::#field_name(v) => (canyon_sql::query::ColumnRef {
+                        table: Some(#db_table_name),
+                        column: #field_name_as_string,
+                        alias: None
+                    }, v as &dyn canyon_sql::query::QueryParameter)
                 }
             })
             .collect::<Vec<_>>()

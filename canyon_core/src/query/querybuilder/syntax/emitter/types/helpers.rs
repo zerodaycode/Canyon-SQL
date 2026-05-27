@@ -79,10 +79,7 @@ pub(crate) fn emit_columns<'a, D: SqlDialect>(
     }
 }
 
-pub(crate) fn emit_placeholders<'a>(
-    columns: &Vec<ColumnRef<'a>>,
-    tokens: &mut SqlTokens<'a>,
-) {
+pub(crate) fn emit_placeholders<'a>(columns: &Vec<ColumnRef<'a>>, tokens: &mut SqlTokens<'a>) {
     for (i, _) in columns.iter().enumerate() {
         if i > 0 {
             tokens.symbol(Comma);

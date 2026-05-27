@@ -91,7 +91,7 @@ pub trait FieldIdentifier: std::fmt::Display {
 /// }
 /// ```
 pub trait FieldValueIdentifier {
-    fn value(&self) -> (&'static str, &dyn QueryParameter);
+    fn value(&self) -> (ColumnRef<'static>, &dyn QueryParameter);
 }
 
 /// Bounds to some type T in order to make it callable over some fn parameter T

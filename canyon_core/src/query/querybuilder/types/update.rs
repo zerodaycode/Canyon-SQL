@@ -61,7 +61,10 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         __validators::set_clause_values_not_empty(columns)?;
 
         // normalized column names
-        self._inner.ast.columns = columns.iter().map(|(z, _)| <Z as Into<ColumnRef>>::into(z.clone())).collect::<Vec<_>>();
+        self._inner.ast.columns = columns
+            .iter()
+            .map(|(z, _)| <Z as Into<ColumnRef>>::into(z.clone()))
+            .collect::<Vec<_>>();
 
         // normalized values
         for (_, v) in columns {

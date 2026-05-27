@@ -49,7 +49,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
 
     assert_eq!(
         select_with_joins.unwrap().build().unwrap().sql(),
-        "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"id\" > $1 AND \"name\" = $2 AND \"name\" IN ($3, $4);"
+        "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"league\".\"id\" > $1 AND \"league\".\"name\" = $2 AND \"name\" IN ($3, $4);"
     )
 }
 
@@ -89,7 +89,7 @@ fn test_crud_find_with_querybuilder_and_fulllike() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR), '%');"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR), '%');"
     )
 }
 
@@ -106,7 +106,7 @@ fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM [league] WHERE [name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR), '%');"
+        "SELECT * FROM [league] WHERE [league].[name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR), '%');"
     )
 }
 
@@ -123,7 +123,7 @@ fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM `league` WHERE `name` LIKE CONCAT ('%', CAST (? AS CHAR), '%');"
+        "SELECT * FROM `league` WHERE `league`.`name` LIKE CONCAT ('%', CAST (? AS CHAR), '%');"
     )
 }
 
@@ -138,7 +138,7 @@ fn test_crud_find_with_querybuilder_and_leftlike() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR));"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR));"
     )
 }
 
@@ -155,7 +155,7 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM [league] WHERE [name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR));"
+        "SELECT * FROM [league] WHERE [league].[name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR));"
     )
 }
 
@@ -172,7 +172,7 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM `league` WHERE `name` LIKE CONCAT ('%', CAST (? AS CHAR));"
+        "SELECT * FROM `league` WHERE `league`.`name` LIKE CONCAT ('%', CAST (? AS CHAR));"
     )
 }
 
@@ -183,11 +183,13 @@ fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
 fn test_crud_find_with_querybuilder_and_rightlike() {
     // Find all the leagues whose name starts with "LC"
     let fv = LeagueFieldValue::name("LEC".to_string());
-    let filtered_leagues_result = League::select_query().unwrap().where_value(&fv, Like(Right));
+    let filtered_leagues_result = League::select_query()
+        .unwrap()
+        .where_value(&fv, Like(Right));
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" LIKE CONCAT (CAST ($1 AS VARCHAR), '%');"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" LIKE CONCAT (CAST ($1 AS VARCHAR), '%');"
     )
 }
 
@@ -204,7 +206,7 @@ fn test_crud_find_with_querybuilder_and_rightlike_with_mssql() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM [league] WHERE [name] LIKE CONCAT (CAST (@P1 AS VARCHAR), '%');"
+        "SELECT * FROM [league] WHERE [league].[name] LIKE CONCAT (CAST (@P1 AS VARCHAR), '%');"
     )
 }
 
@@ -221,7 +223,7 @@ fn test_crud_find_with_querybuilder_and_rightlike_with_mysql() {
 
     assert_eq!(
         filtered_leagues_result.build().unwrap().sql(),
-        "SELECT * FROM `league` WHERE `name` LIKE CONCAT (CAST (? AS CHAR), '%');"
+        "SELECT * FROM `league` WHERE `league`.`name` LIKE CONCAT (CAST (? AS CHAR), '%');"
     )
 }
 
@@ -276,7 +278,8 @@ fn test_crud_update_with_querybuilder() {
         .set_values(&[
             (LeagueField::slug, "Updated with the QueryBuilder"),
             (LeagueField::name, "Random"),
-        ]).unwrap()
+        ])
+        .unwrap()
         .where_value(&LeagueFieldValue::id(1), Operator::Gt)
         .and(&LeagueFieldValue::id(8), Operator::Lt);
 
@@ -308,7 +311,8 @@ fn test_crud_update_with_querybuilder_with_mssql() {
     q.set_values(&[
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
-    ]).unwrap()
+    ])
+    .unwrap()
     .where_value(&PlayerFieldValue::id(1), Operator::Gt)
     .and(&PlayerFieldValue::id(8), Operator::Lt)
     .build()
@@ -341,21 +345,24 @@ fn test_crud_update_with_querybuilder_with_mysql() {
     // and where it's region column value is equals to 'Korea'
 
     let q = Player::update_query_with(DatabaseType::MySQL).unwrap();
-    let update_query = q.set_values(&[
-        (PlayerField::summoner_name, "Random updated player name"),
-        (PlayerField::first_name, "I am an updated first name"),
-    ]).unwrap()
-    .where_value(&PlayerFieldValue::id(1), Operator::Gt)
-    .and(&PlayerFieldValue::id(8), Operator::Lt)
-    .build()
-    .unwrap();
+    let update_query = q
+        .set_values(&[
+            (PlayerField::summoner_name, "Random updated player name"),
+            (PlayerField::first_name, "I am an updated first name"),
+        ])
+        .unwrap()
+        .where_value(&PlayerFieldValue::id(1), Operator::Gt)
+        .and(&PlayerFieldValue::id(8), Operator::Lt)
+        .build()
+        .unwrap();
 
     assert_eq!(
         update_query.sql(),
-        "UPDATE `player` SET `player`.`summoner_name` = ?, `player`.`first_name` = ? WHERE `id` > ? AND `id` < ?;"
+        "UPDATE `player` SET `player`.`summoner_name` = ?, `player`.`first_name` = ? WHERE `player`.`id` > ? AND `player`.`id` < ?;"
     );
 
-    update_query.launch_with::<&str, Player>(MYSQL_DS)
+    update_query
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await
         .expect("Failed to update records with the querybuilder");
 
@@ -470,9 +477,14 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_where_clause() {
     let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query().unwrap().where_value(&wh, Operator::Eq);
+    let l = League::select_query()
+        .unwrap()
+        .where_value(&wh, Operator::Eq);
 
-    assert_eq!(l.build().unwrap().sql(), "SELECT * FROM \"league\" WHERE \"name\" = $1;")
+    assert_eq!(
+        l.build().unwrap().sql(),
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1;"
+    )
 }
 
 /// Tests for the generated SQL query after use the
@@ -487,7 +499,7 @@ fn test_and_clause() {
 
     assert_eq!(
         l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" = $1 AND \"id\" <= $2;"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"league\".\"id\" <= $2;"
     )
 }
 
@@ -503,7 +515,7 @@ fn test_and_clause_with_in_constraint() {
 
     assert_eq!(
         l.unwrap().build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" = $1 AND \"id\" IN ($2, $3, $4);"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"id\" IN ($2, $3, $4);"
     )
 }
 
@@ -519,7 +531,7 @@ fn test_or_clause() {
 
     assert_eq!(
         l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" = $1 OR \"id\" <= $2;"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"league\".\"id\" <= $2;"
     )
 }
 
@@ -535,7 +547,7 @@ fn test_or_clause_with_in_constraint() {
 
     assert_eq!(
         l.unwrap().build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" = $1 OR \"id\" IN ($2, $3, $4);"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"id\" IN ($2, $3, $4);"
     )
 }
 
@@ -551,6 +563,6 @@ fn test_order_by_clause() {
 
     assert_eq!(
         l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"name\" = $1 ORDER BY \"league\".\"id\";"
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 ORDER BY \"league\".\"id\";"
     )
 }
