@@ -12,7 +12,6 @@ use std::error::Error;
 /// Contains the specific database operations of the *UPDATE* SQL statements.
 pub struct UpdateQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a, UpdateAst<'a>>,
-    pub(crate) columns: Vec<&'a str>,
 }
 
 impl<'a> UpdateQueryBuilder<'a> {
@@ -29,7 +28,6 @@ impl<'a> UpdateQueryBuilder<'a> {
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
         Ok(Self {
             _inner: QueryBuilder::new(table_schema_data, UpdateAst::new(), database_type)?,
-            columns: Vec::with_capacity(0),
         })
     }
 
@@ -56,14 +54,14 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         columns: &'a [(Z, Q)],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
-        Z: FieldIdentifier,
+        Z: FieldIdentifier + Into<ColumnRef<'a>> + Clone,
         Q: QueryParameter,
     {
         __validators::set_clause_not_already_present(&self)?;
         __validators::set_clause_values_not_empty(columns)?;
 
         // normalized column names
-        self.columns = columns.iter().map(|(z, _)| z.as_str()).collect::<Vec<_>>();
+        self._inner.ast.columns = columns.iter().map(|(z, _)| <Z as Into<ColumnRef>>::into(z.clone())).collect::<Vec<_>>();
 
         // normalized values
         for (_, v) in columns {
@@ -136,7 +134,7 @@ mod __validators {
     pub(super) fn set_clause_not_already_present<'a>(
         _self: &UpdateQueryBuilder<'a>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
-        if !_self.columns.is_empty() {
+        if !_self._inner.ast.columns.is_empty() {
             return Err(std::io::Error::new(
                 // TODO: CanyonError
                 ErrorKind::Unsupported,

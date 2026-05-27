@@ -125,7 +125,7 @@ pub enum SqlToken<'a> {
     Ident(Cow<'a, str>), // a raw literal value
     Number(NumberKind), // a raw literal numeric value
     Symbol(Symbol),   // =, ( ) , .
-    Operator(Operator), // Comp::Eq, Comp::GtEq...
+    Operator(Operator), // Operator::Eq, Operator::GtEq...
     Placeholder,      // $1, ? , @P1
 }
 

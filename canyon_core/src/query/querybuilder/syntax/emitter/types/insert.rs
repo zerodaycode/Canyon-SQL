@@ -37,7 +37,7 @@ where
 
         tokens.keyword(Keyword::Values);
         tokens.symbol(Symbol::LParen);
-        helpers::emit_placeholders(&ast.columns, base_ast, &mut tokens);
+        helpers::emit_placeholders(&ast.columns, &mut tokens);
         tokens.symbol(Symbol::RParen);
 
         __impl::emit_returning::<T>(ast, &mut tokens);

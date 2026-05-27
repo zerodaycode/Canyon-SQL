@@ -25,7 +25,7 @@ where
             .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
 
         tokens.keyword(Keyword::Set);
-        __impl::emit_set_clause::<T::Dialect>(&ast.columns, base_ast, &mut tokens);
+        __impl::emit_set_clause::<T::Dialect>(&ast.columns, &mut tokens);
 
         helpers::add_clause_conditions::<T::Dialect>(base_ast, &mut tokens);
 
@@ -49,7 +49,6 @@ pub(crate) mod __impl {
 
     pub(crate) fn emit_set_clause<'a, D: SqlDialect>(
         columns: &[ColumnRef<'a>],
-        base_ast: &mut BaseAst<'a>,
         tokens: &mut SqlTokens<'a>,
     ) {
         for (i, col) in columns.iter().enumerate() {
@@ -57,9 +56,7 @@ pub(crate) mod __impl {
                 tokens.symbol(Symbol::Comma);
             }
             tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(col));
-
             tokens.symbol(Symbol::Equals);
-
             tokens.placeholder();
         }
     }

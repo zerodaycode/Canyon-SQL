@@ -90,7 +90,8 @@ mod __impl {
                         | Symbol::Quote
                         | Symbol::DoubleQuote
                         | Symbol::Backtick
-                        | Symbol::LBracket,
+                        | Symbol::LBracket
+                        | Symbol::Equals
                 )
         )
     }

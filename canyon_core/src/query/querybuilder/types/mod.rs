@@ -45,6 +45,8 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
     }
 
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        __impl::check_invariants_over_condition_clauses(&self)?;
+
         let Self {
             mut base_ast,
             ast,
@@ -54,14 +56,6 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
 
         let sql = __detail::sql(database_type, &ast, &mut base_ast)?;
         Ok(Query::new(sql, params)) // TODO, get rid out of query?
-    }
-
-    fn sql(&mut self) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
-        let tokens =
-            __detail::run_emission_phase(self.database_type, &self.ast, &mut self.base_ast);
-
-        let sql = __detail::run_render_phase(tokens, self.database_type)?;
-        Ok(sql)
     }
 
     fn r#where(&mut self, column_name: &'a str, operator: Operator) {
@@ -112,7 +106,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         let actual_params_len = self.params.len() + self.params.len();
         __impl::create_ranged_condition_clause(
             self,
-            ConditionClauseKind::And,
+            ConditionClauseKind::Or,
             r#or.as_str(),
             Operator::In,
             Range::new(actual_params_len, actual_params_len + values.len()),

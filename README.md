@@ -96,8 +96,8 @@ let mut select_with_joins = LeagueTournament::select_query();
     select_with_joins
         .inner_join("tournament", "league.id", "tournament.league_id")
         .left_join("team", "tournament.id", "player.tournament_id")
-        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
-        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+        .r#where(LeagueFieldValue::id(&7), Operator::Gt)
+        .and(LeagueFieldValue::name(&"KOREA"), Operator::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the

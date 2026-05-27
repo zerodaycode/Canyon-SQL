@@ -34,7 +34,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         columns: &'a [(Z, Q)],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
-        Z: FieldIdentifier,
+        Z: FieldIdentifier + Into<ColumnRef<'a>> + Clone,
         Q: QueryParameter,
         Self: Sized;
 }

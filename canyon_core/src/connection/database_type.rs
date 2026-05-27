@@ -67,7 +67,7 @@ pub enum DatabaseType {
     ///     &table_metadata,
     ///     DatabaseType::Deferred
     /// )?
-    /// .where_("id", Comp::Eq, &42)
+    /// .where_("id", Operator::Eq, &42)
     /// .build()?; // resolved dynamically to the active database type
     /// ```
     #[default]

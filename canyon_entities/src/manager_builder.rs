@@ -62,6 +62,7 @@ pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> Toke
         /// assert_eq!(LeagueTable::Name.to_string(), "League");
         /// assert_eq!(LeagueTable::DbName.to_string(), "league");
         /// ```
+        #[derive(Clone)]
         #visibility enum #enum_name #generics  {
             Name,
             DbName
@@ -111,6 +112,7 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
         #[allow(non_camel_case_types)]
         #[allow(unused_variables)]
         #[allow(dead_code)]
+        #[derive(Clone)]
         /// Auto-generated enum to represent every field of the related type
         /// as a variant of an enum that it's named with the concatenation
         /// of the type identifier + Field
@@ -183,6 +185,7 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         #[allow(non_camel_case_types)]
         #[allow(unused_variables)]
         #[allow(dead_code)]
+        #[derive(Clone)]
         /// Auto-generated enumeration to represent each field of the related
         /// type as a variant, which can support and contain a value of the field data type.
         ///

@@ -81,7 +81,6 @@ pub(crate) fn emit_columns<'a, D: SqlDialect>(
 
 pub(crate) fn emit_placeholders<'a>(
     columns: &Vec<ColumnRef<'a>>,
-    base_ast: &mut BaseAst<'a>,
     tokens: &mut SqlTokens<'a>,
 ) {
     for (i, _) in columns.iter().enumerate() {
@@ -335,21 +334,13 @@ mod tests {
         ]
     }
 
-    fn get_placeholders_test_expr_values_3() -> Vec<SqlToken<'static>> {
-        let mut v = vec![];
-        v.extend(get_placeholders_test_expr_values());
-        v.extend(vec![SqlToken::Symbol(Comma), SqlToken::Placeholder]);
-        v
-    }
-
     #[cfg(feature = "mssql")]
     #[test]
     fn emit_placeholders_with_mssql_uses_at_p_numbering() {
         let columns = vec![make_column("id"), make_column("name"), make_column("email")];
-        let mut base_ast = make_base_ast();
 
         let mut tokens = SqlTokens::default();
-        emit_placeholders(&columns, &mut base_ast, &mut tokens);
+        emit_placeholders(&columns, &mut tokens);
         let tokens_vec = tokens.inner();
 
         assert_eq!(

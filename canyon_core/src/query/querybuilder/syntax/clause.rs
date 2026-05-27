@@ -3,7 +3,6 @@ use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
 use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
 pub struct ConditionClause<'a> {
@@ -70,11 +69,10 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
 }
 
 mod __impl {
-    use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::symbol::Symbol;
-    use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
+    use crate::query::querybuilder::syntax::tokens::SqlTokens;
 
     pub(crate) fn output_range_of_placeholders<D: SqlDialect>(
         range: &Range,
