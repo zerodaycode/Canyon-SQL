@@ -31,7 +31,8 @@ pub fn impl_crud_operations_trait_for_struct(
         macro_data.retrieve_mapping_target_type().as_ref(),
     );
 
-    let read_operations_tokens = generate_read_operations_tokens(macro_data, table_schema_data);
+    let read_operations_tokens = generate_read_operations_tokens(macro_data, table_schema_data)
+        .expect("Failed to generate read operations tokens");
     let insert_tokens = generate_insert_tokens(macro_data, table_schema_data);
     let update_tokens = generate_update_tokens(macro_data, table_schema_data);
     let delete_tokens = generate_delete_tokens(macro_data, table_schema_data);

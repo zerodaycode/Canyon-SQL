@@ -5,10 +5,10 @@ use quote::{ToTokens, quote};
 
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
-pub fn generate_read_operations_tokens(
+pub fn generate_read_operations_tokens<'a>(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &str,
-) -> TokenStream {
+    table_schema_data: &'a str,
+) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
@@ -16,24 +16,24 @@ pub fn generate_read_operations_tokens(
         .unwrap_or(ty);
 
     let find_all_tokens =
-        generate_find_all_operations_tokens(mapper_ty, table_schema_data, macro_data);
-    let count_tokens = generate_count_operations_tokens(table_schema_data);
-    let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, table_schema_data);
+        generate_find_all_operations_tokens(mapper_ty, table_schema_data, macro_data)?;
+    let count_tokens = generate_count_operations_tokens(table_schema_data)?;
+    let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, table_schema_data)?;
     let read_querybuilder_ops = generate_select_querybuilder_tokens(table_schema_data);
 
-    quote! {
+    Ok(quote! {
         #find_all_tokens
         #read_querybuilder_ops
         #count_tokens
         #find_by_pk_tokens
-    }
+    })
 }
 
-fn generate_find_all_operations_tokens(
+fn generate_find_all_operations_tokens<'a>(
     mapper_ty: &Ident,
-    table_schema_data: &str,
+    table_schema_data: &'a str,
     macro_data: &MacroTokens,
-) -> TokenStream {
+) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
     let binding = SelectQueryBuilder::new(table_schema_data)
         .with_columns(
             macro_data
@@ -41,19 +41,18 @@ fn generate_find_all_operations_tokens(
                 .map(|field| field.to_string())
                 .collect(),
         )
-        .build()
-        .expect("Failed to build SelectQueryBuilder for find_all macro");
+        .build()?;
 
     let fa_stmt = binding.sql();
 
-    let find_all = __details::find_all_generators::create_find_all_macro(mapper_ty, fa_stmt);
+    let find_all = __details::find_all_generators::create_find_all_macro(mapper_ty, fa_stmt)?;
     let find_all_with =
-        __details::find_all_generators::create_find_all_with_macro(mapper_ty, fa_stmt);
+        __details::find_all_generators::create_find_all_with_macro(mapper_ty, fa_stmt)?;
 
-    quote! {
+    Ok(quote! {
         #find_all
         #find_all_with
-    }
+    })
 }
 
 fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
@@ -69,25 +68,24 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
     }
 }
 
-fn generate_count_operations_tokens(table_schema_data: &str) -> TokenStream {
-    let count_stmt = SelectQueryBuilder::new(table_schema_data)
-        .count()
-        .build()
-        .expect("Failed to build SelectQueryBuilder for count macro");
+fn generate_count_operations_tokens<'a>(
+    table_schema_data: &'a str,
+) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
+    let count_stmt = SelectQueryBuilder::new(table_schema_data).count().build()?;
 
-    let count = __details::count_generators::create_count_macro(count_stmt.sql());
-    let count_with = __details::count_generators::create_count_with_macro(count_stmt.sql());
+    let count = __details::count_generators::create_count_macro(count_stmt.sql())?;
+    let count_with = __details::count_generators::create_count_with_macro(count_stmt.sql())?;
 
-    quote! {
+    Ok(quote! {
         #count
         #count_with
-    }
+    })
 }
 
 fn generate_find_by_pk_operations_tokens(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &str,
-) -> TokenStream {
+) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
     let ty = macro_data.ty;
     let mapper_ty = macro_data.retrieve_mapping_target_type().as_ref();
     let pk = macro_data.get_primary_key_annotation();
@@ -115,14 +113,14 @@ fn generate_find_by_pk_operations_tokens(
 
     let mapper_ty = mapper_ty.unwrap_or(ty);
     let find_by_pk =
-        __details::find_by_pk_generators::create_find_by_pk_macro(mapper_ty, &base_body);
+        __details::find_by_pk_generators::create_find_by_pk_macro(mapper_ty, &base_body)?;
     let find_by_pk_with =
-        __details::find_by_pk_generators::create_find_by_pk_with(mapper_ty, &base_body);
+        __details::find_by_pk_generators::create_find_by_pk_with(mapper_ty, &base_body)?;
 
-    quote! {
+    Ok(quote! {
         #find_by_pk
         #find_by_pk_with
-    }
+    })
 }
 
 mod __details {
@@ -133,19 +131,25 @@ mod __details {
         use super::*;
         use proc_macro2::TokenStream;
 
-        pub fn create_find_all_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
-            quote! {
+        pub fn create_find_all_macro(
+            mapper_ty: &Ident,
+            stmt: &str,
+        ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(quote! {
                 async fn find_all()
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     default_db_conn.query(#stmt, &[]).await
                 }
-            }
+            })
         }
 
-        pub fn create_find_all_with_macro(mapper_ty: &Ident, stmt: &str) -> TokenStream {
-            quote! {
+        pub fn create_find_all_with_macro(
+            mapper_ty: &Ident,
+            stmt: &str,
+        ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
+            Ok(quote! {
                 async fn find_all_with<'a, I>(input: I)
                     -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
                 where
@@ -153,7 +157,7 @@ mod __details {
                 {
                     input.query::<&str, #mapper_ty>(#stmt, &[]).await
                 }
-            }
+            })
         }
     }
 
@@ -161,10 +165,12 @@ mod __details {
         use super::*;
         use proc_macro2::TokenStream;
 
-        pub fn create_count_macro(stmt: &str) -> TokenStream {
+        pub fn create_count_macro(
+            stmt: &str,
+        ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, false);
 
-            quote! {
+            Ok(quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     let db_type = default_db_conn.get_database_type()?;
@@ -175,13 +181,15 @@ mod __details {
                         }
                     }
                 }
-            }
+            })
         }
 
-        pub fn create_count_with_macro(stmt: &str) -> TokenStream {
+        pub fn create_count_with_macro(
+            stmt: &str,
+        ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, true);
 
-            quote! {
+            Ok(quote! {
                 async fn count_with<'a, I>(input: I)
                     -> Result<i64, Box<dyn std::error::Error + Send + Sync + 'a>>
                 where
@@ -196,7 +204,7 @@ mod __details {
                         }
                     }
                 }
-            }
+            })
         }
 
         fn get_mssql_arm_tokens_if_enabled(stmt: &str, is_with_input: bool) -> TokenStream {
@@ -226,7 +234,7 @@ mod __details {
         pub fn create_find_by_pk_macro(
             mapper_ty: &Ident,
             base_body: &Option<TokenStream>,
-        ) -> TokenStream {
+        ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let body = if let Some(body) = base_body {
                 let default_db_conn_call = consts::generate_default_db_conn_tokens();
                 quote! {
@@ -240,19 +248,19 @@ mod __details {
                 quote! { #unsupported_op_err }
             };
 
-            quote! {
+            Ok(quote! {
                 async fn find_by_pk<'canyon_lt, 'err_lt>(value: &'canyon_lt dyn canyon_sql::query::QueryParameter)
                     -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'err_lt)>>
                 {
                     #body
                 }
-            }
+            })
         }
 
         pub fn create_find_by_pk_with(
             mapper_ty: &Ident,
             base_body: &Option<TokenStream>,
-        ) -> TokenStream {
+        ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let body = if let Some(body) = base_body {
                 quote! {
                     #body;
@@ -263,7 +271,7 @@ mod __details {
                 quote! { #unsupported_op_err }
             };
 
-            quote! {
+            Ok(quote! {
                 async fn find_by_pk_with<'canyon_lt, 'err_lt, I>(value: &'canyon_lt dyn canyon_sql::query::QueryParameter, input: I)
                     -> Result<Option<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync + 'err_lt)>>
                 where
@@ -271,7 +279,7 @@ mod __details {
                 {
                     #body
                 }
-            }
+            })
         }
     }
 }
@@ -293,7 +301,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_find_all_macro() {
         let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
-        let tokens = create_find_all_macro(&mapper_ty, SELECT_ALL_STMT);
+        let tokens = create_find_all_macro(&mapper_ty, SELECT_ALL_STMT).unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn find_all"));
@@ -304,7 +312,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_find_all_with_macro() {
         let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
-        let tokens = create_find_all_with_macro(&mapper_ty, SELECT_ALL_STMT);
+        let tokens = create_find_all_with_macro(&mapper_ty, SELECT_ALL_STMT).unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn find_all_with"));
@@ -316,7 +324,7 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_create_count_macro() {
-        let tokens = create_count_macro(COUNT_STMT);
+        let tokens = create_count_macro(COUNT_STMT).unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count"));
@@ -326,7 +334,7 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_create_count_with_macro() {
-        let tokens = create_count_with_macro(COUNT_STMT);
+        let tokens = create_count_with_macro(COUNT_STMT).unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count_with"));
@@ -339,7 +347,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_find_by_pk_macro() {
         let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
-        let tokens = create_find_by_pk_macro(&mapper_ty, &None);
+        let tokens = create_find_by_pk_macro(&mapper_ty, &None).unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn find_by_pk"));
@@ -350,7 +358,7 @@ mod macro_builder_read_ops_tests {
     #[test]
     fn test_create_find_by_pk_with_macro() {
         let mapper_ty = syn::parse_str::<Ident>("User").unwrap();
-        let tokens = create_find_by_pk_with(&mapper_ty, &None);
+        let tokens = create_find_by_pk_with(&mapper_ty, &None).unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn find_by_pk_with"));

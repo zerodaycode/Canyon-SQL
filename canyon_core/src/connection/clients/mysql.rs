@@ -94,6 +94,7 @@ impl DbConnection for MySQLConnector {
 
 pub(crate) mod mysql_query_launcher {
     pub const DETECT_PARAMS_IN_QUERY: &str = r"\$([\d])+";
+    pub const DETECT_MYSQL_PARAMS_IN_QUERY: &str = r"\?";
     pub const DETECT_QUOTE_IN_QUERY: &str = r#"\"|\\"#;
 
     use super::*;
@@ -150,13 +151,42 @@ pub(crate) mod mysql_query_launcher {
             query_string.truncate(index_start_clausule_returning);
         }
 
-        let params_query: Vec<Value> =
-            reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value())?;
+        let params_query = build_mysql_params(stmt, params)?;
 
         Ok(QueryWithParams {
             query: query_string,
             params: params_query,
         })
+    }
+
+    fn build_mysql_params(
+        stmt: &str,
+        params: &[&'_ dyn QueryParameter],
+    ) -> Result<Vec<Value>, Box<dyn Error + Send + Sync>> {
+        if Regex::new(DETECT_PARAMS_IN_QUERY)?.is_match(stmt) {
+            return reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value());
+        }
+
+        let required_params = Regex::new(DETECT_MYSQL_PARAMS_IN_QUERY)?.find_iter(stmt).count();
+
+        if required_params == 0 {
+            return Ok(Vec::new());
+        }
+
+        if required_params != params.len() {
+            return Err(format!(
+                "MySQL statement params mismatch: required {}, supplied {}. Statement: {}",
+                required_params,
+                params.len(),
+                stmt
+            )
+            .into());
+        }
+
+        Ok(params
+            .iter()
+            .map(|param| param.as_mysql_param().to_value())
+            .collect())
     }
 
     fn reorder_params<T>(
