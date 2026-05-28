@@ -55,7 +55,7 @@ pub fn placeholders_generator(num_values: usize) -> String {
 
 pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool {
     field.attrs.iter().any(|attr| {
-        attr.path
+        attr.path()
             .segments
             .first()
             .map(|segment| segment.ident == target_attribute)
@@ -124,7 +124,7 @@ mod __impl {
     use syn::{Attribute, MetaNameValue, Token, punctuated::Punctuated};
 
     pub(super) fn is_canyon_entity_attr(attr: &Attribute) -> bool {
-        attr.path
+        attr.path()
             .segments
             .last()
             .is_some_and(|segment| segment.ident == "canyon_entity")
@@ -142,7 +142,7 @@ mod __impl {
     }
 
     pub(super) fn name_value_key(name_value: &MetaNameValue) -> Result<&syn::Ident, TokenStream> {
-        name_value.path.get_ident().ok_or_else(|| {
+        name_value.path().get_ident().ok_or_else(|| {
             syn::Error::new_spanned(
                 &name_value.path,
                 "Only simple identifiers are valid keys for `canyon_entity` attribute arguments",

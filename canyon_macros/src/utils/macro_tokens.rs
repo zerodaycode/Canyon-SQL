@@ -31,7 +31,7 @@ impl<'a> MacroTokens<'a> {
 
             let mut canyon_crud_attribute = None;
             for attr in attrs {
-                if attr.path.is_ident("canyon_crud") {
+                if attr.path().is_ident("canyon_crud") {
                     canyon_crud_attribute = Some(attr.parse_args::<CanyonCrudAttribute>()?);
                 }
             }
@@ -100,7 +100,7 @@ impl<'a> MacroTokens<'a> {
         self.fields.iter().filter(|field| {
             if !field.attrs.is_empty() {
                 field.attrs.iter().any(|attr| {
-                    let a = attr.path.segments[0].clone().ident;
+                    let a = attr.path().segments[0].clone().ident;
                     let b = attr.tokens.to_string();
                     !(a == "primary_key" || b.contains("false"))
                 })
@@ -187,7 +187,7 @@ impl<'a> MacroTokens<'a> {
             let attrs = field
                 .attrs
                 .iter()
-                .filter(|attr| attr.path.segments[0].clone().ident == "foreign_key");
+                .filter(|attr| attr.path().segments[0].clone().ident == "foreign_key");
             attrs.for_each(|attr| {
                 let fk_parse = EntityFieldAnnotation::try_from(&attr);
                 if let Ok(fk_annotation) = fk_parse {

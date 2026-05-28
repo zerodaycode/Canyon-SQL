@@ -1,9 +1,9 @@
 use proc_macro2::Ident;
-use std::{collections::HashMap, convert::TryFrom};
-use syn::{Attribute, MetaNameValue, Token, punctuated::Punctuated};
+use std::convert::TryFrom;
+use syn::{Attribute, Expr, Lit, MetaNameValue, Token, punctuated::Punctuated};
 
 /// The available annotations for a field that belongs to any struct
-/// annotaded with `#[canyon_entity]`
+/// annotated with `#[canyon_entity]`.
 #[derive(Debug, Clone)]
 pub enum EntityFieldAnnotation {
     PrimaryKey(bool),
@@ -11,8 +11,8 @@ pub enum EntityFieldAnnotation {
 }
 
 impl EntityFieldAnnotation {
-    /// Returns the data of the [`EntityFieldAnnotation`] in a understandable format for
-    /// operations that requires character matching
+    /// Returns the data of the [`EntityFieldAnnotation`] in an understandable format for
+    /// operations that require character matching.
     pub fn get_as_string(&self) -> String {
         match self {
             Self::PrimaryKey(autoincremental) => {
@@ -24,107 +24,66 @@ impl EntityFieldAnnotation {
         }
     }
 
-    /// Retrieves the user defined data in the #[primary_key] attribute
-    fn primary_key_parser(
+    fn parse_primary_key(
         ident: &Ident,
-        attr_args: &Result<Punctuated<MetaNameValue, Token![,]>, syn::Error>,
+        args: syn::Result<Punctuated<MetaNameValue, Token![,]>>,
     ) -> syn::Result<Self> {
-        match attr_args {
-            Ok(name_value) => {
-                let mut data: HashMap<String, bool> = HashMap::new();
-                for nv in name_value {
-                    // The identifier
-                    let attr_value_ident = nv.path.get_ident().unwrap().to_string();
-                    // The value after the Token[=]
-                    let attr_value = match &nv.lit {
-                        // Error if the token is not a boolean literal
-                        syn::Lit::Bool(v) => v.value(),
-                        _ => {
-                            return Err(syn::Error::new_spanned(
-                                nv.path.clone(),
-                                format!(
-                                    "Only bool literals are supported for the `{}` attribute",
-                                    &attr_value_ident
-                                ),
-                            ));
-                        }
-                    };
-                    data.insert(attr_value_ident, attr_value);
-                }
+        let Ok(args) = args else {
+            return Ok(Self::PrimaryKey(true));
+        };
 
-                Ok(EntityFieldAnnotation::PrimaryKey(
-                    match data.get("autoincremental") {
-                        Some(aut) => aut.to_owned(),
-                        None => {
-                            // TODO En vez de error, false para default
-                            return Err(syn::Error::new_spanned(
-                                ident,
-                                "Missed `autoincremental` argument on the Primary Key annotation"
-                                    .to_string(),
-                            ));
-                        }
-                    },
-                ))
+        let mut autoincremental = None;
+
+        for arg in &args {
+            match arg_key(arg)?.as_str() {
+                "autoincremental" => {
+                    autoincremental = Some(parse_bool_value(arg)?);
+                }
+                unknown => return Err(unknown_argument(arg, unknown)),
             }
-            Err(_) => Ok(EntityFieldAnnotation::PrimaryKey(true)),
         }
+
+        autoincremental.map(Self::PrimaryKey).ok_or_else(|| {
+            syn::Error::new_spanned(
+                ident,
+                "Missing `autoincremental` argument on the Primary Key annotation",
+            )
+        })
     }
 
-    fn foreign_key_parser(
+    fn parse_foreign_key(
         ident: &Ident,
-        attr_args: &Result<Punctuated<MetaNameValue, Token![,]>, syn::Error>,
+        args: syn::Result<Punctuated<MetaNameValue, Token![,]>>,
     ) -> syn::Result<Self> {
-        match attr_args {
-            Ok(name_value) => {
-                let mut data: HashMap<String, String> = HashMap::new();
+        let args = args.map_err(|error| {
+            syn::Error::new_spanned(ident, format!("Error generating the Foreign Key: {error}"))
+        })?;
 
-                for nv in name_value {
-                    // The identifier
-                    let attr_value_ident = nv.path.get_ident().unwrap().to_string();
-                    // The value after the Token[=]
-                    let attr_value = match &nv.lit {
-                        // Error if the token is not a string literal
-                        // TODO Implement the option (or change it to) to use a Rust Ident instead a Str Lit
-                        syn::Lit::Str(v) => v.value(),
-                        _ => {
-                            return Err(syn::Error::new_spanned(
-                                nv.path.clone(),
-                                format!(
-                                    "Only string literals are supported for the `{attr_value_ident}` attribute"
-                                ),
-                            ));
-                        }
-                    };
-                    data.insert(attr_value_ident, attr_value);
-                }
+        let mut table = None;
+        let mut column = None;
 
-                Ok(EntityFieldAnnotation::ForeignKey(
-                    match data.get("table") {
-                        Some(table) => table.to_owned(),
-                        None => {
-                            return Err(syn::Error::new_spanned(
-                                ident,
-                                "Missed `table` argument on the Foreign Key annotation".to_string(),
-                            ));
-                        }
-                    },
-                    match data.get("column") {
-                        Some(column) => column.to_owned(),
-                        None => {
-                            return Err(syn::Error::new_spanned(
-                                ident,
-                                "Missed `column` argument on the Foreign Key annotation"
-                                    .to_string(),
-                            ));
-                        }
-                    },
-                ))
+        for arg in &args {
+            match arg_key(arg)?.as_str() {
+                "table" => table = Some(parse_string_value(arg)?),
+                "column" => column = Some(parse_string_value(arg)?),
+                unknown => return Err(unknown_argument(arg, unknown)),
             }
-            Err(_) => Err(syn::Error::new_spanned(
-                ident,
-                "Error generating the Foreign Key".to_string(),
-            )),
         }
+
+        Ok(Self::ForeignKey(
+            table.ok_or_else(|| {
+                syn::Error::new_spanned(
+                    ident,
+                    "Missing `table` argument on the Foreign Key annotation",
+                )
+            })?,
+            column.ok_or_else(|| {
+                syn::Error::new_spanned(
+                    ident,
+                    "Missing `column` argument on the Foreign Key annotation",
+                )
+            })?,
+        ))
     }
 }
 
@@ -132,19 +91,304 @@ impl TryFrom<&&Attribute> for EntityFieldAnnotation {
     type Error = syn::Error;
 
     fn try_from(attribute: &&Attribute) -> Result<Self, Self::Error> {
-        let ident = attribute.path.segments[0].ident.clone();
-        let name_values: Result<Punctuated<MetaNameValue, Token![,]>, syn::Error> =
-            attribute.parse_args_with(Punctuated::parse_terminated);
+        let ident = attribute
+            .path()
+            .get_ident()
+            .ok_or_else(|| syn::Error::new_spanned(attribute.path(), "Expected attribute ident"))?;
 
-        Ok(match ident.to_string().as_str() {
-            "primary_key" => EntityFieldAnnotation::primary_key_parser(&ident, &name_values)?,
-            "foreign_key" => EntityFieldAnnotation::foreign_key_parser(&ident, &name_values)?,
-            _ => {
-                return Err(syn::Error::new_spanned(
-                    ident.clone(),
-                    format!("Unknown attribute `{}`", &ident),
-                ));
-            }
+        let args = attribute.parse_args_with(Punctuated::<MetaNameValue, Token![,]>::parse_terminated);
+
+        match ident.to_string().as_str() {
+            "primary_key" => Self::parse_primary_key(ident, args),
+            "foreign_key" => Self::parse_foreign_key(ident, args),
+            _ => Err(syn::Error::new_spanned(
+                ident,
+                format!("Unknown attribute `{ident}`"),
+            )),
+        }
+    }
+}
+
+fn arg_key(arg: &MetaNameValue) -> syn::Result<String> {
+    arg.path
+        .get_ident()
+        .map(ToString::to_string)
+        .ok_or_else(|| syn::Error::new_spanned(&arg.path, "Expected argument ident"))
+}
+
+fn parse_string_value(arg: &MetaNameValue) -> syn::Result<String> {
+    match &arg.value {
+        Expr::Lit(expr_lit) => match &expr_lit.lit {
+            Lit::Str(lit) => Ok(lit.value()),
+            _ => Err(syn::Error::new_spanned(
+                &arg.value,
+                "Expected string literal",
+            )),
+        },
+        _ => Err(syn::Error::new_spanned(
+            &arg.value,
+            "Expected literal expression",
+        )),
+    }
+}
+
+fn parse_bool_value(arg: &MetaNameValue) -> syn::Result<bool> {
+    parse_string_value(arg).and_then(|value| {
+        value.parse::<bool>().map_err(|_| {
+            syn::Error::new_spanned(
+                &arg.value,
+                format!("Expected boolean string literal, found `{value}`"),
+            )
         })
+    })
+}
+
+fn unknown_argument(arg: &MetaNameValue, ident: &str) -> syn::Error {
+    syn::Error::new_spanned(&arg.path, format!("Unknown annotation argument `{ident}`"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use syn::{parse_quote, Attribute, Field};
+
+    fn annotation_from(attribute: &Attribute) -> syn::Result<EntityFieldAnnotation> {
+        EntityFieldAnnotation::try_from(&attribute)
+    }
+
+    fn field_attribute(field: &Field) -> &Attribute {
+        field.attrs.first().expect("test field must have one attribute")
+    }
+
+    #[test]
+    fn parses_primary_key_without_arguments_as_autoincremental() {
+        let field: Field = parse_quote! {
+            #[primary_key]
+            id: i32
+        };
+
+        let annotation = annotation_from(field_attribute(&field)).unwrap();
+
+        assert!(matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)));
+    }
+
+    #[test]
+    fn parses_primary_key_with_autoincremental_enabled() {
+        let field: Field = parse_quote! {
+            #[primary_key(autoincremental = "true")]
+            id: i32
+        };
+
+        let annotation = annotation_from(field_attribute(&field)).unwrap();
+
+        assert!(matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)));
+    }
+
+    #[test]
+    fn parses_primary_key_with_autoincremental_disabled() {
+        let field: Field = parse_quote! {
+            #[primary_key(autoincremental = "false")]
+            id: i32
+        };
+
+        let annotation = annotation_from(field_attribute(&field)).unwrap();
+
+        assert!(matches!(annotation, EntityFieldAnnotation::PrimaryKey(false)));
+    }
+
+    #[test]
+    fn rejects_primary_key_with_missing_autoincremental_argument_when_args_are_present() {
+        let field: Field = parse_quote! {
+            #[primary_key()]
+            id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Missing `autoincremental` argument on the Primary Key annotation")
+        );
+    }
+
+    #[test]
+    fn rejects_primary_key_with_unknown_argument() {
+        let field: Field = parse_quote! {
+            #[primary_key(foo = "true")]
+            id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(error.to_string().contains("Unknown annotation argument `foo`"));
+    }
+
+    #[test]
+    fn rejects_primary_key_with_non_boolean_value() {
+        let field: Field = parse_quote! {
+            #[primary_key(autoincremental = "yes")]
+            id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Expected boolean string literal, found `yes`")
+        );
+    }
+
+    #[test]
+    fn rejects_primary_key_with_non_string_literal_value() {
+        let field: Field = parse_quote! {
+            #[primary_key(autoincremental = true)]
+            id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(error.to_string().contains("Expected string literal"));
+    }
+
+    #[test]
+    fn parses_foreign_key() {
+        let field: Field = parse_quote! {
+            #[foreign_key(table = "users", column = "id")]
+            user_id: i32
+        };
+
+        let annotation = annotation_from(field_attribute(&field)).unwrap();
+
+        match annotation {
+            EntityFieldAnnotation::ForeignKey(table, column) => {
+                assert_eq!(table, "users");
+                assert_eq!(column, "id");
+            }
+            EntityFieldAnnotation::PrimaryKey(_) => panic!("expected foreign key annotation"),
+        }
+    }
+
+    #[test]
+    fn parses_foreign_key_arguments_in_any_order() {
+        let field: Field = parse_quote! {
+            #[foreign_key(column = "id", table = "users")]
+            user_id: i32
+        };
+
+        let annotation = annotation_from(field_attribute(&field)).unwrap();
+
+        match annotation {
+            EntityFieldAnnotation::ForeignKey(table, column) => {
+                assert_eq!(table, "users");
+                assert_eq!(column, "id");
+            }
+            EntityFieldAnnotation::PrimaryKey(_) => panic!("expected foreign key annotation"),
+        }
+    }
+
+    #[test]
+    fn rejects_foreign_key_without_arguments() {
+        let field: Field = parse_quote! {
+            #[foreign_key]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(error.to_string().contains("Error generating the Foreign Key"));
+    }
+
+    #[test]
+    fn rejects_foreign_key_with_missing_table_argument() {
+        let field: Field = parse_quote! {
+            #[foreign_key(column = "id")]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Missing `table` argument on the Foreign Key annotation")
+        );
+    }
+
+    #[test]
+    fn rejects_foreign_key_with_missing_column_argument() {
+        let field: Field = parse_quote! {
+            #[foreign_key(table = "users")]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Missing `column` argument on the Foreign Key annotation")
+        );
+    }
+
+    #[test]
+    fn rejects_foreign_key_with_unknown_argument() {
+        let field: Field = parse_quote! {
+            #[foreign_key(table = "users", column = "id", cascade = "true")]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Unknown annotation argument `cascade`")
+        );
+    }
+
+    #[test]
+    fn rejects_foreign_key_with_non_string_table_value() {
+        let field: Field = parse_quote! {
+            #[foreign_key(table = users, column = "id")]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(error.to_string().contains("Expected literal expression"));
+    }
+
+    #[test]
+    fn rejects_unknown_attribute() {
+        let field: Field = parse_quote! {
+            #[indexed]
+            id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(error.to_string().contains("Unknown attribute `indexed`"));
+    }
+
+    #[test]
+    fn formats_primary_key_annotation_as_string() {
+        let annotation = EntityFieldAnnotation::PrimaryKey(true);
+
+        assert_eq!(
+            annotation.get_as_string(),
+            "Annotation: PrimaryKey, Autoincremental: true"
+        );
+    }
+
+    #[test]
+    fn formats_foreign_key_annotation_as_string() {
+        let annotation = EntityFieldAnnotation::ForeignKey("users".into(), "id".into());
+
+        assert_eq!(
+            annotation.get_as_string(),
+            "Annotation: ForeignKey, Table: users, Column: id"
+        );
     }
 }
