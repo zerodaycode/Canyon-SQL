@@ -16,7 +16,7 @@ use quote::quote;
 use syn::{DeriveInput, Error, parse_macro_input};
 use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use crate::canyon_entity_macro::generate_canyon_entity_tokens;
+use crate::canyon_entity_macro::{CanyonEntityAttributeArgs, generate_canyon_entity_tokens};
 use crate::canyon_mapper_macro::canyon_mapper_impl_tokens;
 use crate::foreignkeyable_macro::foreignkeyable_impl_tokens;
 use crate::query_operations::impl_crud_operations_trait_for_struct;
@@ -119,7 +119,7 @@ pub fn canyon_tokio_test(
 /// your type
 #[proc_macro_attribute]
 pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    let attrs = syn::parse_macro_input!(meta as syn::AttributeArgs);
+    let attrs = syn::parse_macro_input!(meta with CanyonEntityAttributeArgs::parse_terminated);
     // TODO: a table with table and schema fields maybe would have been more corret
     generate_canyon_entity_tokens(attrs, input).into()
 }
