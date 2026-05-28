@@ -14,7 +14,7 @@ pub struct BaseAst<'a> {
 }
 
 impl<'a> BaseAst<'a> {
-    pub const fn new_table(table: TableMetadata<'a>) -> Self {
+    pub const fn new_ast(table: TableMetadata<'a>) -> Self {
         Self {
             table,
             conditions: Vec::new(),

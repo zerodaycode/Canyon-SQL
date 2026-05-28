@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use crate::query::operators::Operator;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
@@ -83,7 +84,7 @@ fn test_join_clause_basic() {
 
     let join = JoinClause::new(
         JoinKind::Inner,
-        TableMetadata::new("users"),
+        TableMetadata::new_table(None, Cow::from("users")),
         ColumnRef::from("t.id"),
         Operator::Eq,
         "users.team_id".into(),

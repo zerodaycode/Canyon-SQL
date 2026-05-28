@@ -44,6 +44,19 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         }
     }
 
+    pub const fn new_querybuilder(
+        table_metadata: TableMetadata<'a>,
+        ast: P,
+        database_type: DatabaseType,
+    ) -> Self {
+        Self {
+            base_ast: BaseAst::new_ast(table_metadata),
+            ast,
+            database_type,
+            params: Vec::new(),
+        }
+    }
+
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         __impl::check_invariants_over_condition_clauses(&self)?;
 
