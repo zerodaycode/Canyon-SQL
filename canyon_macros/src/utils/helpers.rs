@@ -28,19 +28,6 @@ pub fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
         .collect::<Vec<_>>()
 }
 
-pub fn __fields_with_types(fields: &Fields) -> Vec<(Visibility, Ident, Type)> {
-    fields
-        .iter()
-        .map(|field| {
-            (
-                field.vis.clone(),
-                field.ident.as_ref().unwrap().clone(),
-                field.ty.clone(),
-            )
-        })
-        .collect::<Vec<_>>()
-}
-
 pub fn placeholders_generator(num_values: usize) -> String {
     let mut placeholders = String::new();
     for (i, n) in (1..num_values).enumerate() {
@@ -121,7 +108,7 @@ fn parse_canyon_entity_attr(
 
 mod __impl {
     use proc_macro2::TokenStream;
-    use syn::{Attribute, MetaNameValue, Token, punctuated::Punctuated};
+    use syn::{Attribute, Expr, Lit, Meta, MetaNameValue, Token, punctuated::Punctuated};
 
     pub(super) fn is_canyon_entity_attr(attr: &Attribute) -> bool {
         attr.path()
@@ -133,16 +120,21 @@ mod __impl {
     pub(super) fn parse_canyon_entity_args(
         attr: &Attribute,
     ) -> Result<Punctuated<MetaNameValue, Token![,]>, TokenStream> {
-        if attr.tokens.is_empty() {
-            return Ok(Punctuated::new());
+        match &attr.meta {
+            Meta::Path(_) => Ok(Punctuated::new()),
+            Meta::List(_) => attr
+                .parse_args_with(Punctuated::parse_terminated)
+                .map_err(syn::Error::into_compile_error),
+            Meta::NameValue(_) => Err(syn::Error::new_spanned(
+                &attr.meta,
+                "`canyon_entity` attribute expects a list of arguments",
+            )
+            .into_compile_error()),
         }
-
-        attr.parse_args_with(Punctuated::parse_terminated)
-            .map_err(syn::Error::into_compile_error)
     }
 
     pub(super) fn name_value_key(name_value: &MetaNameValue) -> Result<&syn::Ident, TokenStream> {
-        name_value.path().get_ident().ok_or_else(|| {
+        name_value.path.get_ident().ok_or_else(|| {
             syn::Error::new_spanned(
                 &name_value.path,
                 "Only simple identifiers are valid keys for `canyon_entity` attribute arguments",
@@ -152,11 +144,18 @@ mod __impl {
     }
 
     pub(super) fn string_literal_value(name_value: &MetaNameValue) -> Result<String, TokenStream> {
-        match &name_value.lit {
-            syn::Lit::Str(value) => Ok(value.value()),
+        match &name_value.value {
+            Expr::Lit(expr_lit) => match &expr_lit.lit {
+                Lit::Str(value) => Ok(value.value()),
+                _ => Err(syn::Error::new_spanned(
+                    &name_value.value,
+                    "Only string literals are valid values for `canyon_entity` attribute arguments",
+                )
+                .into_compile_error()),
+            },
             _ => Err(syn::Error::new_spanned(
-                &name_value.lit,
-                "Only string literals are valid values for `canyon_entity` attribute arguments",
+                &name_value.value,
+                "Only literal expressions are valid values for `canyon_entity` attribute arguments",
             )
             .into_compile_error()),
         }
