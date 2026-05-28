@@ -385,19 +385,13 @@ fn test_crud_delete_with_querybuilder() {
     assert_eq!(Tournament::find_by_pk(&15).await.unwrap(), None);
 }
 
-// #[cfg(feature = "postgres")]
-// #[canyon_sql::macros::canyon_tokio_test]
-// fn test_crud_delete_with_querybuilder_lt_creation() {
-//     let q = create_querybuilder_lt(10);
-//     assert_eq!(q.unwrap().read_sql(), "DELETE FROM tournament WHERE id = 10");
-// }
-//
-// #[cfg(feature = "postgres")]
-// fn create_querybuilder_lt<'a, 'b: 'a>(id: i32) -> DeleteQueryBuilder<'b> {
-//     Tournament::delete_query()
-//         .unwrap()
-//         .where_value(&TournamentFieldValue::id(id), Operator::Gt)
-// }
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_delete_with_querybuilder_lt_creation() {
+    let q = Tournament::delete_query()
+        .where_value(&TournamentFieldValue::id(10), Operator::Gt);
+    assert_eq!(q.build().unwrap().sql(), "DELETE FROM \"tournament\" WHERE \"tournament\".\"id\" > $1;");
+}
 
 /// Same as the above delete, but with the specified datasource
 #[cfg(feature = "mssql")]

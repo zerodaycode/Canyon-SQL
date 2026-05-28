@@ -42,7 +42,6 @@ pub trait EmitUpdate<'a>: SqlEmitter<'a> {
 }
 
 pub(crate) mod __impl {
-    use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol, ToSqlTokens};
