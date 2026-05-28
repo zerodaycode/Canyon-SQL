@@ -87,26 +87,15 @@ impl<'a> MacroTokens<'a> {
             .map(|field| field.ident.as_ref().unwrap().clone())
     }
 
-    /// Returns a Vec populated with the fields of the struct
-    ///
-    /// If the type contains a `#[primary_key]` annotation (and), returns the
-    /// name of the columns without the fields that maps against the column designed as
-    /// primary key (if its present and its autoincremental attribute is set to true)
-    /// (autoincremental = true) or its without the autoincremental attribute, which leads
-    /// to the same behaviour.
-    ///
-    /// Returns every field if there's no PK, or if it's present but autoincremental = false
     pub fn get_columns_pk_parsed(&self) -> impl Iterator<Item = &Field> {
-        self.fields.iter().filter(|field| {
-            if !field.attrs.is_empty() {
-                field.attrs.iter().any(|attr| {
-                    let a = attr.path().segments[0].clone().ident;
-                    let b = attr.tokens.to_string();
-                    !(a == "primary_key" || b.contains("false"))
-                })
-            } else {
-                true
-            }
+        let primary_key = self.primary_key_attribute.as_ref().map(|pk| &pk.ident);
+
+        self.fields.iter().filter(move |field| {
+            !matches!(
+            (primary_key, field.ident.as_ref()),
+            (Some(pk), Some(field_ident))
+                if field_ident == *pk && __details::primary_key_is_autoincremental(field)
+        )
         })
     }
 
@@ -145,7 +134,7 @@ impl<'a> MacroTokens<'a> {
         for (idx, field) in self.fields.iter().enumerate() {
             for attr in &field.attrs {
                 if attr
-                    .path
+                    .path()
                     .segments
                     .first()
                     .map(|segment| segment.ident == "primary_key")?
@@ -229,6 +218,7 @@ mod __details {
     use crate::utils::primary_key_attribute::PrimaryKeyIndex;
     use proc_macro2::Span;
     use syn::{Field, Fields};
+    use canyon_entities::field_annotation::EntityFieldAnnotation;
 
     pub(super) fn find_primary_key_field_annotation(
         fields: &Fields,
@@ -242,6 +232,15 @@ mod __details {
                 None
             }
         })
+    }
+
+    pub(super) fn primary_key_is_autoincremental(field: &Field) -> bool {
+        field
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("primary_key"))
+            .and_then(|attr| EntityFieldAnnotation::try_from(&attr).ok())
+            .is_none_or(|annotation| matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)))
     }
 
     pub(crate) fn raise_canyon_crud_only_for_structs_err<'a>() -> Result<MacroTokens<'a>, syn::Error>
