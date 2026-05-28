@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:14
+    image: postgres:latest
     restart: always
     hostname: postgres
     environment:
@@ -21,7 +21,8 @@ services:
   sql-server:
     container_name: sql-server
     image: mcr.microsoft.com/mssql/server:2022-latest
-    restart: always
+    platform: linux/amd64
+    restart: unless-stopped
     ports:
       - "1434:1433"
     environment:

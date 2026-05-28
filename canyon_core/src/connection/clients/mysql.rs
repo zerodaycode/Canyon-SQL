@@ -84,7 +84,7 @@ impl DbConnection for MySQLConnector {
         let mysql_connection = self.0.get_conn().await?;
         let mysql_stmt = generate_mysql_stmt(stmt, params)?;
 
-        Ok(mysql_stmt.run(mysql_connection).await?.affected_rows())
+        Ok(mysql_stmt.stmt.run(mysql_connection).await?.affected_rows())
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
@@ -93,17 +93,17 @@ impl DbConnection for MySQLConnector {
 }
 
 pub(crate) mod mysql_query_launcher {
-    pub const DETECT_PARAMS_IN_QUERY: &str = r"\$([\d])+";
-    pub const DETECT_MYSQL_PARAMS_IN_QUERY: &str = r"\?";
-    pub const DETECT_QUOTE_IN_QUERY: &str = r#"\"|\\"#;
-
     use super::*;
 
     use mysql_async::QueryWithParams;
     use mysql_async::Value;
     use mysql_async::prelude::Query;
-    use regex::Regex;
     use std::sync::Arc;
+
+    pub(crate) struct MySqlGeneratedStmt {
+        pub(crate) stmt: QueryWithParams<String, Vec<Value>>,
+        returns_last_insert_id: bool,
+    }
 
     pub(crate) async fn execute_query<S>(
         stmt: S,
@@ -114,11 +114,10 @@ pub(crate) mod mysql_query_launcher {
         S: AsRef<str> + Send,
     {
         let mysql_connection = conn.0.get_conn().await?;
-        let is_insert = stmt.as_ref().find(" RETURNING");
         let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
 
-        let mut query_result = mysql_stmt.run(mysql_connection).await?;
-        let result_rows = if is_insert.is_some() {
+        let mut query_result = mysql_stmt.stmt.run(mysql_connection).await?;
+        let result_rows = if mysql_stmt.returns_last_insert_id {
             let last_insert = query_result
                 .last_insert_id()
                 .map(Value::UInt)
@@ -138,82 +137,29 @@ pub(crate) mod mysql_query_launcher {
     pub(crate) fn generate_mysql_stmt(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<QueryWithParams<String, Vec<Value>>, Box<dyn Error + Send + Sync>> {
-        let stmt_with_escape_characters = regex::escape(stmt);
-        let query_string =
-            Regex::new(DETECT_PARAMS_IN_QUERY)?.replace_all(&stmt_with_escape_characters, "?");
+    ) -> Result<MySqlGeneratedStmt, Box<dyn Error + Send + Sync>> {
+        let (stmt, returns_last_insert_id) = strip_mysql_returning_clause(stmt);
+        let params = params
+            .iter()
+            .map(|param| param.as_mysql_param().to_value())
+            .collect();
 
-        let mut query_string = Regex::new(DETECT_QUOTE_IN_QUERY)?
-            .replace_all(&query_string, "")
-            .to_string();
-
-        if let Some(index_start_clausule_returning) = query_string.find(" RETURNING") {
-            query_string.truncate(index_start_clausule_returning);
-        }
-
-        let params_query = build_mysql_params(stmt, params)?;
-
-        Ok(QueryWithParams {
-            query: query_string,
-            params: params_query,
+        Ok(MySqlGeneratedStmt {
+            stmt: QueryWithParams {
+                query: stmt.to_owned(),
+                params,
+            },
+            returns_last_insert_id,
         })
     }
 
-    fn build_mysql_params(
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<Vec<Value>, Box<dyn Error + Send + Sync>> {
-        if Regex::new(DETECT_PARAMS_IN_QUERY)?.is_match(stmt) {
-            return reorder_params(stmt, params, |f| (*f).as_mysql_param().to_value());
+    fn strip_mysql_returning_clause(stmt: &str) -> (&str, bool) {
+        match stmt.find(" RETURNING") {
+            Some(returning_index) => (&stmt[..returning_index], true),
+            None => (stmt, false),
         }
-
-        let required_params = Regex::new(DETECT_MYSQL_PARAMS_IN_QUERY)?.find_iter(stmt).count();
-
-        if required_params == 0 {
-            return Ok(Vec::new());
-        }
-
-        if required_params != params.len() {
-            return Err(format!(
-                "MySQL statement params mismatch: required {}, supplied {}. Statement: {}",
-                required_params,
-                params.len(),
-                stmt
-            )
-            .into());
-        }
-
-        Ok(params
-            .iter()
-            .map(|param| param.as_mysql_param().to_value())
-            .collect())
     }
 
-    fn reorder_params<T>(
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-        fn_parser: impl Fn(&&dyn QueryParameter) -> T,
-    ) -> Result<Vec<T>, Box<dyn Error + Send + Sync>> {
-        use mysql_query_launcher::DETECT_PARAMS_IN_QUERY;
-
-        let mut ordered_params = vec![];
-        let rg = Regex::new(DETECT_PARAMS_IN_QUERY)
-            .expect("Error create regex with detect params pattern expression");
-
-        for positional_param in rg.find_iter(stmt) {
-            let pp: &str = positional_param.as_str();
-            let pp_index = pp[1..] // param $1 -> get 1
-                .parse::<usize>()?
-                - 1;
-
-            let element = params
-                .get(pp_index)
-                .expect("Error obtaining the element of the mapping against parameters.");
-            ordered_params.push(fn_parser(element));
-        }
-
-        Ok(ordered_params)
-    }
 }
 
 pub(crate) mod __impl {

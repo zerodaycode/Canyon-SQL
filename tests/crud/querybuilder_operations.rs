@@ -244,8 +244,6 @@ fn test_crud_find_with_querybuilder_with_mysql() {
         filtered_find_players.sql(),
         "SELECT * FROM `player` WHERE `player`.`id` > ?;"
     );
-    
-    dbg!(&filtered_find_players);
 
     let result = filtered_find_players
         .launch_with::<&str, Player>(MYSQL_DS)
