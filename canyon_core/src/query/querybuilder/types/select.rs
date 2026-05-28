@@ -17,9 +17,7 @@ pub struct SelectQueryBuilder<'a> {
 
 impl<'a> SelectQueryBuilder<'a> {
     /// The constructor for creating [`QueryBuilder`] instances of type: SELECT
-    pub fn new(
-        table_schema_data: impl Into<TableMetadata<'a>>,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
         SelectQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
     }
 
@@ -27,10 +25,10 @@ impl<'a> SelectQueryBuilder<'a> {
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, SelectAst::new(), database_type)?,
-        })
+    ) -> Self {
+        Self {
+            _inner: QueryBuilder::new(table_schema_data, SelectAst::new(), database_type),
+        }
     }
 
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {

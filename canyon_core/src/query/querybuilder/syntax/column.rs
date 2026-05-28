@@ -1,7 +1,7 @@
-use std::borrow::Cow;
 use crate::query::bounds::FieldIdentifier;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Default)]
 pub struct ColumnRef<'a> {
@@ -25,15 +25,15 @@ impl<'a> From<&'a str> for ColumnRef<'a> {
     }
 }
 
-impl From<String> for ColumnRef<'static> {
-    fn from(value: String) -> Self {
-        __impl::column_ref_from_string(value)
-    }
-}
-
 impl<'a> From<&'a String> for ColumnRef<'a> {
     fn from(value: &'a String) -> Self {
         __impl::column_ref_from_str_ref(value.as_str())
+    }
+}
+
+impl<'a> From<String> for ColumnRef<'a> {
+    fn from(value: String) -> Self {
+        __impl::column_ref_from_string(value)
     }
 }
 
@@ -92,13 +92,13 @@ impl<'a> ColumnRef<'a> {
 }
 
 mod __impl {
-    use std::borrow::Cow;
     use crate::query::querybuilder::syntax::column::{__detail, ColumnRef};
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::symbol::Symbol::Dot;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
+    use std::borrow::Cow;
 
     pub(crate) fn column_ref_from_str_ref(value: &str) -> ColumnRef<'_> {
         let trimmed = value.trim();

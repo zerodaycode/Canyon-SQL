@@ -47,7 +47,7 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Adds a `DISTINCT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
     fn with_distinct(self) -> Self;
 
-        /// Adds a `COUNT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
+    /// Adds a `COUNT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
     fn count(self) -> Self;
 
     /// Adds a *LEFT JOIN* SQL statement to the underlying

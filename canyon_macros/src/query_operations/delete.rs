@@ -121,11 +121,8 @@ fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn delete_query<'canyon, 'err>() -> Result<
-            canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon>,
-            Box<(dyn std::error::Error + Send + Sync + 'err)>
-        > where
-    'canyon: 'err {
+        fn delete_query<'canyon, 'err>() ->
+            canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon> where 'canyon: 'err {
             canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data)
         }
 
@@ -140,11 +137,7 @@ fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
         /// The query it's made against the database with the configured datasource
         /// described in the configuration file, selected with the input parameter
         fn delete_query_with<'canyon, 'err>(database_type: canyon_sql::connection::DatabaseType)
-        -> Result<
-            canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon>,
-            Box<(dyn std::error::Error + Send + Sync + 'err)>
-        > where
-    'canyon: 'err {
+        -> canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon> where 'canyon: 'err {
             canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(#table_schema_data, database_type)
         }
     }

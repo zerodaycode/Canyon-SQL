@@ -16,19 +16,17 @@ pub struct UpdateQueryBuilder<'a> {
 
 impl<'a> UpdateQueryBuilder<'a> {
     /// Generates a new public instance of the [`UpdateQueryBuilder`]
-    pub fn new(
-        table_schema_data: impl Into<TableMetadata<'a>>,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
         UpdateQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
     }
 
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, UpdateAst::new(), database_type)?,
-        })
+    ) -> Self {
+        Self {
+            _inner: QueryBuilder::new(table_schema_data, UpdateAst::new(), database_type),
+        }
     }
 
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {

@@ -35,13 +35,13 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         table_metadata: impl Into<TableMetadata<'a>>,
         ast: P,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Ok(Self {
+    ) -> Self {
+        Self {
             base_ast: BaseAst::new(table_metadata),
             ast,
             database_type,
             params: Vec::new(),
-        })
+        }
     }
 
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {

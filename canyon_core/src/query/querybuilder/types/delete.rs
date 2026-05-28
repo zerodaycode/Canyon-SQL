@@ -19,19 +19,17 @@ pub struct DeleteQueryBuilder<'a> {
 
 impl<'a> DeleteQueryBuilder<'a> {
     /// Generates a new public instance of the [`DeleteQueryBuilder`]
-    pub fn new(
-        table_schema_data: impl Into<TableMetadata<'a>>,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
         Self::new_for(table_schema_data, DatabaseType::Deferred)
     }
 
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>> {
-        Ok(Self {
-            _inner: QueryBuilder::new(table_schema_data, DeleteAst::new(), database_type)?,
-        })
+    ) -> Self {
+        Self {
+            _inner: QueryBuilder::new(table_schema_data, DeleteAst::new(), database_type),
+        }
     }
 
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
