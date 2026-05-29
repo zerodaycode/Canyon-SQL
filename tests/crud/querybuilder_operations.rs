@@ -47,7 +47,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
 
     assert_eq!(
-        select_with_joins.unwrap().build().unwrap().sql(),
+        select_with_joins?.build().unwrap().sql(), // TODO: That .unwrap instead of '?' because the lt issues associated with the &'a Z on .and
         "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"league\".\"id\" > $1 AND \"league\".\"name\" = $2 AND \"name\" IN ($3, $4);"
     )
 }
@@ -388,9 +388,11 @@ fn test_crud_delete_with_querybuilder() {
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_lt_creation() {
-    let q = Tournament::delete_query()
-        .where_value(&TournamentFieldValue::id(10), Operator::Gt);
-    assert_eq!(q.build().unwrap().sql(), "DELETE FROM \"tournament\" WHERE \"tournament\".\"id\" > $1;");
+    let q = Tournament::delete_query().where_value(&TournamentFieldValue::id(10), Operator::Gt);
+    assert_eq!(
+        q.build()?.sql(),
+        "DELETE FROM \"tournament\" WHERE \"tournament\".\"id\" > $1;"
+    );
 }
 
 /// Same as the above delete, but with the specified datasource
@@ -400,8 +402,7 @@ fn test_crud_delete_with_querybuilder_with_mssql() {
     Player::delete_query_with(DatabaseType::SqlServer)
         .where_value(&PlayerFieldValue::id(120), Operator::Gt)
         .and(&PlayerFieldValue::id(130), Operator::Lt)
-        .build()
-        .unwrap()
+        .build()?
         .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");

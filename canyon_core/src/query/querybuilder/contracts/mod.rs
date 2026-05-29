@@ -156,7 +156,7 @@ pub trait QueryBuilderOps<'a> {
     ///  It will generate a SQL statement with the where constraint value generated as a placeholder,
     /// depending on the underlying database driver and the number of elements already added to the
     /// querybuilder
-    fn r#where(self, column: &'a str, op: Operator) -> Self;
+    fn r#where<I: Into<ColumnRef<'a>>>(self, column: I, op: Operator) -> Self;
 
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///

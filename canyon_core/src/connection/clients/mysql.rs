@@ -159,7 +159,6 @@ pub(crate) mod mysql_query_launcher {
             None => (stmt, false),
         }
     }
-
 }
 
 pub(crate) mod __impl {

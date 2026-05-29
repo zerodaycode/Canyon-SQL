@@ -12,7 +12,6 @@ pub struct TableMetadata<'a> {
     pub name: Cow<'a, str>,
 }
 
-
 impl<'a, T> From<T> for TableMetadata<'a>
 where
     T: bounds::TableMetadata<'a>,
@@ -81,10 +80,7 @@ impl<'a> TableMetadata<'a> {
     }
 
     pub const fn new_table(schema: Option<Cow<'a, str>>, name: Cow<'a, str>) -> Self {
-        Self {
-            schema,
-            name,
-        }
+        Self { schema, name }
     }
 
     pub fn schema<S>(&mut self, schema: S)

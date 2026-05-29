@@ -92,10 +92,10 @@ impl<'a> MacroTokens<'a> {
 
         self.fields.iter().filter(move |field| {
             !matches!(
-            (primary_key, field.ident.as_ref()),
-            (Some(pk), Some(field_ident))
-                if field_ident == *pk && __details::primary_key_is_autoincremental(field)
-        )
+                (primary_key, field.ident.as_ref()),
+                (Some(pk), Some(field_ident))
+                    if field_ident == *pk && __details::primary_key_is_autoincremental(field)
+            )
         })
     }
 
@@ -216,9 +216,9 @@ mod __details {
     use crate::utils::helpers;
     use crate::utils::macro_tokens::MacroTokens;
     use crate::utils::primary_key_attribute::PrimaryKeyIndex;
+    use canyon_entities::field_annotation::EntityFieldAnnotation;
     use proc_macro2::Span;
     use syn::{Field, Fields};
-    use canyon_entities::field_annotation::EntityFieldAnnotation;
 
     pub(super) fn find_primary_key_field_annotation(
         fields: &Fields,

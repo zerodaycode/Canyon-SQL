@@ -119,9 +119,7 @@ mod tests {
             columns: vec![col("name")],
         });
 
-        let mut base_ast = BaseAst::new_ast(
-            "users".into()
-        );
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render_standard(&ast, &mut base_ast);
         assert_eq!(sql, "UPDATE \"users\" SET \"name\" = $1;");

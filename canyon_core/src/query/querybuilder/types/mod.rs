@@ -18,6 +18,7 @@ use crate::{
     },
 };
 use std::error::Error;
+use crate::query::ColumnRef;
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a, P: AstProcessor<'a> + 'a> {
@@ -71,7 +72,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Ok(Query::new(sql, params)) // TODO, get rid out of query?
     }
 
-    fn r#where(&mut self, column_name: &'a str, operator: Operator) {
+    fn r#where<I: Into<ColumnRef<'a>>>(&mut self, column_name: I, operator: Operator) {
         __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator);
     }
 

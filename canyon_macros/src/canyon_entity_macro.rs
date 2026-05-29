@@ -1,6 +1,7 @@
 use crate::utils::helpers;
 use canyon_entities::CANYON_REGISTER_ENTITIES;
 use canyon_entities::entity::CanyonEntity;
+use canyon_entities::entity_fields::EntityField;
 use canyon_entities::manager_builder::generate_user_struct;
 use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntityField};
 use proc_macro::TokenStream as CompilerTokenStream;
@@ -8,7 +9,6 @@ use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::punctuated::Punctuated;
 use syn::{Expr, Lit, Meta, Token};
-use canyon_entities::entity_fields::EntityField;
 
 pub type CanyonEntityAttributeArgs = Punctuated<Meta, Token![,]>;
 
@@ -24,7 +24,8 @@ pub fn generate_canyon_entity_tokens(
     };
 
     let generated_user_struct = generate_user_struct(&entity);
-    let register_entity = build_register_entity(&entity, parsed_attrs.table_name, parsed_attrs.schema_name);
+    let register_entity =
+        build_register_entity(&entity, parsed_attrs.table_name, parsed_attrs.schema_name);
 
     CANYON_REGISTER_ENTITIES
         .lock()
@@ -53,10 +54,16 @@ fn build_register_entity<'a>(
     CanyonRegisterEntity {
         entity_name,
         entity_db_table_name: table_name.unwrap_or_else(|| {
-            leak_string(helpers::default_database_table_name_from_entity_name(entity_name))
+            leak_string(helpers::default_database_table_name_from_entity_name(
+                entity_name,
+            ))
         }),
         user_schema_name: schema_name,
-        entity_fields: entity.fields.iter().map(build_register_entity_field).collect(),
+        entity_fields: entity
+            .fields
+            .iter()
+            .map(build_register_entity_field)
+            .collect(),
     }
 }
 
@@ -80,7 +87,9 @@ struct ParsedCanyonEntityAttrs {
     error: Option<TokenStream>,
 }
 
-fn parse_canyon_entity_proc_macro_attr(attrs: CanyonEntityAttributeArgs) -> ParsedCanyonEntityAttrs {
+fn parse_canyon_entity_proc_macro_attr(
+    attrs: CanyonEntityAttributeArgs,
+) -> ParsedCanyonEntityAttrs {
     let mut parsed = ParsedCanyonEntityAttrs::default();
 
     for meta in attrs {

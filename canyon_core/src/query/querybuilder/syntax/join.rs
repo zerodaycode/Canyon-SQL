@@ -1,10 +1,10 @@
-use std::borrow::Cow;
 use crate::query::operators::Operator;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
+use std::borrow::Cow;
 
 #[derive(Debug, Clone, Copy)]
 pub enum JoinKind {

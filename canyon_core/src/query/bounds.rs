@@ -91,12 +91,12 @@ pub trait FieldIdentifier: std::fmt::Display {
 /// }
 /// ```
 pub trait FieldValueIdentifier {
-    fn value(&self) -> (ColumnRef<'static>, &dyn QueryParameter);
+    fn value(&self) -> (ColumnRef<'_>, &dyn QueryParameter);
 }
 
 /// Bounds to some type T in order to make it callable over some fn parameter T
 ///
-/// Represents the ability of an struct to be considered as candidate to perform
+/// Represents the ability of a struct to be considered as candidate to perform
 /// actions over it as it holds the 'parent' side of a foreign key relation.
 ///
 /// Usually, it's used on the Canyon macros to retrieve the column that

@@ -96,7 +96,8 @@ impl TryFrom<&&Attribute> for EntityFieldAnnotation {
             .get_ident()
             .ok_or_else(|| syn::Error::new_spanned(attribute.path(), "Expected attribute ident"))?;
 
-        let args = attribute.parse_args_with(Punctuated::<MetaNameValue, Token![,]>::parse_terminated);
+        let args =
+            attribute.parse_args_with(Punctuated::<MetaNameValue, Token![,]>::parse_terminated);
 
         match ident.to_string().as_str() {
             "primary_key" => Self::parse_primary_key(ident, args),
@@ -150,14 +151,17 @@ fn unknown_argument(arg: &MetaNameValue, ident: &str) -> syn::Error {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use syn::{parse_quote, Attribute, Field};
+    use syn::{Attribute, Field, parse_quote};
 
     fn annotation_from(attribute: &Attribute) -> syn::Result<EntityFieldAnnotation> {
         EntityFieldAnnotation::try_from(&attribute)
     }
 
     fn field_attribute(field: &Field) -> &Attribute {
-        field.attrs.first().expect("test field must have one attribute")
+        field
+            .attrs
+            .first()
+            .expect("test field must have one attribute")
     }
 
     #[test]
@@ -169,7 +173,10 @@ mod tests {
 
         let annotation = annotation_from(field_attribute(&field)).unwrap();
 
-        assert!(matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)));
+        assert!(matches!(
+            annotation,
+            EntityFieldAnnotation::PrimaryKey(true)
+        ));
     }
 
     #[test]
@@ -181,7 +188,10 @@ mod tests {
 
         let annotation = annotation_from(field_attribute(&field)).unwrap();
 
-        assert!(matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)));
+        assert!(matches!(
+            annotation,
+            EntityFieldAnnotation::PrimaryKey(true)
+        ));
     }
 
     #[test]
@@ -193,7 +203,10 @@ mod tests {
 
         let annotation = annotation_from(field_attribute(&field)).unwrap();
 
-        assert!(matches!(annotation, EntityFieldAnnotation::PrimaryKey(false)));
+        assert!(matches!(
+            annotation,
+            EntityFieldAnnotation::PrimaryKey(false)
+        ));
     }
 
     #[test]
@@ -221,7 +234,11 @@ mod tests {
 
         let error = annotation_from(field_attribute(&field)).unwrap_err();
 
-        assert!(error.to_string().contains("Unknown annotation argument `foo`"));
+        assert!(
+            error
+                .to_string()
+                .contains("Unknown annotation argument `foo`")
+        );
     }
 
     #[test]
@@ -297,7 +314,11 @@ mod tests {
 
         let error = annotation_from(field_attribute(&field)).unwrap_err();
 
-        assert!(error.to_string().contains("Error generating the Foreign Key"));
+        assert!(
+            error
+                .to_string()
+                .contains("Error generating the Foreign Key")
+        );
     }
 
     #[test]

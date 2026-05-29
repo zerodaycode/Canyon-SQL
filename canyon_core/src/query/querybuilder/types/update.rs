@@ -75,7 +75,7 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 
 impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     #[inline]
-    fn r#where(mut self, column_name: &'a str, operator: Operator) -> Self {
+    fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);
         self
     }

@@ -7,6 +7,7 @@ use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
 use crate::query::querybuilder::types::TableMetadata;
 use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps};
 use std::error::Error;
+use crate::query::ColumnRef;
 
 /// Contains the specific database operations associated with the
 /// *DELETE* SQL statements.
@@ -41,7 +42,7 @@ impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for no
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline]
-    fn r#where(mut self, column_name: &'a str, operator: Operator) -> Self {
+    fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);
         self
     }

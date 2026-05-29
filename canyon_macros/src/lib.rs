@@ -81,7 +81,6 @@ pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerT
 /// the tokio's current reactor
 #[proc_macro_attribute]
 pub fn canyon_tokio_test(
-    // TODO: with Result for using ? on tests?
     _meta: CompilerTokenStream,
     input: CompilerTokenStream,
 ) -> CompilerTokenStream {
@@ -94,18 +93,24 @@ pub fn canyon_tokio_test(
         let sign = func.sig;
         let body = func.block.stmts;
         let attrs = func.attrs;
-
         quote! {
             #[test]
             #(#attrs)*
             #vis #sign {
                 canyon_sql::runtime::get_canyon_tokio_runtime()
                     .handle()
-                    .block_on( async {
+                    .block_on(async {
                         canyon_sql::core::Canyon::init().await
                             .expect("Error initializing the connections POOL");
-                        #(#body)*
-                    });
+                        async {
+                            {
+                                #(#body)*
+                            }
+                            Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+                        }
+                        .await
+                        .expect("Error executing `canyon_tokio_test` body");
+                    })
             }
         }
         .into()
