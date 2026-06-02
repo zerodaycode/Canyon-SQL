@@ -97,7 +97,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        let actual_params_len = self.params.len() + self.params.len();
+        let actual_params_len = self.params.len();
         __impl::create_ranged_condition_clause(
             self,
             ConditionClauseKind::And,
@@ -117,7 +117,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        let actual_params_len = self.params.len() + self.params.len();
+        let actual_params_len = self.params.len();
         __impl::create_ranged_condition_clause(
             self,
             ConditionClauseKind::Or,
