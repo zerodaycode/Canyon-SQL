@@ -179,7 +179,7 @@ mod __details {
                     match db_type {
                         #mssql_arm
                         _ => {
-                             default_db_conn.query_one_for_query::<i64>(query.sql(), query.params()).await
+                             default_db_conn.query_one_for::<i64>(query.sql(), query.params()).await
                         }
                     }
                 }
@@ -205,7 +205,7 @@ mod __details {
                     match db_type {
                         #mssql_arm
                         _ => {
-                            input.query_one_for::<i64>(query.sql(), query.params(), input).await
+                            input.query_one_for::<i64>(query.sql(), query.params()).await
                         }
                     }
                 }
@@ -223,11 +223,11 @@ mod __details {
 
             let query_call = if is_with_input {
                 quote! {
-                    input.query_one_for::<i32, I>(input).await?;
+                    input.query_one_for::<i32>(query.sql(), query.params()).await?;
                 }
             } else {
                 quote! {
-                    default_db_conn.query_one::<i32>().await?;
+                    default_db_conn.query_one_for::<i32>(query.sql(), query.params()).await?;
                 }
             };
 
