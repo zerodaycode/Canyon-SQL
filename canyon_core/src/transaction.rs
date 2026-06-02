@@ -4,7 +4,7 @@ use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
 use std::future::Future;
-use crate::query::querybuilder::QueryBuilderOps;
+use crate::query::query::Query;
 
 /// The `Transaction` trait serves as a proxy for types implementing CRUD operations.
 ///
@@ -78,17 +78,6 @@ pub trait Transaction {
         Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,
     {
         async move { input.query_one_for(stmt.as_ref(), params.as_ref()).await }
-    }
-
-    fn query_one_for_with_querybuilder<'a, T, F: FromSqlOwnedValue<F>>(
-        builder: T,
-        input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<F, Box<dyn Error + Send + Sync>>> + Send
-    where
-        T: QueryBuilderOps<'a>,
-    {
-        let query = builder.build()?;
-        async move { input.query_one_for(query.sql(), query.).await }
     }
 
     /// Performs a query against the targeted database by the selected or

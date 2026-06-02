@@ -5,6 +5,7 @@ use crate::query::parameters::QueryParameter;
 use crate::transaction::Transaction;
 use std::error::Error;
 use std::fmt::Debug;
+use crate::rows::FromSqlOwnedValue;
 
 // TODO: query should implement ToStatement (as the drivers underneath Canyon) or similar
 // to be usable directly in the input of Transaction and DbConnenction
@@ -38,6 +39,10 @@ impl<'a> Query<'a> {
         self.sql.as_str()
     }
 
+    pub const fn params(&self) -> &[&'a dyn QueryParameter] {
+        self.params.as_slice()
+    }
+
     /// Launches the generated query against the database assuming the default
     /// [`DbConnection`]
     pub async fn launch_default<T: Transaction + RowMapper>(
@@ -50,8 +55,22 @@ impl<'a> Query<'a> {
         <T as Transaction>::query(&self.sql, &self.params, default_conn).await
     }
 
+    pub async fn launch_one_for_default<T: Transaction, F: FromSqlOwnedValue<F>>(
+        self,
+    ) -> Result<F, Box<dyn Error + Send + Sync>> {
+        let default_conn = Canyon::instance()?.get_default_connection()?;
+        <T as Transaction>::query_one_for(&self.sql, &self.params, default_conn).await
+    }
+
+    pub async fn launch_one_for_with<T: Transaction, F: FromSqlOwnedValue<F>, I: DbConnection>(
+        self,
+        input: I
+    ) -> Result<F, Box<dyn Error + Send + Sync>>  {
+        input.query_one_for(&self.sql, &self.params).await
+    }
+
     /// Launches the generated query against the database with the selected [`DbConnection`]
-    pub async fn launch_with<I: DbConnection, R: RowMapper>(
+    pub async fn launch_with<I: DbConnection + 'a, R: RowMapper>(
         self,
         input: I,
     ) -> Result<Vec<R>, Box<dyn Error + Send + Sync + 'a>>
@@ -61,3 +80,5 @@ impl<'a> Query<'a> {
         input.query(&self.sql, &self.params).await
     }
 }
+
+impl<'a> Transaction for Query<'a> {}

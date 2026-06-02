@@ -30,6 +30,11 @@ impl<'a> SelectQueryBuilder<'a> {
             _inner: QueryBuilder::new(table_schema_data, SelectAst::new(), database_type),
         }
     }
+
+    #[inline(always)]
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        self._inner.build()
+    }
 }
 
 impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
@@ -95,7 +100,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
-    #[inline]
+    #[inline(always)]
     fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()
     }
@@ -129,7 +134,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         Q: QueryParameter,
         Self: Sized,
     {
-        self._inner.and_values_in(and, values)?;
+        self._inner.and_values_in(r#and, values)?;
         Ok(self)
     }
 
@@ -144,7 +149,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         Q: QueryParameter,
         Self: Sized,
     {
-        self._inner.or_values_in(and, values)?;
+        self._inner.or_values_in(r#and, values)?;
         Ok(self)
     }
 

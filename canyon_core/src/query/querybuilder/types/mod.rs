@@ -3,8 +3,8 @@ pub mod select;
 pub mod update;
 
 pub use self::{delete::*, select::*, update::*};
-use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
 use crate::{
+    query::querybuilder::syntax::emitter::types::helpers::Range,
     connection::database_type::DatabaseType,
     query::{
         bounds::{FieldIdentifier, FieldValueIdentifier},
@@ -16,9 +16,9 @@ use crate::{
             table_metadata::TableMetadata,
         },
     },
+    query::ColumnRef
 };
 use std::error::Error;
-use crate::query::ColumnRef;
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a, P: AstProcessor<'a> + 'a> {
@@ -69,7 +69,7 @@ impl<'a, P: AstProcessor<'a> + 'a> QueryBuilder<'a, P> {
         } = self;
 
         let sql = __detail::sql(database_type, &ast, &mut base_ast)?;
-        Ok(Query::new(sql, params)) // TODO, get rid out of query?
+        Ok(Query::new(sql, params))
     }
 
     fn r#where<I: Into<ColumnRef<'a>>>(&mut self, column_name: I, operator: Operator) {

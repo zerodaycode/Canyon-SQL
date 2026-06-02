@@ -70,7 +70,7 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
-    #[inline]
+    #[inline(always)]
     fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()
     }

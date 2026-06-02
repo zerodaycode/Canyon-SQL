@@ -5,7 +5,7 @@ use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use std::borrow::Cow;
 use std::fmt::Write;
-use syn::{Attribute, Field, Fields, Type, TypeGenerics, Visibility};
+use syn::{Attribute, Field, Fields, TypeGenerics, Visibility};
 
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
 /// returns a [`TokenStream`] with the final `RowMapper` implementor.

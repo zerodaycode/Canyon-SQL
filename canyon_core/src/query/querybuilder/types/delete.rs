@@ -1,13 +1,21 @@
-use crate::connection::database_type::DatabaseType;
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Operator;
-use crate::query::parameters::QueryParameter;
-use crate::query::query::Query;
-use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
-use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps};
+use crate::{
+    query::{
+        bounds::{FieldIdentifier, FieldValueIdentifier},
+        operators::Operator,
+        parameters::QueryParameter,
+        query::Query,
+        querybuilder::{
+            syntax::ast::delete::DeleteAst,
+            types::TableMetadata,
+            DeleteQueryBuilderOps,
+            QueryBuilder,
+            QueryBuilderOps
+        },
+        ColumnRef
+    },
+    connection::database_type::DatabaseType,
+};
 use std::error::Error;
-use crate::query::ColumnRef;
 
 /// Contains the specific database operations associated with the
 /// *DELETE* SQL statements.
@@ -32,12 +40,17 @@ impl<'a> DeleteQueryBuilder<'a> {
             _inner: QueryBuilder::new(table_schema_data, DeleteAst::new(), database_type),
         }
     }
+
+    #[inline(always)]
+    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        self._inner.build()
+    }
 }
 
 impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
-    #[inline]
+    #[inline(always)]
     fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()
     }
@@ -70,7 +83,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        self._inner.and_values_in(and, values)?;
+        self._inner.and_values_in(r#and, values)?;
         Ok(self)
     }
 
@@ -84,7 +97,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        self._inner.or_values_in(or, values)?;
+        self._inner.or_values_in(r#or, values)?;
         Ok(self)
     }
 

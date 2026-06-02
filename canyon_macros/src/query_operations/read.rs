@@ -1,5 +1,5 @@
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::query::querybuilder::{SelectQueryBuilder, SelectQueryBuilderOps};
+use canyon_core::query::querybuilder::{QueryBuilderOps, SelectQueryBuilder, SelectQueryBuilderOps};
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 
@@ -71,8 +71,6 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
 fn generate_count_operations_tokens<'a>(
     table_schema_data: &'a str,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
-    //let count_stmt = SelectQueryBuilder::new(table_schema_data).count().build()?;
-
     let count = __details::count_generators::create_count_macro(table_schema_data)?;
     let count_with = __details::count_generators::create_count_with_macro(table_schema_data)?;
 
@@ -168,32 +166,30 @@ mod __details {
         pub fn create_count_macro(
             table_schema_data: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-            //let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, false);
+            let mssql_arm = get_mssql_arm_tokens_if_enabled(false);
 
             Ok(quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
-                    use canyon_sql::query::querybuilder::SelectQueryBuilderOps;
+                    use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
 
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     let db_type = default_db_conn.get_database_type()?;
 
                     let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_for(#table_schema_data, db_type).count().build()?;
-
-                    default_db_conn.query_one_for::<i64>(stmt.as_ref(), &[]).await
-                    // match db_type {
-                    //     #mssql_arm
-                    //     _ => {
-                    //         default_db_conn.query_one_for::<i64>(#stmt, &[]).await
-                    //     }
-                    // }
+                    match db_type {
+                        #mssql_arm
+                        _ => {
+                             default_db_conn.query_one_for_query::<i64>(query.sql(), query.params()).await
+                        }
+                    }
                 }
             })
         }
 
         pub fn create_count_with_macro(
-            stmt: &str,
+            table_schema_data: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-            let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, true);
+            let mssql_arm = get_mssql_arm_tokens_if_enabled(true);
 
             Ok(quote! {
                 async fn count_with<'a, I>(input: I)
@@ -201,33 +197,45 @@ mod __details {
                 where
                     I: canyon_sql::connection::DbConnection + Send + 'a
                 {
+                    use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
+
                     let db_type = input.get_database_type()?;
+                    let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_for(#table_schema_data, db_type).count().build()?;
+
                     match db_type {
                         #mssql_arm
                         _ => {
-                            // PostgreSQL and MySQL COUNT(*) return i64
-                            input.query_one_for::<i64>(#stmt, &[]).await
+                            input.query_one_for::<i64>(query.sql(), query.params(), input).await
                         }
                     }
                 }
             })
         }
 
-        fn get_mssql_arm_tokens_if_enabled(stmt: &str, is_with_input: bool) -> TokenStream {
-            let db_conn = if is_with_input {
-                quote! {input}
-            } else {
-                quote! {default_db_conn}
+        fn get_mssql_arm_tokens_if_enabled(is_with_input: bool) -> TokenStream {
+            if !cfg!(feature = "mssql") {
+                return quote! {};
+            }
+
+            let base_expr = quote! {
+                let count_i32: i32 =
             };
-            if cfg!(feature = "mssql") {
+
+            let query_call = if is_with_input {
                 quote! {
-                    canyon_sql::connection::DatabaseType::SqlServer => {
-                        let count_i32: i32 = #db_conn.query_one_for::<i32>(#stmt, &[]).await?;
-                        Ok(count_i32 as i64)
-                    }
+                    input.query_one_for::<i32, I>(input).await?;
                 }
             } else {
-                quote! {} // nothing emitted
+                quote! {
+                    default_db_conn.query_one::<i32>().await?;
+                }
+            };
+
+            quote! {
+                canyon_sql::connection::DatabaseType::SqlServer => {
+                    #base_expr #query_call
+                    Ok(count_i32 as i64)
+                }
             }
         }
     }
