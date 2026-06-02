@@ -28,10 +28,6 @@ impl<'a> UpdateQueryBuilder<'a> {
             _inner: QueryBuilder::new(table_schema_data, UpdateAst::new(), database_type),
         }
     }
-
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
-        self._inner.build()
-    }
 }
 
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
@@ -74,6 +70,11 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
+    #[inline]
+    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        self._inner.build()
+    }
+
     #[inline]
     fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);

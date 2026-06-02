@@ -71,10 +71,10 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
 fn generate_count_operations_tokens<'a>(
     table_schema_data: &'a str,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
-    let count_stmt = SelectQueryBuilder::new(table_schema_data).count().build()?;
+    //let count_stmt = SelectQueryBuilder::new(table_schema_data).count().build()?;
 
-    let count = __details::count_generators::create_count_macro(count_stmt.sql())?;
-    let count_with = __details::count_generators::create_count_with_macro(count_stmt.sql())?;
+    let count = __details::count_generators::create_count_macro(table_schema_data)?;
+    let count_with = __details::count_generators::create_count_with_macro(table_schema_data)?;
 
     Ok(quote! {
         #count
@@ -166,20 +166,26 @@ mod __details {
         use proc_macro2::TokenStream;
 
         pub fn create_count_macro(
-            stmt: &str,
+            table_schema_data: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-            let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, false);
+            //let mssql_arm = get_mssql_arm_tokens_if_enabled(stmt, false);
 
             Ok(quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
+                    use canyon_sql::query::querybuilder::SelectQueryBuilderOps;
+
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     let db_type = default_db_conn.get_database_type()?;
-                    match db_type {
-                        #mssql_arm
-                        _ => {
-                            default_db_conn.query_one_for::<i64>(#stmt, &[]).await
-                        }
-                    }
+
+                    let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_for(#table_schema_data, db_type).count().build()?;
+
+                    default_db_conn.query_one_for::<i64>(stmt.as_ref(), &[]).await
+                    // match db_type {
+                    //     #mssql_arm
+                    //     _ => {
+                    //         default_db_conn.query_one_for::<i64>(#stmt, &[]).await
+                    //     }
+                    // }
                 }
             })
         }

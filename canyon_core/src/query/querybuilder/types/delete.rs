@@ -32,15 +32,16 @@ impl<'a> DeleteQueryBuilder<'a> {
             _inner: QueryBuilder::new(table_schema_data, DeleteAst::new(), database_type),
         }
     }
-
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
-        self._inner.build()
-    }
 }
 
 impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
+    #[inline]
+    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        self._inner.build()
+    }
+
     #[inline]
     fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);

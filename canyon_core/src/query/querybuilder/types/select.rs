@@ -30,10 +30,6 @@ impl<'a> SelectQueryBuilder<'a> {
             _inner: QueryBuilder::new(table_schema_data, SelectAst::new(), database_type),
         }
     }
-
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
-        self._inner.build()
-    }
 }
 
 impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
@@ -99,6 +95,11 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 }
 
 impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
+    #[inline]
+    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+        self._inner.build()
+    }
+
     #[inline]
     fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);

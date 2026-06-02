@@ -7,6 +7,7 @@ use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use std::error::Error;
+use crate::query::query::Query;
 
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 
@@ -147,6 +148,9 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 /// without mixing types or polluting everything into
 /// just one type.
 pub trait QueryBuilderOps<'a> {
+    /// Builds the final [`Query`] by consuming the querybuilder, and returning the generated SQL statement and the collected parameters as a tuple.
+    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>>;
+
     /// Generates a `WHERE` SQL clause for constraint the query.
     ///
     /// * `column` - An [`&str`] that will provide the target column name
