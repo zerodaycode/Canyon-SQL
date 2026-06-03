@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
@@ -21,6 +22,10 @@ impl<'a> SelectQueryBuilder<'a> {
         SelectQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
     }
 
+    pub const fn new_querybuilder(table_schema_data: TableMetadata<'a>) -> Self {
+        SelectQueryBuilder::new_querybuilder_for(table_schema_data, DatabaseType::Deferred)
+    }
+
     /// Same as [`SelectQueryBuilder::new`] but specifying the [`DatabaseType`]
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
@@ -28,6 +33,29 @@ impl<'a> SelectQueryBuilder<'a> {
     ) -> Self {
         Self {
             _inner: QueryBuilder::new(table_schema_data, SelectAst::new(), database_type),
+        }
+    }
+
+    pub const fn new_querybuilder_for(
+        table_schema_data: TableMetadata<'a>,
+        database_type: DatabaseType,
+    ) -> Self {
+        Self {
+            _inner: QueryBuilder::new_querybuilder(table_schema_data, SelectAst::new(), database_type),
+        }
+    }
+
+    pub const fn new_from_parts(
+        schema: Option<Cow<'a, str>>,
+        table_name: Cow<'a, str>,
+        database_type: DatabaseType,
+    ) -> Self {
+        let table_schema_data = TableMetadata {
+            schema,
+            name: table_name,
+        };
+        Self {
+            _inner: QueryBuilder::new_querybuilder(table_schema_data, SelectAst::new(), database_type),
         }
     }
 

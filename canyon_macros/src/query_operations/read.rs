@@ -71,8 +71,11 @@ fn generate_select_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
 fn generate_count_operations_tokens<'a>(
     table_schema_data: &'a str,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
-    let count = __details::count_generators::create_count_macro(table_schema_data)?;
-    let count_with = __details::count_generators::create_count_with_macro(table_schema_data)?;
+    let table_metadata = canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata::try_from(table_schema_data)?;
+    let schema_name = table_metadata.schema;
+    let table_name = table_metadata.name;
+    let count = __details::count_generators::create_count_macro(schema_name.clone(), table_name.as_ref())?;
+    let count_with = __details::count_generators::create_count_with_macro(schema_name, table_name.as_ref())?;
 
     Ok(quote! {
         #count
@@ -160,13 +163,21 @@ mod __details {
     }
 
     pub mod count_generators {
+        use std::borrow::Cow;
         use super::*;
         use proc_macro2::TokenStream;
 
         pub fn create_count_macro(
-            table_schema_data: &str,
+            schema_name: Option<Cow<str>>,
+            table_name: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let mssql_arm = get_mssql_arm_tokens_if_enabled(false);
+            let schema_tokens = match schema_name {
+                Some(schema_name) => quote! { Some(#schema_name) },
+                None => quote! { None },
+            };
+
+            let table_name = quote! { std::borrow::Cow::Borrowed(#table_name) };
 
             Ok(quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
@@ -175,7 +186,7 @@ mod __details {
                     let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
                     let db_type = default_db_conn.get_database_type()?;
 
-                    let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_for(#table_schema_data, db_type).count().build()?;
+                    let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_from_parts(#schema_tokens, #table_name, db_type).count().build()?;
                     match db_type {
                         #mssql_arm
                         _ => {
@@ -187,9 +198,15 @@ mod __details {
         }
 
         pub fn create_count_with_macro(
-            table_schema_data: &str,
+            schema_name: Option<Cow<str>>,
+            table_name: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let mssql_arm = get_mssql_arm_tokens_if_enabled(true);
+            let schema_tokens = match schema_name {
+                Some(schema_name) => quote! { Some(#schema_name) },
+                None => quote! { None },
+            };
+            let table_name = quote! { std::borrow::Cow::Borrowed(#table_name) };
 
             Ok(quote! {
                 async fn count_with<'a, I>(input: I)
@@ -200,7 +217,7 @@ mod __details {
                     use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
 
                     let db_type = input.get_database_type()?;
-                    let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_for(#table_schema_data, db_type).count().build()?;
+                    let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_from_parts(#schema_tokens, #table_name, db_type).count().build()?;
 
                     match db_type {
                         #mssql_arm
@@ -300,6 +317,7 @@ mod __details {
 
 #[cfg(test)]
 mod macro_builder_read_ops_tests {
+    use std::borrow::Cow;
     use super::__details::{count_generators::*, find_all_generators::*};
 
     use crate::query_operations::consts;
@@ -338,22 +356,20 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_create_count_macro() {
-        let tokens = create_count_macro(COUNT_STMT).unwrap();
+        let tokens = create_count_macro(Some(&Cow::from("public")), "user").unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count"));
         assert!(generated.contains(consts::I64_RET_TY));
-        assert!(generated.contains(COUNT_STMT));
     }
 
     #[test]
     fn test_create_count_with_macro() {
-        let tokens = create_count_with_macro(COUNT_STMT).unwrap();
+        let tokens = create_count_with_macro(Some(&Cow::from("public")), "user").unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count_with"));
         assert!(generated.contains(consts::I64_RET_TY_LT));
-        assert!(generated.contains(COUNT_STMT));
         assert!(generated.contains(consts::LT_CONSTRAINT));
         assert!(generated.contains(consts::INPUT_PARAM));
     }
