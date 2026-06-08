@@ -40,6 +40,19 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         Self: Sized;
 }
 
+pub trait InsertQueryBuilderOps<'a>: QueryBuilderOps<'a> {
+    /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
+    /// If this method isn't invoked, the querybuilder will create a INSERT INTO ... VALUES ... query without specifying the columns
+    fn with_columns<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Self;
+
+    fn with_values<Q>(self, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    where
+        Q: QueryParameter,
+        Self: Sized;
+
+    fn returning(self, columns: Vec<impl Into<ColumnRef<'a>>>) -> Self;
+}
+
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
     /// If this method isn't invoked, the querybuilder will create a SELECT * FROM query

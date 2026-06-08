@@ -172,12 +172,8 @@ mod __details {
             table_name: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let mssql_arm = get_mssql_arm_tokens_if_enabled(false);
-            let schema_tokens = match schema_name {
-                Some(schema_name) => quote! { Some(#schema_name) },
-                None => quote! { None },
-            };
-
-            let table_name = quote! { std::borrow::Cow::Borrowed(#table_name) };
+            let schema_tokens = get_schema_tokens(schema_name);
+            let table_name = create_cow_borrowed_table_name(table_name);
 
             Ok(quote! {
                 async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
@@ -202,11 +198,8 @@ mod __details {
             table_name: &str,
         ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
             let mssql_arm = get_mssql_arm_tokens_if_enabled(true);
-            let schema_tokens = match schema_name {
-                Some(schema_name) => quote! { Some(#schema_name) },
-                None => quote! { None },
-            };
-            let table_name = quote! { std::borrow::Cow::Borrowed(#table_name) };
+            let schema_tokens = get_schema_tokens(schema_name);
+            let table_name = create_cow_borrowed_table_name(table_name);
 
             Ok(quote! {
                 async fn count_with<'a, I>(input: I)
@@ -254,6 +247,17 @@ mod __details {
                     Ok(count_i32 as i64)
                 }
             }
+        }
+
+        fn get_schema_tokens(schema_name: Option<Cow<'_, str>>) -> TokenStream {
+            match schema_name {
+                Some(schema_name) => quote! { Some(#schema_name) },
+                None => quote! { None },
+            }
+        }
+
+        fn create_cow_borrowed_table_name(table_name: &str) -> TokenStream {
+            quote! { std::borrow::Cow::Borrowed(#table_name) }
         }
     }
 
@@ -356,7 +360,7 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_create_count_macro() {
-        let tokens = create_count_macro(Some(&Cow::from("public")), "user").unwrap();
+        let tokens = create_count_macro(Some(Cow::from("public")), "user").unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count"));
@@ -365,7 +369,7 @@ mod macro_builder_read_ops_tests {
 
     #[test]
     fn test_create_count_with_macro() {
-        let tokens = create_count_with_macro(Some(&Cow::from("public")), "user").unwrap();
+        let tokens = create_count_with_macro(Some(Cow::from("public")), "user").unwrap();
         let generated = tokens.to_string();
 
         assert!(generated.contains("async fn count_with"));

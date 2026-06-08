@@ -1,6 +1,7 @@
 pub mod delete;
 pub mod select;
 pub mod update;
+mod insert;
 
 pub use self::{delete::*, select::*, update::*};
 use crate::{

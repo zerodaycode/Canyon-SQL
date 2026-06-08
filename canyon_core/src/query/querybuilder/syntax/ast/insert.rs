@@ -16,7 +16,7 @@ impl<'a> AstProcessor<'a> for InsertAst<'a> {
 }
 
 impl<'a> InsertAst<'a> {
-    pub const fn _new() -> Self {
+    pub const fn new() -> Self {
         Self {
             columns: Vec::new(),
             returning_columns: Vec::new(),
