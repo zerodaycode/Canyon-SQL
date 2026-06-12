@@ -1,12 +1,13 @@
 pub mod delete;
+mod insert;
 pub mod select;
 pub mod update;
-mod insert;
 
 pub use self::{delete::*, select::*, update::*};
 use crate::{
-    query::querybuilder::syntax::emitter::types::helpers::Range,
     connection::database_type::DatabaseType,
+    query::ColumnRef,
+    query::querybuilder::syntax::emitter::types::helpers::Range,
     query::{
         bounds::{FieldIdentifier, FieldValueIdentifier},
         operators::Operator,
@@ -17,7 +18,6 @@ use crate::{
             table_metadata::TableMetadata,
         },
     },
-    query::ColumnRef
 };
 use std::error::Error;
 

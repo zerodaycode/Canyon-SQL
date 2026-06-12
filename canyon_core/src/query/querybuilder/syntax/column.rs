@@ -3,7 +3,7 @@ use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 pub struct ColumnRef<'a> {
     pub table: Option<Cow<'a, str>>,
     pub column: Cow<'a, str>,
@@ -22,6 +22,13 @@ where
 impl<'a> From<&'a str> for ColumnRef<'a> {
     fn from(value: &'a str) -> Self {
         __impl::column_ref_from_str_ref(value)
+    }
+}
+
+impl<'a> From<&'a &'a str> for ColumnRef<'a> {
+    // This impl is provided to avoid to impl quote::ToTokens to some artificial types that maps values at compile time from this
+    fn from(value: &'a &'a str) -> Self {
+        Self::from(*value)
     }
 }
 
@@ -55,10 +62,10 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ColumnRef<'a> {
 }
 
 impl<'a> ColumnRef<'a> {
-    pub fn new(column_name: &'a str) -> Self {
+    pub fn new(table_name: &'a str, column_name: &'a str) -> Self {
         Self {
             column: Cow::Borrowed(column_name),
-            table: None,
+            table: Some(Cow::Borrowed(table_name)),
             alias: None,
         }
     }

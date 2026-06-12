@@ -4,7 +4,6 @@ use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
 use std::error::Error;
 use std::future::Future;
-use crate::query::query::Query;
 
 /// The `Transaction` trait serves as a proxy for types implementing CRUD operations.
 ///

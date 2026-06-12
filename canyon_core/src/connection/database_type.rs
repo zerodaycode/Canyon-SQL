@@ -63,7 +63,7 @@ pub enum DatabaseType {
     ///
     /// # Example
     /// ```rust,ignore
-    /// let query = SelectQueryBuilder::new_for(
+    /// let query = SelectQueryBuilder::new(
     ///     &table_metadata,
     ///     DatabaseType::Deferred
     /// )?

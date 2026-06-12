@@ -2,10 +2,10 @@ use crate::canyon::Canyon;
 use crate::connection::contracts::DbConnection;
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
+use crate::rows::FromSqlOwnedValue;
 use crate::transaction::Transaction;
 use std::error::Error;
 use std::fmt::Debug;
-use crate::rows::FromSqlOwnedValue;
 
 // TODO: query should implement ToStatement (as the drivers underneath Canyon) or similar
 // to be usable directly in the input of Transaction and DbConnenction
@@ -25,6 +25,9 @@ impl AsRef<str> for Query<'_> {
         self.sql.as_str()
     }
 }
+
+unsafe impl Send for Query<'_> {}
+unsafe impl Sync for Query<'_> {}
 
 impl<'a> Query<'a> {
     /// Constructs a new [`Self`] but receiving the number of expected query parameters, allowing
@@ -64,8 +67,8 @@ impl<'a> Query<'a> {
 
     pub async fn launch_one_for_with<T: Transaction, F: FromSqlOwnedValue<F>, I: DbConnection>(
         self,
-        input: I
-    ) -> Result<F, Box<dyn Error + Send + Sync>>  {
+        input: I,
+    ) -> Result<F, Box<dyn Error + Send + Sync>> {
         input.query_one_for(&self.sql, &self.params).await
     }
 

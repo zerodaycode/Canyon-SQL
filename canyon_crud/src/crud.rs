@@ -44,7 +44,7 @@ where
     /// entity but converted to the corresponding database convention,
     /// unless concrete values are set on the available parameters of the
     /// `canyon_macro(table_name = "table_name", schema = "schema")`
-    fn select_query<'a>() -> SelectQueryBuilder<'a>;
+    fn select_query<'a>() -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
     /// Generates a [`canyon_sql::query::querybuilder::SelectQueryBuilder`]
     /// that allows you to customize the query by adding parameters and constrains dynamically.
@@ -53,7 +53,9 @@ where
     /// entity but converted to the corresponding database convention,
     /// unless concrete values are set on the available parameters of the
     /// `canyon_macro(table_name = "table_name", schema = "schema")`
-    fn select_query_with<'a>(database_type: DatabaseType) -> SelectQueryBuilder<'a>;
+    fn select_query_with<'a>(
+        database_type: DatabaseType,
+    ) -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
     fn count() -> impl Future<Output = Result<i64, Box<dyn Error + Send + Sync>>> + Send;
 

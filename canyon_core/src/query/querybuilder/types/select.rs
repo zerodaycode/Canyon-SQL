@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use crate::connection::database_type::DatabaseType;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
@@ -10,6 +9,7 @@ use crate::query::querybuilder::syntax::join::JoinKind;
 use crate::query::querybuilder::syntax::order::OrderByClause;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps};
+use std::borrow::Cow;
 use std::error::Error;
 
 pub struct SelectQueryBuilder<'a> {
@@ -17,17 +17,7 @@ pub struct SelectQueryBuilder<'a> {
 }
 
 impl<'a> SelectQueryBuilder<'a> {
-    /// The constructor for creating [`QueryBuilder`] instances of type: SELECT
-    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
-        SelectQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
-    }
-
-    pub const fn new_querybuilder(table_schema_data: TableMetadata<'a>) -> Self {
-        SelectQueryBuilder::new_querybuilder_for(table_schema_data, DatabaseType::Deferred)
-    }
-
-    /// Same as [`SelectQueryBuilder::new`] but specifying the [`DatabaseType`]
-    pub fn new_for(
+    pub fn new(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Self {
@@ -36,12 +26,16 @@ impl<'a> SelectQueryBuilder<'a> {
         }
     }
 
-    pub const fn new_querybuilder_for(
+    pub const fn new_querybuilder(
         table_schema_data: TableMetadata<'a>,
         database_type: DatabaseType,
     ) -> Self {
         Self {
-            _inner: QueryBuilder::new_querybuilder(table_schema_data, SelectAst::new(), database_type),
+            _inner: QueryBuilder::new_querybuilder(
+                table_schema_data,
+                SelectAst::new(),
+                database_type,
+            ),
         }
     }
 
@@ -54,9 +48,26 @@ impl<'a> SelectQueryBuilder<'a> {
             schema,
             name: table_name,
         };
-        Self {
-            _inner: QueryBuilder::new_querybuilder(table_schema_data, SelectAst::new(), database_type),
-        }
+        Self::new_querybuilder(table_schema_data, database_type)
+    }
+
+    pub fn with_known_columns<I>(mut self, columns: I) -> Self
+    where
+        I: IntoIterator<Item = ColumnRef<'a>>,
+    {
+        self._inner.ast.columns.extend(columns);
+        self
+    }
+
+    pub fn with_known_column_names<I>(mut self, columns: I) -> Self
+    where
+        I: IntoIterator<Item = &'a &'a str>,
+    {
+        self._inner
+            .ast
+            .columns
+            .extend(columns.into_iter().map(Into::into));
+        self
     }
 
     #[inline(always)]
@@ -67,7 +78,10 @@ impl<'a> SelectQueryBuilder<'a> {
 
 impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     fn with_columns<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> Self {
-        self._inner.ast.columns = columns.into_iter().map(|e| e.into()).collect();
+        self._inner
+            .ast
+            .columns
+            .extend(columns.into_iter().map(|e| e.into()));
         self
     }
 

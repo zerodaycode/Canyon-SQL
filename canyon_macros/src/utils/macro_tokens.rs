@@ -2,6 +2,7 @@ use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
 use crate::utils::helpers;
 use crate::utils::primary_key_attribute::PrimaryKeyAttribute;
 use canyon_entities::field_annotation::EntityFieldAnnotation;
+use canyon_entities::helpers::default_database_table_name_from_entity_name;
 use proc_macro2::Ident;
 use std::convert::TryFrom;
 use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
@@ -86,6 +87,17 @@ impl<'a> MacroTokens<'a> {
             .iter()
             .map(|field| field.ident.as_ref().unwrap().clone())
     }
+    pub fn get_struct_fields_as_table_column_pairs(&self) -> Vec<(String, String)> {
+        let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
+
+        self.fields
+            .iter()
+            .map(|field| {
+                let column_name = field.ident.as_ref().unwrap().to_string();
+                (table_name.clone(), column_name)
+            })
+            .collect()
+    }
 
     pub fn get_columns_pk_parsed(&self) -> impl Iterator<Item = &Field> {
         let primary_key = self.primary_key_attribute.as_ref().map(|pk| &pk.ident);
@@ -126,24 +138,6 @@ impl<'a> MacroTokens<'a> {
         self.get_column_names_pk_parsed()
             .collect::<Vec<String>>()
             .join(", ")
-    }
-
-    /// Retrieves the value of the index of an annotated field with #[primary_key]
-    pub fn _get_pk_index(&self) -> Option<usize> {
-        let mut pk_index = None;
-        for (idx, field) in self.fields.iter().enumerate() {
-            for attr in &field.attrs {
-                if attr
-                    .path()
-                    .segments
-                    .first()
-                    .map(|segment| segment.ident == "primary_key")?
-                {
-                    pk_index = Some(idx);
-                }
-            }
-        }
-        pk_index
     }
 
     pub fn get_primary_key_field_annotation(&self) -> Option<&PrimaryKeyAttribute<'a>> {

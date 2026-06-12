@@ -176,7 +176,7 @@ impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryA
     async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>> {
         let db_conn = &self.db_conn;
         let select_query =
-            SelectQueryBuilder::new_for("league", db_conn.get_database_type()?).build()?;
+            SelectQueryBuilder::new("league", db_conn.get_database_type()?).build()?;
         db_conn.query(select_query, &[]).await
     }
 

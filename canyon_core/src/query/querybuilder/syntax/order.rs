@@ -3,7 +3,7 @@ use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 pub struct OrderByClause<'a> {
     pub column: ColumnRef<'a>,
     pub descending: bool,

@@ -1,19 +1,16 @@
 use crate::{
+    connection::database_type::DatabaseType,
     query::{
+        ColumnRef,
         bounds::{FieldIdentifier, FieldValueIdentifier},
         operators::Operator,
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            syntax::ast::delete::DeleteAst,
+            DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, syntax::ast::delete::DeleteAst,
             types::TableMetadata,
-            DeleteQueryBuilderOps,
-            QueryBuilder,
-            QueryBuilderOps
         },
-        ColumnRef
     },
-    connection::database_type::DatabaseType,
 };
 use std::error::Error;
 

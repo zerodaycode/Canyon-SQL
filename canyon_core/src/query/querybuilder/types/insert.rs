@@ -16,17 +16,7 @@ pub struct InsertQueryBuilder<'a> {
 }
 
 impl<'a> InsertQueryBuilder<'a> {
-    /// The constructor for creating [`QueryBuilder`] instances of type: INSERT
-    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
-        Self::new_for(table_schema_data, DatabaseType::Deferred)
-    }
-
-    pub const fn new_querybuilder(table_schema_data: TableMetadata<'a>) -> Self {
-        Self::new_querybuilder_for(table_schema_data, DatabaseType::Deferred)
-    }
-
-    /// Same as [`InsertQueryBuilder::new`] but specifying the [`DatabaseType`]
-    pub fn new_for(
+    pub fn new(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Self {
@@ -35,7 +25,7 @@ impl<'a> InsertQueryBuilder<'a> {
         }
     }
 
-    pub const fn new_querybuilder_for(
+    pub const fn new_querybuilder(
         table_schema_data: TableMetadata<'a>,
         database_type: DatabaseType,
     ) -> Self {
