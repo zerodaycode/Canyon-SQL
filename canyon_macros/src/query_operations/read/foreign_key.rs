@@ -244,19 +244,17 @@ mod __impl {
         method_name: &Ident,
         parent_ty: &Ident,
         return_type_tokens: ReturnTypeTokens,
-        method_kind: CanyonMethodKind
+        method_kind: CanyonMethodKind,
     ) -> FkOperationTokens {
-        let signature =
-            __detail::create_method_signature(method_name, parent_ty, return_type_tokens, method_kind);
-
-        let implementation = __detail::generate_method_implementation_body(
+        __detail::generate_operation_tokens(
             stmt,
-            field_ident,
+            __detail::LookupValueSource::SelfField(field_ident),
+            method_name,
             parent_ty,
-            method_kind
-        );
-
-        FkOperationTokens::new(signature, implementation)
+            return_type_tokens,
+            __detail::FkLookupKind::Parent,
+            method_kind,
+        )
     }
 
     pub(crate) fn generate_child_fk_operations_tokens(
@@ -266,20 +264,15 @@ mod __impl {
         mapper_ty: &Ident,
         method_kind: CanyonMethodKind,
     ) -> FkOperationTokens {
-        let signature = __detail::create_child_method_signature(
+        __detail::generate_operation_tokens(
+            stmt,
+            __detail::LookupValueSource::ForeignKeyable(lookup_value),
             method_name,
             mapper_ty,
+            ReturnTypeTokens::Vec,
+            __detail::FkLookupKind::Child,
             method_kind,
-        );
-
-        let implementation = __detail::generate_child_method_implementation_body(
-            stmt,
-            lookup_value,
-            mapper_ty,
-            method_kind,
-        );
-
-        FkOperationTokens::new(signature, implementation)
+        )
     }
 }
 
@@ -287,14 +280,55 @@ mod __detail {
     use super::*;
     use crate::utils::helpers::{CanyonMethodKind, ReturnTypeTokens};
 
-    pub(super) fn create_method_signature(
+    #[derive(Clone, Copy)]
+    pub(super) enum FkLookupKind {
+        Parent,
+        Child,
+    }
+
+    #[derive(Clone, Copy)]
+    pub(super) enum LookupValueSource<'a> {
+        SelfField(&'a Ident),
+        ForeignKeyable(&'a TokenStream),
+    }
+
+    pub(super) fn generate_operation_tokens(
+        stmt: &str,
+        lookup_value_source: LookupValueSource<'_>,
+        method_name: &Ident,
+        return_ty: &Ident,
+        return_type_tokens: ReturnTypeTokens,
+        lookup_kind: FkLookupKind,
+        method_kind: CanyonMethodKind,
+    ) -> FkOperationTokens {
+        let signature = create_method_signature(
+            method_name,
+            return_ty,
+            return_type_tokens,
+            lookup_kind,
+            method_kind,
+        );
+
+        let implementation = generate_method_implementation_body(
+            stmt,
+            lookup_value_source,
+            return_ty,
+            lookup_kind,
+            method_kind,
+        );
+
+        FkOperationTokens::new(signature, implementation)
+    }
+
+    fn create_method_signature(
         method_name: &Ident,
         return_ty: &Ident,
         ret_ty: ReturnTypeTokens,
-        method_kind: CanyonMethodKind
+        lookup_kind: FkLookupKind,
+        method_kind: CanyonMethodKind,
     ) -> TokenStream {
-        let method_generics_and_args = method_generics_and_args(method_kind);
-        let where_clause = get_where_clause(method_kind);
+        let method_generics_and_args = method_generics_and_args(lookup_kind, method_kind);
+        let where_clause = get_where_clause(lookup_kind, method_kind);
 
         quote! {
             async fn #method_name #method_generics_and_args
@@ -303,48 +337,31 @@ mod __detail {
         }
     }
 
-    pub(super) fn create_child_method_signature(
-        method_name: &Ident,
-        mapper_ty: &Ident,
+    fn method_generics_and_args(
+        lookup_kind: FkLookupKind,
         method_kind: CanyonMethodKind,
     ) -> TokenStream {
-        let method_generics_and_args = child_method_generics_and_args(method_kind);
-        let where_clause = get_child_where_clause(method_kind);
-
-        quote! {
-            async fn #method_name #method_generics_and_args
-                -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
-                #where_clause
+        match (lookup_kind, method_kind) {
+            (FkLookupKind::Parent, CanyonMethodKind::Default) => quote! { <'a>(&self) },
+            (FkLookupKind::Parent, CanyonMethodKind::WithInput) => quote! { <'a, I>(&self, input: I) },
+            (FkLookupKind::Child, CanyonMethodKind::Default) => quote! { <'a, F>(value: &F) },
+            (FkLookupKind::Child, CanyonMethodKind::WithInput) => quote! { <'a, F, I>(value: &F, input: I) },
         }
     }
 
-    fn method_generics_and_args(method_kind: CanyonMethodKind) -> TokenStream {
-        match method_kind {
-            CanyonMethodKind::Default => quote! { <'a>(&self) },
-            CanyonMethodKind::WithInput => quote! { <'a, I>(&self, input: I) }
-        }
-    }
-
-    fn child_method_generics_and_args(method_kind: CanyonMethodKind) -> TokenStream {
-        match method_kind {
-            CanyonMethodKind::Default => quote! { <'a, F>(value: &F) },
-            CanyonMethodKind::WithInput => quote! { <'a, F, I>(value: &F, input: I) },
-        }
-    }
-
-    fn get_where_clause(method_kind: CanyonMethodKind) -> TokenStream {
-        match method_kind {
-            CanyonMethodKind::Default => quote! {},
-            CanyonMethodKind::WithInput => quote! { where I: canyon_sql::connection::DbConnection + Send + 'a },
-        }
-    }
-
-    fn get_child_where_clause(method_kind: CanyonMethodKind) -> TokenStream {
-        match method_kind {
-            CanyonMethodKind::Default => quote! {
+    fn get_where_clause(
+        lookup_kind: FkLookupKind,
+        method_kind: CanyonMethodKind,
+    ) -> TokenStream {
+        match (lookup_kind, method_kind) {
+            (FkLookupKind::Parent, CanyonMethodKind::Default) => quote! {},
+            (FkLookupKind::Parent, CanyonMethodKind::WithInput) => quote! {
+                where I: canyon_sql::connection::DbConnection + Send + 'a
+            },
+            (FkLookupKind::Child, CanyonMethodKind::Default) => quote! {
                 where F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync
             },
-            CanyonMethodKind::WithInput => quote! {
+            (FkLookupKind::Child, CanyonMethodKind::WithInput) => quote! {
                 where
                     F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync,
                     I: canyon_sql::connection::DbConnection + Send + 'a
@@ -352,17 +369,7 @@ mod __detail {
         }
     }
 
-    fn self_ptr_callee(method_kind: CanyonMethodKind) -> TokenStream {
-        match method_kind {
-            CanyonMethodKind::Default => quote! { let default_db_conn = canyon_sql::core::Canyon::instance()?
-                    .get_default_connection()?;
-
-                default_db_conn },
-            CanyonMethodKind::WithInput => quote! { input },
-        }
-    }
-
-    fn child_query_callee(method_kind: CanyonMethodKind) -> TokenStream {
+    fn query_callee(method_kind: CanyonMethodKind) -> TokenStream {
         match method_kind {
             CanyonMethodKind::Default => quote! {
                 let default_db_conn = canyon_sql::core::Canyon::instance()?
@@ -374,48 +381,64 @@ mod __detail {
         }
     }
 
-    fn create_query_one_tokens(stmt: &str,
-                               field_ident: &Ident,
-                               parent_ty: &Ident) -> TokenStream {
-        quote! {
-            .query_one::<#parent_ty>(
-                #stmt,
-                &[&self.#field_ident as &dyn canyon_sql::query::QueryParameter],
-            )
-            .await
+    fn lookup_value_tokens(lookup_value_source: LookupValueSource<'_>) -> TokenStream {
+        match lookup_value_source {
+            LookupValueSource::SelfField(field_ident) => quote! {
+                &self.#field_ident as &dyn canyon_sql::query::QueryParameter
+            },
+            LookupValueSource::ForeignKeyable(lookup_value) => quote! {
+                lookup_value
+            },
         }
     }
 
-    pub(crate) fn generate_method_implementation_body(
+    fn query_tokens(
         stmt: &str,
-        field_ident: &Ident,
-        parent_ty: &Ident,
-        method_kind: CanyonMethodKind
+        lookup_value_source: LookupValueSource<'_>,
+        return_ty: &Ident,
+        lookup_kind: FkLookupKind,
     ) -> TokenStream {
-        let callee = self_ptr_callee(method_kind);
-        let query_one_tokens = create_query_one_tokens(stmt, field_ident, parent_ty);
+        let lookup_value = lookup_value_tokens(lookup_value_source);
 
-        quote! {
-            {
-                #callee #query_one_tokens
-            }
+        match lookup_kind {
+            FkLookupKind::Parent => quote! {
+                .query_one::<#return_ty>(
+                    #stmt,
+                    &[#lookup_value],
+                )
+                .await
+            },
+            FkLookupKind::Child => quote! {
+                .query::<&str, #return_ty>(#stmt, &[#lookup_value])
+                .await
+            },
         }
     }
 
-    pub(crate) fn generate_child_method_implementation_body(
+    fn lookup_value_binding(lookup_value_source: LookupValueSource<'_>) -> TokenStream {
+        match lookup_value_source {
+            LookupValueSource::SelfField(_) => quote! {},
+            LookupValueSource::ForeignKeyable(lookup_value) => quote! {
+                let lookup_value = #lookup_value;
+            },
+        }
+    }
+
+    fn generate_method_implementation_body(
         stmt: &str,
-        lookup_value: &TokenStream,
-        mapper_ty: &Ident,
+        lookup_value_source: LookupValueSource<'_>,
+        return_ty: &Ident,
+        lookup_kind: FkLookupKind,
         method_kind: CanyonMethodKind,
     ) -> TokenStream {
-        let callee = child_query_callee(method_kind);
+        let lookup_value_binding = lookup_value_binding(lookup_value_source);
+        let callee = query_callee(method_kind);
+        let query = query_tokens(stmt, lookup_value_source, return_ty, lookup_kind);
 
         quote! {
             {
-                let lookup_value = #lookup_value;
-                #callee
-                    .query::<&str, #mapper_ty>(#stmt, &[lookup_value])
-                    .await
+                #lookup_value_binding
+                #callee #query
             }
         }
     }
