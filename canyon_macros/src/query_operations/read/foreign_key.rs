@@ -116,7 +116,6 @@ mod __operations {
                         ReturnTypeTokens::Option,
                         CanyonMethodKind::Default
                     );
-                println!("Generated parent fk_operation: {:?}", fk_operation);
 
                 let fk_operation_with = __impl::generate_fk_operations_tokens(
                     &stmt,
@@ -126,7 +125,6 @@ mod __operations {
                     ReturnTypeTokens::Option,
                     CanyonMethodKind::WithInput
                 );
-                println!("Generated parent fk_operation_with: {:?}", fk_operation_with);
 
                 [
                     fk_operation,
@@ -177,42 +175,21 @@ mod __operations {
                 let stmt = children_lookup_stmt(table_schema_data, &field_name);
                 let lookup_value = lookup_value(column, table);
 
-                let signature = quote! {
-                    /// Fetches all child entities whose foreign-key field references the given parent entity.
-                    async fn #method_name<'a, F>(value: &F)
-                        -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
-                    where
-                        F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync
-                };
+                let child_operation = __impl::generate_child_fk_operations_tokens(
+                    &stmt,
+                    &lookup_value,
+                    &method_name,
+                    mapper_ty,
+                    CanyonMethodKind::Default,
+                );
 
-                let implementation = quote! {
-                    {
-                        let lookup_value = #lookup_value;
-                        let default_db_conn = canyon_sql::core::Canyon::instance()?
-                            .get_default_connection()?;
-
-                        default_db_conn.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
-                    }
-                };
-
-                let with_signature = quote! {
-                    /// Fetches all child entities whose foreign-key field references the given parent entity using the specified datasource.
-                    async fn #method_name_with<'a, F, I>(value: &F, input: I)
-                        -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
-                    where
-                        F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync,
-                        I: canyon_sql::connection::DbConnection + Send + 'a
-                };
-
-                let with_implementation = quote! {
-                    {
-                        let lookup_value = #lookup_value;
-                        input.query::<&str, #mapper_ty>(#stmt, &[lookup_value]).await
-                    }
-                };
-
-                let child_operation = FkOperationTokens::new(signature, implementation);
-                let child_operation_with = FkOperationTokens::new(with_signature, with_implementation);
+                let child_operation_with = __impl::generate_child_fk_operations_tokens(
+                    &stmt,
+                    &lookup_value,
+                    &method_name_with,
+                    mapper_ty,
+                    CanyonMethodKind::WithInput,
+                );
 
                 [
                     child_operation,
@@ -281,6 +258,29 @@ mod __impl {
 
         FkOperationTokens::new(signature, implementation)
     }
+
+    pub(crate) fn generate_child_fk_operations_tokens(
+        stmt: &str,
+        lookup_value: &TokenStream,
+        method_name: &Ident,
+        mapper_ty: &Ident,
+        method_kind: CanyonMethodKind,
+    ) -> FkOperationTokens {
+        let signature = __detail::create_child_method_signature(
+            method_name,
+            mapper_ty,
+            method_kind,
+        );
+
+        let implementation = __detail::generate_child_method_implementation_body(
+            stmt,
+            lookup_value,
+            mapper_ty,
+            method_kind,
+        );
+
+        FkOperationTokens::new(signature, implementation)
+    }
 }
 
 mod __detail {
@@ -303,10 +303,32 @@ mod __detail {
         }
     }
 
+    pub(super) fn create_child_method_signature(
+        method_name: &Ident,
+        mapper_ty: &Ident,
+        method_kind: CanyonMethodKind,
+    ) -> TokenStream {
+        let method_generics_and_args = child_method_generics_and_args(method_kind);
+        let where_clause = get_child_where_clause(method_kind);
+
+        quote! {
+            async fn #method_name #method_generics_and_args
+                -> Result<Vec<#mapper_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
+                #where_clause
+        }
+    }
+
     fn method_generics_and_args(method_kind: CanyonMethodKind) -> TokenStream {
         match method_kind {
             CanyonMethodKind::Default => quote! { <'a>(&self) },
             CanyonMethodKind::WithInput => quote! { <'a, I>(&self, input: I) }
+        }
+    }
+
+    fn child_method_generics_and_args(method_kind: CanyonMethodKind) -> TokenStream {
+        match method_kind {
+            CanyonMethodKind::Default => quote! { <'a, F>(value: &F) },
+            CanyonMethodKind::WithInput => quote! { <'a, F, I>(value: &F, input: I) },
         }
     }
 
@@ -317,12 +339,37 @@ mod __detail {
         }
     }
 
+    fn get_child_where_clause(method_kind: CanyonMethodKind) -> TokenStream {
+        match method_kind {
+            CanyonMethodKind::Default => quote! {
+                where F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync
+            },
+            CanyonMethodKind::WithInput => quote! {
+                where
+                    F: canyon_sql::query::bounds::ForeignKeyable<F> + Send + Sync,
+                    I: canyon_sql::connection::DbConnection + Send + 'a
+            },
+        }
+    }
+
     fn self_ptr_callee(method_kind: CanyonMethodKind) -> TokenStream {
         match method_kind {
             CanyonMethodKind::Default => quote! { let default_db_conn = canyon_sql::core::Canyon::instance()?
                     .get_default_connection()?;
 
                 default_db_conn },
+            CanyonMethodKind::WithInput => quote! { input },
+        }
+    }
+
+    fn child_query_callee(method_kind: CanyonMethodKind) -> TokenStream {
+        match method_kind {
+            CanyonMethodKind::Default => quote! {
+                let default_db_conn = canyon_sql::core::Canyon::instance()?
+                    .get_default_connection()?;
+
+                default_db_conn
+            },
             CanyonMethodKind::WithInput => quote! { input },
         }
     }
@@ -351,6 +398,24 @@ mod __detail {
         quote! {
             {
                 #callee #query_one_tokens
+            }
+        }
+    }
+
+    pub(crate) fn generate_child_method_implementation_body(
+        stmt: &str,
+        lookup_value: &TokenStream,
+        mapper_ty: &Ident,
+        method_kind: CanyonMethodKind,
+    ) -> TokenStream {
+        let callee = child_query_callee(method_kind);
+
+        quote! {
+            {
+                let lookup_value = #lookup_value;
+                #callee
+                    .query::<&str, #mapper_ty>(#stmt, &[lookup_value])
+                    .await
             }
         }
     }
