@@ -2,10 +2,32 @@ use super::macro_tokens::MacroTokens;
 use canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata;
 pub(crate) use canyon_entities::helpers::default_database_table_name_from_entity_name;
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
+use quote::{ToTokens, quote};
 use std::borrow::Cow;
 use std::fmt::Write;
 use syn::{Attribute, Field, Fields, TypeGenerics, Visibility};
+
+#[derive(Copy, Clone)]
+pub(crate) enum CanyonMethodKind {
+    Default,
+    WithInput
+}
+
+#[derive(Copy, Clone)]
+pub(crate) enum ReturnTypeTokens {
+    Vec,
+    Option,
+}
+
+impl ToTokens for ReturnTypeTokens {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let expanded = match self {
+            Self::Vec => quote! { Vec },
+            Self::Option => quote! { Option },
+        };
+        tokens.extend(expanded);
+    }
+}
 
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
 /// returns a [`TokenStream`] with the final `RowMapper` implementor.

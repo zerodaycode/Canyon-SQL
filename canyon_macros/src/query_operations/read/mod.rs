@@ -9,6 +9,7 @@ use quote::quote;
 mod count;
 mod find_all;
 mod find_by_primary_key;
+pub(crate) mod foreign_key;
 mod select_querybuilder;
 
 /// Facade function that acts as the unique API for export to the real macro implementation
