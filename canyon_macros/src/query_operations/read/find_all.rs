@@ -74,8 +74,8 @@ fn create_find_all_with_macro(
         {
             use crate::canyon_sql::query::querybuilder::SelectQueryBuilderOps;
 
-            let default_db = input.get_database_type()?;
-            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, default_db)
+            let db_type = input.get_database_type()?;
+            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, db_type)
                 .with_known_columns(#columns)
                 .build()?;
             input.query::<&str, #mapper_ty>(stmt.sql(), &[]).await

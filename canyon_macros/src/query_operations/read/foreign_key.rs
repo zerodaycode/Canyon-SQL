@@ -82,54 +82,43 @@ mod __operations {
     ///
     /// A parent lookup follows the foreign-key reference from the current row to the row it points
     /// to. In relational terms, this is the many-to-one side of the relationship.
-    ///
-    /// Example:
-    ///
-    /// - `Player.team_id -> Team.id`
-    /// - `player.search_teams().await` returns the `Team` referenced by `player.team_id`.
-    ///
-    /// The generated operation is an instance method because the lookup needs the concrete foreign-key
-    /// value stored in `self.<field>`.
     fn generate_parent_lookup_tokens(macro_data: &MacroTokens<'_>) -> Vec<FkOperationTokens> {
         macro_data
             .get_fk_annotations()
             .iter()
             .filter_map(|(field_ident, annotation)| match annotation {
-                EntityFieldAnnotation::ForeignKey(table, column) => {
-                    Some((field_ident, table, column))
-                }
+                EntityFieldAnnotation::ForeignKey(table, column) => Some((field_ident, table, column)),
                 _ => None,
             })
             .flat_map(|(field_ident, table, column)| {
                 let parent_ty = database_table_name_to_struct_ident(table);
-                // TODO: we must ensure that the generated method names are singular, so there's no confusion with the child lookup methods. For example, if the table is `teams`, the method should be `search_team()` and not `search_teams()`.
+                // TODO: we must ensure that the generated method names are singular, so there's no confusion with the child lookup methods.
                 let method_name = format_ident!("search_{}", table);
                 let method_name_with = format_ident!("search_{}_with", table);
-                let stmt = parent_lookup_stmt(table, column);
+                let query_source = __detail::LookupQuerySource::Parent {
+                    table,
+                    predicate_column: column,
+                };
 
-                let fk_operation=
-                    __impl::generate_fk_operations_tokens(
-                        &stmt,
-                        field_ident,
-                        &method_name,
-                        &parent_ty,
-                        ReturnTypeTokens::Option,
-                        CanyonMethodKind::Default
-                    );
+                let fk_operation = __impl::generate_fk_operations_tokens(
+                    query_source,
+                    field_ident,
+                    &method_name,
+                    &parent_ty,
+                    ReturnTypeTokens::Option,
+                    CanyonMethodKind::Default,
+                );
 
                 let fk_operation_with = __impl::generate_fk_operations_tokens(
-                    &stmt,
+                    query_source,
                     field_ident,
                     &method_name_with,
                     &parent_ty,
                     ReturnTypeTokens::Option,
-                    CanyonMethodKind::WithInput
+                    CanyonMethodKind::WithInput,
                 );
 
-                [
-                    fk_operation,
-                    fk_operation_with,
-                ]
+                [fk_operation, fk_operation_with]
             })
             .collect()
     }
@@ -140,15 +129,6 @@ mod __operations {
     /// a second or inverted foreign key. The same child table foreign-key column is reused in the
     /// opposite navigation direction: starting from a parent row, Canyon fetches all child rows that
     /// reference it.
-    ///
-    /// Example:
-    ///
-    /// - `Player.team_id -> Team.id`
-    /// - `Player::search_teams_childrens(&team).await` returns every `Player` whose `team_id`
-    ///   references `team.id`.
-    ///
-    /// The generated operation is an associated function because the lookup starts from a parent
-    /// value, not from an existing child instance.
     fn generate_child_lookup_tokens(
         macro_data: &MacroTokens<'_>,
         table_schema_data: &str,
@@ -163,20 +143,21 @@ mod __operations {
             .get_fk_annotations()
             .iter()
             .filter_map(|(field_ident, annotation)| match annotation {
-                EntityFieldAnnotation::ForeignKey(table, column) => {
-                    Some((field_ident, table, column))
-                }
+                EntityFieldAnnotation::ForeignKey(table, column) => Some((field_ident, table, column)),
                 _ => None,
             })
             .flat_map(|(field_ident, table, column)| {
                 let method_name = format_ident!("search_{}_childrens", table);
                 let method_name_with = format_ident!("search_{}_childrens_with", table);
                 let field_name = field_ident.to_string();
-                let stmt = children_lookup_stmt(table_schema_data, &field_name);
                 let lookup_value = lookup_value(column, table);
+                let query_source = __detail::LookupQuerySource::Child {
+                    table: table_schema_data,
+                    predicate_column: &field_name,
+                };
 
                 let child_operation = __impl::generate_child_fk_operations_tokens(
-                    &stmt,
+                    query_source,
                     &lookup_value,
                     &method_name,
                     mapper_ty,
@@ -184,37 +165,16 @@ mod __operations {
                 );
 
                 let child_operation_with = __impl::generate_child_fk_operations_tokens(
-                    &stmt,
+                    query_source,
                     &lookup_value,
                     &method_name_with,
                     mapper_ty,
                     CanyonMethodKind::WithInput,
                 );
 
-                [
-                    child_operation,
-                    child_operation_with,
-                ]
+                [child_operation, child_operation_with]
             })
             .collect()
-    }
-
-    /// Builds the SQL used by parent lookup operations.
-    ///
-    /// For `Player.team_id -> Team.id`, this generates:
-    ///
-    /// `SELECT * FROM teams WHERE "id" = $1`
-    fn parent_lookup_stmt(table: &str, column: &str) -> String {
-        format!("SELECT * FROM {table} WHERE \"{column}\" = $1")
-    }
-
-    /// Builds the SQL used by child lookup operations.
-    ///
-    /// For `Player.team_id -> Team.id`, this generates:
-    ///
-    /// `SELECT * FROM players WHERE "team_id" = $1`
-    fn children_lookup_stmt(table_schema_data: &str, field_name: &str) -> String {
-        format!("SELECT * FROM {table_schema_data} WHERE \"{field_name}\" = $1")
     }
 
     /// Generates the expression that extracts the referenced parent column value from a
@@ -239,7 +199,7 @@ mod __impl {
     use crate::utils::helpers::{CanyonMethodKind, ReturnTypeTokens};
 
     pub(crate) fn generate_fk_operations_tokens(
-        stmt: &str,
+        query_source: __detail::LookupQuerySource<'_>,
         field_ident: &Ident,
         method_name: &Ident,
         parent_ty: &Ident,
@@ -247,7 +207,7 @@ mod __impl {
         method_kind: CanyonMethodKind,
     ) -> FkOperationTokens {
         __detail::generate_operation_tokens(
-            stmt,
+            query_source,
             __detail::LookupValueSource::SelfField(field_ident),
             method_name,
             parent_ty,
@@ -258,14 +218,14 @@ mod __impl {
     }
 
     pub(crate) fn generate_child_fk_operations_tokens(
-        stmt: &str,
+        query_source: __detail::LookupQuerySource<'_>,
         lookup_value: &TokenStream,
         method_name: &Ident,
         mapper_ty: &Ident,
         method_kind: CanyonMethodKind,
     ) -> FkOperationTokens {
         __detail::generate_operation_tokens(
-            stmt,
+            query_source,
             __detail::LookupValueSource::ForeignKeyable(lookup_value),
             method_name,
             mapper_ty,
@@ -287,13 +247,25 @@ mod __detail {
     }
 
     #[derive(Clone, Copy)]
+    pub(super) enum LookupQuerySource<'a> {
+        Parent {
+            table: &'a str,
+            predicate_column: &'a str,
+        },
+        Child {
+            table: &'a str,
+            predicate_column: &'a str,
+        },
+    }
+
+    #[derive(Clone, Copy)]
     pub(super) enum LookupValueSource<'a> {
         SelfField(&'a Ident),
         ForeignKeyable(&'a TokenStream),
     }
 
     pub(super) fn generate_operation_tokens(
-        stmt: &str,
+        query_source: LookupQuerySource<'_>,
         lookup_value_source: LookupValueSource<'_>,
         method_name: &Ident,
         return_ty: &Ident,
@@ -310,7 +282,7 @@ mod __detail {
         );
 
         let implementation = generate_method_implementation_body(
-            stmt,
+            query_source,
             lookup_value_source,
             return_ty,
             lookup_kind,
@@ -369,15 +341,31 @@ mod __detail {
         }
     }
 
-    fn query_callee(method_kind: CanyonMethodKind) -> TokenStream {
+    fn connection_binding(method_kind: CanyonMethodKind) -> TokenStream {
         match method_kind {
             CanyonMethodKind::Default => quote! {
-                let default_db_conn = canyon_sql::core::Canyon::instance()?
+                let db_conn = canyon_sql::core::Canyon::instance()?
                     .get_default_connection()?;
-
-                default_db_conn
             },
-            CanyonMethodKind::WithInput => quote! { input },
+            CanyonMethodKind::WithInput => quote! {
+                let db_conn = input;
+            },
+        }
+    }
+
+    fn query_builder_stmt(query_source: LookupQuerySource<'_>) -> TokenStream {
+        let (table, predicate_column) = match query_source {
+            LookupQuerySource::Parent { table, predicate_column } => (table, predicate_column),
+            LookupQuerySource::Child { table, predicate_column } => (table, predicate_column),
+        };
+
+        quote! {
+            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(
+                #table,
+                db_conn.get_database_type()?,
+            )
+            .r#where(#predicate_column, canyon_sql::query::operators::Operator::Eq)
+            .build()?;
         }
     }
 
@@ -386,31 +374,8 @@ mod __detail {
             LookupValueSource::SelfField(field_ident) => quote! {
                 &self.#field_ident as &dyn canyon_sql::query::QueryParameter
             },
-            LookupValueSource::ForeignKeyable(lookup_value) => quote! {
+            LookupValueSource::ForeignKeyable(_) => quote! {
                 lookup_value
-            },
-        }
-    }
-
-    fn query_tokens(
-        stmt: &str,
-        lookup_value_source: LookupValueSource<'_>,
-        return_ty: &Ident,
-        lookup_kind: FkLookupKind,
-    ) -> TokenStream {
-        let lookup_value = lookup_value_tokens(lookup_value_source);
-
-        match lookup_kind {
-            FkLookupKind::Parent => quote! {
-                .query_one::<#return_ty>(
-                    #stmt,
-                    &[#lookup_value],
-                )
-                .await
-            },
-            FkLookupKind::Child => quote! {
-                .query::<&str, #return_ty>(#stmt, &[#lookup_value])
-                .await
             },
         }
     }
@@ -424,21 +389,53 @@ mod __detail {
         }
     }
 
+    fn query_execution_tokens(
+        lookup_value_source: LookupValueSource<'_>,
+        return_ty: &Ident,
+        lookup_kind: FkLookupKind,
+    ) -> TokenStream {
+        let lookup_value = lookup_value_tokens(lookup_value_source);
+
+        match lookup_kind {
+            FkLookupKind::Parent => quote! {
+                db_conn
+                    .query_one::<#return_ty>(
+                        stmt.sql(),
+                        &[#lookup_value],
+                    )
+                    .await
+            },
+            FkLookupKind::Child => quote! {
+                db_conn
+                    .query::<&str, #return_ty>(
+                        stmt.sql(),
+                        &[#lookup_value],
+                    )
+                    .await
+            },
+        }
+    }
+
     fn generate_method_implementation_body(
-        stmt: &str,
+        query_source: LookupQuerySource<'_>,
         lookup_value_source: LookupValueSource<'_>,
         return_ty: &Ident,
         lookup_kind: FkLookupKind,
         method_kind: CanyonMethodKind,
     ) -> TokenStream {
+        let connection_binding = connection_binding(method_kind);
         let lookup_value_binding = lookup_value_binding(lookup_value_source);
-        let callee = query_callee(method_kind);
-        let query = query_tokens(stmt, lookup_value_source, return_ty, lookup_kind);
+        let query_builder_stmt = query_builder_stmt(query_source);
+        let query_execution = query_execution_tokens(lookup_value_source, return_ty, lookup_kind);
 
         quote! {
             {
+                use crate::canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
+
                 #lookup_value_binding
-                #callee #query
+                #connection_binding
+                #query_builder_stmt
+                #query_execution
             }
         }
     }
