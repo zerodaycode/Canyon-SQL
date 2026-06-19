@@ -1,15 +1,16 @@
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use crate::utils::helpers;
 
 pub fn generate_find_all_operations_tokens<'a>(
     mapper_ty: &Ident,
     table_schema_data: &'a str,
     macro_data: &MacroTokens,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
-    let struct_fields = macro_data.get_struct_fields_as_table_column_pairs();
-    let find_all = create_find_all_macro(mapper_ty, table_schema_data, &struct_fields)?;
-    let find_all_with = create_find_all_with_macro(mapper_ty, table_schema_data, &struct_fields)?;
+    let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data);
+    let find_all = create_find_all_macro(mapper_ty, table_schema_data, &columns)?;
+    let find_all_with = create_find_all_with_macro(mapper_ty, table_schema_data, &columns)?;
 
     Ok(quote! {
         #find_all
@@ -20,20 +21,8 @@ pub fn generate_find_all_operations_tokens<'a>(
 fn create_find_all_macro(
     mapper_ty: &Ident,
     table_schema_data: &str,
-    struct_fields: &[(String, String)],
+    columns: &TokenStream
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-    let columns = struct_fields.iter().map(|(table, column)| {
-        quote! {
-            canyon_sql::query::ColumnRef::new(#table, #column)
-        }
-    });
-
-    let columns = quote! {
-        ::core::array::IntoIter::new([
-            #(#columns),*
-        ])
-    };
-
     Ok(quote! {
         async fn find_all()
             -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
@@ -52,19 +41,8 @@ fn create_find_all_macro(
 fn create_find_all_with_macro(
     mapper_ty: &Ident,
     table_schema_data: &str,
-    struct_fields: &[(String, String)],
+    columns: &TokenStream,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-    let columns = struct_fields.iter().map(|(table, column)| {
-        quote! {
-            canyon_sql::query::ColumnRef::new(#table, #column)
-        }
-    });
-
-    let columns = quote! {
-        ::core::array::IntoIter::new([
-            #(#columns),*
-        ])
-    };
 
     Ok(quote! {
         async fn find_all_with<'a, I>(input: I)

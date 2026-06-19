@@ -56,6 +56,23 @@ impl<'a> InsertQueryBuilder<'a> {
         }
     }
 
+    // TODO: this should be abstracted into a trait for all query builders, but for now it's only implemented for InsertQueryBuilder and SelectQueryBuilder
+    pub fn with_known_columns<I>(mut self, columns: I) -> Self
+    where
+        I: IntoIterator<Item = ColumnRef<'a>>,
+    {
+        self._inner.ast.columns.extend(columns);
+        self
+    }
+
+    pub fn returning_columns<I>(mut self, columns: I) -> Self
+    where
+        I: IntoIterator<Item = ColumnRef<'a>>,
+    {
+        self._inner.ast.returning_columns.extend(columns);
+        self
+    }
+
     #[inline(always)]
     pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()

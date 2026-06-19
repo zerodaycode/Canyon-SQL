@@ -41,10 +41,9 @@ pub fn generate_insert_method_tokens(
         insert_with_body = raised_err;
         insert_values = quote! {};
     } else {
-        let stmt = __details::generate_insert_sql_statement(macro_data, table_schema_data);
         insert_values = __details::generate_insert_fn_values_slice_expr(macro_data);
-        insert_body = __details::generate_insert_fn_body_tokens(macro_data, &stmt, false);
-        insert_with_body = __details::generate_insert_fn_body_tokens(macro_data, &stmt, true);
+        insert_body = __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, false);
+        insert_with_body = __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, true);
     };
 
     quote! {
@@ -84,18 +83,28 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
     let no_fields_to_insert_err = __details::no_fields_to_insert_err();
 
     let stmt_ctr = quote! {
+        use canyon_sql::query::querybuilder::{InsertQueryBuilderOps, QueryBuilderOps};
+
         let insert_columns = entity.fields_as_comma_sep_string();
 
         if insert_columns.is_empty() {
             return #no_fields_to_insert_err;
         }
-        let values = entity.fields_actual_values();
-        let placeholders = entity.queries_placeholders();
 
-        let mut stmt = format!( // TODO: use the InsertQueryBuilder when created ;)
-            "INSERT INTO {} ({}) VALUES ({})",
-            #table_schema_data, insert_columns, placeholders
-        );
+        let values = entity.fields_actual_values();
+        let insert_column_names = insert_columns
+            .split(", ")
+            .map(|column| column.trim_matches('"'))
+            .collect::<Vec<&str>>();
+
+        let stmt = canyon_sql::query::querybuilder::InsertQueryBuilder::new(
+            #table_schema_data,
+            db_conn.get_database_type()?,
+        )
+        .with_known_column_names(&insert_column_names)
+        .build()?;
+
+        let mut stmt = stmt.sql().to_owned();
     };
     let add_returning_clause = quote! {
         stmt.push_str(" RETURNING ");
@@ -104,27 +113,28 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
 
     quote! {
         #insert_entity_signature {
-            let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
+            let db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
             #stmt_ctr;
 
             if let Some(pk) = entity.primary_key() {
                 #add_returning_clause
-                let pk = default_db_conn.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
+                let pk = db_conn.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
                 entity.set_primary_key_actual_value(pk)?;
             } else {
-                let _ = default_db_conn.execute(&stmt, &values).await?;
+                let _ = db_conn.execute(&stmt, &values).await?;
             }
             Ok(())
         }
 
         #insert_entity_with_signature {
+            let db_conn = input;
             #stmt_ctr;
             if let Some(pk) = entity.primary_key() {
                 #add_returning_clause
-                let pk = input.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
+                let pk = db_conn.query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(&stmt, &values).await?;
                 entity.set_primary_key_actual_value(pk)?;
             } else {
-                let _ = input.execute(&stmt, &values).await?;
+                let _ = db_conn.execute(&stmt, &values).await?;
             }
             Ok(())
         }
@@ -132,43 +142,67 @@ pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> TokenS
 }
 
 mod __details {
+    use crate::utils::helpers;
     use super::*;
 
     pub(crate) fn generate_insert_fn_body_tokens(
         macro_data: &MacroTokens,
-        stmt: &str,
+        table_schema_data: &str,
         is_with_method: bool,
     ) -> TokenStream {
         let pk_ident_and_type = macro_data.get_primary_key_ident_and_type();
+        let insert_column_names = helpers::get_struct_fields_as_column_ref_token_stream(macro_data);
 
-        let db_conn = if is_with_method {
-            quote! { input }
+        let connection_binding = if is_with_method {
+            quote! {
+                let db_conn = input;
+            }
         } else {
-            quote! { default_db_conn }
+            quote! {
+                let db_conn = canyon_sql::core::Canyon::instance()?
+                    .get_default_connection()?;
+            }
         };
 
         let mut insert_body_tokens = TokenStream::new();
-        if !is_with_method {
-            insert_body_tokens.extend(quote! {
-                let default_db_conn = canyon_sql::core::Canyon::instance()?
-                    .get_default_connection()?;
-            });
-        }
+        insert_body_tokens.extend(quote! {
+            use canyon_sql::query::querybuilder::{InsertQueryBuilderOps, QueryBuilderOps};
+
+            #connection_binding
+
+            let insert_column_names = #insert_column_names;
+            let stmt = canyon_sql::query::querybuilder::InsertQueryBuilder::new(
+                #table_schema_data,
+                #connection_binding.get_database_type()?,
+            )
+            .with_known_columns(insert_column_names)
+        });
 
         if let Some(pk_data) = pk_ident_and_type {
             let pk_ident = pk_data.0;
             let pk_type = pk_data.1;
+            let primary_key = macro_data
+                .get_primary_key_annotation()
+                .expect("Primary key annotation must exist when primary key ident and type exist");
+
+            let returning_columns = helpers::get_fields_as_iterable_of_column_refs(vec![(pk_ident.to_string(), primary_key)]);
 
             insert_body_tokens.extend(quote! {
-                self.#pk_ident = #db_conn.query_one_for::<#pk_type>(#stmt, values).await?;
-                Ok(())
+                .returning_columns(#returning_columns)
+                .build()?;
+                self.#pk_ident = #connection_binding.query_one_for::<#pk_type>
             });
         } else {
             insert_body_tokens.extend(quote! {
-                let _ = #db_conn.execute(#stmt, values).await?;
-                Ok(())
+                .build()?;
+                let _ = #connection_binding.execute(&stmt, values).await?;
             });
         }
+
+        insert_body_tokens.extend(quote!{
+            (stmt.sql(), values).await?;
+            Ok(())
+        });
 
         insert_body_tokens
     }
@@ -190,29 +224,6 @@ mod __details {
         }
     }
 
-    pub(crate) fn generate_insert_sql_statement(
-        macro_data: &MacroTokens,
-        table_schema_data: &str,
-    ) -> String {
-        // Retrieves the fields of the Struct as a collection of Strings, already parsed
-        // the condition of remove the primary key if it's present, and it's auto incremental
-        let insert_columns = macro_data.get_struct_fields_as_comma_sep_string();
-
-        // Returns a String with the generic $x placeholder for the query parameters.
-        // Already takes in consideration if there's pk annotation
-        let placeholders = macro_data.placeholders_generator();
-
-        let mut stmt = format!(
-            "INSERT INTO {} ({}) VALUES ({})",
-            table_schema_data, insert_columns, placeholders
-        );
-
-        if let Some(primary_key) = macro_data.get_primary_key_annotation() {
-            stmt.push_str(format!(" RETURNING {}", primary_key).as_str());
-        }
-
-        stmt
-    }
 
     pub(crate) fn generate_unsupported_operation_err() -> TokenStream {
         quote! {

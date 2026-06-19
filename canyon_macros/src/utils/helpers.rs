@@ -29,6 +29,24 @@ impl ToTokens for ReturnTypeTokens {
     }
 }
 
+pub(crate) fn get_struct_fields_as_column_ref_token_stream(macro_tokens: &MacroTokens) -> TokenStream {
+    let struct_fields = macro_tokens.get_struct_fields_as_table_column_pairs();
+    get_fields_as_iterable_of_column_refs(struct_fields)
+}
+
+pub(crate) fn get_fields_as_iterable_of_column_refs(elements: Vec<(String, String)>) -> TokenStream {
+    let columns = elements.iter().map(|(table, column)| {
+        quote! {
+            canyon_sql::query::ColumnRef::new(#table, #column)
+        }
+    });
+    quote! {
+        ::core::array::IntoIter::new([
+            #(#columns),*
+        ])
+    }
+}
+
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
 /// returns a [`TokenStream`] with the final `RowMapper` implementor.
 pub fn compute_crud_ops_mapping_target_type_with_generics(
