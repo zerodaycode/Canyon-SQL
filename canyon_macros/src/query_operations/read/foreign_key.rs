@@ -353,19 +353,17 @@ mod __detail {
         }
     }
 
-    fn query_builder_stmt(query_source: LookupQuerySource<'_>) -> TokenStream {
+    fn query_builder_stmt(query_source: LookupQuerySource) -> TokenStream {
         let (table, predicate_column) = match query_source {
             LookupQuerySource::Parent { table, predicate_column } => (table, predicate_column),
             LookupQuerySource::Child { table, predicate_column } => (table, predicate_column),
         };
 
         quote! {
-            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(
-                #table,
-                db_conn.get_database_type()?,
-            )
-            .r#where(#predicate_column, canyon_sql::query::operators::Operator::Eq)
-            .build()?;
+            let db_type = db_conn.get_database_type()?;
+            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table, db_type)
+                .r#where(#predicate_column, canyon_sql::query::operators::Operator::Eq)
+                .build()?;
         }
     }
 
