@@ -7,7 +7,7 @@ use crate::rows::FromSqlOwnedValue;
 /// Typically, these will be used by the macros to gather some information or to create some user code
 /// in more complex scenarios, like when insert an entity, when we need to know the value of the fields of
 /// the current instance that we'd like to insert
-pub trait Inspectionable<'a> {
+pub trait Inspectionable<'a> { // TODO: change name to entity runtime info EntityRuntimeInfo
     type PrimaryKeyType: FromSqlOwnedValue<Self::PrimaryKeyType>;
 
     /// Returns an allocated linear collection with the current values of all the fields declared
@@ -25,7 +25,7 @@ pub trait Inspectionable<'a> {
 
     /// Returns a linear collection with the names of every field for the implementor as a String
     fn fields_names(&self) -> &[&'static str];
-    fn fields_as_comma_sep_string(&self) -> &'static str;
+    fn fields_as_column_refs(&self) -> Vec<ColumnRef<'static>>;
 
     fn queries_placeholders(&self) -> &'static str;
 
@@ -36,6 +36,7 @@ pub trait Inspectionable<'a> {
         &mut self,
         value: Self::PrimaryKeyType,
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>>;
+    fn primary_key_as_column_ref(&self) -> Option<ColumnRef<'static>>;
 }
 
 pub trait TableMetadata<'a>: std::fmt::Display {

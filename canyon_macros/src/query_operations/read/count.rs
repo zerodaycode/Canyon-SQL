@@ -6,9 +6,9 @@ pub fn generate_count_operations_tokens<'a>(
     table_schema_data: &'a str,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
     let table_metadata =
-        canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata::try_from(
+        canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata::from(
             table_schema_data,
-        )?;
+        );
     let schema_name = table_metadata.schema;
     let table_name = table_metadata.name;
     let count = create_count_macro(schema_name.clone(), table_name.as_ref())?;

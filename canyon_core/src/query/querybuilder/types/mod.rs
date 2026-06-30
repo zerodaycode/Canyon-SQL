@@ -1,9 +1,9 @@
 pub mod delete;
-mod insert;
+pub mod insert;
 pub mod select;
 pub mod update;
 
-pub use self::{delete::*, select::*, update::*};
+pub use self::{select::*, insert::*, update::*, delete::*};
 use crate::{
     connection::database_type::DatabaseType,
     query::ColumnRef,

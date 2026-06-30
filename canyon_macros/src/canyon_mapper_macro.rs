@@ -252,9 +252,11 @@ mod __details {
     pub(crate) mod inspectionable_macro {
         use super::*;
         use syn::{Field, Fields};
+        use crate::utils::helpers;
 
         pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
+            let ty_str = ty.to_string();
             let pk = ast.get_primary_key_field_annotation();
             let pk_ident_ts = pk.map(|pk| pk.ident);
             let pk_ty_ts = pk.map(|pk| pk.ty);
@@ -265,7 +267,7 @@ mod __details {
             let fields_values = get_fields_values_expr_tokens(&fields);
             let fields_names = get_fields_names_expr_tokens(&fields);
 
-            let fields_as_comma_sep_string = ast.get_struct_fields_as_comma_sep_string();
+            let fields_as_column_refs = helpers::get_struct_fields_as_column_ref_token_stream(ast);
             let queries_placeholders = ast.placeholders_generator();
 
             let pk_opt_val = get_pk_ident_as_str(ast);
@@ -287,8 +289,8 @@ mod __details {
                         &[#(#fields_names),*]
                     }
 
-                    fn fields_as_comma_sep_string(&self) -> &'static str {
-                        #fields_as_comma_sep_string
+                    fn fields_as_column_refs(&self) -> Vec<canyon_sql::query::ColumnRef<'static>> {
+                        #fields_as_column_refs.collect()
                     }
 
                     fn queries_placeholders(&self) -> &'static str {
@@ -309,6 +311,11 @@ mod __details {
 
                     fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         #set_pk_val_method
+                    }
+
+                    fn primary_key_as_column_ref(&self) -> Option<canyon_sql::query::ColumnRef<'static>> {
+                        self.primary_key()
+                            .map(|pk| canyon_sql::query::ColumnRef::new(#ty_str, pk))
                     }
                 }
             }
