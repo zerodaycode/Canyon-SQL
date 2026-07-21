@@ -1,7 +1,7 @@
 use crate::query::querybuilder::syntax::ast::select::SelectAst;
 use crate::query::querybuilder::syntax::dialect::PgDialect;
+use crate::query::querybuilder::syntax::emitter::types::select::select_default_plan;
 use crate::query::querybuilder::syntax::emitter::{EmitStep, SqlEmitter};
-use crate::query::querybuilder::syntax::emitter::types::select::{select_default_plan};
 
 #[derive(Default)]
 pub struct PgEmitter {}

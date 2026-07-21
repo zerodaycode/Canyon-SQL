@@ -87,7 +87,9 @@ mod __operations {
             .get_fk_annotations()
             .iter()
             .filter_map(|(field_ident, annotation)| match annotation {
-                EntityFieldAnnotation::ForeignKey(table, column) => Some((field_ident, table, column)),
+                EntityFieldAnnotation::ForeignKey(table, column) => {
+                    Some((field_ident, table, column))
+                }
                 _ => None,
             })
             .flat_map(|(field_ident, table, column)| {
@@ -143,7 +145,9 @@ mod __operations {
             .get_fk_annotations()
             .iter()
             .filter_map(|(field_ident, annotation)| match annotation {
-                EntityFieldAnnotation::ForeignKey(table, column) => Some((field_ident, table, column)),
+                EntityFieldAnnotation::ForeignKey(table, column) => {
+                    Some((field_ident, table, column))
+                }
                 _ => None,
             })
             .flat_map(|(field_ident, table, column)| {
@@ -315,16 +319,17 @@ mod __detail {
     ) -> TokenStream {
         match (lookup_kind, method_kind) {
             (FkLookupKind::Parent, CanyonMethodKind::Default) => quote! { <'a>(&self) },
-            (FkLookupKind::Parent, CanyonMethodKind::WithInput) => quote! { <'a, I>(&self, input: I) },
+            (FkLookupKind::Parent, CanyonMethodKind::WithInput) => {
+                quote! { <'a, I>(&self, input: I) }
+            }
             (FkLookupKind::Child, CanyonMethodKind::Default) => quote! { <'a, F>(value: &F) },
-            (FkLookupKind::Child, CanyonMethodKind::WithInput) => quote! { <'a, F, I>(value: &F, input: I) },
+            (FkLookupKind::Child, CanyonMethodKind::WithInput) => {
+                quote! { <'a, F, I>(value: &F, input: I) }
+            }
         }
     }
 
-    fn get_where_clause(
-        lookup_kind: FkLookupKind,
-        method_kind: CanyonMethodKind,
-    ) -> TokenStream {
+    fn get_where_clause(lookup_kind: FkLookupKind, method_kind: CanyonMethodKind) -> TokenStream {
         match (lookup_kind, method_kind) {
             (FkLookupKind::Parent, CanyonMethodKind::Default) => quote! {},
             (FkLookupKind::Parent, CanyonMethodKind::WithInput) => quote! {
@@ -355,8 +360,14 @@ mod __detail {
 
     fn query_builder_stmt(query_source: LookupQuerySource) -> TokenStream {
         let (table, predicate_column) = match query_source {
-            LookupQuerySource::Parent { table, predicate_column } => (table, predicate_column),
-            LookupQuerySource::Child { table, predicate_column } => (table, predicate_column),
+            LookupQuerySource::Parent {
+                table,
+                predicate_column,
+            } => (table, predicate_column),
+            LookupQuerySource::Child {
+                table,
+                predicate_column,
+            } => (table, predicate_column),
         };
 
         quote! {
@@ -438,7 +449,6 @@ mod __detail {
         }
     }
 }
-
 
 #[derive(Debug)]
 struct FkOperationTokens {

@@ -40,11 +40,9 @@ macro_rules! select_default_plan {
 
 pub(crate) use select_default_plan;
 
-
-
 pub(crate) mod __impl {
-    use crate::query::querybuilder::syntax::ast::select::SelectAst;
     use crate::query::querybuilder::syntax::ast::BaseAst;
+    use crate::query::querybuilder::syntax::ast::select::SelectAst;
     use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::having::HavingClause;
@@ -55,11 +53,19 @@ pub(crate) mod __impl {
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
     use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
-    pub(crate) fn emit_select_keyword<'a>(_ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_select_keyword<'a>(
+        _ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         tokens.keyword(Keyword::Select);
     }
-    
-    pub(crate) fn emit_columns<'a, D: SqlDialect>(ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+
+    pub(crate) fn emit_columns<'a, D: SqlDialect>(
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         let is_count_query = ast.is_count_query;
         if is_count_query {
             tokens.keyword(Keyword::Count);
@@ -71,14 +77,22 @@ pub(crate) mod __impl {
         }
     }
 
-    pub(crate) fn emit_from<'a, D: SqlDialect>(_ast: &SelectAst<'a>, base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_from<'a, D: SqlDialect>(
+        _ast: &SelectAst<'a>,
+        base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         tokens.keyword(Keyword::From);
         tokens.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
             &base_ast.table,
         ));
     }
 
-    pub(crate) fn emit_joins<'a, D: SqlDialect>(ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_joins<'a, D: SqlDialect>(
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         for join in &ast.joins {
             tokens.extend(<JoinClause<'a> as ToSqlTokens<'a, D>>::to_tokens(join));
         }
@@ -88,15 +102,16 @@ pub(crate) mod __impl {
         _ast: &SelectAst<'a>,
         base_ast: &mut BaseAst<'a>,
         tokens: &mut SqlTokens<'a>,
-    )
-    where
+    ) where
         D: SqlDialect,
     {
         helpers::emit_query_conditions::<D>(&base_ast.conditions, tokens);
     }
 
     pub(crate) fn emit_group_by<'a, D: SqlDialect>(
-        ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
     ) {
         if let Some(group_by) = &ast.group_by {
             tokens.keyword(Keyword::GroupBy);
@@ -104,7 +119,11 @@ pub(crate) mod __impl {
         }
     }
 
-    pub(crate) fn emit_having<'a, D: SqlDialect>(ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_having<'a, D: SqlDialect>(
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         if let Some(having) = &ast.having {
             tokens.keyword(Keyword::Having);
             tokens.extend(<HavingClause<'_> as ToSqlTokens<'_, D>>::to_tokens(having));
@@ -112,7 +131,9 @@ pub(crate) mod __impl {
     }
 
     pub(crate) fn emit_order_by<'a, D: SqlDialect>(
-        ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
     ) {
         if let Some(order_by) = &ast.order_by {
             tokens.extend(<OrderByClause<'_> as ToSqlTokens<'_, D>>::to_tokens(
@@ -121,14 +142,22 @@ pub(crate) mod __impl {
         }
     }
 
-    pub(crate) fn emit_limit<'a>(ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_limit<'a>(
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         if let Some(limit) = ast.limit {
             tokens.keyword(Keyword::Limit);
             tokens.numeric(limit);
         }
     }
 
-    pub(crate) fn emit_offset<'a>(ast: &SelectAst<'a>, _base_ast: &mut BaseAst<'a>, tokens: &mut SqlTokens<'a>) {
+    pub(crate) fn emit_offset<'a>(
+        ast: &SelectAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
         if let Some(offset) = ast.offset {
             tokens.keyword(Keyword::Offset);
             tokens.numeric(offset);
@@ -153,10 +182,8 @@ mod tests {
     use crate::query::{
         operators::Operator,
         querybuilder::syntax::{
-            ast::select::SelectAst, ast::BaseAst, column::ColumnRef, dialect::StandardDialect,
-            emitter::SqlEmitter,
-            order::OrderByClause,
-            writer::TokenWriter,
+            ast::BaseAst, ast::select::SelectAst, column::ColumnRef, dialect::StandardDialect,
+            emitter::SqlEmitter, order::OrderByClause, writer::TokenWriter,
         },
     };
 
@@ -165,7 +192,7 @@ mod tests {
         type Dialect = StandardDialect;
         const PLAN: &'static [EmitStep<'a, SelectAst<'a>>] = select_default_plan!(StandardDialect);
     }
-    
+
     fn col(name: &'_ str) -> ColumnRef<'_> {
         ColumnRef::from(name)
     }

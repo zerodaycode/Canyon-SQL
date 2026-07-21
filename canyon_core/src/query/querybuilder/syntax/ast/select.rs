@@ -1,15 +1,14 @@
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
-use crate::query::querybuilder::syntax::having::HavingClause;
-use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;
 use crate::query::querybuilder::syntax::query_kind::QueryKind;
+use crate::query::querybuilder::syntax::{
+    emitter::AstProcessor, having::HavingClause, join::JoinClause,
+};
 use transient::Transient;
 
 #[derive(Default, Transient)]
 pub struct SelectAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
-    pub columns2: &'a [ColumnRef<'a>],
     pub is_count_query: bool,
     pub with_distinct: bool,
     pub joins: Vec<JoinClause<'a>>,
@@ -24,7 +23,6 @@ impl<'a> SelectAst<'a> {
     pub const fn new() -> Self {
         Self {
             columns: Vec::new(),
-            columns2: &[],
             is_count_query: false,
             with_distinct: false,
             joins: Vec::new(),

@@ -1,14 +1,5 @@
-use crate::{
-    query::{
-        querybuilder::{
-            syntax::{
-                tokens::SqlTokens,
-                tokens::SqlToken,
-                symbol::Symbol,
-                dialect::SqlDialect
-            }
-        }
-    }
+use crate::query::querybuilder::syntax::{
+    dialect::SqlDialect, symbol::Symbol, tokens::SqlToken, tokens::SqlTokens,
 };
 
 pub struct TokenWriter {}
@@ -33,11 +24,7 @@ impl TokenWriter {
                 out.push(' ');
             }
 
-            __impl::output_token_to_string_buffer::<D>(
-                token,
-                &mut out,
-                &mut placeholder_counter,
-            )?;
+            __impl::output_token_to_string_buffer::<D>(token, &mut out, &mut placeholder_counter)?;
 
             previous = Some(token);
         }

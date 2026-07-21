@@ -2,8 +2,7 @@ pub(crate) mod backends;
 pub(crate) mod types;
 
 use crate::query::querybuilder::syntax::{
-    ast::BaseAst, dialect::SqlDialect,
-    query_kind::QueryKind, tokens::SqlTokens,
+    ast::BaseAst, dialect::SqlDialect, query_kind::QueryKind, tokens::SqlTokens,
 };
 use transient::{Any, Inv};
 
@@ -98,11 +97,7 @@ where
     const PLAN: &'a [EmitStep<'a, P>];
 
     #[inline]
-    fn emit(
-        &mut self,
-        ast: &P,
-        base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a> {
+    fn emit(&mut self, ast: &P, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a> {
         let mut tokens = SqlTokens::default();
 
         for step in Self::PLAN {
@@ -110,6 +105,5 @@ where
         }
 
         tokens
-
     }
 }

@@ -9,7 +9,7 @@ use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 impl<'a, T, P> EmitUpdate<'a, P> for T
 where
     T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a>,
+    P: AstProcessor<'a> + 'a,
 {
     fn emit_update(
         &mut self,
@@ -34,7 +34,10 @@ where
     }
 }
 
-pub trait EmitUpdate<'a, P> where P: AstProcessor<'a> {
+pub trait EmitUpdate<'a, P>
+where
+    P: AstProcessor<'a>,
+{
     fn emit_update(
         &mut self,
         ast: &impl AstProcessor<'a>,
@@ -74,17 +77,16 @@ mod tests {
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
-    use crate::query::querybuilder::syntax::emitter::AstProcessor;
 
     #[derive(Default)]
     struct TestUpdateEmitter;
-    impl<'a, P: AstProcessor<'a>> SqlEmitter<'a, P> for TestUpdateEmitter {
+    impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitter {
         type Dialect = StandardDialect;
     }
 
     #[derive(Default)]
     struct TestUpdateEmitterMsSql;
-    impl<'a, P: AstProcessor<'a>> SqlEmitter<'a, P> for TestUpdateEmitterMsSql {
+    impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitterMsSql {
         type Dialect = MsSql;
     }
 
@@ -96,16 +98,14 @@ mod tests {
         let mut emitter = TestUpdateEmitter;
         let tokens = emitter.emit_update(&ast.0, base_ast);
         TokenWriter::new()
-            .render::<TestUpdateEmitter>(tokens)
+            .render::<StandardDialect>(tokens)
             .unwrap()
     }
 
     fn render_mssql<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitterMsSql;
         let tokens = emitter.emit_update(&ast.0, base_ast);
-        TokenWriter::new()
-            .render::<TestUpdateEmitterMsSql>(tokens)
-            .unwrap()
+        TokenWriter::new().render::<MsSql>(tokens).unwrap()
     }
 
     struct SelectlessUpdateAst<'a>(UpdateAst<'a>);

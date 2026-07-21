@@ -251,8 +251,8 @@ mod __details {
     use super::*;
     pub(crate) mod inspectionable_macro {
         use super::*;
-        use syn::{Field, Fields};
         use crate::utils::helpers;
+        use syn::{Field, Fields};
 
         pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;

@@ -3,7 +3,7 @@ pub mod insert;
 pub mod select;
 pub mod update;
 
-pub use self::{select::*, insert::*, update::*, delete::*};
+pub use self::{delete::*, insert::*, select::*, update::*};
 use crate::{
     connection::database_type::DatabaseType,
     query::ColumnRef,
@@ -214,6 +214,7 @@ mod __impl {
 mod __detail {
     use crate::connection::database_type::DatabaseType;
     use crate::query::querybuilder::syntax::ast::BaseAst;
+    use crate::query::querybuilder::syntax::dialect::{MsSql, MySql, PgDialect};
     use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
     use crate::query::querybuilder::syntax::emitter::backends::{MySqlEmitter, SqlServerEmitter};
     use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
@@ -221,7 +222,6 @@ mod __detail {
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use std::error::Error;
     use std::fmt::Write;
-    use crate::query::querybuilder::syntax::dialect::{MsSql, MySql, PgDialect};
 
     pub(super) fn sql<'a, P>(
         database_type: DatabaseType,

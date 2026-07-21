@@ -1,7 +1,7 @@
+use crate::utils::helpers;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use crate::utils::helpers;
 
 pub fn generate_find_all_operations_tokens<'a>(
     mapper_ty: &Ident,
@@ -21,7 +21,7 @@ pub fn generate_find_all_operations_tokens<'a>(
 fn create_find_all_macro(
     mapper_ty: &Ident,
     table_schema_data: &str,
-    columns: &TokenStream
+    columns: &TokenStream,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
     Ok(quote! {
         async fn find_all()
@@ -43,7 +43,6 @@ fn create_find_all_with_macro(
     table_schema_data: &str,
     columns: &TokenStream,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-
     Ok(quote! {
         async fn find_all_with<'a, I>(input: I)
             -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>

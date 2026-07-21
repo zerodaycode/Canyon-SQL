@@ -10,7 +10,7 @@ use syn::{Attribute, Field, Fields, TypeGenerics, Visibility};
 #[derive(Copy, Clone)]
 pub(crate) enum CanyonMethodKind {
     Default,
-    WithInput
+    WithInput,
 }
 
 #[derive(Copy, Clone)]
@@ -29,12 +29,16 @@ impl ToTokens for ReturnTypeTokens {
     }
 }
 
-pub(crate) fn get_struct_fields_as_column_ref_token_stream(macro_tokens: &MacroTokens) -> TokenStream {
+pub(crate) fn get_struct_fields_as_column_ref_token_stream(
+    macro_tokens: &MacroTokens,
+) -> TokenStream {
     let struct_fields = macro_tokens.get_struct_fields_as_table_column_pairs();
     get_fields_as_iterable_of_column_refs(struct_fields)
 }
 
-pub(crate) fn get_fields_as_iterable_of_column_refs(elements: Vec<(String, String)>) -> TokenStream {
+pub(crate) fn get_fields_as_iterable_of_column_refs(
+    elements: Vec<(String, String)>,
+) -> TokenStream {
     let columns = elements.iter().map(|(table, column)| {
         quote! {
             canyon_sql::query::ColumnRef::new(#table, #column)

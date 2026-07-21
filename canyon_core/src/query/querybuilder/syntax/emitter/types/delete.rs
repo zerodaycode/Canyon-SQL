@@ -1,3 +1,4 @@
+use crate::query::querybuilder::syntax::emitter::types::helpers;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::{
     ast::BaseAst,
@@ -5,22 +6,17 @@ use crate::query::querybuilder::syntax::{
     keyword::Keyword,
     tokens::{SqlTokens, ToSqlTokens},
 };
-use crate::query::querybuilder::syntax::emitter::types::helpers;
 
-pub(crate) fn general_delete_impl<'a, T, P>(
-    _ast: &P,
-    base_ast: &mut BaseAst<'a>,
-) -> SqlTokens<'a>
+pub(crate) fn general_delete_impl<'a, T, P>(_ast: &P, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a>
 where
     T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a>,
+    P: AstProcessor<'a> + 'a,
 {
     let mut tokens = SqlTokens::default();
 
     tokens.keyword(Keyword::Delete);
     tokens.keyword(Keyword::From);
-    tokens
-        .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
+    tokens.extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
 
     helpers::emit_query_conditions::<T::Dialect>(&base_ast.conditions, &mut tokens);
 
@@ -28,40 +24,41 @@ where
 }
 
 pub trait EmitDelete<'a, T, P>
-    where 
-        T: SqlEmitter<'a, P>,
-        P: AstProcessor<'a>
+where
+    T: SqlEmitter<'a, P>,
+    P: AstProcessor<'a> + 'a,
 {
-    fn emit_delete(
-        &mut self,
-        ast: &P,
-        base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a> {
+    fn emit_delete(&mut self, ast: &P, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a> {
         general_delete_impl::<T, P>(&ast, base_ast)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::query::querybuilder::syntax::dialect::MsSql;
-    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
-    use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
-        ast::BaseAst, ast::delete::DeleteAst, dialect::StandardDialect, emitter::SqlEmitter,
+        ast::{BaseAst, delete::DeleteAst},
+        dialect::{MsSql, StandardDialect},
+        emitter::{AstProcessor, SqlEmitter, types::helpers::Range},
+        writer::TokenWriter,
     };
-    use crate::query::querybuilder::syntax::emitter::{AsAstProcessor, AstProcessor};
 
     #[derive(Default)]
     struct TestDeleteEmitter;
-    
+
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitter {
         type Dialect = StandardDialect;
+
+        const PLAN: &'a [crate::query::querybuilder::syntax::emitter::EmitStep<'a, DeleteAst>] =
+            &[]; // TODO: Implement for DeleteAst
     }
 
     #[derive(Default)]
     struct TestDeleteEmitterMsSql;
-    impl<'a, P> SqlEmitter<'a, P> for TestDeleteEmitterMsSql where P: AstProcessor<'a> {
+    impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitterMsSql {
         type Dialect = MsSql;
+
+        const PLAN: &'a [crate::query::querybuilder::syntax::emitter::EmitStep<'a, DeleteAst>] =
+            &[]; // TODO: Implement for DeleteAst
     }
 
     fn render_standard<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {
@@ -75,11 +72,9 @@ mod tests {
     fn render_mssql<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestDeleteEmitterMsSql;
         let tokens = emitter.emit(ast, base_ast);
-        TokenWriter::new()
-            .render::<MsSql>(tokens)
-            .unwrap()
+        TokenWriter::new().render::<MsSql>(tokens).unwrap()
     }
-    
+
     #[test]
     fn emits_delete_from_table_without_conditions() {
         let ast = DeleteAst::default();

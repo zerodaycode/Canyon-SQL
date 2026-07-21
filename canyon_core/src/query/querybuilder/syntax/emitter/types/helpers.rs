@@ -8,7 +8,6 @@ use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
-use crate::query::querybuilder::syntax::emitter::EmitStep;
 
 pub(crate) struct Range(usize, Option<usize>);
 impl Range {
@@ -100,15 +99,16 @@ pub(crate) fn add_clause_conditions<'a, D: SqlDialect>(
     }
 }
 
-
-pub(crate) fn emit_query_conditions<'a, D: SqlDialect>(query_conditions: &Vec<ConditionClause<'a>>, tokens: &mut SqlTokens<'a>) {
+pub(crate) fn emit_query_conditions<'a, D: SqlDialect>(
+    query_conditions: &Vec<ConditionClause<'a>>,
+    tokens: &mut SqlTokens<'a>,
+) {
     if query_conditions.is_empty() {
         return;
     }
 
     for cond in query_conditions {
-        tokens
-            .extend(<ConditionClause<'_> as ToSqlTokens<'_, D>>::to_tokens(cond));
+        tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, D>>::to_tokens(cond));
     }
 }
 

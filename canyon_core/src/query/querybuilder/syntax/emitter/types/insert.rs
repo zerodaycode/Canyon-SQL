@@ -55,11 +55,11 @@ macro_rules! insert_default_plan {
 }
 
 pub(crate) mod __impl {
-    use crate::query::querybuilder::syntax::{
-        ast::insert::InsertAst, dialect::SqlDialect, emitter::types::helpers,
-        keyword::Keyword, tokens::SqlTokens,
-    };
     use crate::query::querybuilder::syntax::ast::BaseAst;
+    use crate::query::querybuilder::syntax::{
+        ast::insert::InsertAst, dialect::SqlDialect, emitter::types::helpers, keyword::Keyword,
+        tokens::SqlTokens,
+    };
 
     pub(crate) fn emit_returning<'a, D: SqlDialect>(
         ast: &InsertAst<'a>,
@@ -79,13 +79,13 @@ pub(crate) use insert_default_plan;
 #[cfg(test)]
 mod tests {
     use crate::query::querybuilder::syntax::dialect::{MsSql, PgDialect};
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitStep};
+    use crate::query::querybuilder::syntax::query_kind::QueryKind;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::insert::InsertAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
-    use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitStep};
-    use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
     #[derive(Default)]
     struct TestInsertEmitter;
@@ -110,9 +110,7 @@ mod tests {
     ) -> String {
         let mut emitter = TestInsertEmitter;
         let tokens = emitter.emit(ast, base_ast);
-        TokenWriter::new()
-            .render::<PgDialect>(tokens)
-            .unwrap()
+        TokenWriter::new().render::<PgDialect>(tokens).unwrap()
     }
 
     fn render_without_returning<'a>(
@@ -121,9 +119,7 @@ mod tests {
     ) -> String {
         let mut emitter = TestInsertEmitterNoReturning;
         let tokens = emitter.emit(&ast.0, base_ast);
-        TokenWriter::new()
-            .render::<MsSql>(tokens)
-            .unwrap()
+        TokenWriter::new().render::<MsSql>(tokens).unwrap()
     }
 
     /// Tiny wrapper only to keep helper signatures short in tests.

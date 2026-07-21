@@ -1,7 +1,7 @@
+use crate::utils::helpers;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
-use crate::utils::helpers;
 
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
     let insert_method_ops = generate_insert_method_tokens(macro_data, &table_schema_data);
@@ -43,8 +43,10 @@ pub fn generate_insert_method_tokens(
         insert_values = quote! {};
     } else {
         insert_values = __details::generate_insert_fn_values_slice_expr(macro_data);
-        insert_body = __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, false);
-        insert_with_body = __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, true);
+        insert_body =
+            __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, false);
+        insert_with_body =
+            __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, true);
     };
 
     quote! {
@@ -60,7 +62,10 @@ pub fn generate_insert_method_tokens(
     }
 }
 
-pub fn generate_insert_entity_function_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
+pub fn generate_insert_entity_function_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &str,
+) -> TokenStream {
     let insert_entity_signature = quote! {
         async fn insert_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
@@ -149,8 +154,8 @@ pub fn generate_insert_entity_function_tokens(macro_data: &MacroTokens, table_sc
 }
 
 mod __details {
-    use crate::utils::helpers;
     use super::*;
+    use crate::utils::helpers;
 
     pub(crate) fn generate_insert_fn_body_tokens(
         macro_data: &MacroTokens,
@@ -187,9 +192,10 @@ mod __details {
                 .get_primary_key_annotation()
                 .expect("Primary key annotation must exist when primary key ident and type exist");
 
-            let returning_columns = helpers::get_fields_as_iterable_of_column_refs(vec![
-                (pk_ident.to_string(), primary_key),
-            ]);
+            let returning_columns = helpers::get_fields_as_iterable_of_column_refs(vec![(
+                pk_ident.to_string(),
+                primary_key,
+            )]);
 
             insert_body_tokens.extend(quote! {
                 .returning_columns(#returning_columns)
@@ -230,7 +236,6 @@ mod __details {
             let values: &[&dyn canyon_sql::query::QueryParameter] = &[#(#insert_values),*];
         }
     }
-
 
     pub(crate) fn generate_unsupported_operation_err() -> TokenStream {
         quote! {
