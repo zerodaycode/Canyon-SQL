@@ -1,5 +1,5 @@
 use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::AstProcessor;
+use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
 use crate::query::querybuilder::syntax::having::HavingClause;
 use crate::query::querybuilder::syntax::join::JoinClause;
 use crate::query::querybuilder::syntax::order::OrderByClause;

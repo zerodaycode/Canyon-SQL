@@ -6,9 +6,10 @@ use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 
-impl<'a, T> EmitUpdate<'a> for T
+impl<'a, T, P> EmitUpdate<'a, P> for T
 where
-    T: SqlEmitter<'a>,
+    T: SqlEmitter<'a, P>,
+    P: AstProcessor<'a>,
 {
     fn emit_update(
         &mut self,
@@ -33,7 +34,7 @@ where
     }
 }
 
-pub trait EmitUpdate<'a>: SqlEmitter<'a> {
+pub trait EmitUpdate<'a, P> where P: AstProcessor<'a> {
     fn emit_update(
         &mut self,
         ast: &impl AstProcessor<'a>,
@@ -73,16 +74,17 @@ mod tests {
         ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
+    use crate::query::querybuilder::syntax::emitter::AstProcessor;
 
     #[derive(Default)]
     struct TestUpdateEmitter;
-    impl<'a> SqlEmitter<'a> for TestUpdateEmitter {
+    impl<'a, P: AstProcessor<'a>> SqlEmitter<'a, P> for TestUpdateEmitter {
         type Dialect = StandardDialect;
     }
 
     #[derive(Default)]
     struct TestUpdateEmitterMsSql;
-    impl<'a> SqlEmitter<'a> for TestUpdateEmitterMsSql {
+    impl<'a, P: AstProcessor<'a>> SqlEmitter<'a, P> for TestUpdateEmitterMsSql {
         type Dialect = MsSql;
     }
 

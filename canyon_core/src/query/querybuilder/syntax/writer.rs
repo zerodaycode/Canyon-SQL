@@ -1,6 +1,15 @@
-use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::tokens::SqlToken;
-use crate::query::querybuilder::syntax::{emitter::SqlEmitter, tokens::SqlTokens};
+use crate::{
+    query::{
+        querybuilder::{
+            syntax::{
+                tokens::SqlTokens,
+                tokens::SqlToken,
+                symbol::Symbol,
+                dialect::SqlDialect
+            }
+        }
+    }
+};
 
 pub struct TokenWriter {}
 
@@ -9,7 +18,7 @@ impl TokenWriter {
         Self {}
     }
 
-    pub fn render<'a, E: SqlEmitter<'a>>(
+    pub fn render<'a, D: SqlDialect>(
         self,
         mut tokens: SqlTokens<'a>,
     ) -> Result<String, std::fmt::Error> {
@@ -24,7 +33,7 @@ impl TokenWriter {
                 out.push(' ');
             }
 
-            __impl::output_token_to_string_buffer::<E::Dialect>(
+            __impl::output_token_to_string_buffer::<D>(
                 token,
                 &mut out,
                 &mut placeholder_counter,
@@ -257,6 +266,7 @@ mod mssql_tests {
 mod spacing_tests {
     use super::*;
     use crate::query::operators::Operator;
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
     use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
     use crate::query::querybuilder::syntax::keyword::Keyword;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
@@ -278,7 +288,7 @@ mod spacing_tests {
         tokens.placeholder();
 
         let sql = TokenWriter::new()
-            .render::<PgEmitter>(tokens)
+            .render::<PgDialect>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(sql, "SELECT * FROM \"league\" WHERE \"id\" > $1;");
@@ -301,7 +311,7 @@ mod spacing_tests {
         tokens.symbol(Symbol::DoubleQuote);
 
         let sql = TokenWriter::new()
-            .render::<PgEmitter>(tokens)
+            .render::<PgDialect>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(sql, "SELECT \"league\".\"id\" FROM \"league\";");
@@ -318,7 +328,7 @@ mod spacing_tests {
         tokens.symbol(Symbol::RParen);
 
         let sql = TokenWriter::new()
-            .render::<PgEmitter>(tokens)
+            .render::<PgDialect>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(sql, "IN ($1, $2);");
@@ -353,7 +363,7 @@ mod spacing_tests {
         tokens.symbol(Symbol::RParen);
 
         let sql = TokenWriter::new()
-            .render::<PgEmitter>(tokens)
+            .render::<PgDialect>(tokens)
             .expect("failed to render SQL");
 
         assert_eq!(

@@ -1,11 +1,9 @@
 pub(crate) mod backends;
 pub(crate) mod types;
 
-use crate::query::querybuilder::syntax::emitter::types::delete::EmitDelete;
-use crate::query::querybuilder::syntax::emitter::types::update::EmitUpdate;
 use crate::query::querybuilder::syntax::{
-    ast::BaseAst, dialect::SqlDialect, emitter::types::insert::EmitInsert,
-    emitter::types::select::EmitSelect, query_kind::QueryKind, tokens::SqlTokens,
+    ast::BaseAst, dialect::SqlDialect,
+    query_kind::QueryKind, tokens::SqlTokens,
 };
 use transient::{Any, Inv};
 
@@ -68,16 +66,16 @@ where
 /// ```
 ///
 /// The example shows emission for a `SELECT` query in PostgreSQL.
-pub trait SqlEmitter<'a>
+// pub type EmitStep<'a, P> =
+//     for<'step> fn(&'step P, &'step mut BaseAst<'a>, &'step mut SqlTokens<'a>);
+
+pub type EmitStep<'a, P> = fn(&P, &mut BaseAst<'a>, &mut SqlTokens<'a>);
+
+pub trait SqlEmitter<'a, P>
 where
-    Self: 'a,
+    Self: Sized,
+    P: AstProcessor<'a> + 'a,
 {
-    /// The [`SqlDialect`] used by this emitter.
-    ///
-    /// Each backend emitter selects a dialect type that implements
-    /// [`SqlDialect`]. This associated type must be distinct for each
-    /// backend so that syntax differences can be encoded in the type
-    /// system.
     type Dialect: SqlDialect;
 
     /// Emit SQL tokens for the given AST node and table metadata.
@@ -89,13 +87,6 @@ where
     /// the emitter must generate the appropriate SQL tokens into its
     /// internal buffer.
     ///
-    /// # Parameters
-    /// TODO:
-    /// - `ast`: A reference to the query AST to be emitted.
-    /// - `table_metadata`: A reference containing table name and other
-    ///   basic metadata required for correctly forming qualified database
-    ///   identifiers such as table and schema names.
-    ///
     /// # Semantics
     ///
     /// The implementation of `emit` must produce tokens **in the correct
@@ -104,15 +95,21 @@ where
     /// emission writes: `SELECT ... FROM ... WHERE ...`. A backend
     /// emitter may choose to include or omit certain clauses (e.g.,
     /// `RETURNING`) depending on dialect support.
-    fn emit(&mut self, ast: &impl AstProcessor<'a>, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a>
-    where
-        Self: Sized,
-    {
-        match ast.query_kind() {
-            QueryKind::Select => self.emit_select(ast, base_ast),
-            QueryKind::Insert => self.emit_insert(ast, base_ast),
-            QueryKind::Update => self.emit_update(ast, base_ast),
-            QueryKind::Delete => self.emit_delete(ast, base_ast),
+    const PLAN: &'a [EmitStep<'a, P>];
+
+    #[inline]
+    fn emit(
+        &mut self,
+        ast: &P,
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a> {
+        let mut tokens = SqlTokens::default();
+
+        for step in Self::PLAN {
+            step(ast, base_ast, &mut tokens)
         }
+
+        tokens
+
     }
 }

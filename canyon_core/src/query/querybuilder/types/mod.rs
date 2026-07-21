@@ -181,7 +181,7 @@ mod __impl {
         __validators::check_where_clause_position(_self)
     }
 
-    pub(crate) fn create_condition_clause<'a, 'b, P: AstProcessor<'a>>(
+    pub(crate) fn create_condition_clause<'a, P: AstProcessor<'a>>(
         _self: &mut QueryBuilder<'a, P>,
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
@@ -195,7 +195,7 @@ mod __impl {
         });
     }
 
-    pub(crate) fn create_ranged_condition_clause<'a, 'b, P: AstProcessor<'a>>(
+    pub(crate) fn create_ranged_condition_clause<'a, P: AstProcessor<'a>>(
         _self: &mut QueryBuilder<'a, P>,
         kind: ConditionClauseKind,
         column_name: impl Into<ColumnRef<'a>>,
@@ -221,6 +221,7 @@ mod __detail {
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use std::error::Error;
     use std::fmt::Write;
+    use crate::query::querybuilder::syntax::dialect::{MsSql, MySql, PgDialect};
 
     pub(super) fn sql<'a, P>(
         database_type: DatabaseType,
@@ -272,7 +273,6 @@ mod __detail {
     {
         match database_type {
             DatabaseType::PostgreSql | DatabaseType::Deferred => {
-                // TODO: review the semantics of this assumption
                 let mut emitter = PgEmitter::default();
                 emitter.emit(ast, base_ast)
             }
@@ -321,9 +321,9 @@ mod __detail {
     ) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         let writer = TokenWriter::new();
         match db {
-            DatabaseType::PostgreSql | DatabaseType::Deferred => writer.render::<PgEmitter>(tokens),
-            DatabaseType::MySQL => writer.render::<MySqlEmitter>(tokens),
-            DatabaseType::SqlServer => writer.render::<SqlServerEmitter>(tokens),
+            DatabaseType::PostgreSql | DatabaseType::Deferred => writer.render::<PgDialect>(tokens),
+            DatabaseType::MySQL => writer.render::<MySql>(tokens),
+            DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
         }
         .map_err(|e| e.into())
     }
