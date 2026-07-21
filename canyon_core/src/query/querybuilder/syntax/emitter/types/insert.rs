@@ -1,96 +1,57 @@
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::ToSqlTokens;
-use crate::query::querybuilder::syntax::{
-    ast::BaseAst,
-    ast::insert::InsertAst,
-    emitter::types::helpers,
-    emitter::{AstProcessor, SqlEmitter},
-    keyword::Keyword,
-    symbol::Symbol,
-    tokens::SqlTokens,
-};
-
-pub(crate) fn general_insert_impl<'a, T, P>(
-    ast: &P,
-    base_ast: &mut BaseAst<'a>,
-) -> SqlTokens<'a>
-where
-    T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a>,
-{
-    let mut tokens = SqlTokens::default();
-
-    let ast = transient::Downcast::downcast_ref::<InsertAst>(ast.as_any()).expect(
-        "[emitInsert] - Handle this propagating result and introducing custom error types",
-    );
-
-    tokens.keyword(Keyword::Insert);
-    tokens.keyword(Keyword::Into);
-
-    tokens
-        .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
-
-    tokens.symbol(Symbol::LParen);
-    helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens);
-    tokens.symbol(Symbol::RParen);
-
-    tokens.keyword(Keyword::Values);
-    tokens.symbol(Symbol::LParen);
-    helpers::emit_placeholders(&ast.columns, &mut tokens);
-    tokens.symbol(Symbol::RParen);
-
-    __impl::emit_returning::<T::Dialect>(ast, &mut tokens);
-
-    tokens
-}
-
-// impl<'a, T, P> EmitInsert<'a, T, P> for T
-// where
-//     T: SqlEmitter<'a, P>,
-//     P: AstProcessor<'a>,
-// {
-//     fn emit_insert(
-//         &mut self,
-//         ast: &P,
-//         base_ast: &mut BaseAst<'a>,
-//     ) -> SqlTokens<'a> {
-//         let mut tokens = SqlTokens::default();
-// 
-//         let ast = transient::Downcast::downcast_ref::<InsertAst>(ast.as_any()).expect(
-//             "[emitInsert] - Handle this propagating result and introducing custom error types",
-//         );
-// 
-//         tokens.keyword(Keyword::Insert);
-//         tokens.keyword(Keyword::Into);
-// 
-//         tokens
-//             .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
-// 
-//         tokens.symbol(Symbol::LParen);
-//         helpers::emit_columns::<T::Dialect>(&ast.columns, &mut tokens);
-//         tokens.symbol(Symbol::RParen);
-// 
-//         tokens.keyword(Keyword::Values);
-//         tokens.symbol(Symbol::LParen);
-//         helpers::emit_placeholders(&ast.columns, &mut tokens);
-//         tokens.symbol(Symbol::RParen);
-// 
-//         __impl::emit_returning::<T::Dialect>(ast, &mut tokens);
-// 
-//         tokens
-//     }
-// }
-
-pub trait EmitInsert<'a, T, P>
-where
-    T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a>,
-{
-    fn emit_insert(
-        &mut self,
-        ast: &P,
-        base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a>;
+macro_rules! insert_default_plan {
+    ($dialect:ty) => {
+        &[
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_insert_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_into_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_table::<$dialect>(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_columns::<$dialect>(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_values_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_placeholders(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_returning::<$dialect>(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+        ]
+    }
 }
 
 pub(crate) mod __impl {
@@ -98,10 +59,11 @@ pub(crate) mod __impl {
         ast::insert::InsertAst, dialect::SqlDialect, emitter::types::helpers,
         keyword::Keyword, tokens::SqlTokens,
     };
-    use crate::query::querybuilder::syntax::emitter::AstProcessor;
+    use crate::query::querybuilder::syntax::ast::BaseAst;
 
     pub(crate) fn emit_returning<'a, D: SqlDialect>(
         ast: &InsertAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
         tokens: &mut SqlTokens<'a>,
     ) {
         if !D::SUPPORTS_RETURNING || ast.returning_columns.is_empty() {
@@ -112,27 +74,29 @@ pub(crate) mod __impl {
     }
 }
 
+pub(crate) use insert_default_plan;
+
 #[cfg(test)]
 mod tests {
-    use super::EmitInsert;
     use crate::query::querybuilder::syntax::dialect::{MsSql, PgDialect};
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
         ast::BaseAst, ast::insert::InsertAst, column::ColumnRef, dialect::StandardDialect,
         emitter::SqlEmitter,
     };
-    use crate::query::querybuilder::syntax::emitter::AstProcessor;
+    use crate::query::querybuilder::syntax::emitter::{AstProcessor, EmitStep};
     use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
     #[derive(Default)]
     struct TestInsertEmitter;
-    impl<'a, P: AstProcessor<'a>> SqlEmitter<'a, P> for TestInsertEmitter {
+    impl<'a> SqlEmitter<'a, InsertAst<'a>> for TestInsertEmitter {
         type Dialect = StandardDialect;
+        const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = insert_default_plan!(Self::Dialect);
     }
 
     #[derive(Default)]
     struct TestInsertEmitterNoReturning;
-    impl<'a> SqlEmitter<'a, P> for TestInsertEmitterNoReturning {
+    impl<'a> SqlEmitter<'a, InsertAst<'a>> for TestInsertEmitterNoReturning {
         type Dialect = MsSql;
     }
 
