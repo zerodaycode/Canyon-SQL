@@ -287,34 +287,6 @@ mod __detail {
         }
     }
 
-    /// Convenient standalone that helps us to interpolate the placeholder of the parameters of a SQL
-    /// query directly into the passed in buffer, avoiding the need to construct and allocate temporary strings
-    /// for such purpose
-    pub(crate) fn _write_param_placeholder(
-        db_type: DatabaseType,
-        buffer: &mut String,
-        params: impl Iterator,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
-        Ok(match db_type {
-            DatabaseType::PostgreSql => write!(
-                buffer,
-                "${}",
-                _calculate_param_placeholder_count_value(params)
-            ),
-            DatabaseType::SqlServer => write!(
-                buffer,
-                "@P{}",
-                _calculate_param_placeholder_count_value(params)
-            ),
-            DatabaseType::MySQL => write!(buffer, "?"),
-            _ => panic!("Provisional (placeholder)"),
-        }?)
-    }
-
-    fn _calculate_param_placeholder_count_value(container: impl Iterator) -> usize {
-        container.count()
-    }
-
     pub(crate) fn run_render_phase<'a>(
         tokens: SqlTokens<'a>,
         db: DatabaseType,
