@@ -1,60 +1,78 @@
-use crate::query::querybuilder::syntax::ast::BaseAst;
-use crate::query::querybuilder::syntax::ast::update::UpdateAst;
-use crate::query::querybuilder::syntax::emitter::types::helpers;
-use crate::query::querybuilder::syntax::emitter::{AstProcessor, SqlEmitter};
-use crate::query::querybuilder::syntax::keyword::Keyword;
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
-
-impl<'a, T, P> EmitUpdate<'a, P> for T
-where
-    T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a> + 'a,
-{
-    fn emit_update(
-        &mut self,
-        ast: &impl AstProcessor<'a>,
-        base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a> {
-        let mut tokens = SqlTokens::default();
-        let ast = transient::Downcast::downcast_ref::<UpdateAst>(ast.as_any()).expect(
-            "[emitUpdate] - Handle this propagating result and introducing custom error types",
-        );
-
-        tokens.keyword(Keyword::Update);
-        tokens
-            .extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
-
-        tokens.keyword(Keyword::Set);
-        __impl::emit_set_clause::<T::Dialect>(&ast.columns, &mut tokens);
-
-        helpers::add_clause_conditions::<T::Dialect>(base_ast, &mut tokens);
-
-        tokens
-    }
+macro_rules! update_default_plan {
+    ($dialect:ty) => {
+        &[
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::update::__impl::emit_update_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |_ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::helpers::emit_table::<$dialect>(
+                    base_ast.table(),
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::update::__impl::emit_set_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::update::__impl::emit_set_clause::<$dialect>(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |_ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::helpers::emit_query_conditions::<$dialect>(
+                    base_ast.conditions(),
+                    tokens,
+                )
+            },
+        ]
+    };
 }
 
-pub trait EmitUpdate<'a, P>
-where
-    P: AstProcessor<'a>,
-{
-    fn emit_update(
-        &mut self,
-        ast: &impl AstProcessor<'a>,
-        base_ast: &mut BaseAst<'a>,
-    ) -> SqlTokens<'a>;
-}
+pub(crate) use update_default_plan;
 
 pub(crate) mod __impl {
-    use crate::query::querybuilder::syntax::column::ColumnRef;
-    use crate::query::querybuilder::syntax::dialect::SqlDialect;
-    use crate::query::querybuilder::syntax::tokens::{SqlTokens, Symbol, ToSqlTokens};
+    use crate::query::ColumnRef;
+    use crate::query::querybuilder::syntax::symbol::Symbol;
+    use crate::query::querybuilder::syntax::{
+        ast::{BaseAst, update::UpdateAst},
+        dialect::SqlDialect,
+        emitter::types::helpers,
+        keyword::Keyword,
+        tokens::{SqlTokens, ToSqlTokens},
+    };
 
-    pub(crate) fn emit_set_clause<'a, D: SqlDialect>(
-        columns: &[ColumnRef<'a>],
+    pub(crate) fn emit_update_keyword<'a>(
+        _ast: &UpdateAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
         tokens: &mut SqlTokens<'a>,
     ) {
-        for (i, col) in columns.iter().enumerate() {
+        tokens.keyword(Keyword::Update);
+    }
+
+    pub(crate) fn emit_set_keyword<'a>(
+        _ast: &UpdateAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
+        tokens.keyword(Keyword::Set);
+    }
+
+    pub(crate) fn emit_set_clause<'a, D: SqlDialect>(
+        ast: &UpdateAst<'a>,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
+        for (i, col) in ast.columns.iter().enumerate() {
             if i > 0 {
                 tokens.symbol(Symbol::Comma);
             }
@@ -67,10 +85,10 @@ pub(crate) mod __impl {
 
 #[cfg(test)]
 mod tests {
-    use super::EmitUpdate;
     use crate::query::operators::Operator;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::dialect::MsSql;
+    use crate::query::querybuilder::syntax::emitter::EmitStep;
     use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
@@ -82,44 +100,39 @@ mod tests {
     struct TestUpdateEmitter;
     impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitter {
         type Dialect = StandardDialect;
+        const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] = update_default_plan!(Self::Dialect);
     }
 
     #[derive(Default)]
     struct TestUpdateEmitterMsSql;
     impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitterMsSql {
         type Dialect = MsSql;
+        const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] = update_default_plan!(Self::Dialect);
     }
 
     fn col(name: &'_ str) -> ColumnRef<'_> {
         ColumnRef::from(name)
     }
 
-    fn render_standard<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
+    fn render_standard<'a>(ast: &UpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitter;
-        let tokens = emitter.emit_update(&ast.0, base_ast);
+        let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new()
             .render::<StandardDialect>(tokens)
             .unwrap()
     }
 
-    fn render_mssql<'a>(ast: &SelectlessUpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
+    fn render_mssql<'a>(ast: &UpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitterMsSql;
-        let tokens = emitter.emit_update(&ast.0, base_ast);
+        let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<MsSql>(tokens).unwrap()
-    }
-
-    struct SelectlessUpdateAst<'a>(UpdateAst<'a>);
-    impl<'a> SelectlessUpdateAst<'a> {
-        fn new(ast: UpdateAst<'a>) -> Self {
-            Self(ast)
-        }
     }
 
     #[test]
     fn emits_update_with_single_set_column() {
-        let ast = SelectlessUpdateAst::new(UpdateAst {
+        let ast = UpdateAst {
             columns: vec![col("name")],
-        });
+        };
 
         let mut base_ast = BaseAst::new_ast("users".into());
 
@@ -129,14 +142,11 @@ mod tests {
 
     #[test]
     fn emits_update_with_multiple_set_columns() {
-        let ast = SelectlessUpdateAst::new(UpdateAst {
+        let ast = UpdateAst {
             columns: vec![col("name"), col("email"), col("updated_at")],
-        });
-
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
         };
+
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render_standard(&ast, &mut base_ast);
 
@@ -148,16 +158,13 @@ mod tests {
 
     #[test]
     fn emits_update_with_where_conditions() {
-        let ast = SelectlessUpdateAst::new(UpdateAst {
+        let ast = UpdateAst {
             columns: vec![col("name"), col("email")],
-        });
-
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
         };
 
-        base_ast.conditions.push(ConditionClause {
+        let mut base_ast = BaseAst::new_ast("users".into());
+
+        base_ast.add_condition(ConditionClause {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,
@@ -174,14 +181,11 @@ mod tests {
 
     #[test]
     fn emits_update_in_mssql_with_dialect_specific_identifiers_and_placeholders() {
-        let ast = SelectlessUpdateAst::new(UpdateAst {
+        let ast = UpdateAst {
             columns: vec![col("name"), col("email")],
-        });
-
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
         };
+
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render_mssql(&ast, &mut base_ast);
 
@@ -190,16 +194,13 @@ mod tests {
 
     #[test]
     fn preserves_placeholder_sequence_between_set_and_where() {
-        let ast = SelectlessUpdateAst::new(UpdateAst {
+        let ast = UpdateAst {
             columns: vec![col("name"), col("email")],
-        });
-
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
         };
 
-        base_ast.conditions.push(ConditionClause {
+        let mut base_ast = BaseAst::new_ast("users".into());
+
+        base_ast.add_condition(ConditionClause {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,

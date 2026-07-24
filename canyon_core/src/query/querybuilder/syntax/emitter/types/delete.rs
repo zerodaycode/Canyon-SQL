@@ -1,35 +1,83 @@
-use crate::query::querybuilder::syntax::emitter::types::helpers;
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::syntax::{
-    ast::BaseAst,
-    emitter::{AstProcessor, SqlEmitter},
-    keyword::Keyword,
-    tokens::{SqlTokens, ToSqlTokens},
-};
-
-pub(crate) fn general_delete_impl<'a, T, P>(_ast: &P, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a>
-where
-    T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a> + 'a,
-{
-    let mut tokens = SqlTokens::default();
-
-    tokens.keyword(Keyword::Delete);
-    tokens.keyword(Keyword::From);
-    tokens.extend(<TableMetadata<'_> as ToSqlTokens<'_, T::Dialect>>::to_tokens(&base_ast.table));
-
-    helpers::emit_query_conditions::<T::Dialect>(&base_ast.conditions, &mut tokens);
-
-    tokens
+macro_rules! delete_default_plan {
+    ($dialect:ty) => {
+        &[
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::delete::__impl::emit_delete_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::delete::__impl::emit_from_keyword(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::delete::__impl::emit_table::<$dialect>(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+            |ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::delete::__impl::emit_conditions::<$dialect>(
+                    ast,
+                    base_ast,
+                    tokens,
+                )
+            },
+        ]
+    };
 }
 
-pub trait EmitDelete<'a, T, P>
-where
-    T: SqlEmitter<'a, P>,
-    P: AstProcessor<'a> + 'a,
-{
-    fn emit_delete(&mut self, ast: &P, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a> {
-        general_delete_impl::<T, P>(&ast, base_ast)
+pub(crate) use delete_default_plan;
+
+pub(crate) mod __impl {
+    use crate::query::querybuilder::syntax::{
+        ast::{BaseAst, delete::DeleteAst},
+        dialect::SqlDialect,
+        emitter::types::helpers,
+        keyword::Keyword,
+        tokens::SqlTokens,
+    };
+
+    pub(crate) fn emit_delete_keyword<'a>(
+        _ast: &DeleteAst,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
+        tokens.keyword(Keyword::Delete);
+    }
+
+    pub(crate) fn emit_from_keyword<'a>(
+        _ast: &DeleteAst,
+        _base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) {
+        tokens.keyword(Keyword::From);
+    }
+
+    pub(crate) fn emit_table<'a, D>(
+        _ast: &DeleteAst,
+        base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) where
+        D: SqlDialect,
+    {
+        helpers::emit_table::<D>(base_ast.table(), tokens);
+    }
+
+    pub(crate) fn emit_conditions<'a, D>(
+        _ast: &DeleteAst,
+        base_ast: &mut BaseAst<'a>,
+        tokens: &mut SqlTokens<'a>,
+    ) where
+        D: SqlDialect,
+    {
+        helpers::emit_query_conditions::<D>(base_ast.conditions(), tokens);
     }
 }
 
@@ -79,10 +127,7 @@ mod tests {
     fn emits_delete_from_table_without_conditions() {
         let ast = DeleteAst::default();
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render_standard(&ast, &mut base_ast);
         assert_eq!(sql.trim(), "DELETE FROM \"users\";");
@@ -92,10 +137,7 @@ mod tests {
     fn emits_delete_from_table_without_conditions_in_mssql() {
         let ast = DeleteAst::default();
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render_mssql(&ast, &mut base_ast);
         assert_eq!(sql.trim(), "DELETE FROM [users];");
@@ -108,12 +150,9 @@ mod tests {
 
         let ast = DeleteAst::default();
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
-        base_ast.conditions.push(ConditionClause {
+        base_ast.add_condition(ConditionClause {
             kind: ConditionClauseKind::Where,
             column_name: "id".into(),
             operator: Operator::Eq,
@@ -121,7 +160,6 @@ mod tests {
         });
 
         let sql = render_standard(&ast, &mut base_ast);
-
         assert_eq!(sql.trim(), "DELETE FROM \"users\" WHERE \"id\" = $1;");
     }
 }

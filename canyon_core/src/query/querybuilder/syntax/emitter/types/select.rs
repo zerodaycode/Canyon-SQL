@@ -1,3 +1,15 @@
+/// Blanket implementation of `SqlEmitter` for `SelectAst`.
+/// This implementation provides a default plan for emitting SQL statements for
+/// `SelectAst` nodes, since all the Canyon queries for now emit `SelectAst` nodes in the same way,
+/// regardless of the backend dialect.
+// impl<'a, T> SqlEmitter<'a, SelectAst<'a>> for T
+//     where
+//           T: SqlEmitter<'a, SelectAst<'a>>, {
+//     type Dialect = <T as SqlEmitter<'a, SelectAst<'a>>>::Dialect;
+//
+//     const PLAN: &'a [EmitStep<'a, SelectAst<'a>>] = select_default_plan!(Self::Dialect);
+// }
+
 macro_rules! select_default_plan {
     ($dialect:ty) => {
         &[
@@ -84,7 +96,7 @@ pub(crate) mod __impl {
     ) {
         tokens.keyword(Keyword::From);
         tokens.extend(<TableMetadata<'a> as ToSqlTokens<'a, D>>::to_tokens(
-            &base_ast.table,
+            base_ast.table(),
         ));
     }
 
@@ -105,7 +117,7 @@ pub(crate) mod __impl {
     ) where
         D: SqlDialect,
     {
-        helpers::emit_query_conditions::<D>(&base_ast.conditions, tokens);
+        helpers::emit_query_conditions::<D>(base_ast.conditions(), tokens);
     }
 
     pub(crate) fn emit_group_by<'a, D: SqlDialect>(
@@ -189,8 +201,9 @@ mod tests {
 
     struct TestEmitter;
     impl<'a> SqlEmitter<'a, SelectAst<'a>> for TestEmitter {
-        type Dialect = StandardDialect;
-        const PLAN: &'static [EmitStep<'a, SelectAst<'a>>] = select_default_plan!(StandardDialect);
+        type Dialect = PgDialect;
+
+        const PLAN: &'a [EmitStep<'a, SelectAst<'a>>] = select_default_plan!(Self::Dialect);
     }
 
     fn col(name: &'_ str) -> ColumnRef<'_> {
@@ -208,10 +221,7 @@ mod tests {
         let mut ast = SelectAst::new();
         ast.columns = vec![col("id"), col("name")];
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render(&ast, &mut base_ast);
         assert_eq!(sql, "SELECT \"id\", \"name\" FROM \"users\";");
@@ -225,10 +235,7 @@ mod tests {
         ast.limit = Some(10);
         ast.offset = Some(20);
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render(&ast, &mut base_ast);
         assert_eq!(
@@ -242,10 +249,7 @@ mod tests {
         let mut ast = SelectAst::new();
         ast.columns = vec![];
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render(&ast, &mut base_ast);
         assert_eq!(sql, "SELECT * FROM \"users\";");
@@ -257,10 +261,7 @@ mod tests {
         ast.columns = vec![col("users.country")];
         ast.group_by = Some(vec![col("users.country")]);
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render(&ast, &mut base_ast);
         assert_eq!(
@@ -307,10 +308,7 @@ mod tests {
             ),
         ];
 
-        let mut base_ast = BaseAst {
-            table: "users".into(),
-            ..Default::default()
-        };
+        let mut base_ast = BaseAst::new_ast("users".into());
 
         let sql = render(&ast, &mut base_ast);
         assert_eq!(

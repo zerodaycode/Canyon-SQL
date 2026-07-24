@@ -1,11 +1,12 @@
 //! Standalone functions that shares the same behaviour for different AST kinds
 
-use crate::query::querybuilder::syntax::ast::BaseAst;
 use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
+use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
+use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
 
@@ -88,17 +89,6 @@ pub(crate) fn emit_placeholders<'a>(columns: &Vec<ColumnRef<'a>>, tokens: &mut S
     }
 }
 
-pub(crate) fn add_clause_conditions<'a, D: SqlDialect>(
-    base_ast: &BaseAst<'a>,
-    tokens: &mut SqlTokens<'a>,
-) {
-    if !base_ast.conditions.is_empty() {
-        for cond in &base_ast.conditions {
-            tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, D>>::to_tokens(cond));
-        }
-    }
-}
-
 pub(crate) fn emit_query_conditions<'a, D: SqlDialect>(
     query_conditions: &Vec<ConditionClause<'a>>,
     tokens: &mut SqlTokens<'a>,
@@ -110,6 +100,18 @@ pub(crate) fn emit_query_conditions<'a, D: SqlDialect>(
     for cond in query_conditions {
         tokens.extend(<ConditionClause<'_> as ToSqlTokens<'_, D>>::to_tokens(cond));
     }
+}
+
+pub(crate) fn emit_table<'a, D: SqlDialect>(table: &TableMetadata<'a>, tokens: &mut SqlTokens<'a>) {
+    tokens.extend(<TableMetadata<'_> as ToSqlTokens<'_, D>>::to_tokens(table));
+}
+
+pub(crate) fn emit_from_table<'a, D: SqlDialect>(
+    table: &TableMetadata<'a>,
+    tokens: &mut SqlTokens<'a>,
+) {
+    tokens.keyword(Keyword::From);
+    emit_table::<D>(table, tokens);
 }
 
 #[cfg(test)]
@@ -130,10 +132,7 @@ mod tests {
     use crate::query::querybuilder::syntax::tokens::SqlToken;
 
     fn make_base_ast<'a>() -> BaseAst<'a> {
-        BaseAst {
-            table: TableMetadata::from("users"),
-            conditions: vec![],
-        }
+        BaseAst::new_ast(TableMetadata::from("users"))
     }
 
     fn make_column(column: &'_ str) -> ColumnRef<'_> {

@@ -40,6 +40,8 @@ pub enum Keyword {
     Concat,
     Distinct,
     Count,
+    Output,
+    Inserted,
 }
 
 impl Display for Keyword {
@@ -79,6 +81,8 @@ impl Display for Keyword {
             Keyword::Concat => "CONCAT",
             Keyword::Distinct => "DISTINCT",
             Keyword::Count => "COUNT",
+            Keyword::Output => "OUTPUT",
+            Keyword::Inserted => "INSERTED",
         };
         write!(f, "{}", i)
     }

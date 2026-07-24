@@ -9,8 +9,8 @@ use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 /// Base AST for common parts
 #[derive(Default)]
 pub struct BaseAst<'a> {
-    pub table: TableMetadata<'a>,
-    pub conditions: Vec<ConditionClause<'a>>,
+    table: TableMetadata<'a>,
+    conditions: Vec<ConditionClause<'a>>,
 }
 
 impl<'a> BaseAst<'a> {
@@ -25,5 +25,19 @@ impl<'a> BaseAst<'a> {
             table: table.into(),
             conditions: Vec::new(),
         }
+    }
+
+    #[inline(always)]
+    pub const fn table(&self) -> &TableMetadata<'a> {
+        &self.table
+    }
+
+    #[inline(always)]
+    pub const fn conditions(&self) -> &Vec<ConditionClause<'a>> {
+        &self.conditions
+    }
+
+    pub fn add_condition(&mut self, condition: ConditionClause<'a>) {
+        self.conditions.push(condition);
     }
 }

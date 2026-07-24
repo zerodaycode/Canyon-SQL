@@ -70,31 +70,9 @@ impl<'a> ColumnRef<'a> {
         }
     }
 
-    /// mutator that allows to modify a [`ColumnRef`] to have a <table>.<column> format
-    ///
-    /// Ex: SELECT * FROM <table>.<column> as <alias>
-    pub fn table(mut self, table: &'a str) -> Self {
-        self.table = Some(Cow::Borrowed(table));
-        self
-    }
-
-    pub fn table_owned(mut self, table: String) -> Self {
-        self.table = Some(Cow::Owned(table));
-        self
-    }
-
-    /// mutator that allows to modify a [`ColumnRef`] to have a AS clause for
-    /// specify a SQL alias
-    ///
-    /// Ex: SELECT * FROM <table>.<column> as <alias>
-    pub fn alias(mut self, alias: &'a str) -> Self {
-        self.alias = Some(Cow::Borrowed(alias));
-        self
-    }
-
-    pub fn alias_owned(mut self, alias: String) -> Self {
-        self.alias = Some(Cow::Owned(alias));
-        self
+    /// Returns the column name
+    pub fn name(&self) -> Cow<'a, str> {
+        self.column.clone()
     }
 }
 

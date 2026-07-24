@@ -78,6 +78,16 @@ impl<'a> SqlTokens<'a> {
     pub fn iter(&self) -> std::slice::Iter<'_, SqlToken<'a>> {
         self.0.iter()
     }
+
+    pub fn comma(&mut self) -> &mut Self {
+        self.0.push(SqlToken::Symbol(Symbol::Comma));
+        self
+    }
+
+    pub fn dot(&mut self) -> &mut Self {
+        self.0.push(SqlToken::Symbol(Symbol::Dot));
+        self
+    }
 }
 
 impl<'a> IntoIterator for SqlTokens<'a> {

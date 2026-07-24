@@ -1,6 +1,10 @@
 pub(crate) mod backends;
 pub(crate) mod types;
 
+use crate::connection::database_type::DatabaseType;
+use crate::query::querybuilder::syntax::emitter::backends::{
+    MySqlEmitter, PgEmitter, SqlServerEmitter,
+};
 use crate::query::querybuilder::syntax::{
     ast::BaseAst, dialect::SqlDialect, query_kind::QueryKind, tokens::SqlTokens,
 };
@@ -70,6 +74,34 @@ where
 
 pub type EmitStep<'a, P> = fn(&P, &mut BaseAst<'a>, &mut SqlTokens<'a>);
 
+pub trait BackendEmittable<'a>: AstProcessor<'a> {
+    fn emit_for(
+        database_type: DatabaseType,
+        ast: &Self,
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a>;
+}
+impl<'a, P> BackendEmittable<'a> for P
+where
+    P: AstProcessor<'a> + 'a,
+    PgEmitter: SqlEmitter<'a, P>,
+    MySqlEmitter: SqlEmitter<'a, P>,
+    SqlServerEmitter: SqlEmitter<'a, P>,
+{
+    fn emit_for(
+        database_type: DatabaseType,
+        ast: &Self,
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a> {
+        match database_type {
+            DatabaseType::PostgreSql | DatabaseType::Deferred => {
+                PgEmitter::default().emit(ast, base_ast)
+            }
+            DatabaseType::MySQL => MySqlEmitter::default().emit(ast, base_ast),
+            DatabaseType::SqlServer => SqlServerEmitter::default().emit(ast, base_ast),
+        }
+    }
+}
 pub trait SqlEmitter<'a, P>
 where
     Self: Sized,
