@@ -46,7 +46,6 @@ pub(crate) mod __impl {
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, update::UpdateAst},
         dialect::SqlDialect,
-        emitter::types::helpers,
         keyword::Keyword,
         tokens::{SqlTokens, ToSqlTokens},
     };

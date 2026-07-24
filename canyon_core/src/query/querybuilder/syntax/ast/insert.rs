@@ -1,9 +1,8 @@
 pub(crate) use crate::query::querybuilder::syntax::{
     column::ColumnRef, emitter::AstProcessor, query_kind::QueryKind,
 };
-use transient::Transient;
 
-#[derive(Default, Transient)]
+#[derive(Default)]
 pub struct InsertAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
     pub returning_columns: Vec<ColumnRef<'a>>,

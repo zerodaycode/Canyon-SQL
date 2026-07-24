@@ -58,8 +58,8 @@ walkdir = "2.3.3"
 regex = "1.9.3"
 partialdebug = "0.2.0"
 
-quote = "1.0.9"
-proc-macro2 = "1.0.27"
+quote = "1.0.47"
+proc-macro2 = "1.0.107"
 
 [workspace.package]
 version = "0.5.1"

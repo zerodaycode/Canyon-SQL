@@ -1,4 +1,3 @@
-use crate::utils::helpers;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -63,7 +62,7 @@ pub fn generate_insert_method_tokens(
 }
 
 pub fn generate_insert_entity_function_tokens(
-    macro_data: &MacroTokens,
+    _macro_data: &MacroTokens,
     table_schema_data: &str,
 ) -> TokenStream {
     let insert_entity_signature = quote! {

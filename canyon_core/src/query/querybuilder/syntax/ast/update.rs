@@ -1,9 +1,7 @@
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::emitter::AstProcessor;
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
-use transient::Transient;
+use crate::query::querybuilder::syntax::{
+    column::ColumnRef, emitter::AstProcessor, query_kind::QueryKind,
+};
 
-#[derive(Transient)]
 pub struct UpdateAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
 }

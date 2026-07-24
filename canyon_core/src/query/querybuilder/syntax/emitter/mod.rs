@@ -8,29 +8,11 @@ use crate::query::querybuilder::syntax::emitter::backends::{
 use crate::query::querybuilder::syntax::{
     ast::BaseAst, dialect::SqlDialect, query_kind::QueryKind, tokens::SqlTokens,
 };
-use transient::{Any, Inv};
 
 // ---------- AST Processor marker trait ----------
-pub trait AstProcessor<'a>: Default + AsAstProcessor<'a> {
+pub trait AstProcessor<'a>: Default {
     fn query_kind(&self) -> QueryKind;
 }
-/// Base trait for downcasting all the implementors of [`AstProcessor`] when they are hidden
-/// behind an opaque type
-pub trait AsAstProcessor<'a>: Any<Inv<'a>> {
-    fn as_any(&self) -> &dyn Any<Inv<'a>>;
-}
-
-/// Blanket implementation for all the AST types
-impl<'a, T> AsAstProcessor<'a> for T
-where
-    T: AstProcessor<'a>,
-{
-    fn as_any(&self) -> &dyn Any<Inv<'a>> {
-        self
-    }
-}
-// #[allow(type_alias_bounds)]
-// type SelectStep<'a, E: SqlEmitter<'a, SelectAst<'a>> + 'a> = fn(&mut E, ast: &SelectAst<'a>, base_ast: &BaseAst<'a>);
 
 /// A strategy for emitting SQL text from a specific query AST type.
 ///

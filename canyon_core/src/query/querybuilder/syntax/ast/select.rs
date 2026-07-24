@@ -1,12 +1,9 @@
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::order::OrderByClause;
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
 use crate::query::querybuilder::syntax::{
-    emitter::AstProcessor, having::HavingClause, join::JoinClause,
+    column::ColumnRef, emitter::AstProcessor, having::HavingClause, join::JoinClause,
+    order::OrderByClause, query_kind::QueryKind,
 };
-use transient::Transient;
 
-#[derive(Default, Transient)]
+#[derive(Default)]
 pub struct SelectAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
     pub is_count_query: bool,

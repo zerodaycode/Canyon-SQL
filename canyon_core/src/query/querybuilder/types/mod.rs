@@ -15,8 +15,7 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::syntax::{
-            ast::BaseAst, clause::ConditionClauseKind,
-            table_metadata::TableMetadata,
+            ast::BaseAst, clause::ConditionClauseKind, table_metadata::TableMetadata,
         },
     },
 };
@@ -144,8 +143,8 @@ mod __impl {
     use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
     use crate::query::querybuilder::syntax::column::ColumnRef;
-    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::emitter::BackendEmittable;
+    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::types::__validators;
     use std::error::Error;
 
@@ -216,8 +215,7 @@ mod __detail {
     use crate::connection::database_type::DatabaseType;
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::dialect::{MsSql, MySql, PgDialect};
-    
-    
+
     use crate::query::querybuilder::syntax::emitter::BackendEmittable;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
     use crate::query::querybuilder::syntax::writer::TokenWriter;

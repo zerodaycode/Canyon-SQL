@@ -1,8 +1,5 @@
-use crate::query::querybuilder::syntax::emitter::AstProcessor;
-use crate::query::querybuilder::syntax::query_kind::QueryKind;
-use transient::Transient;
+use crate::query::querybuilder::syntax::{emitter::AstProcessor, query_kind::QueryKind};
 
-#[derive(Transient)]
 pub struct DeleteAst {}
 
 impl<'a> AstProcessor<'a> for DeleteAst {

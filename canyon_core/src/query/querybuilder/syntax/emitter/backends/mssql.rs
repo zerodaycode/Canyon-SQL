@@ -46,7 +46,6 @@ mod __impl {
         keyword::Keyword,
         tokens::SqlTokens,
     };
-    
 
     pub(super) fn emit_output<'a, D>(
         ast: &InsertAst<'a>,
