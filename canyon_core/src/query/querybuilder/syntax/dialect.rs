@@ -39,7 +39,6 @@ pub struct MsSql;
 #[cfg(feature = "mssql")]
 impl SqlDialect for MsSql {
     const DB: DatabaseType = SqlServer;
-    const SUPPORTS_RETURNING: bool = false;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Bracket;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::AtPNumbered;
 }
@@ -52,6 +51,7 @@ impl SqlDialect for MySql {
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Backtick;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::QuestionMark;
     const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Char;
+    const SUPPORTS_RETURNING: bool = false;
 }
 
 /// Identifier quoting strategy for a SQL dialect.

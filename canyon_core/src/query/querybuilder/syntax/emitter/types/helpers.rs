@@ -91,7 +91,7 @@ pub(crate) fn emit_unqualified_columns<'a, D: SqlDialect>(
     columns: &[ColumnRef<'a>],
     tokens: &mut SqlTokens<'a>,
 ) {
-    emit_columns::<D>(columns, Qualification::Qualified, tokens);
+    emit_columns::<D>(columns, Qualification::Unqualified, tokens);
 }
 
 pub(crate) fn emit_placeholders<'a>(columns: &Vec<ColumnRef<'a>>, tokens: &mut SqlTokens<'a>) {
