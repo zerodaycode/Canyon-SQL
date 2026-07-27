@@ -21,7 +21,7 @@ impl<'a> SqlEmitter<'a, InsertAst<'a>> for SqlServerEmitter {
     const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = &[
         insert::__impl::emit_insert_into_keywords,
         |_ast, base_ast, tokens| helpers::emit_table::<Self::Dialect>(base_ast.table(), tokens),
-        |ast, _base_ast, tokens| helpers::emit_columns::<Self::Dialect>(&ast.columns, tokens),
+        |ast, _base_ast, tokens| helpers::emit_unqualified_columns::<Self::Dialect>(&ast.columns, tokens),
         |ast, base_ast, tokens| __impl::emit_output::<Self::Dialect>(ast, base_ast, tokens),
         |ast, base_ast, tokens| insert::__impl::emit_values(ast, base_ast, tokens),
     ];

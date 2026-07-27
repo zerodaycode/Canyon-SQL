@@ -8,10 +8,9 @@ macro_rules! insert_default_plan {
                     tokens,
                 )
             },
-            |ast, base_ast, tokens| {
-                $crate::query::querybuilder::syntax::emitter::types::insert::__impl::emit_from_table::<$dialect>(
-                    ast,
-                    base_ast,
+            |_ast, base_ast, tokens| {
+                $crate::query::querybuilder::syntax::emitter::types::helpers::emit_table::<$dialect>(
+                    base_ast.table(),
                     tokens,
                 )
             },
@@ -57,20 +56,14 @@ pub(crate) mod __impl {
         tokens.keyword(Keyword::Into);
     }
 
-    pub(crate) fn emit_from_table<'a, D: SqlDialect>(
-        _ast: &InsertAst<'a>,
-        base_ast: &mut BaseAst<'a>,
-        tokens: &mut SqlTokens<'a>,
-    ) {
-        helpers::emit_from_table::<D>(base_ast.table(), tokens);
-    }
-
     pub(crate) fn emit_columns<'a, D: SqlDialect>(
         ast: &InsertAst<'a>,
         _base_ast: &mut BaseAst<'a>,
         tokens: &mut SqlTokens<'a>,
     ) {
-        helpers::emit_columns::<D>(&ast.columns, tokens);
+        tokens.symbol(Symbol::LParen);
+        helpers::emit_unqualified_columns::<D>(&ast.columns, tokens);
+        tokens.symbol(Symbol::RParen);
     }
 
     pub(crate) fn emit_values<'a>(
@@ -93,7 +86,7 @@ pub(crate) mod __impl {
             return;
         }
         tokens.keyword(Keyword::Returning);
-        helpers::emit_columns::<D>(&ast.returning_columns, tokens)
+        helpers::emit_unqualified_columns::<D>(&ast.returning_columns, tokens)
     }
 }
 

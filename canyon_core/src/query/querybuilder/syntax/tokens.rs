@@ -4,9 +4,18 @@ pub(crate) use crate::query::{
     querybuilder::syntax::{keyword::Keyword, symbol::Symbol, tokens::SqlToken::Number},
 };
 use std::borrow::Cow;
+use crate::query::querybuilder::syntax::emitter::types::helpers;
 
 pub trait ToSqlTokens<'a, D: SqlDialect> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a;
+}
+
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for Cow<'a, str> {
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
+        let mut tokens = SqlTokens::with_capacity(1);
+        helpers::push_quoted_ident::<D, Cow<'a, str>>(self.clone(), &mut tokens);
+        tokens
+    }
 }
 
 /// 'newtype' (strong type) for the SqlToken container

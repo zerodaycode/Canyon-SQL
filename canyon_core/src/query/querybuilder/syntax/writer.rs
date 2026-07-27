@@ -172,9 +172,7 @@ mod __detail {
 mod mssql_tests {
     use crate::query::ColumnRef;
     use crate::query::querybuilder::syntax::dialect::{MsSql, SqlDialect};
-    use crate::query::querybuilder::syntax::emitter::types::helpers::{
-        emit_columns, push_quoted_ident,
-    };
+    use crate::query::querybuilder::syntax::emitter::types::helpers::{emit_qualified_columns, push_quoted_ident};
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens};
     use std::borrow::Cow;
@@ -213,7 +211,7 @@ mod mssql_tests {
     fn emit_columns_with_mssql_emits_balanced_brackets_for_every_identifier() {
         let columns = get_columns_mock();
         let mut tokens = SqlTokens::default();
-        emit_columns::<MsSql>(&columns, &mut tokens);
+        emit_qualified_columns::<MsSql>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),

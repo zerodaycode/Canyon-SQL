@@ -3,8 +3,8 @@ use proc_macro2::TokenStream;
 use quote::quote;
 
 pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
-    let insert_method_ops = generate_insert_method_tokens(macro_data, &table_schema_data);
-    let insert_entity_ops = generate_insert_entity_function_tokens(macro_data, &table_schema_data);
+    let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
+    let insert_entity_ops = generate_insert_entity_function_tokens(macro_data, table_schema_data);
     // let multi_insert_tokens = generate_multiple_insert_tokens(macro_data, table_schema_data);
 
     quote! {
@@ -34,8 +34,7 @@ pub fn generate_insert_method_tokens(
     let insert_with_body;
     let insert_values;
 
-    let is_mapper_ty_present = macro_data.retrieve_mapping_target_type().is_some();
-    if is_mapper_ty_present {
+    if macro_data.retrieve_mapping_target_type().is_some() {
         let raised_err = __details::generate_unsupported_operation_err();
         insert_body = raised_err.clone(); // TODO: Can't we do it better?
         insert_with_body = raised_err;

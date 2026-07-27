@@ -1,15 +1,3 @@
-/// Blanket implementation of `SqlEmitter` for `SelectAst`.
-/// This implementation provides a default plan for emitting SQL statements for
-/// `SelectAst` nodes, since all the Canyon queries for now emit `SelectAst` nodes in the same way,
-/// regardless of the backend dialect.
-// impl<'a, T> SqlEmitter<'a, SelectAst<'a>> for T
-//     where
-//           T: SqlEmitter<'a, SelectAst<'a>>, {
-//     type Dialect = <T as SqlEmitter<'a, SelectAst<'a>>>::Dialect;
-//
-//     const PLAN: &'a [EmitStep<'a, SelectAst<'a>>] = select_default_plan!(Self::Dialect);
-// }
-
 macro_rules! select_default_plan {
     ($dialect:ty) => {
         &[
@@ -83,7 +71,7 @@ pub(crate) mod __impl {
             tokens.keyword(Keyword::Count);
             tokens.symbol(Symbol::LParen);
         }
-        helpers::emit_columns::<D>(&ast.columns, tokens);
+        helpers::emit_qualified_columns::<D>(&ast.columns, tokens);
         if is_count_query {
             tokens.symbol(Symbol::RParen);
         }
@@ -127,7 +115,7 @@ pub(crate) mod __impl {
     ) {
         if let Some(group_by) = &ast.group_by {
             tokens.keyword(Keyword::GroupBy);
-            helpers::emit_columns::<D>(group_by, tokens);
+            helpers::emit_qualified_columns::<D>(group_by, tokens);
         }
     }
 
