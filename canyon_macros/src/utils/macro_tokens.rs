@@ -81,12 +81,6 @@ impl<'a> MacroTokens<'a> {
             .collect::<Vec<_>>()
     }
 
-    /// Gives a Vec of Ident with the fields of a Struct
-    pub fn get_struct_fields(&self) -> impl Iterator<Item = Ident> {
-        self.fields
-            .iter()
-            .map(|field| field.ident.as_ref().unwrap().clone())
-    }
     pub fn get_struct_fields_as_table_column_pairs(&self) -> Vec<(String, String)> {
         let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
 
@@ -99,7 +93,7 @@ impl<'a> MacroTokens<'a> {
             .collect()
     }
 
-    pub fn get_columns_pk_parsed(&self) -> impl Iterator<Item = &Field> {
+    pub fn get_columns_skipping_pk(&self) -> impl Iterator<Item = &Field> {
         let primary_key = self.primary_key_attribute.as_ref().map(|pk| &pk.ident);
 
         self.fields.iter().filter(move |field| {
@@ -111,13 +105,10 @@ impl<'a> MacroTokens<'a> {
         })
     }
 
-    pub fn get_struct_fields_as_table_column_pairs_pk_parsed(
-        &self,
-    ) -> Vec<(String, String)> {
-        let table_name =
-            default_database_table_name_from_entity_name(&self.ty.to_string());
+    pub fn get_struct_fields_as_table_column_pairs_skipping_pk(&self) -> Vec<(String, String)> {
+        let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
 
-        self.get_columns_pk_parsed()
+        self.get_columns_skipping_pk()
             .map(|field| {
                 let column_name = field
                     .ident
@@ -132,8 +123,8 @@ impl<'a> MacroTokens<'a> {
 
     /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
     /// the field which is annotated with #[primary_key]
-    pub fn get_fields_idents_pk_parsed(&self) -> impl Iterator<Item = &Ident> {
-        self.get_columns_pk_parsed()
+    pub fn get_fields_idents_skipping_pk(&self) -> impl Iterator<Item = &Ident> {
+        self.get_columns_skipping_pk()
             .map(|field| field.ident.as_ref().unwrap())
     }
 
@@ -147,14 +138,14 @@ impl<'a> MacroTokens<'a> {
     /// to the same behaviour.
     ///
     /// Returns every field if there's no PK, or if it's present but autoincremental = false
-    pub fn get_column_names_pk_parsed(&self) -> impl Iterator<Item = String> {
-        self.get_columns_pk_parsed()
+    pub fn get_column_names_skipping_pk(&self) -> impl Iterator<Item = String> {
+        self.get_columns_skipping_pk()
             .map(|c| format!("\"{}\"", c.ident.as_ref().unwrap()))
     }
 
     /// Retrieves the fields of the Struct as continuous String, comma separated
     pub fn get_struct_fields_as_comma_sep_string(&self) -> String {
-        self.get_column_names_pk_parsed()
+        self.get_column_names_skipping_pk()
             .collect::<Vec<String>>()
             .join(", ")
     }

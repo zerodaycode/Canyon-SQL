@@ -38,17 +38,7 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &s
 
         let pk_name = &primary_key.name;
 
-        let update_values = macro_data
-            .get_fields_idents_pk_parsed()
-            .map(|ident| {
-                quote! {
-                    &self.#ident as &dyn canyon_sql::query::QueryParameter
-                }
-            })
-            .chain(std::iter::once(quote! {
-                &self.#pk as &dyn canyon_sql::query::QueryParameter
-            }))
-            .collect::<Vec<_>>();
+        let update_values = __details::generate_update_values(macro_data, &pk);
 
         let query = quote! {
                 canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
@@ -160,6 +150,7 @@ fn generate_update_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
 mod __details {
     use super::*;
     use crate::utils::primary_key_attribute::PrimaryKeyAttribute;
+    use proc_macro2::Ident;
 
     pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
@@ -226,7 +217,7 @@ mod __details {
         macro_data: &MacroTokens,
         primary_key_attribute: &PrimaryKeyAttribute,
     ) -> TokenStream {
-        let fields = macro_data.get_fields_idents_pk_parsed();
+        let fields = macro_data.get_fields_idents_skipping_pk();
 
         let update_columns_and_values = fields.map(|ident| {
             let column_name = ident.to_string();
@@ -246,6 +237,20 @@ mod __details {
                     )
                     .build()?;
         }
+    }
+
+    pub(crate) fn generate_update_values(macro_data: &MacroTokens, pk: &Ident) -> Vec<TokenStream> {
+        macro_data
+            .get_fields_idents_skipping_pk()
+            .map(|ident| {
+                quote! {
+                    &self.#ident as &dyn canyon_sql::query::QueryParameter
+                }
+            })
+            .chain(std::iter::once(quote! {
+                &self.#pk as &dyn canyon_sql::query::QueryParameter
+            }))
+            .collect::<Vec<_>>()
     }
 }
 

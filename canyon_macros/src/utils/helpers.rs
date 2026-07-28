@@ -28,20 +28,28 @@ impl ToTokens for ReturnTypeTokens {
         tokens.extend(expanded);
     }
 }
-// 
+//
 // pub(crate) fn to_table_metadata_public_type(table_metadata: &str) -> TokenStream {
-// 
+//
 // }
 
 pub(crate) fn get_struct_fields_as_column_ref_token_stream(
     macro_tokens: &MacroTokens,
+    skip_primary_key: bool
 ) -> TokenStream {
-    let struct_fields = macro_tokens.get_struct_fields_as_table_column_pairs();
+    let struct_fields = if skip_primary_key {
+        macro_tokens.get_struct_fields_as_table_column_pairs_skipping_pk()
+    } else {
+        macro_tokens.get_struct_fields_as_table_column_pairs()
+    };
     get_fields_as_iterable_of_column_refs(struct_fields)
 }
 
-pub(crate) fn get_struct_fields_as_table_column_pairs_pk_parsed(macro_tokens: &MacroTokens) -> Vec<TokenStream> {
-    let struct_fields_without_pk = macro_tokens.get_struct_fields_as_table_column_pairs_pk_parsed();
+pub(crate) fn get_struct_fields_as_table_column_pairs_pk_parsed(
+    macro_tokens: &MacroTokens,
+) -> Vec<TokenStream> {
+    let struct_fields_without_pk =
+        macro_tokens.get_struct_fields_as_table_column_pairs_skipping_pk();
     get_fields_as_vec_of_column_refs(struct_fields_without_pk)
 }
 
@@ -60,7 +68,9 @@ pub(crate) fn get_fields_as_iterable_of_column_refs(
     }
 }
 
-pub(crate) fn get_fields_as_vec_of_column_refs(struct_fields: Vec<(String, String)>) -> Vec<TokenStream> {
+pub(crate) fn get_fields_as_vec_of_column_refs(
+    struct_fields: Vec<(String, String)>,
+) -> Vec<TokenStream> {
     struct_fields
         .iter()
         .map(|(table, column)| {

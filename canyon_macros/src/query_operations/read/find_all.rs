@@ -8,7 +8,7 @@ pub fn generate_find_all_operations_tokens<'a>(
     table_schema_data: &'a str,
     macro_data: &MacroTokens,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
-    let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data);
+    let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);
     let find_all = create_find_all_macro(mapper_ty, table_schema_data, &columns)?;
     let find_all_with = create_find_all_with_macro(mapper_ty, table_schema_data, &columns)?;
 

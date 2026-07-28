@@ -42,6 +42,8 @@ pub(crate) use update_default_plan;
 
 pub(crate) mod __impl {
     use crate::query::ColumnRef;
+    use crate::query::querybuilder::syntax::column::Qualification;
+    use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, update::UpdateAst},
@@ -49,8 +51,6 @@ pub(crate) mod __impl {
         keyword::Keyword,
         tokens::{SqlTokens, ToSqlTokens},
     };
-    use crate::query::querybuilder::syntax::column::Qualification;
-    use crate::query::querybuilder::syntax::emitter::types::helpers;
 
     pub(crate) fn emit_update_keyword<'a>(
         _ast: &UpdateAst<'a>,
