@@ -49,6 +49,8 @@ pub(crate) mod __impl {
         keyword::Keyword,
         tokens::{SqlTokens, ToSqlTokens},
     };
+    use crate::query::querybuilder::syntax::column::Qualification;
+    use crate::query::querybuilder::syntax::emitter::types::helpers;
 
     pub(crate) fn emit_update_keyword<'a>(
         _ast: &UpdateAst<'a>,
@@ -75,7 +77,7 @@ pub(crate) mod __impl {
             if i > 0 {
                 tokens.symbol(Symbol::Comma);
             }
-            tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(col));
+            col.emit::<D>(Qualification::Unqualified, tokens);
             tokens.symbol(Symbol::Equals);
             tokens.placeholder();
         }

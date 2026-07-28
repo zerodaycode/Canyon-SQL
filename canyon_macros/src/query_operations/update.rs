@@ -33,7 +33,7 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &s
         let ty = macro_data.ty;
         let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
-        let update_columns = helpers::get_fields_as_vec_of_column_refs(macro_data);
+        let update_columns = helpers::get_struct_fields_as_table_column_pairs_pk_parsed(macro_data);
         let pk = primary_key.ident;
 
         let pk_name = &primary_key.name;

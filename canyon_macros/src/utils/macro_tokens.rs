@@ -111,6 +111,25 @@ impl<'a> MacroTokens<'a> {
         })
     }
 
+    pub fn get_struct_fields_as_table_column_pairs_pk_parsed(
+        &self,
+    ) -> Vec<(String, String)> {
+        let table_name =
+            default_database_table_name_from_entity_name(&self.ty.to_string());
+
+        self.get_columns_pk_parsed()
+            .map(|field| {
+                let column_name = field
+                    .ident
+                    .as_ref()
+                    .expect("Struct fields must be named")
+                    .to_string();
+
+                (table_name.clone(), column_name)
+            })
+            .collect()
+    }
+
     /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
     /// the field which is annotated with #[primary_key]
     pub fn get_fields_idents_pk_parsed(&self) -> impl Iterator<Item = &Ident> {

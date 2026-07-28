@@ -339,7 +339,7 @@ fn test_crud_update_with_querybuilder_with_mysql() {
 
     assert_eq!(
         update_query.sql(),
-        "UPDATE `player` SET `player`.`summoner_name` = ?, `player`.`first_name` = ? WHERE `player`.`id` > ? AND `player`.`id` < ?;"
+        "UPDATE `player` SET `summoner_name` = ?, `first_name` = ? WHERE `player`.`id` > ? AND `player`.`id` < ?;"
     );
 
     update_query
