@@ -1,10 +1,14 @@
-use crate::query_operations::delete::generate_delete_tokens;
-use crate::query_operations::insert::generate_insert_tokens;
-use crate::query_operations::read::foreign_key::generate_find_by_fk_ops;
-use crate::query_operations::read::generate_read_operations_tokens;
-use crate::query_operations::update::generate_update_tokens;
-use crate::utils::helpers::compute_crud_ops_mapping_target_type_with_generics;
-use crate::utils::macro_tokens::MacroTokens;
+use crate::{
+    query_operations::{
+        delete::generate_delete_tokens,
+        insert::generate_insert_tokens,
+        read::{foreign_key::generate_find_by_fk_ops, generate_read_operations_tokens},
+        update::generate_update_tokens,
+    },
+    utils::{
+        helpers::compute_crud_ops_mapping_target_type_with_generics, macro_tokens::MacroTokens,
+    },
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 

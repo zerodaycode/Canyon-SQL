@@ -1,7 +1,10 @@
-use crate::query_operations::update::entity::generate_update_entity_tokens;
-use crate::query_operations::update::method::generate_update_method_tokens;
-use crate::query_operations::update::querybuilder::generate_update_querybuilder_tokens;
-use crate::utils::macro_tokens::MacroTokens;
+use crate::{
+    query_operations::update::{
+        entity::generate_update_entity_tokens, method::generate_update_method_tokens,
+        querybuilder::generate_update_querybuilder_tokens,
+    },
+    utils::macro_tokens::MacroTokens,
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 
