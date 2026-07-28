@@ -172,7 +172,9 @@ mod __detail {
 mod mssql_tests {
     use crate::query::ColumnRef;
     use crate::query::querybuilder::syntax::dialect::{MsSql, SqlDialect};
-    use crate::query::querybuilder::syntax::emitter::types::helpers::{emit_qualified_columns, push_quoted_ident};
+    use crate::query::querybuilder::syntax::emitter::types::helpers::{
+        emit_qualified_columns, push_quoted_ident,
+    };
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens};
     use std::borrow::Cow;

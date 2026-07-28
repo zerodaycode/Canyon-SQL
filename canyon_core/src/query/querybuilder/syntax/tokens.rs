@@ -1,10 +1,10 @@
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
+use crate::query::querybuilder::syntax::emitter::types::helpers;
 pub(crate) use crate::query::{
     operators::Operator,
     querybuilder::syntax::{keyword::Keyword, symbol::Symbol, tokens::SqlToken::Number},
 };
 use std::borrow::Cow;
-use crate::query::querybuilder::syntax::emitter::types::helpers;
 
 pub trait ToSqlTokens<'a, D: SqlDialect> {
     fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a;

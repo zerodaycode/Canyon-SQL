@@ -51,6 +51,18 @@ pub(crate) fn get_fields_as_iterable_of_column_refs(
     }
 }
 
+pub(crate) fn get_fields_as_vec_of_column_refs(macro_tokens: &MacroTokens) -> Vec<TokenStream> {
+    let struct_fields = macro_tokens.get_struct_fields_as_table_column_pairs();
+    struct_fields
+        .iter()
+        .map(|(table, column)| {
+            quote! {
+                canyon_sql::query::ColumnRef::new(#table, #column)
+            }
+        })
+        .collect::<Vec<_>>()
+}
+
 /// Given the derived type of CrudOperations, and the possible mapping type if the `#[canyon_crud(maps_to=<Ident>]` exists,
 /// returns a [`TokenStream`] with the final `RowMapper` implementor.
 pub fn compute_crud_ops_mapping_target_type_with_generics(

@@ -70,7 +70,8 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
         } = self;
 
         let sql = __detail::sql(database_type, &ast, &mut base_ast)?;
-        #[cfg(feature = "dev-mode")] __dbg::log_sql(&sql, database_type, ast.query_kind());
+        #[cfg(feature = "dev-mode")]
+        __dbg::log_sql(&sql, database_type, ast.query_kind());
         Ok(Query::new(sql, params))
     }
 
@@ -355,8 +356,6 @@ mod __dbg {
     use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
     pub(crate) fn log_sql(sql: &str, database_type: DatabaseType, query_kind: QueryKind) {
-        eprintln!(
-            "[Canyon-SQL] [{database_type:?}] [{query_kind:?}]\n\t{sql}"
-        );
+        eprintln!("[Canyon-SQL] [{database_type:?}] [{query_kind:?}]\n\t{sql}");
     }
 }

@@ -1,8 +1,8 @@
 use crate::query::bounds::FieldIdentifier;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
+use crate::query::querybuilder::syntax::emitter::types::helpers;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
-use crate::query::querybuilder::syntax::emitter::types::helpers;
 
 /// Whether a column reference is qualified with a table name or not, meaning that will be emitted as `table.column` or just `column`.
 #[derive(Copy, Clone)]
@@ -11,8 +11,7 @@ pub(crate) enum Qualification {
     Unqualified,
 }
 
-#[derive(Default)]
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct ColumnRef<'a> {
     pub table: Option<Cow<'a, str>>,
     pub column: Cow<'a, str>,
@@ -86,14 +85,12 @@ impl<'a> ColumnRef<'a> {
     ) {
         match qualification {
             Qualification::Qualified => {
-                tokens.extend(
-                    <ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(self),
-                );
+                tokens.extend(<ColumnRef<'_> as ToSqlTokens<'_, D>>::to_tokens(self));
             }
             Qualification::Unqualified => {
-                tokens.extend(
-                    <Cow<'_, str> as ToSqlTokens<'_, D>>::to_tokens(&self.column),
-                );
+                tokens.extend(<Cow<'_, str> as ToSqlTokens<'_, D>>::to_tokens(
+                    &self.column,
+                ));
             }
         }
     }

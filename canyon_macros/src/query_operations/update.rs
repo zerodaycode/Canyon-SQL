@@ -1,4 +1,5 @@
 use crate::query_operations::consts;
+use crate::utils::helpers;
 use crate::utils::macro_tokens::MacroTokens;
 use crate::utils::primary_key_attribute::PrimaryKeyIndex;
 use proc_macro2::TokenStream;
@@ -28,58 +29,63 @@ fn generate_update_method_tokens(macro_data: &MacroTokens, table_schema_data: &s
 
     let mut update_ops_tokens = TokenStream::new();
 
-    let ty = macro_data.ty;
-
     if let Some(primary_key) = macro_data.get_primary_key_field_annotation() {
+        let ty = macro_data.ty;
         let (_, ty_generics, _) = macro_data.generics.split_for_impl();
-        let update_columns = macro_data.get_column_names_pk_parsed();
-        let fields = macro_data.get_struct_fields();
 
-        let mut vec_columns_values: Vec<String> = Vec::new();
-        for (i, column_name) in update_columns.enumerate() {
-            let column_equal_value = format!("{} = ${}", column_name, i + 2);
-            vec_columns_values.push(column_equal_value)
-        }
-
-        let str_columns_values = vec_columns_values.join(", ");
-
-        let update_values = fields.map(|ident| {
-            quote! { &self.#ident }
-        });
+        let update_columns = helpers::get_fields_as_vec_of_column_refs(macro_data);
+        let pk = primary_key.ident;
 
         let pk_name = &primary_key.name;
-        let pk_index = <PrimaryKeyIndex as Into<usize>>::into(primary_key.index) + 1usize;
-        let stmt = quote! {&format!(
-            "UPDATE {} SET {} WHERE {} = ${}",
-            #table_schema_data, #str_columns_values, #pk_name, #pk_index
-        )};
-        let update_values = quote! {
-            &[#(#update_values),*]
+
+        let update_values = macro_data
+            .get_fields_idents_pk_parsed()
+            .map(|ident| {
+                quote! {
+                    &self.#ident as &dyn canyon_sql::query::QueryParameter
+                }
+            })
+            .chain(std::iter::once(quote! {
+                &self.#pk as &dyn canyon_sql::query::QueryParameter
+            }))
+            .collect::<Vec<_>>();
+
+        let query = quote! {
+                canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
+                    #table_schema_data, // TODO: construct a const value
+                    db_type,
+                )
+                    .set(vec![#(#update_columns),*])?
+                    .r#where(
+                        #pk_name,
+                        canyon_sql::query::operators::Operator::Eq,
+                    )
+                    .build()?;
         };
 
         update_ops_tokens.extend(quote! {
             #update_signature {
-                let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
-                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(#stmt, update_values, "").await
+                use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
+
+                let default_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
+                let db_type = default_conn.get_database_type()?;
+
+                let query = #query;
+                let update_values: &[&dyn canyon_sql::query::QueryParameter] = &[#(#update_values),*];
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(query.as_ref(), update_values, default_conn).await
             }
             #update_with_signature {
-                let update_values: &[&dyn canyon_sql::query::QueryParameter] = #update_values;
-                input.execute(#stmt, update_values).await
+                use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
+                let db_type = input.get_database_type()?;
+                let query = #query;
+                let update_values: &[&dyn canyon_sql::query::QueryParameter] = &[#(#update_values),*];
+                input.execute(query.as_ref(), update_values).await
             }
         });
     } else {
         // If there's no primary key, update method over self won't be available.
         // Use instead the update associated function of the querybuilder
-        let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE;
-        let no_pk_err = quote! {
-            Err(
-                std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    #err_msg
-                ).into_inner().unwrap()
-            )
-        }; // TODO: waiting for creating our custom error types
-
+        let no_pk_err = __err::invalid_method_call_without_pk_present();
         update_ops_tokens.extend(quote! {
             #update_signature { #no_pk_err }
             #update_with_signature{ #no_pk_err }
@@ -153,10 +159,11 @@ fn generate_update_querybuilder_tokens(table_schema_data: &str) -> TokenStream {
 
 mod __details {
     use super::*;
+    use crate::utils::primary_key_attribute::PrimaryKeyAttribute;
 
     pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
-        let no_pk_err = generate_no_pk_error();
+        let no_pk_err = __err::generate_no_pk_error();
 
         quote! {
             if let Some(primary_key) = entity.primary_key() {
@@ -174,7 +181,7 @@ mod __details {
 
     pub(crate) fn generate_update_entity_with_body(table_schema_data: &str) -> TokenStream {
         let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
-        let no_pk_err = generate_no_pk_error();
+        let no_pk_err = __err::generate_no_pk_error();
 
         quote! {
             if let Some(primary_key) = entity.primary_key() {
@@ -214,6 +221,39 @@ mod __details {
         }
     }
 
+    pub(crate) fn generate_update_stmt(
+        table_schema_data: &str,
+        macro_data: &MacroTokens,
+        primary_key_attribute: &PrimaryKeyAttribute,
+    ) -> TokenStream {
+        let fields = macro_data.get_fields_idents_pk_parsed();
+
+        let update_columns_and_values = fields.map(|ident| {
+            let column_name = ident.to_string();
+            quote! { (#column_name, &self.#ident) }
+        });
+
+        quote! {
+            let stmt =
+                canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
+                    #table_schema_data,
+                    db_conn.get_database_type()?,
+                )
+                    .set(&[#(#update_columns_and_values),*])?
+                    .r#where(
+                        primary_key_column,
+                        Operator::Eq,
+                    )
+                    .build()?;
+        }
+    }
+}
+
+mod __err {
+    use crate::query_operations::consts;
+    use proc_macro2::TokenStream;
+    use quote::quote;
+
     pub(crate) fn generate_no_pk_error() -> TokenStream {
         let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE;
         quote! {
@@ -224,6 +264,18 @@ mod __details {
                 ).into_inner().unwrap()
             );
         }
+    }
+
+    pub(crate) fn invalid_method_call_without_pk_present() -> TokenStream {
+        let err_msg = consts::UNAVAILABLE_CRUD_OP_ON_INSTANCE;
+        quote! {
+            Err(
+                std::io::Error::new(
+                    std::io::ErrorKind::Unsupported,
+                    #err_msg
+                ).into_inner().unwrap()
+            )
+        } // TODO: waiting for creating our custom error types
     }
 }
 
