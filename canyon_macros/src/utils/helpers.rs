@@ -35,7 +35,7 @@ impl ToTokens for ReturnTypeTokens {
 
 pub(crate) fn get_struct_fields_as_column_ref_token_stream(
     macro_tokens: &MacroTokens,
-    skip_primary_key: bool
+    skip_primary_key: bool,
 ) -> TokenStream {
     let struct_fields = if skip_primary_key {
         macro_tokens.get_struct_fields_as_table_column_pairs_skipping_pk()

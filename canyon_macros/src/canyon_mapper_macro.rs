@@ -267,7 +267,8 @@ mod __details {
             let fields_values = get_fields_values_expr_tokens(&fields);
             let fields_names = get_fields_names_expr_tokens(&fields);
 
-            let fields_as_column_refs = helpers::get_struct_fields_as_column_ref_token_stream(ast, true);
+            let fields_as_column_refs =
+                helpers::get_struct_fields_as_column_ref_token_stream(ast, true);
             let queries_placeholders = ast.placeholders_generator();
 
             let pk_opt_val = get_pk_ident_as_str(ast);
