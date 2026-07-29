@@ -51,7 +51,6 @@ impl SqlDialect for MySql {
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Backtick;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::QuestionMark;
     const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Char;
-    const SUPPORTS_RETURNING: bool = false;
 }
 
 /// Identifier quoting strategy for a SQL dialect.

@@ -22,7 +22,7 @@ impl<'a> SqlEmitter<'a, InsertAst<'a>> for SqlServerEmitter {
         insert::__impl::emit_insert_into_keywords,
         |_ast, base_ast, tokens| helpers::emit_table::<Self::Dialect>(base_ast.table(), tokens),
         |ast, _base_ast, tokens| {
-            helpers::emit_unqualified_columns::<Self::Dialect>(&ast.columns, tokens)
+            __impl::emit_unqualified_columns::<Self::Dialect>(&ast.columns, tokens)
         },
         |ast, base_ast, tokens| __impl::emit_output::<Self::Dialect>(ast, base_ast, tokens),
         |ast, base_ast, tokens| insert::__impl::emit_values(ast, base_ast, tokens),
@@ -41,6 +41,7 @@ impl<'a> SqlEmitter<'a, DeleteAst> for SqlServerEmitter {
 }
 
 mod __impl {
+    use crate::query::ColumnRef;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, insert::InsertAst},
@@ -48,6 +49,18 @@ mod __impl {
         keyword::Keyword,
         tokens::SqlTokens,
     };
+    use crate::query::querybuilder::syntax::column::Qualification;
+    use crate::query::querybuilder::syntax::symbol::Symbol;
+    use crate::query::querybuilder::syntax::symbol::Symbol::LParen;
+
+    pub(crate) fn emit_unqualified_columns<'a, D: SqlDialect>(
+        columns: &[ColumnRef<'a>],
+        tokens: &mut SqlTokens<'a>,
+    ) {
+        tokens.symbol(LParen);
+        helpers::emit_columns::<D>(columns, Qualification::Unqualified, tokens);
+        tokens.symbol(Symbol::RParen);
+    }
 
     pub(super) fn emit_output<'a, D>(
         ast: &InsertAst<'a>,

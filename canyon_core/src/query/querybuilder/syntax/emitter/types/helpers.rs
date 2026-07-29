@@ -5,7 +5,7 @@ use crate::query::querybuilder::syntax::column::{ColumnRef, Qualification};
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
+use crate::query::querybuilder::syntax::symbol::Symbol::{Comma, LParen};
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
@@ -62,7 +62,7 @@ where
 }
 
 /// Helper function to emit a list of columns, separated by commas
-fn emit_columns<'a, D: SqlDialect>(
+pub(crate) fn emit_columns<'a, D: SqlDialect>(
     columns: &[ColumnRef<'a>],
     qualification: Qualification,
     tokens: &mut SqlTokens<'a>,
