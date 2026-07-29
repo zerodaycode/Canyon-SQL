@@ -62,7 +62,7 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
     });
 
     let entity_runtime_info_impl_tokens =
-        __details::EntityRuntimeInfo_macro::generate_EntityRuntimeInfo_impl_tokens(&ast);
+        __details::entity_runtime_info_macro::tokens(&ast);
     row_mapper_tokens.extend(quote! {
         #entity_runtime_info_impl_tokens
     });
@@ -249,12 +249,12 @@ mod mapper_macro_tests {
 
 mod __details {
     use super::*;
-    pub(crate) mod EntityRuntimeInfo_macro {
+    pub(crate) mod entity_runtime_info_macro {
         use super::*;
         use crate::utils::helpers;
         use syn::{Field, Fields};
 
-        pub(crate) fn generate_EntityRuntimeInfo_impl_tokens(ast: &MacroTokens) -> TokenStream {
+        pub(crate) fn tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
             let ty_str = ty.to_string();
             let pk = ast.get_primary_key_field_annotation();
@@ -269,7 +269,6 @@ mod __details {
 
             let fields_as_column_refs =
                 helpers::get_struct_fields_as_column_ref_token_stream(ast, true);
-            let queries_placeholders = ast.placeholders_generator();
 
             let pk_opt_val = get_pk_ident_as_str(ast);
             let pk_actual_value = get_pk_actual_value_expr_tokens(ast);
@@ -286,23 +285,15 @@ mod __details {
                         vec![#(#fields_values),*]
                     }
 
-                    fn fields_names(&self) -> &[&'static str] {
-                        &[#(#fields_names),*]
-                    }
-
                     fn fields_as_column_refs(&self) -> Vec<canyon_sql::query::ColumnRef<'static>> {
                         #fields_as_column_refs.collect()
-                    }
-
-                    fn queries_placeholders(&self) -> &'static str {
-                        #queries_placeholders
                     }
 
                     fn primary_key(&self) -> Option<&'static str> {
                         #pk_opt_val
                     }
 
-                    fn primary_key_st() -> Option<&'static str> {
+                    fn primary_key_name() -> Option<&'static str> {
                         #pk_opt_val
                     }
 

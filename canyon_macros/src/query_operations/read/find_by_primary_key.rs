@@ -69,7 +69,7 @@ fn generate_mapped_find_by_pk_operations(
         use canyon_sql::query::bounds::EntityRuntimeInfo;
 
         let primary_key =
-            <#entity_ty as EntityRuntimeInfo>::primary_key_st()
+            <#entity_ty as EntityRuntimeInfo>::primary_key_name()
                 .ok_or_else(|| "No primary key found for this entity")?;
 
         let stmt =

@@ -199,21 +199,6 @@ impl<'a> MacroTokens<'a> {
             .iter()
             .any(|field| helpers::field_has_target_attribute(field, "primary_key"))
     }
-
-    /// Returns a String ready to be inserted on the VALUES Sql clause
-    /// representing generic query parameters ($x).
-    ///
-    /// Already returns the correct number of placeholders, skipping one
-    /// entry in the type contains a `#[primary_key]`
-    pub fn placeholders_generator(&self) -> String {
-        let range_upper_bound = if self.type_has_primary_key() {
-            self.fields.len()
-        } else {
-            self.fields.len() + 1
-        };
-
-        helpers::placeholders_generator(range_upper_bound)
-    }
 }
 
 mod __details {

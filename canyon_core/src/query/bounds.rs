@@ -23,14 +23,10 @@ pub trait EntityRuntimeInfo<'a> {
     /// recommended to use it publicly as an end-user.
     fn fields_actual_values(&self) -> Vec<&dyn QueryParameter>;
 
-    /// Returns a linear collection with the names of every field for the implementor as a String
-    fn fields_names(&self) -> &[&'static str];
     fn fields_as_column_refs(&self) -> Vec<ColumnRef<'static>>;
 
-    fn queries_placeholders(&self) -> &'static str;
-
     fn primary_key(&self) -> Option<&'static str>;
-    fn primary_key_st() -> Option<&'static str>;
+    fn primary_key_name() -> Option<&'static str>;
     fn primary_key_actual_value(&self) -> &'_ (dyn QueryParameter + '_);
     fn set_primary_key_actual_value(
         &mut self,

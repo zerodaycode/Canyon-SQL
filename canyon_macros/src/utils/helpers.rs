@@ -102,18 +102,6 @@ pub fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
         .collect::<Vec<_>>()
 }
 
-pub fn placeholders_generator(num_values: usize) -> String {
-    let mut placeholders = String::new();
-    for (i, n) in (1..num_values).enumerate() {
-        if i > 0 {
-            placeholders.push_str(", ");
-        }
-        write!(placeholders, "${}", n).unwrap();
-    }
-
-    placeholders
-}
-
 pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool {
     field.attrs.iter().any(|attr| {
         attr.path()
