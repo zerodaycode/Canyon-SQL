@@ -35,18 +35,25 @@ mod __details {
     use crate::query_operations::update::__err;
     use proc_macro2::TokenStream;
     use quote::quote;
+    use crate::query_operations::consts;
+    use crate::query_operations::consts::generate_default_db_conn_tokens;
 
     pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
-        let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
+        let update_query = generate_update_query(table_schema_data);
+        let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
         let no_pk_err = __err::generate_no_pk_err();
 
         quote! {
             if let Some(primary_key) = entity.primary_key() {
-                #update_entity_core_logic
+                #default_db_conn_and_type_tokens
 
-                let default_db_conn = canyon_sql::core::Canyon::instance()?
-                    .get_default_connection()?;
-                let _ = default_db_conn.execute(&stmt, &update_values).await?;
+                let pk_actual_value = entity.primary_key_actual_value();
+                let mut update_values = entity.fields_actual_values();
+                update_values.push(pk_actual_value);
+
+                #update_query
+
+                let _ = default_db_conn.execute(query.as_ref(), &update_values).await?;
                 Ok(())
             } else {
                 #no_pk_err
@@ -55,14 +62,19 @@ mod __details {
     }
 
     pub(crate) fn generate_update_entity_with_body(table_schema_data: &str) -> TokenStream {
-        let update_entity_core_logic = generate_update_entity_pk_body_logic(table_schema_data);
+        let update_query = generate_update_query(table_schema_data);
         let no_pk_err = __err::generate_no_pk_err();
 
         quote! {
             if let Some(primary_key) = entity.primary_key() {
-                #update_entity_core_logic
+                let pk_actual_value = entity.primary_key_actual_value();
+                let mut update_values = entity.fields_actual_values();
+                update_values.push(pk_actual_value);
 
-                let _ = input.execute(&stmt, &update_values).await?;
+                let db_type = input.get_database_type()?;
+                #update_query
+
+                let _ = input.execute(query.as_ref(), &update_values).await?;
                 Ok(())
             } else {
                 #no_pk_err
@@ -70,29 +82,21 @@ mod __details {
         }
     }
 
-    fn generate_update_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
+    fn generate_update_query(table_schema_data: &str, ) -> TokenStream {
         quote! {
-            let pk_actual_value = entity.primary_key_actual_value();
-            let update_columns = entity.fields_names();
-            let update_values_pk_parsed = entity.fields_actual_values();
+            let update_columns = entity.fields_as_column_refs();
 
-            let mut vec_columns_values: Vec<String> = Vec::new();
-            for (i, column_name) in update_columns.to_vec().iter().enumerate() {
-                let column_equal_value = format!("{} = ${}", column_name, i + 2);
-                vec_columns_values.push(column_equal_value)
-            }
-            let col_vals_placeholders = vec_columns_values.join(", ");
-
-            // Efficiently build argument list: pk first, then values
-            let mut update_values: Vec<&dyn canyon_sql::query::QueryParameter> =
-                Vec::with_capacity(1 + update_values_pk_parsed.len());
-            update_values.push(pk_actual_value);
-            update_values.extend(update_values_pk_parsed);
-
-            let stmt = format!(
-                "UPDATE {} SET {} WHERE {:?} = $1",
-                #table_schema_data, col_vals_placeholders, primary_key
-            );
+            use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
+            let query = canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
+                #table_schema_data, // TODO: construct a const value
+                db_type,
+            )
+                .set(update_columns)?
+                .r#where(
+                    primary_key,
+                    canyon_sql::query::operators::Operator::Eq,
+                )
+                .build()?;
         }
     }
 }

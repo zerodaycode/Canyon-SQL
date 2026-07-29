@@ -30,6 +30,14 @@ pub(crate) fn generate_default_db_conn_tokens() -> TokenStream {
     }
 }
 
+pub(crate) fn generate_default_db_conn_and_type_tokens() -> TokenStream {
+    quote! {
+        let default_db_conn = canyon_sql::core::Canyon::instance()?
+            .get_default_connection()?;
+        let db_type = default_db_conn.get_database_type()?;
+    }
+}
+
 thread_local! {
     pub static USER_MOCK_TY: RefCell<Ident> = RefCell::new(Ident::new("User", Span::call_site()));
     pub static USER_MOCK_MAPPER_TY: RefCell<Ident> = RefCell::new(Ident::new("User", Span::call_site()));
