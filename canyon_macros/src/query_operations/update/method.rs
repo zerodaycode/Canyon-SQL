@@ -38,6 +38,7 @@ pub(crate) fn generate_update_method_tokens(
 mod __details {
     use super::*;
     use proc_macro2::Ident;
+    use crate::query_operations::consts;
 
     pub(crate) fn generate_update_method_tokens(
         macro_data: &MacroTokens,
@@ -48,17 +49,18 @@ mod __details {
         let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
         let update_signature = __signatures::get_update_signature();
+        let default_db_conn_and_type_tokens =
+            consts::generate_default_db_conn_and_type_tokens();
 
         quote! {
             #update_signature {
                 use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
 
-                let default_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                let db_type = default_conn.get_database_type()?;
+                #default_db_conn_and_type_tokens
 
                 let query = #query;
                 let update_values: &[&dyn canyon_sql::query::QueryParameter] = &[#(#update_values),*];
-                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(query.as_ref(), update_values, default_conn).await
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(query.as_ref(), update_values, default_db_conn).await
             }
         }
     }

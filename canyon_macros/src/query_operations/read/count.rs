@@ -1,6 +1,7 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::borrow::Cow;
+use crate::query_operations::consts;
 
 pub fn generate_count_operations_tokens<'a>(
     table_schema_data: &'a str,
@@ -27,13 +28,14 @@ pub fn create_count_macro(
     let mssql_arm = get_mssql_arm_tokens_if_enabled(false);
     let schema_tokens = get_schema_tokens(schema_name);
     let table_name = create_cow_borrowed_table_name(table_name);
+    let default_db_conn_and_type_tokens =
+        consts::generate_default_db_conn_and_type_tokens();
 
     Ok(quote! {
         async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
             use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
 
-            let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-            let db_type = default_db_conn.get_database_type()?;
+            #default_db_conn_and_type_tokens
 
             let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_from_parts(
                 #schema_tokens,

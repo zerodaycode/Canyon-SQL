@@ -41,6 +41,7 @@ mod __detail {
     };
     use proc_macro2::{Ident, TokenStream};
     use quote::quote;
+    use crate::query_operations::consts;
 
     pub(crate) fn generate_delete_stmt(
         table_schema_data: &str,
@@ -73,16 +74,17 @@ mod __detail {
         let (_, ty_generics, _) = macro_tokens.generics.split_for_impl();
 
         let delete_signature = __signatures::get_delete_signature();
+        let default_db_conn_and_type_tokens =
+            consts::generate_default_db_conn_and_type_tokens();
 
         quote! {
             #delete_signature {
                 use canyon_sql::query::querybuilder::{QueryBuilderOps, DeleteQueryBuilderOps};
 
-                let default_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-                let db_type = default_conn.get_database_type()?;
+                #default_db_conn_and_type_tokens
 
                 let query = #query;
-                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(query.as_ref(), &[#pk_field_value], default_conn).await?;
+                <#ty #ty_generics as canyon_sql::core::Transaction>::execute(query.as_ref(), &[#pk_field_value], default_db_conn).await?;
                 Ok(())
             }
         }

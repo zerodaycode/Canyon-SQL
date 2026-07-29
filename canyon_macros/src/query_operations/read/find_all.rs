@@ -2,6 +2,7 @@ use crate::utils::helpers;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use crate::query_operations::consts;
 
 pub fn generate_find_all_operations_tokens<'a>(
     mapper_ty: &Ident,
@@ -23,14 +24,17 @@ fn create_find_all_macro(
     table_schema_data: &str,
     columns: &TokenStream,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
+    let default_db_conn_and_type_tokens =
+        consts::generate_default_db_conn_and_type_tokens();
+
     Ok(quote! {
         async fn find_all()
             -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
         {
             use crate::canyon_sql::query::querybuilder::SelectQueryBuilderOps;
 
-            let default_db_conn = canyon_sql::core::Canyon::instance()?.get_default_connection()?;
-            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, default_db_conn.get_database_type()?)
+            #default_db_conn_and_type_tokens
+            let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, db_type)
                 .with_known_columns(#columns)
                 .build()?;
             default_db_conn.query(stmt.sql(), &[]).await
