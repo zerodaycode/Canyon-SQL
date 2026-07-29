@@ -268,12 +268,15 @@ fn test_crud_update_with_querybuilder() {
         .where_value(&LeagueFieldValue::id(1), Operator::Gt)
         .and(&LeagueFieldValue::id(8), Operator::Lt);
 
-    q.build()
-        .expect("Failed to update records with the querybuilder");
+    let q = q.build()
+        .expect("Failed to update records with the querybuilder")
+        .launch_default::<League>()
+        .await
+        .unwrap();
 
     let found_updated_values = League::select_query()?
         .where_value(&LeagueFieldValue::id(1), Operator::Gt)
-        .and(&LeagueFieldValue::id(7), Operator::Lt)
+        .and(&LeagueFieldValue::id(8), Operator::Lt)
         .build()
         .unwrap()
         .launch_default::<League>()
