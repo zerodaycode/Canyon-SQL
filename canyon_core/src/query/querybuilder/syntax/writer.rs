@@ -38,6 +38,7 @@ mod __impl {
         dialect::SqlDialect, symbol::Symbol, tokens::SqlToken, writer::__detail,
     };
     use std::fmt::Write;
+    use crate::query::querybuilder::syntax::keyword::Keyword;
 
     pub(crate) fn output_token_to_string_buffer<D: SqlDialect>(
         token: &SqlToken<'_>,
@@ -65,11 +66,27 @@ mod __impl {
             return false;
         };
 
-        if is_quoted_ident_boundary(previous, current) || suppresses_trailing_space(previous) {
+        if is_quoted_ident_boundary(previous, current)
+            || suppresses_trailing_space(previous)
+            || is_function_call_boundary(previous, current)
+        {
             return false;
         }
 
         wants_leading_space_after(previous, current)
+    }
+
+    fn is_function_call_boundary(
+        previous: &SqlToken<'_>,
+        current: &SqlToken<'_>,
+    ) -> bool {
+        matches!(
+            (previous, current),
+            (
+                SqlToken::Keyword(Keyword::Count),
+                SqlToken::Symbol(Symbol::LParen),
+            )
+        )
     }
 
     fn wants_leading_space_after(_previous: &SqlToken<'_>, current: &SqlToken<'_>) -> bool {

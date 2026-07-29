@@ -36,7 +36,6 @@ mod __details {
     use proc_macro2::TokenStream;
     use quote::quote;
     use crate::query_operations::consts;
-    use crate::query_operations::consts::generate_default_db_conn_tokens;
 
     pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
         let update_query = generate_update_query(table_schema_data);
