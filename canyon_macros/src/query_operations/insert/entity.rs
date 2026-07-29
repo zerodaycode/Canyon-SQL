@@ -10,7 +10,7 @@ pub fn generate_insert_entity_function_tokens(
         async fn insert_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt mut Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
+            + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon_lt>
             + Sync
             + 'canyon_lt
     };
@@ -20,7 +20,7 @@ pub fn generate_insert_entity_function_tokens(
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
+                + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon_lt>
                 + Sync
                 + 'canyon_lt,
             Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
@@ -58,7 +58,7 @@ pub fn generate_insert_entity_function_tokens(
                     .build()?;
 
                 let pk = db_conn
-                    .query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(stmt.sql(), &values)
+                    .query_one_for::<<Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::PrimaryKeyType>(stmt.sql(), &values)
                     .await?;
 
                 entity.set_primary_key_actual_value(pk)?;
@@ -80,7 +80,7 @@ pub fn generate_insert_entity_function_tokens(
                     .build()?;
 
                 let pk = db_conn
-                    .query_one_for::<<Entity as canyon_sql::query::bounds::Inspectionable>::PrimaryKeyType>(stmt.sql(), &values)
+                    .query_one_for::<<Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::PrimaryKeyType>(stmt.sql(), &values)
                     .await?;
 
                 entity.set_primary_key_actual_value(pk)?;

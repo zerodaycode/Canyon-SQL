@@ -6,7 +6,7 @@ pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStr
         async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable<'canyon>
+            + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon>
             + Sync
             + 'canyon
     };
@@ -16,7 +16,7 @@ pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStr
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable<'canyon>
+                + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon>
                 + Sync
                 + 'canyon,
             Input: canyon_sql::connection::DbConnection + Send + 'canyon

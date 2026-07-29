@@ -6,7 +6,7 @@ pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStr
         async fn update_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt Entity)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
+            + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon_lt>
             + Sync
             + 'canyon_lt
     };
@@ -16,7 +16,7 @@ pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStr
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::Inspectionable<'canyon_lt>
+                + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon_lt>
                 + Sync
                 + 'canyon_lt,
             Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt

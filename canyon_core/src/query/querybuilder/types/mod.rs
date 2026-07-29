@@ -71,7 +71,7 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
 
         let sql = __detail::sql(database_type, &ast, &mut base_ast)?;
         #[cfg(feature = "dev-mode")]
-        __dbg::log_sql(&sql, database_type, ast.query_kind());
+        __dbg::log_sql(&sql, database_type, ast.query_kind(), &params);
         Ok(Query::new(sql, params))
     }
 
@@ -353,9 +353,16 @@ mod __errors {
 #[cfg(feature = "dev-mode")]
 mod __dbg {
     use crate::connection::database_type::DatabaseType;
+    use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
-    pub(crate) fn log_sql(sql: &str, database_type: DatabaseType, query_kind: QueryKind) {
-        eprintln!("[Canyon-SQL] [{database_type:?}] [{query_kind:?}]\n\t{sql}");
+    pub(crate) fn log_sql<'a>(sql: &str, database_type: DatabaseType, query_kind: QueryKind, args: &[&dyn QueryParameter]) {
+        eprintln!("\
+        \n
+        ==========================================================
+        \
+        [Canyon-SQL] [{database_type:?}] [{query_kind:?}]\n\t{sql}\
+        Args: [{args:#?}]
+        ");
     }
 }

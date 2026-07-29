@@ -7,8 +7,7 @@ use crate::rows::FromSqlOwnedValue;
 /// Typically, these will be used by the macros to gather some information or to create some user code
 /// in more complex scenarios, like when insert an entity, when we need to know the value of the fields of
 /// the current instance that we'd like to insert
-pub trait Inspectionable<'a> {
-    // TODO: change name to entity runtime info EntityRuntimeInfo
+pub trait EntityRuntimeInfo<'a> {
     type PrimaryKeyType: FromSqlOwnedValue<Self::PrimaryKeyType>;
 
     /// Returns an allocated linear collection with the current values of all the fields declared

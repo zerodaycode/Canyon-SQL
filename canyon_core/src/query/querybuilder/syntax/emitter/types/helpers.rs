@@ -5,7 +5,7 @@ use crate::query::querybuilder::syntax::column::{ColumnRef, Qualification};
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::symbol::Symbol::{Comma, LParen};
+use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use crate::query::querybuilder::syntax::tokens::{SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
@@ -118,14 +118,6 @@ pub(crate) fn emit_query_conditions<'a, D: SqlDialect>(
 
 pub(crate) fn emit_table<'a, D: SqlDialect>(table: &TableMetadata<'a>, tokens: &mut SqlTokens<'a>) {
     tokens.extend(<TableMetadata<'_> as ToSqlTokens<'_, D>>::to_tokens(table));
-}
-
-pub(crate) fn emit_from_table<'a, D: SqlDialect>(
-    table: &TableMetadata<'a>,
-    tokens: &mut SqlTokens<'a>,
-) {
-    tokens.keyword(Keyword::From);
-    emit_table::<D>(table, tokens);
 }
 
 #[cfg(test)]

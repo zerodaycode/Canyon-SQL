@@ -41,15 +41,15 @@ macro_rules! update_default_plan {
 pub(crate) use update_default_plan;
 
 pub(crate) mod __impl {
-    use crate::query::ColumnRef;
+    
     use crate::query::querybuilder::syntax::column::Qualification;
-    use crate::query::querybuilder::syntax::emitter::types::helpers;
+    
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, update::UpdateAst},
         dialect::SqlDialect,
         keyword::Keyword,
-        tokens::{SqlTokens, ToSqlTokens},
+        tokens::SqlTokens,
     };
 
     pub(crate) fn emit_update_keyword<'a>(

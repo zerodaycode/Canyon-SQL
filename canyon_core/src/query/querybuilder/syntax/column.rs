@@ -1,6 +1,5 @@
 use crate::query::bounds::FieldIdentifier;
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
-use crate::query::querybuilder::syntax::emitter::types::helpers;
 use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
 use std::borrow::Cow;
 

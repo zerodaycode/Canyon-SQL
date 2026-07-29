@@ -61,10 +61,10 @@ pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         }
     });
 
-    let inspectionable_impl_tokens =
-        __details::inspectionable_macro::generate_inspectionable_impl_tokens(&ast);
+    let entity_runtime_info_impl_tokens =
+        __details::EntityRuntimeInfo_macro::generate_EntityRuntimeInfo_impl_tokens(&ast);
     row_mapper_tokens.extend(quote! {
-        #inspectionable_impl_tokens
+        #entity_runtime_info_impl_tokens
     });
 
     row_mapper_tokens
@@ -249,12 +249,12 @@ mod mapper_macro_tests {
 
 mod __details {
     use super::*;
-    pub(crate) mod inspectionable_macro {
+    pub(crate) mod EntityRuntimeInfo_macro {
         use super::*;
         use crate::utils::helpers;
         use syn::{Field, Fields};
 
-        pub(crate) fn generate_inspectionable_impl_tokens(ast: &MacroTokens) -> TokenStream {
+        pub(crate) fn generate_EntityRuntimeInfo_impl_tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
             let ty_str = ty.to_string();
             let pk = ast.get_primary_key_field_annotation();
@@ -278,7 +278,7 @@ mod __details {
             let pk_assoc_ty = generate_pk_associated_type_tokens(&pk_ty_ts);
 
             quote! {
-                impl #impl_generics canyon_sql::query::bounds::Inspectionable<'_> for #ty #ty_generics #where_clause {
+                impl #impl_generics canyon_sql::query::bounds::EntityRuntimeInfo<'_> for #ty #ty_generics #where_clause {
 
                     type PrimaryKeyType = #pk_assoc_ty;
 
