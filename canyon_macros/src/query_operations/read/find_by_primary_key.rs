@@ -9,81 +9,103 @@ pub fn generate_find_by_pk_operations_tokens(
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
     let ty = macro_data.ty;
     let mapping_target_ty = macro_data.retrieve_mapping_target_type().as_ref();
-    let result_ty = mapping_target_ty.unwrap_or(ty);
 
-    let columns =
-        helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);
-
-    let primary_key_resolution = match mapping_target_ty {
-        Some(entity_ty) => {
-            generate_inspectionable_primary_key_resolution(entity_ty)
-        }
+    let operations = match mapping_target_ty {
+        Some(entity_ty) => generate_mapped_find_by_pk_operations(
+            entity_ty,
+            table_schema_data,
+        ),
         None => {
             let Some(primary_key) = macro_data.get_primary_key_annotation() else {
-                return Ok(generate_unsupported_find_by_pk_operations(
-                    result_ty,
-                ));
+                return Ok(generate_unsupported_find_by_pk_operations(ty));
             };
 
-            generate_compile_time_primary_key_resolution(&primary_key)
+            let columns =
+                helpers::get_struct_fields_as_column_ref_token_stream(
+                    macro_data,
+                    false,
+                );
+
+            generate_entity_find_by_pk_operations(
+                ty,
+                table_schema_data,
+                &columns,
+                &primary_key,
+            )
         }
     };
 
-    let find_by_pk = generate_find_by_pk(
-        result_ty,
-        table_schema_data,
-        &columns,
-        &primary_key_resolution,
-    );
-
-    let find_by_pk_with = generate_find_by_pk_with(
-        result_ty,
-        table_schema_data,
-        &columns,
-        &primary_key_resolution,
-    );
-
-    Ok(quote! {
-        #find_by_pk
-        #find_by_pk_with
-    })
+    Ok(operations)
 }
 
-fn generate_compile_time_primary_key_resolution(
+fn generate_entity_find_by_pk_operations(
+    result_ty: &Ident,
+    table_schema_data: &str,
+    columns: &TokenStream,
     primary_key: &str,
 ) -> TokenStream {
-    quote! {
-        let primary_key = #primary_key;
-    }
+    let query = quote! {
+        let stmt =
+            canyon_sql::query::querybuilder::SelectQueryBuilder::new(
+                #table_schema_data,
+                db_type,
+            )
+            .with_known_columns(#columns)
+            .r#where(
+                #primary_key,
+                canyon_sql::query::operators::Operator::Eq,
+            )
+            .build()?;
+    };
+
+    generate_find_by_pk_methods(result_ty, query)
 }
 
-fn generate_inspectionable_primary_key_resolution(
+fn generate_mapped_find_by_pk_operations(
     entity_ty: &Ident,
+    table_schema_data: &str,
 ) -> TokenStream {
-    quote! {
+    let query = quote! {
         use canyon_sql::query::bounds::Inspectionable;
 
         let primary_key =
             <#entity_ty as Inspectionable>::primary_key_st()
                 .ok_or_else(|| "No primary key found for this entity")?;
+
+        let stmt =
+            canyon_sql::query::querybuilder::SelectQueryBuilder::new(
+                #table_schema_data,
+                db_type,
+            )
+            .r#where(
+                primary_key,
+                canyon_sql::query::operators::Operator::Eq,
+            )
+            .build()?;
+    };
+
+    generate_find_by_pk_methods(entity_ty, query)
+}
+
+fn generate_find_by_pk_methods(
+    result_ty: &Ident,
+    query: TokenStream,
+) -> TokenStream {
+    let find_by_pk = generate_find_by_pk(result_ty, &query);
+    let find_by_pk_with = generate_find_by_pk_with(result_ty, &query);
+
+    quote! {
+        #find_by_pk
+        #find_by_pk_with
     }
 }
 
 fn generate_find_by_pk(
     result_ty: &Ident,
-    table_schema_data: &str,
-    columns: &TokenStream,
-    primary_key_resolution: &TokenStream,
+    query: &TokenStream,
 ) -> TokenStream {
     let default_db_conn_call =
         consts::generate_default_db_conn_tokens();
-
-    let query = generate_find_by_pk_query(
-        quote! { default_db_conn },
-        table_schema_data,
-        columns,
-        primary_key_resolution,
-    );
 
     quote! {
         async fn find_by_pk<'canyon_lt, 'err_lt>(
@@ -92,13 +114,20 @@ fn generate_find_by_pk(
             Option<#result_ty>,
             Box<dyn std::error::Error + Send + Sync + 'err_lt>,
         > {
-            let default_db_conn = {
+            use canyon_sql::query::querybuilder::{
+                QueryBuilderOps,
+                SelectQueryBuilderOps,
+            };
+
+            let input = {
                 #default_db_conn_call
             };
 
+            let db_type = input.get_database_type()?;
+
             #query
 
-            default_db_conn
+            input
                 .query_one::<#result_ty>(stmt.as_ref(), &[value])
                 .await
         }
@@ -107,17 +136,8 @@ fn generate_find_by_pk(
 
 fn generate_find_by_pk_with(
     result_ty: &Ident,
-    table_schema_data: &str,
-    columns: &TokenStream,
-    primary_key_resolution: &TokenStream,
+    query: &TokenStream,
 ) -> TokenStream {
-    let query = generate_find_by_pk_query(
-        quote! { input },
-        table_schema_data,
-        columns,
-        primary_key_resolution,
-    );
-
     quote! {
         async fn find_by_pk_with<'canyon_lt, 'err_lt, I>(
             value: &'canyon_lt dyn canyon_sql::query::QueryParameter,
@@ -131,42 +151,19 @@ fn generate_find_by_pk_with(
                 + Send
                 + 'canyon_lt,
         {
+            use canyon_sql::query::querybuilder::{
+                QueryBuilderOps,
+                SelectQueryBuilderOps,
+            };
+
+            let db_type = input.get_database_type()?;
+
             #query
 
             input
                 .query_one::<#result_ty>(stmt.as_ref(), &[value])
                 .await
         }
-    }
-}
-
-fn generate_find_by_pk_query(
-    connection: TokenStream,
-    table_schema_data: &str,
-    columns: &TokenStream,
-    primary_key_resolution: &TokenStream,
-) -> TokenStream {
-    quote! {
-        use canyon_sql::query::querybuilder::{
-            QueryBuilderOps,
-            SelectQueryBuilderOps,
-        };
-
-        #primary_key_resolution
-
-        let db_type = #connection.get_database_type()?;
-
-        let stmt =
-            canyon_sql::query::querybuilder::SelectQueryBuilder::new(
-                #table_schema_data,
-                db_type,
-            )
-            .with_known_columns(#columns)
-            .r#where(
-                primary_key,
-                canyon_sql::query::operators::Operator::Eq,
-            )
-            .build()?;
     }
 }
 
