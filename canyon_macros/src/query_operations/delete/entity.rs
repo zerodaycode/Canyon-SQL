@@ -37,15 +37,16 @@ mod __detail {
     use quote::quote;
 
     pub(crate) fn generate_delete_entity_body(table_schema_data: &str) -> TokenStream {
-        let delete_entity_core_logic = generate_delete_entity_pk_body_logic(table_schema_data);
+        let delete_stmt = generate_delete_query(table_schema_data);
         let no_pk_err = consts::generate_no_pk_error();
+        let default_db_conn_and_type_tokens =
+            consts::generate_default_db_conn_and_type_tokens();
 
         quote! {
             if let Some(primary_key) = entity.primary_key() {
-                #delete_entity_core_logic
-                let default_db_conn = canyon_sql::core::Canyon::instance()?
-                    .get_default_connection()?;
-                let _ = default_db_conn.execute(&delete_stmt, &[pk_actual_value]).await?;
+                #default_db_conn_and_type_tokens
+                #delete_stmt
+                let _ = default_db_conn.execute(&delete_stmt.as_ref(), &[pk_actual_value]).await?;
                 Ok(())
             } else {
                 #no_pk_err
@@ -54,13 +55,14 @@ mod __detail {
     }
 
     pub(crate) fn generate_delete_entity_with_body(table_schema_data: &str) -> TokenStream {
-        let delete_entity_core_logic = generate_delete_entity_pk_body_logic(table_schema_data);
+        let delete_stmt = generate_delete_query(table_schema_data);
         let no_pk_err = consts::generate_no_pk_error();
 
         quote! {
             if let Some(primary_key) = entity.primary_key() {
-                #delete_entity_core_logic
-                let _ = input.execute(&delete_stmt, &[pk_actual_value]).await?;
+                let db_type = input.get_database_type()?;
+                #delete_stmt
+                let _ = input.execute(&delete_stmt.as_ref(), &[pk_actual_value]).await?;
                 Ok(())
             } else {
                 #no_pk_err
@@ -68,13 +70,21 @@ mod __detail {
         }
     }
 
-    fn generate_delete_entity_pk_body_logic(table_schema_data: &str) -> TokenStream {
+    fn generate_delete_query(table_schema_data: &str) -> TokenStream {
         quote! {
+            use canyon_sql::query::querybuilder::{QueryBuilderOps, DeleteQueryBuilderOps};
+
             let pk_actual_value = entity.primary_key_actual_value();
-            let delete_stmt = format!(
-                "DELETE FROM {} WHERE {:?} = $1",
-                #table_schema_data, primary_key
-            );
+            let delete_stmt =
+                canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(
+                    #table_schema_data,
+                    db_type,
+                )
+                .r#where(
+                    primary_key,
+                    canyon_sql::query::operators::Operator::Eq,
+                )
+                .build()?;
         }
     }
 }
