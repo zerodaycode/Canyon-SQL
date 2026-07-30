@@ -1,22 +1,34 @@
-use crate::connection::database_type::DatabaseType;
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Operator;
-use crate::query::parameters::QueryParameter;
-use crate::query::query::Query;
-use crate::query::querybuilder::syntax::ast::select::SelectAst;
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::join::JoinKind;
-use crate::query::querybuilder::syntax::order::OrderByClause;
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps};
+use crate::{
+    connection::database_type::DatabaseType,
+    query::{
+        bounds::{FieldIdentifier, FieldValueIdentifier},
+        operators::Operator,
+        parameters::QueryParameter,
+        query::Query,
+        querybuilder::{
+            syntax::{
+                ast::select::SelectAst,
+                column::ColumnRef,
+                join::JoinKind,
+                order::OrderByClause,
+                table_metadata::TableMetadata
+            },
+            QueryBuilder,
+            QueryBuilderOps,
+            SelectQueryBuilderOps
+        }
+    }
+};
 use std::borrow::Cow;
 use std::error::Error;
 
+/// Fluent builder for `SELECT` queries
 pub struct SelectQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a, SelectAst<'a>>,
 }
 
 impl<'a> SelectQueryBuilder<'a> {
+    /// Creates a builder for the given table and target database.
     pub fn new(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
@@ -26,6 +38,10 @@ impl<'a> SelectQueryBuilder<'a> {
         }
     }
 
+    /// Creates a builder from already normalized table metadata.
+    ///
+    /// This constructor is const-compatible and avoids the conversion performed
+    /// by [`Self::new`].
     pub const fn new_querybuilder(
         table_schema_data: TableMetadata<'a>,
         database_type: DatabaseType,
@@ -39,6 +55,7 @@ impl<'a> SelectQueryBuilder<'a> {
         }
     }
 
+    /// Creates a builder directly from schema and table components.
     pub const fn new_from_parts(
         schema: Option<Cow<'a, str>>,
         table_name: Cow<'a, str>,
@@ -48,9 +65,14 @@ impl<'a> SelectQueryBuilder<'a> {
             schema,
             name: table_name,
         };
+
         Self::new_querybuilder(table_schema_data, database_type)
     }
 
+    /// Appends columns that have already been converted into [`ColumnRef`] values.
+    ///
+    /// This avoids repeating identifier conversion in internal or generated code
+    /// that already works with the query syntax types.
     pub fn with_known_columns<I>(mut self, columns: I) -> Self
     where
         I: IntoIterator<Item = ColumnRef<'a>>,
@@ -59,6 +81,8 @@ impl<'a> SelectQueryBuilder<'a> {
         self
     }
 
+    /// Appends borrowed column names from the representation produced by the
+    /// entity metadata APIs.
     pub fn with_known_column_names<I>(mut self, columns: I) -> Self
     where
         I: IntoIterator<Item = &'a &'a str>,
@@ -67,6 +91,7 @@ impl<'a> SelectQueryBuilder<'a> {
             .ast
             .columns
             .extend(columns.into_iter().map(Into::into));
+
         self
     }
 
@@ -81,7 +106,8 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         self._inner
             .ast
             .columns
-            .extend(columns.into_iter().map(|e| e.into()));
+            .extend(columns.into_iter().map(Into::into));
+
         self
     }
 
@@ -183,7 +209,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     #[inline]
     fn or_values_in<'b, Z, Q>(
         mut self,
-        r#and: Z,
+        r#or: Z,
         values: &'a [Q],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
@@ -191,7 +217,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
         Q: QueryParameter,
         Self: Sized,
     {
-        self._inner.or_values_in(r#and, values)?;
+        self._inner.or_values_in(r#or, values)?;
         Ok(self)
     }
 
@@ -204,21 +230,21 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
 mod __impl {
     use crate::query::operators::Operator;
-    use crate::query::querybuilder::SelectQueryBuilder;
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
+    use crate::query::querybuilder::SelectQueryBuilder;
 
     pub(crate) fn build_and_append_join_clause<'a>(
-        mut _self: SelectQueryBuilder<'a>,
+        mut builder: SelectQueryBuilder<'a>,
         join_kind: JoinKind,
         target_table: impl Into<TableMetadata<'a>>,
         left: impl Into<ColumnRef<'a>>,
         right: impl Into<ColumnRef<'a>>,
     ) -> SelectQueryBuilder<'a> {
         let join_clause = build_join_clause(join_kind, target_table, left, right);
-        _self._inner.ast.joins.push(join_clause);
-        _self
+        builder._inner.ast.joins.push(join_clause);
+        builder
     }
 
     fn build_join_clause<'a>(

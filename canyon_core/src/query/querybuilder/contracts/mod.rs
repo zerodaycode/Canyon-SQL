@@ -1,5 +1,7 @@
-//! Contains the elements that makes part of the formal declaration
-//! of the behaviour of the Canyon-SQL QueryBuilder
+//! Defines the operation traits exposed by Canyon-SQL query builders.
+//!
+//! Each trait groups the operations available for a specific SQL statement,
+//! while [`QueryBuilderOps`] contains the behaviour shared by all builders.
 
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
@@ -9,18 +11,21 @@ use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 use std::error::Error;
 
+/// Operations supported by a delete query builder.
+///
+/// Delete queries currently require no statement-specific operations beyond
+/// those provided by [`QueryBuilderOps`].
 pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
 
+/// Operations supported by an update query builder.
 pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
-    /// Creates an SQL `SET` clause by specifying the columns that must be updated in the sentence,
-    /// but without adding any [`QueryParameter`] value to the internal querybuilder.
+    /// Defines the columns assigned by the generated `SET` clause.
     ///
-    /// Is it the responsibility of the callee to pass the query values that will match the generated
-    /// sql placeholders
+    /// This method only registers column references. It does not collect the
+    /// values corresponding to the generated placeholders.
     ///
-    /// Note: If there's values already on the querybuilder, and the only placeholders api is called,
-    /// UB (provisionally) will occur, since we're refactoring the API's and these are subject to change
-    /// at any time while in the v0.x.x
+    /// The caller is therefore responsible for supplying matching parameters
+    /// when the query is executed.
     fn set<I: Into<ColumnRef<'a>>>(
         self,
         columns: Vec<I>,
@@ -28,8 +33,10 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     where
         Self: Sized;
 
-    /// Similar to [`Self::set`] but storing the underlying update values for each column in the
-    /// internal values collection of the [`crate::query::querybuilder::QueryBuilder`]
+    /// Defines the `SET` clause and collects one update value for each column.
+    ///
+    /// Each tuple contains the target column identifier and the parameter value
+    /// assigned to it.
     fn set_values<Z, Q>(
         self,
         columns: &'a [(Z, Q)],
@@ -40,38 +47,50 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         Self: Sized;
 }
 
+/// Operations supported by an insert query builder.
 pub trait InsertQueryBuilderOps<'a>: QueryBuilderOps<'a> {
-    /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
-    /// If this method isn't invoked, the querybuilder will create a INSERT INTO ... VALUES ... query without specifying the columns
+    /// Defines the columns targeted by the insert statement.
+    ///
+    /// When omitted, the generated statement does not include an explicit
+    /// column list.
     fn with_columns<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Self;
 
+    /// Collects the values inserted by the statement.
+    ///
+    /// The generated placeholder count must match the number of configured
+    /// insert columns when an explicit column list is present.
     fn with_values<Q>(self, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Q: QueryParameter,
         Self: Sized;
 
+    /// Defines the columns returned after a successful insert.
+    ///
+    /// The resulting SQL is emitted according to the target database dialect,
+    /// such as `RETURNING` or `OUTPUT INSERTED`.
     fn returning(self, columns: Vec<impl Into<ColumnRef<'a>>>) -> Self;
 }
 
+/// Operations supported by a select query builder.
 pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
-    /// Adds the column names that must be added to the query in order to retrieve the correct mapped fields
-    /// If this method isn't invoked, the querybuilder will create a SELECT * FROM query
+    /// Defines the columns projected by the select statement.
+    ///
+    /// When omitted, the query projects all columns using `SELECT *`.
     fn with_columns<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> Self;
 
-    /// Adds a `DISTINCT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
+    /// Marks the select statement as `DISTINCT`.
     fn with_distinct(self) -> Self;
 
-    /// Adds a `COUNT` SQL statement to the underlying `Sql Statement` held by the [`QueryBuilder`]
+    /// Changes the select projection to a row count.
     fn count(self) -> Self;
 
-    /// Adds a *LEFT JOIN* SQL statement to the underlying
-    /// `Sql Statement` held by the [`QueryBuilder`], where:
+    /// Adds a `LEFT JOIN` to the select statement.
     ///
-    /// * `join_table` - The table target of the join operation
-    /// * `col1` - The left side of the ON operator for the join
-    /// * `col2` - The right side of the ON operator for the join
+    /// `join_table` identifies the joined table, while `col1` and `col2`
+    /// define the two column references used by the join condition.
     ///
-    /// > Note: The order on the column parameters is irrelevant
+    /// The order of the column references does not affect the generated
+    /// equality condition.
     fn left_join(
         self,
         join_table: impl Into<TableMetadata<'a>>,
@@ -79,14 +98,13 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
-    /// Adds a *INNER JOIN* SQL statement to the underlying
-    /// `Sql Statement` held by the [`QueryBuilder`], where:
+    /// Adds an `INNER JOIN` to the select statement.
     ///
-    /// * `join_table` - The table target of the join operation
-    /// * `col1` - The left side of the ON operator for the join
-    /// * `col2` - The right side of the ON operator for the join
+    /// `join_table` identifies the joined table, while `col1` and `col2`
+    /// define the two column references used by the join condition.
     ///
-    /// > Note: The order on the column parameters is irrelevant
+    /// The order of the column references does not affect the generated
+    /// equality condition.
     fn inner_join(
         self,
         join_table: impl Into<TableMetadata<'a>>,
@@ -94,14 +112,13 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
-    /// Adds a *RIGHT JOIN* SQL statement to the underlying
-    /// `Sql Statement` held by the [`QueryBuilder`], where:
+    /// Adds a `RIGHT JOIN` to the select statement.
     ///
-    /// * `join_table` - The table target of the join operation
-    /// * `col1` - The left side of the ON operator for the join
-    /// * `col2` - The right side of the ON operator for the join
+    /// `join_table` identifies the joined table, while `col1` and `col2`
+    /// define the two column references used by the join condition.
     ///
-    /// > Note: The order on the column parameters is irrelevant
+    /// The order of the column references does not affect the generated
+    /// equality condition.
     fn right_join(
         self,
         join_table: impl Into<TableMetadata<'a>>,
@@ -109,14 +126,13 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
-    /// Adds a *FULL JOIN* SQL statement to the underlying
-    /// `Sql Statement` held by the [`QueryBuilder`], where:
+    /// Adds a `FULL JOIN` to the select statement.
     ///
-    /// * `join_table` - The table target of the join operation
-    /// * `col1` - The left side of the ON operator for the join
-    /// * `col2` - The right side of the ON operator for the join
+    /// `join_table` identifies the joined table, while `col1` and `col2`
+    /// define the two column references used by the join condition.
     ///
-    /// > Note: The order on the column parameters is irrelevant
+    /// The order of the column references does not affect the generated
+    /// equality condition.
     fn full_join(
         self,
         join_table: impl Into<TableMetadata<'a>>,
@@ -124,80 +140,55 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
         col2: impl Into<ColumnRef<'a>>,
     ) -> Self;
 
-    /// Generates a `ORDER BY` SQL clause for constraint the query.
+    /// Adds an `ORDER BY` clause for the specified column.
     ///
-    /// * `order_by` - A [`FieldIdentifier`] that will provide the target  column name
-    /// * `desc` - a boolean indicating if the generated `ORDER_BY` must be in ascending or descending order
+    /// When `desc` is `true`, descending order is used. Otherwise, the
+    /// generated ordering is ascending.
     fn order_by<Z: FieldIdentifier + Into<ColumnRef<'a>>>(self, order_by: Z, desc: bool) -> Self;
 }
 
-/// The [`QueryBuilder`] trait is the root of a kind of hierarchy
-/// on more specific [`super::QueryBuilder`], that are:
+/// Common operations supported by every query builder.
 ///
-/// * [`super::SelectQueryBuilder`]
-/// * [`super::UpdateQueryBuilder`]
-/// * [`super::DeleteQueryBuilder`]
+/// Statement-specific builders expose this shared filtering and build API,
+/// while traits such as [`SelectQueryBuilderOps`], [`InsertQueryBuilderOps`],
+/// and [`UpdateQueryBuilderOps`] add operations that only apply to their
+/// corresponding SQL statement.
 ///
-/// This trait provides the formal declaration of the behaviour that the
-/// implementors must provide in their public interfaces, grouping
-/// the common elements between every element down in that
-/// hierarchy.
-///
-/// For example, the [`super::QueryBuilder`] type holds the data
-/// necessary for track the SQL sentence while it's being generated
-/// thought the fluent builder, and provides the behaviour of
-/// the common elements defined in this trait.
-///
-/// The more concrete types represents a wrapper over a raw
-/// [`super::QueryBuilder`], offering all the elements declared
-/// in this trait in its public interface, and which implementation
-/// only consists of call the same method on the wrapped
-/// [`super::QueryBuilder`].
-///
-/// This allows us to declare in their public interface their
-/// specific operations, like, for example, join operations
-/// on the [`super::SelectQueryBuilder`], and the usage
-/// of the `SET` clause on a [`super::UpdateQueryBuilder`],
-/// without mixing types or polluting everything into
-/// just one type.
+/// Implementations collect structured query data and parameters. SQL generation
+/// is deferred until [`Self::build`] consumes the builder and emits a [`Query`]
+/// for the configured database dialect.
 pub trait QueryBuilderOps<'a> {
-    /// Builds the final [`Query`] by consuming the querybuilder, and returning the generated SQL statement and the collected parameters as a tuple.
+    /// Consumes the builder and generates the final query.
+    ///
+    /// The returned [`Query`] contains both the emitted SQL statement and the
+    /// parameters collected while constructing it.
     fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>>;
 
-    /// Generates a `WHERE` SQL clause for constraint the query.
+    /// Adds a `WHERE` condition without collecting a parameter value.
     ///
-    /// * `column` - An [`&str`] that will provide the target column name
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    ///   or equality binary operator
+    /// `column` identifies the left-hand side of the condition and `op`
+    /// defines the comparison operator.
     ///
-    ///  It will generate a SQL statement with the where constraint value generated as a placeholder,
-    /// depending on the underlying database driver and the number of elements already added to the
-    /// querybuilder
+    /// The condition emits a placeholder whose corresponding value must be
+    /// supplied separately.
     fn r#where<I: Into<ColumnRef<'a>>>(self, column: I, op: Operator) -> Self;
 
-    /// Generates a `WHERE` SQL clause for constraint the query.
+    /// Adds a `WHERE` condition and collects its parameter value.
     ///
-    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-    ///   column name and the value for the filter
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    ///   or equality binary operator
+    /// The [`FieldValueIdentifier`] provides both the target column and the
+    /// value bound to the generated placeholder.
     fn where_value<Z: FieldValueIdentifier>(self, column: &'a Z, op: Operator) -> Self;
 
-    /// Generates an `AND` SQL clause for constraint the query.
+    /// Adds an `AND` condition and collects its parameter value.
     ///
-    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-    ///   column name and the value for the filter
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    ///   or equality binary operator
+    /// The [`FieldValueIdentifier`] provides both the target column and the
+    /// value bound to the generated placeholder.
     fn and<Z: FieldValueIdentifier>(self, column: &'a Z, op: Operator) -> Self;
 
-    /// Generates an `AND` SQL clause for constraint the query that's being constructed
+    /// Adds an `AND <column> IN (...)` condition.
     ///
-    /// * `column` - A [`FieldIdentifier`] that will provide the target
-    ///   column name for the filter, based on the variant that represents
-    ///   the field name that maps the targeted column name
-    /// * `values` - An array of [`QueryParameter`] with the values to filter
-    ///   inside the `IN` operator
+    /// One placeholder and one collected query parameter are generated for
+    /// every element in `values`.
     fn and_values_in<'b, Z, Q>(
         self,
         column: Z,
@@ -208,14 +199,10 @@ pub trait QueryBuilderOps<'a> {
         Q: QueryParameter,
         Self: Sized;
 
-    /// Generates an `OR` SQL clause for constraint the query that will create
-    /// the filter in conjunction with an `IN` operator that will ac
+    /// Adds an `OR <column> IN (...)` condition.
     ///
-    /// * `column` - A [`FieldIdentifier`] that will provide the target
-    ///   column name for the filter, based on the variant that represents
-    ///   the field name that maps the targeted column name
-    /// * `values` - An array of [`QueryParameter`] with the values to filter
-    ///   inside the `IN` operator
+    /// One placeholder and one collected query parameter are generated for
+    /// every element in `values`.
     fn or_values_in<'b, Z, Q>(
         self,
         r#or: Z,
@@ -226,11 +213,9 @@ pub trait QueryBuilderOps<'a> {
         Q: QueryParameter,
         Self: Sized;
 
-    /// Generates an `OR` SQL clause for constraint the query.
+    /// Adds an `OR` condition and collects its parameter value.
     ///
-    /// * `column` - A [`FieldValueIdentifier`] that will provide the target
-    ///   column name and the value for the filter
-    /// * `op` - Any element that implements [`Operator`] for create the comparison
-    ///   or equality binary operator
+    /// The [`FieldValueIdentifier`] provides both the target column and the
+    /// value bound to the generated placeholder.
     fn or<Z: FieldValueIdentifier>(self, column: &'a Z, op: Operator) -> Self;
 }

@@ -1,5 +1,6 @@
 use crate::query::querybuilder::syntax::{emitter::AstProcessor, query_kind::QueryKind};
 
+/// Structured representation of a `DELETE` statement.
 pub struct DeleteAst {}
 
 impl<'a> AstProcessor<'a> for DeleteAst {

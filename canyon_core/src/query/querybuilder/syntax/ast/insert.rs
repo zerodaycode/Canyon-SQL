@@ -2,6 +2,7 @@ pub(crate) use crate::query::querybuilder::syntax::{
     column::ColumnRef, emitter::AstProcessor, query_kind::QueryKind,
 };
 
+/// Structured representation of a `INSERT` statement.
 #[derive(Default)]
 pub struct InsertAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,

@@ -14,45 +14,7 @@ pub trait AstProcessor<'a>: Default {
     fn query_kind(&self) -> QueryKind;
 }
 
-/// A strategy for emitting SQL text from a specific query AST type.
-///
-/// `SqlEmitter` represents a backend-specific SQL generator that knows how
-/// to produce SQL tokens for a given AST node type `P` in a particular
-/// dialect.
-///
-/// The emitter:
-/// - accumulates SQL tokens (`SqlTokens`) during emission,
-/// - knows its SQL dialect (`Dialect`) which governs syntax details,
-/// - and produces SQL text deterministically given an AST of type `P`
-///   and its associated `TableMetadata`.
-///
-/// This trait is **unified**: it combines both the emitter infrastructure
-/// (token buffer access and dialect information) and the actual
-/// emission behavior for the AST `P`. That eliminates the need for
-/// separate “support traits” such as `EmitSelect`, `EmitInsert`, etc.
-///
-/// Users of this trait instantiate a backend emitter (e.g., `PgEmitter`)
-/// and call `emit` once with the appropriate AST and table metadata. The
-/// emitter pushes tokens into its internal buffer. After emission,
-/// the tokens can be rendered into a final SQL string by a writer (e.g.,
-/// `TokenWriter`).
-///
-/// # Type Parameters
-///
-/// - `P`: the type of the query AST being emitted (e.g., `SelectAst`, `InsertAst`, etc.).
-///
-/// # Example
-///
-/// ```rust
-/// let mut tokens = SqlTokens::default();
-/// let mut emitter: PgEmitter<'_, SelectAst<'_>> = PgEmitter::new(&mut tokens);
-/// emitter.emit(&select_ast, &table_metadata);
-/// let sql = TokenWriter::new().render(emitter.tokens(), database_type)?;
-/// ```
-///
-/// The example shows emission for a `SELECT` query in PostgreSQL.
-// pub type EmitStep<'a, P> =
-//     for<'step> fn(&'step P, &'step mut BaseAst<'a>, &'step mut SqlTokens<'a>);
+
 
 pub type EmitStep<'a, P> = fn(&P, &mut BaseAst<'a>, &mut SqlTokens<'a>);
 

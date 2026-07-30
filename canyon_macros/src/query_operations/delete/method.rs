@@ -16,7 +16,7 @@ pub fn generate_delete_method_tokens(
 
     if let Some(primary_key) = pk {
         let query = __detail::generate_delete_stmt(table_schema_data, primary_key);
-        let pk_field_value = __detail::get_pk_field_value(&primary_key.ident);
+        let pk_field_value = __detail::get_pk_field_value(primary_key.ident);
 
         let delete_method_tokens =
             __detail::generate_delete_method_tokens(macro_data, &query, &pk_field_value);

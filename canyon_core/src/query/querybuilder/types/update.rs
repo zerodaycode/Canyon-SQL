@@ -1,25 +1,34 @@
-use crate::connection::database_type::DatabaseType;
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Operator;
-use crate::query::parameters::QueryParameter;
-use crate::query::query::Query;
-use crate::query::querybuilder::syntax::ast::update::UpdateAst;
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::types::TableMetadata;
-use crate::query::querybuilder::{QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps};
+use crate::{
+    connection::database_type::DatabaseType,
+    query::{
+        bounds::{FieldIdentifier, FieldValueIdentifier},
+        operators::Operator,
+        parameters::QueryParameter,
+        query::Query,
+        querybuilder::{
+            syntax::{
+                ast::update::UpdateAst,
+                column::ColumnRef
+            },
+            types::TableMetadata,
+            QueryBuilder,
+            QueryBuilderOps,
+            UpdateQueryBuilderOps
+        }
+    }
+};
 use std::error::Error;
 
-/// Contains the specific database operations of the *UPDATE* SQL statements.
+/// Fluent builder for `UPDATE` statements
 pub struct UpdateQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a, UpdateAst<'a>>,
 }
-
 impl<'a> UpdateQueryBuilder<'a> {
-    /// Generates a new public instance of the [`UpdateQueryBuilder`]
+    /// Creates an update builder whose database dialect will be resolved later.
     pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
-        UpdateQueryBuilder::new_for(table_schema_data, DatabaseType::Deferred)
+        Self::new_for(table_schema_data, DatabaseType::Deferred)
     }
-
+    /// Creates an update builder for a specific database dialect.
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
@@ -36,10 +45,10 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         columns: Vec<I>,
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
-        Self: std::marker::Sized,
+        Self: Sized,
     {
         __validators::set_clause_values_not_empty(&columns)?;
-        self._inner.ast.columns = columns.into_iter().map(|f| f.into()).collect::<Vec<_>>();
+        self._inner.ast.columns = columns.into_iter().map(Into::into).collect();
         Ok(self)
     }
 
@@ -53,18 +62,13 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     {
         __validators::set_clause_not_already_present(&self)?;
         __validators::set_clause_values_not_empty(columns)?;
-
-        // normalized column names
         self._inner.ast.columns = columns
             .iter()
-            .map(|(z, _)| <Z as Into<ColumnRef>>::into(z.clone()))
-            .collect::<Vec<_>>();
-
-        // normalized values
-        for (_, v) in columns {
-            self._inner.params.push(v as &dyn QueryParameter);
+            .map(|(column, _)| column.clone().into())
+            .collect();
+        for (_, value) in columns {
+            self._inner.params.push(value as &dyn QueryParameter);
         }
-
         Ok(self)
     }
 }
@@ -74,7 +78,6 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
         self._inner.build()
     }
-
     #[inline]
     fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
         self._inner.r#where(column_name, operator);
@@ -92,7 +95,6 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         self._inner.and(column, op);
         self
     }
-
     #[inline]
     fn and_values_in<'b, Z, Q>(
         mut self,
@@ -103,7 +105,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        self._inner.and_values_in(and, values)?;
+        self._inner.and_values_in(r#and, values)?;
         Ok(self)
     }
 
@@ -117,7 +119,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        self._inner.or_values_in(or, values)?;
+        self._inner.or_values_in(r#or, values)?;
         Ok(self)
     }
 
@@ -133,20 +135,21 @@ mod __validators {
     use std::error::Error;
     use std::io::ErrorKind;
 
+    /// Prevents `set_values` from replacing a previously configured `SET` clause.
     pub(super) fn set_clause_not_already_present<'a>(
-        _self: &UpdateQueryBuilder<'a>,
+        builder: &UpdateQueryBuilder<'a>,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
-        if !_self._inner.ast.columns.is_empty() {
+        if !builder._inner.ast.columns.is_empty() {
             return Err(std::io::Error::new(
                 // TODO: CanyonError
                 ErrorKind::Unsupported,
                 "SET clause already present",
-            )
-            .into());
+            ).into());
         }
         Ok(())
     }
 
+    /// Rejects update statements that would produce an empty `SET` clause.
     pub(super) fn set_clause_values_not_empty<T>(
         values: &[T],
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
@@ -155,8 +158,7 @@ mod __validators {
                 // TODO: CanyonError
                 ErrorKind::Unsupported,
                 "Empty SET clause",
-            )
-            .into());
+            ).into());
         }
         Ok(())
     }

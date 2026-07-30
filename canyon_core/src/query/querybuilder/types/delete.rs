@@ -1,34 +1,32 @@
+use std::error::Error;
+
 use crate::{
     connection::database_type::DatabaseType,
     query::{
-        ColumnRef,
         bounds::{FieldIdentifier, FieldValueIdentifier},
         operators::Operator,
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, syntax::ast::delete::DeleteAst,
-            types::TableMetadata,
+            syntax::ast::delete::DeleteAst, types::TableMetadata, DeleteQueryBuilderOps,
+            QueryBuilder, QueryBuilderOps,
         },
+        ColumnRef,
     },
 };
-use std::error::Error;
 
-/// Contains the specific database operations associated with the
-/// *DELETE* SQL statements.
-///
-/// * `set` - To construct a new `SET` clause to determine the columns to
-///   update with the provided values
+/// Fluent builder for `DELETE` statements
 pub struct DeleteQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a, DeleteAst>,
 }
 
 impl<'a> DeleteQueryBuilder<'a> {
-    /// Generates a new public instance of the [`DeleteQueryBuilder`]
+    /// Creates a delete builder whose database dialect will be resolved later.
     pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
         Self::new_for(table_schema_data, DatabaseType::Deferred)
     }
 
+    /// Creates a delete builder for a specific database dialect.
     pub fn new_for(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
@@ -44,7 +42,7 @@ impl<'a> DeleteQueryBuilder<'a> {
     }
 }
 
-impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {} // NOTE: for now, this is just a type formalism
+impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {}
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline(always)]
@@ -53,14 +51,14 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn r#where<I: Into<ColumnRef<'a>>>(mut self, column_name: I, operator: Operator) -> Self {
-        self._inner.r#where(column_name, operator);
+    fn r#where<I: Into<ColumnRef<'a>>>(mut self, column: I, op: Operator) -> Self {
+        self._inner.r#where(column, op);
         self
     }
 
     #[inline]
-    fn where_value<Z: FieldValueIdentifier>(mut self, r#where: &'a Z, op: Operator) -> Self {
-        self._inner.where_value(r#where, op);
+    fn where_value<Z: FieldValueIdentifier>(mut self, column: &'a Z, op: Operator) -> Self {
+        self._inner.where_value(column, op);
         self
     }
 
@@ -73,28 +71,28 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline]
     fn and_values_in<'b, Z, Q>(
         mut self,
-        r#and: Z,
+        column: Z,
         values: &'a [Q],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        self._inner.and_values_in(r#and, values)?;
+        self._inner.and_values_in(column, values)?;
         Ok(self)
     }
 
     #[inline]
     fn or_values_in<'b, Z, Q>(
         mut self,
-        r#or: Z,
+        column: Z,
         values: &'a [Q],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
     {
-        self._inner.or_values_in(r#or, values)?;
+        self._inner.or_values_in(column, values)?;
         Ok(self)
     }
 

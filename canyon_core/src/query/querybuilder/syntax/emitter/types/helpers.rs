@@ -3,7 +3,6 @@
 use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::column::{ColumnRef, Qualification};
 use crate::query::querybuilder::syntax::dialect::SqlDialect;
-use crate::query::querybuilder::syntax::keyword::Keyword;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
@@ -40,7 +39,7 @@ impl Range {
     }
 }
 
-impl<'a> IntoIterator for &'a Range {
+impl IntoIterator for &Range {
     type Item = usize;
     type IntoIter = std::ops::Range<usize>;
 
@@ -104,7 +103,7 @@ pub(crate) fn emit_placeholders<'a>(columns: &Vec<ColumnRef<'a>>, tokens: &mut S
 }
 
 pub(crate) fn emit_query_conditions<'a, D: SqlDialect>(
-    query_conditions: &Vec<ConditionClause<'a>>,
+    query_conditions: &[ConditionClause<'a>],
     tokens: &mut SqlTokens<'a>,
 ) {
     if query_conditions.is_empty() {

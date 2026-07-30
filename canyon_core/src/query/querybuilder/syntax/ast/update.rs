@@ -2,6 +2,7 @@ use crate::query::querybuilder::syntax::{
     column::ColumnRef, emitter::AstProcessor, query_kind::QueryKind,
 };
 
+/// Structured representation of a `UPDATE` statement.
 pub struct UpdateAst<'a> {
     pub columns: Vec<ColumnRef<'a>>,
 }

@@ -163,7 +163,7 @@ mod __impl {
     {
         let target_column = field.as_str();
         __validators::check_not_empty_in_clause_values(
-            &_self.base_ast.table(),
+            _self.base_ast.table(),
             target_column,
             values,
         )?;

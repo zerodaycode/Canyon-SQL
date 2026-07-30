@@ -1,21 +1,33 @@
 use std::borrow::Cow;
 use std::error::Error;
 
-use crate::connection::database_type::DatabaseType;
-use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
-use crate::query::operators::Operator;
-use crate::query::parameters::QueryParameter;
-use crate::query::query::Query;
-use crate::query::querybuilder::syntax::ast::insert::InsertAst;
-use crate::query::querybuilder::syntax::column::ColumnRef;
-use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use crate::query::querybuilder::{InsertQueryBuilderOps, QueryBuilder, QueryBuilderOps};
+use crate::{
+    connection::database_type::DatabaseType,
+    query::{
+        bounds::{FieldIdentifier, FieldValueIdentifier},
+        operators::Operator,
+        parameters::QueryParameter,
+        query::Query,
+        querybuilder::{
+            syntax::{
+                ast::insert::InsertAst,
+                column::ColumnRef,
+                table_metadata::TableMetadata
+            },
+            InsertQueryBuilderOps,
+            QueryBuilder,
+            QueryBuilderOps
+        }
+    }
+};
 
+/// Fluent builder for `INSERT` statements
 pub struct InsertQueryBuilder<'a> {
     pub(crate) _inner: QueryBuilder<'a, InsertAst<'a>>,
 }
 
 impl<'a> InsertQueryBuilder<'a> {
+    /// Creates an insert builder for a specific database dialect.
     pub fn new(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
@@ -25,6 +37,7 @@ impl<'a> InsertQueryBuilder<'a> {
         }
     }
 
+    /// Creates a const-compatible builder from normalized table metadata.
     pub const fn new_querybuilder(
         table_schema_data: TableMetadata<'a>,
         database_type: DatabaseType,
@@ -38,6 +51,7 @@ impl<'a> InsertQueryBuilder<'a> {
         }
     }
 
+    /// Creates a const-compatible builder directly from schema and table parts.
     pub const fn new_from_parts(
         schema: Option<Cow<'a, str>>,
         table_name: Cow<'a, str>,
@@ -47,16 +61,14 @@ impl<'a> InsertQueryBuilder<'a> {
             schema,
             name: table_name,
         };
-        Self {
-            _inner: QueryBuilder::new_querybuilder(
-                table_schema_data,
-                InsertAst::new(),
-                database_type,
-            ),
-        }
+
+        Self::new_querybuilder(table_schema_data, database_type)
     }
 
-    // TODO: this should be abstracted into a trait for all query builders, but for now it's only implemented for InsertQueryBuilder and SelectQueryBuilder
+    /// Appends columns that are already represented by the query syntax model.
+    ///
+    /// This is primarily useful for generated code and internal APIs that do
+    /// not require identifier normalization.
     pub fn with_known_columns<I>(mut self, columns: I) -> Self
     where
         I: IntoIterator<Item = ColumnRef<'a>>,
@@ -65,6 +77,7 @@ impl<'a> InsertQueryBuilder<'a> {
         self
     }
 
+    /// Appends an already normalized returning projection.
     pub fn returning_columns<I>(mut self, columns: I) -> Self
     where
         I: IntoIterator<Item = ColumnRef<'a>>,
@@ -121,7 +134,7 @@ impl<'a> QueryBuilderOps<'a> for InsertQueryBuilder<'a> {
     #[inline]
     fn or_values_in<'b, Z, Q>(
         mut self,
-        r#or: Z,
+        column: Z,
         values: &'a [Q],
     ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
     where
@@ -129,7 +142,7 @@ impl<'a> QueryBuilderOps<'a> for InsertQueryBuilder<'a> {
         Q: QueryParameter,
         Self: Sized,
     {
-        self._inner.or_values_in(r#or, values)?;
+        self._inner.or_values_in(column, values)?;
         Ok(self)
     }
 
@@ -142,11 +155,14 @@ impl<'a> QueryBuilderOps<'a> for InsertQueryBuilder<'a> {
 
 impl<'a> InsertQueryBuilderOps<'a> for InsertQueryBuilder<'a> {
     fn with_columns<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> Self {
-        self._inner.ast.columns = columns.into_iter().map(|e| e.into()).collect();
+        self._inner.ast.columns = columns.into_iter().map(Into::into).collect();
         self
     }
 
-    fn with_values<Q>(mut self, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn with_values<Q>(
+        mut self,
+        values: &'a [Q],
+    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Q: QueryParameter,
     {
@@ -157,7 +173,8 @@ impl<'a> InsertQueryBuilderOps<'a> for InsertQueryBuilder<'a> {
     }
 
     fn returning(mut self, columns: Vec<impl Into<ColumnRef<'a>>>) -> Self {
-        self._inner.ast.returning_columns = columns.into_iter().map(|e| e.into()).collect();
+        self._inner.ast.returning_columns =
+            columns.into_iter().map(Into::into).collect();
         self
     }
 }
