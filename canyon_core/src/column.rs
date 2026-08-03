@@ -9,7 +9,6 @@ use tokio_postgres::{self};
 
 /// Generic abstraction for hold a Column type that will be one of the Column
 /// types present in the dependent crates
-// #[derive(Copy, Clone)]
 pub struct Column<'a> {
     pub(crate) name: Cow<'a, str>,
     pub(crate) type_: ColumnType,
@@ -21,12 +20,6 @@ impl Column<'_> {
     pub fn column_type(&self) -> &ColumnType {
         &self.type_
     }
-    // pub fn type_(&'a self) -> &'_ dyn Type {
-    //     match (*self).type_ {
-    //         #[cfg(feature = "postgres")] ColumnType::Postgres(v) => v as &'a dyn Type,
-    //         #[cfg(feature = "mssql")] ColumnType::SqlServer(v) => v as &'a dyn Type,
-    //     }
-    // }
 }
 
 pub trait ColType {

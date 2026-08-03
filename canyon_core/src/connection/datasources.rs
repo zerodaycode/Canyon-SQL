@@ -45,14 +45,12 @@ fn load_ds_config_from_array() {
         [canyon_sql]
         datasources = [
             {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },
-            {name = 'SqlServerDS', auth = { sqlserver = { integrated = {} } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
         ]
         "#;
         let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MSSQL)
             .expect("A failure happened retrieving the [canyon_sql] section");
 
         let ds_1 = &config.canyon_sql.datasources[0];
-        let ds_2 = &config.canyon_sql.datasources[1];
 
         assert_eq!(ds_1.name, "SqlServerDS");
         assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);
@@ -67,8 +65,6 @@ fn load_ds_config_from_array() {
         assert_eq!(ds_1.properties.port, Some(3340));
         assert_eq!(ds_1.properties.db_name, "triforce2");
         assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
-
-        assert_eq!(ds_2.auth, Auth::SqlServer(SqlServerAuth::Integrated));
     }
     #[cfg(feature = "mysql")]
     {
@@ -181,8 +177,6 @@ pub enum PostgresAuth {
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
     Basic { username: String, password: String },
-    #[serde(alias = "Integrated", alias = "integrated")]
-    Integrated,
 }
 
 #[derive(Deserialize, Debug, Clone, PartialEq)]

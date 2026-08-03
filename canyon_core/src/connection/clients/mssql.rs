@@ -230,7 +230,6 @@ pub(crate) mod __impl {
                 SqlServerAuth::Basic { username, password } => {
                     Ok(tiberius::AuthMethod::sql_server(username, password))
                 }
-                SqlServerAuth::Integrated => Ok(tiberius::AuthMethod::Integrated),
             },
             #[cfg(any(feature = "postgres", feature = "mysql"))]
             _ => Err("Invalid auth configuration for a SqlServer datasource.".into()),
@@ -259,13 +258,6 @@ mod tests {
             AuthMethod::SqlServer(_) => {} // success
             _ => panic!("Expected AuthMethod::SqlServer variant"),
         }
-    }
-
-    #[test]
-    fn test_extract_mssql_auth_integrated() {
-        let auth = Auth::SqlServer(SqlServerAuth::Integrated);
-        let result = __impl::extract_mssql_auth(&auth).unwrap();
-        assert!(matches!(result, AuthMethod::Integrated));
     }
 
     #[test]
