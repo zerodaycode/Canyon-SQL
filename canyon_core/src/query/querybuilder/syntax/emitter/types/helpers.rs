@@ -122,29 +122,10 @@ pub(crate) fn emit_table<'a, D: SqlDialect>(table: &TableMetadata<'a>, tokens: &
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        query::{
-            querybuilder::{
-                syntax::{
-                    ast::BaseAst,
-                    tokens::SqlToken,
-                    dialect::{
-                        IdentQuotingStyle,
-                        PlaceholderSymbol,
-                        MsSql,
-                        MySql,
-                        PgDialect
-                    },
-                    table_metadata::TableMetadata,
-                }
-            }
-        }
+    use crate::query::querybuilder::syntax::{
+        dialect::{IdentQuotingStyle, MsSql, MySql, PgDialect, PlaceholderSymbol},
+        tokens::SqlToken,
     };
-
-
-    fn make_base_ast<'a>() -> BaseAst<'a> {
-        BaseAst::new_ast(TableMetadata::from("users"))
-    }
 
     fn make_column(column: &'_ str) -> ColumnRef<'_> {
         ColumnRef::from(column)
@@ -336,14 +317,6 @@ mod tests {
         let expected = get_columns_test_expr_values::<PgDialect>(&["user.id", "account.name"]);
 
         assert_eq!(tokens.inner(), expected);
-    }
-
-    fn get_placeholders_test_expr_values() -> Vec<SqlToken<'static>> {
-        vec![
-            SqlToken::Placeholder,
-            SqlToken::Symbol(Comma),
-            SqlToken::Placeholder,
-        ]
     }
 
     #[cfg(feature = "mssql")]

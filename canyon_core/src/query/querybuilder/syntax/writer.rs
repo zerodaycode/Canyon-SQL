@@ -266,11 +266,10 @@ mod mssql_tests {
 #[cfg(test)]
 mod spacing_tests {
     use super::*;
-    use crate::query::operators::Operator;
-    use crate::query::querybuilder::syntax::dialect::PgDialect;
-    use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
-    use crate::query::querybuilder::syntax::keyword::Keyword;
-    use crate::query::querybuilder::syntax::tokens::SqlTokens;
+    use crate::query::{
+        operators::Operator,
+        querybuilder::syntax::{dialect::PgDialect, keyword::Keyword, tokens::SqlTokens},
+    };
 
     #[test]
     fn render_spaces_select_from_where_and_operators_without_whitespace_tokens() {

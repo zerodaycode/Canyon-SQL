@@ -98,7 +98,7 @@ mod tests {
         ast::BaseAst,
         ast::insert::InsertAst,
         column::ColumnRef,
-        dialect::{MsSql, MySql, PgDialect},
+        dialect::{MySql, PgDialect},
         emitter::EmitStep,
         emitter::SqlEmitter,
         writer::TokenWriter,

@@ -234,10 +234,7 @@ fn create_row_mapper_error_extracting_row(
 
 #[cfg(all(test, feature = "mssql"))]
 mod mapper_macro_tests {
-    use super::{
-        extract_deserializing_type_name,
-        get_deserializing_type,
-    };
+    use super::{extract_deserializing_type_name, get_deserializing_type};
 
     #[test]
     fn extracts_the_inner_tiberius_deserialization_type_name() {

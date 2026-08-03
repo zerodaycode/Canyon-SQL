@@ -83,13 +83,13 @@ pub(crate) mod __impl {
 
 #[cfg(test)]
 mod tests {
+    use crate::query::querybuilder::syntax::emitter::EmitStep;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, delete::DeleteAst},
         dialect::{MsSql, PgDialect},
-        emitter::{AstProcessor, SqlEmitter, types::helpers::Range},
+        emitter::{SqlEmitter, types::helpers::Range},
         writer::TokenWriter,
     };
-    use crate::query::querybuilder::syntax::emitter::EmitStep;
 
     #[derive(Default)]
     struct TestDeleteEmitter;
@@ -97,8 +97,7 @@ mod tests {
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitter {
         type Dialect = PgDialect;
 
-        const PLAN: &'a [EmitStep<'a, DeleteAst>] =
-            delete_default_plan!(Self::Dialect);
+        const PLAN: &'a [EmitStep<'a, DeleteAst>] = delete_default_plan!(Self::Dialect);
     }
 
     #[derive(Default)]
@@ -106,8 +105,7 @@ mod tests {
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitterMsSql {
         type Dialect = MsSql;
 
-        const PLAN: &'a [EmitStep<'a, DeleteAst>] =
-            delete_default_plan!(Self::Dialect);
+        const PLAN: &'a [EmitStep<'a, DeleteAst>] = delete_default_plan!(Self::Dialect);
     }
 
     fn render_standard<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {

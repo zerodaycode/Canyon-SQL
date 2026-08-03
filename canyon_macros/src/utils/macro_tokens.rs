@@ -1,8 +1,9 @@
-use crate::utils::canyon_crud_attribute::CanyonCrudAttribute;
-use crate::utils::helpers;
-use crate::utils::primary_key_attribute::PrimaryKeyAttribute;
-use canyon_entities::field_annotation::EntityFieldAnnotation;
-use canyon_entities::helpers::default_database_table_name_from_entity_name;
+use crate::utils::{
+    canyon_crud_attribute::CanyonCrudAttribute, primary_key_attribute::PrimaryKeyAttribute,
+};
+use canyon_entities::{
+    field_annotation::EntityFieldAnnotation, helpers::default_database_table_name_from_entity_name,
+};
 use proc_macro2::Ident;
 use std::convert::TryFrom;
 use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
@@ -169,32 +170,19 @@ impl<'a> MacroTokens<'a> {
 
         foreign_key_annotations
     }
-
-    /// Boolean that returns true if the type contains a `#[primary_key]`
-    /// annotation. False otherwise.
-    pub fn type_has_primary_key(&self) -> bool {
-        self.fields
-            .iter()
-            .any(|field| helpers::field_has_target_attribute(field, "primary_key"))
-    }
 }
 
 mod __details {
-    use crate::utils::helpers;
-    use crate::utils::macro_tokens::MacroTokens;
-    use crate::utils::primary_key_attribute::PrimaryKeyIndex;
+    use crate::utils::{helpers, macro_tokens::MacroTokens};
     use canyon_entities::field_annotation::EntityFieldAnnotation;
     use proc_macro2::Span;
     use syn::{Field, Fields};
 
-    pub(super) fn find_primary_key_field_annotation(
-        fields: &Fields,
-    ) -> Option<(PrimaryKeyIndex, &Field)> {
+    pub(super) fn find_primary_key_field_annotation(fields: &Fields) -> Option<&Field> {
         fields.iter().enumerate().find_map(|index_and_field| {
-            let idx = index_and_field.0;
             let field = index_and_field.1;
             if helpers::field_has_target_attribute(field, "primary_key") {
-                Some((PrimaryKeyIndex(idx), field))
+                Some(field)
             } else {
                 None
             }
