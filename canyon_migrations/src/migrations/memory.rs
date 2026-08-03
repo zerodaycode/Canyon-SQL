@@ -71,7 +71,7 @@ impl CanyonMemory {
             .unwrap_or_else(|_| {
                 panic!(
                     "Failure getting db connection: {} on Canyon Memory",
-                    &datasource.name
+                    datasource.name
                 )
             })
             .get_connection(&datasource.name)

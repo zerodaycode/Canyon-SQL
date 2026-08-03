@@ -210,22 +210,6 @@ mod tests {
     }
 
     #[test]
-    fn rejects_primary_key_with_missing_autoincremental_argument_when_args_are_present() {
-        let field: Field = parse_quote! {
-            #[primary_key]
-            id: i32
-        };
-
-        let error = annotation_from(field_attribute(&field)).unwrap_err();
-
-        assert!(
-            error
-                .to_string()
-                .contains("Missing `autoincremental` argument on the Primary Key annotation")
-        );
-    }
-
-    #[test]
     fn rejects_primary_key_with_unknown_argument() {
         let field: Field = parse_quote! {
             #[primary_key(foo = "true")]

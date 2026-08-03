@@ -42,7 +42,7 @@ impl Migrations {
 
             let mut migrations_processor = MigrationsProcessor::default();
             let db_conn = Canyon::instance()
-                .unwrap_or_else(|_| panic!("Failure getting db connection: {}", &datasource.name))
+                .unwrap_or_else(|_| panic!("Failure getting db connection: {}", datasource.name))
                 .get_connection(&datasource.name)
                 .unwrap_or_else(|_| {
                     panic!(

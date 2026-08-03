@@ -76,7 +76,6 @@ fn build_register_entity_field(field: &EntityField) -> CanyonRegisterEntityField
             .iter()
             .map(|attr| attr.get_as_string())
             .collect(),
-        ..Default::default()
     }
 }
 

@@ -57,8 +57,8 @@ where
     /// Given:
     /// - an AST of type `P` representing the query structure,
     /// - a `TableMetadata` reference describing the target table,
-    /// the emitter must generate the appropriate SQL tokens into its
-    /// internal buffer.
+    ///   the emitter must generate the appropriate SQL tokens into its
+    ///   internal buffer.
     ///
     /// # Semantics
     ///

@@ -70,8 +70,7 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
         } = self;
 
         let sql = __detail::sql(database_type, &ast, &mut base_ast)?;
-        #[cfg(feature = "dev-mode")]
-        __dbg::log_sql(&sql, database_type, ast.query_kind(), &params);
+        // __dbg::log_sql(&sql, database_type, ast.query_kind(), &params);
         Ok(Query::new(sql, params))
     }
 
@@ -352,13 +351,13 @@ mod __errors {
     }
 }
 
-#[cfg(feature = "dev-mode")]
+#[allow(unused)]
 mod __dbg {
     use crate::connection::database_type::DatabaseType;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
-    pub(crate) fn log_sql<'a>(
+    pub(crate) fn log_sql(
         sql: &str,
         database_type: DatabaseType,
         query_kind: QueryKind,

@@ -320,7 +320,7 @@ impl MigrationsProcessor {
 
                 let foreign_key_name = format!(
                     "{entity_name}_{}_fkey",
-                    &canyon_register_entity_field.field_name
+                    canyon_register_entity_field.field_name
                 );
 
                 Self::add_foreign_key(
@@ -461,7 +461,7 @@ impl MigrationsProcessor {
 
                 let foreign_key_name = format!(
                     "{entity_name}_{}_fkey",
-                    &canyon_register_entity_field.field_name
+                    canyon_register_entity_field.field_name
                 );
 
                 Self::add_foreign_key(
@@ -483,7 +483,7 @@ impl MigrationsProcessor {
 
             let foreign_key_name = format!(
                 "{entity_name}_{}_fkey",
-                &canyon_register_entity_field.field_name
+                canyon_register_entity_field.field_name
             );
 
             // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
@@ -538,16 +538,12 @@ impl MigrationsProcessor {
                     &canyon_register_entity_field,
                 )
             }
-        } else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() {
+        } else if !field_is_foreign_key && let Some(foreign_key_name) = current_column_metadata.foreign_key_name.as_ref() {
             // Case when field don't contain a foreign key annotation, but there is already one in the database column
             Self::delete_foreign_key(
                 self,
                 entity_name,
-                current_column_metadata
-                    .foreign_key_name
-                    .as_ref()
-                    .expect("ForeignKey constrain name not found")
-                    .to_string(),
+                foreign_key_name.to_owned(),
             );
         }
     }
@@ -601,11 +597,11 @@ impl MigrationsProcessor {
                 match res {
                     Ok(_) => println!(
                         "\t[OK] - {:?} - Query: {:?}",
-                        datasource.0, &query_to_execute
+                        datasource.0, query_to_execute
                     ),
                     Err(e) => println!(
                         "\t[ERR] - {:?} - Query: {:?}\nCause: {:?}",
-                        datasource.0, &query_to_execute, e
+                        datasource.0, query_to_execute, e
                     ),
                 }
                 // TODO Ask for user input?
