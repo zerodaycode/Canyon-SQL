@@ -195,7 +195,7 @@ pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
     let generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
 
     quote! {
-        use canyon_sql::query::bounds::TableMetadata;
+        use canyon_sql::query::bounds::EntityTable;
         use canyon_sql::query::bounds::FieldIdentifier;
 
         #generated_enum_type_for_struct_data

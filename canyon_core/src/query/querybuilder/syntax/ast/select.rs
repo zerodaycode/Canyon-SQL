@@ -6,8 +6,8 @@ use crate::query::querybuilder::syntax::{
 /// Structured representation of a `SELECT` statement.
 ///
 /// `SelectAst` stores the clauses and modifiers that are specific to selection
-/// queries. 
-/// 
+/// queries.
+///
 /// NOTE: The target table and filtering conditions are held separately by
 /// the shared base AST.
 #[derive(Default)]

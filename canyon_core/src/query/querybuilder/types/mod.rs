@@ -80,15 +80,18 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
     }
 
     pub fn where_value<Z: FieldValueIdentifier>(&mut self, r#where: &'a Z, operator: Operator) {
-        let (column_name, value) = r#where.value();
-        self.params.push(value);
-        __impl::create_condition_clause(self, ConditionClauseKind::Where, column_name, operator);
+        self.params.push(r#where.value());
+        __impl::create_condition_clause(
+            self,
+            ConditionClauseKind::Where,
+            r#where.column(),
+            operator,
+        );
     }
 
     pub fn and<Z: FieldValueIdentifier>(&mut self, r#and: &'a Z, operator: Operator) {
-        let (column_name, value) = r#and.value();
-        self.params.push(value);
-        __impl::create_condition_clause(self, ConditionClauseKind::And, column_name, operator);
+        self.params.push(and.value());
+        __impl::create_condition_clause(self, ConditionClauseKind::And, and.column(), operator);
     }
 
     pub fn and_values_in<'b, Z, Q>(
@@ -132,9 +135,8 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
     }
 
     pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, operator: Operator) {
-        let (column_name, value) = r#or.value();
-        self.params.push(value);
-        __impl::create_condition_clause(self, ConditionClauseKind::Or, column_name, operator);
+        self.params.push(or.value());
+        __impl::create_condition_clause(self, ConditionClauseKind::Or, or.column(), operator);
     }
 }
 
@@ -356,13 +358,20 @@ mod __dbg {
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::syntax::query_kind::QueryKind;
 
-    pub(crate) fn log_sql<'a>(sql: &str, database_type: DatabaseType, query_kind: QueryKind, args: &[&dyn QueryParameter]) {
-        eprintln!("\
+    pub(crate) fn log_sql<'a>(
+        sql: &str,
+        database_type: DatabaseType,
+        query_kind: QueryKind,
+        args: &[&dyn QueryParameter],
+    ) {
+        eprintln!(
+            "\
         \n
         ==========================================================
         \
         [Canyon-SQL] [{database_type:?}] [{query_kind:?}]\n\t{sql}\
         Args: [{args:#?}]
-        ");
+        "
+        );
     }
 }

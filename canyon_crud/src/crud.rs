@@ -1,10 +1,11 @@
-use canyon_core::connection::contracts::DbConnection;
-use canyon_core::connection::database_type::DatabaseType;
-use canyon_core::mapper::RowMapper;
-use canyon_core::query::bounds::EntityRuntimeInfo;
-use canyon_core::query::parameters::QueryParameter;
-use canyon_core::query::querybuilder::{
-    DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder,
+use canyon_core::{
+    connection::{contracts::DbConnection, database_type::DatabaseType},
+    mapper::RowMapper,
+    query::{
+        bounds::EntityRuntimeInfo,
+        parameters::QueryParameter,
+        querybuilder::{DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder},
+    },
 };
 use std::error::Error;
 use std::future::Future;
@@ -188,27 +189,15 @@ where
         entity: &'a mut T,
     ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
-        T: RowMapper + EntityRuntimeInfo<'a> + Sync + 'a;
+        T: RowMapper + EntityRuntimeInfo + Sync + 'a;
 
     fn insert_entity_with<'a, 'b, T, I>(
         entity: &'a mut T,
         input: I,
     ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
-        T: RowMapper + EntityRuntimeInfo<'a> + Sync + 'a,
+        T: RowMapper + EntityRuntimeInfo + Sync + 'a,
         I: DbConnection + Send + 'a;
-
-    // TODO: the horripilant multi_insert MUST be replaced with a batch insert
-    // fn multi_insert<'a, T>(
-    //     instances: &'a mut [&'a mut T],
-    // ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'a>>> + Send;
-    //
-    // fn multi_insert_with<'a, T, I>(
-    //     instances: &'a mut [&'a mut T],
-    //     input: I,
-    // ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'a>>> + Send
-    // where
-    //     I: DbConnection + Send + 'a;
 
     /// Updates a database record that matches the current instance of a T type, returning a
     /// result indicating a possible failure querying the database.
@@ -225,14 +214,14 @@ where
         entity: &'a T,
     ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
-        T: RowMapper + EntityRuntimeInfo<'a> + Sync + 'a;
+        T: RowMapper + EntityRuntimeInfo + Sync + 'a;
 
     fn update_entity_with<'a, 'b, T, I>(
         entity: &'a T,
         input: I,
     ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
-        T: RowMapper + EntityRuntimeInfo<'a> + Sync + 'a,
+        T: RowMapper + EntityRuntimeInfo + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     fn update_query<'a>() -> UpdateQueryBuilder<'a>;
@@ -252,14 +241,14 @@ where
         entity: &'a T,
     ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
-        T: RowMapper + EntityRuntimeInfo<'a> + Sync + 'a;
+        T: RowMapper + EntityRuntimeInfo + Sync + 'a;
 
     fn delete_entity_with<'a, 'b, T, I>(
         entity: &'a T,
         input: I,
     ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'b>>>
     where
-        T: RowMapper + EntityRuntimeInfo<'a> + Sync + 'a,
+        T: RowMapper + EntityRuntimeInfo + Sync + 'a,
         I: DbConnection + Send + 'a;
 
     fn delete_query<'a, 'b>() -> DeleteQueryBuilder<'a>

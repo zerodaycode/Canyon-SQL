@@ -1,7 +1,7 @@
+use crate::query_operations::consts;
 use proc_macro2::TokenStream;
 use quote::quote;
 use std::borrow::Cow;
-use crate::query_operations::consts;
 
 pub fn generate_count_operations_tokens<'a>(
     table_schema_data: &'a str,
@@ -28,8 +28,7 @@ pub fn create_count_macro(
     let mssql_arm = get_mssql_arm_tokens_if_enabled(false);
     let schema_tokens = get_schema_tokens(schema_name);
     let table_name = create_cow_borrowed_table_name(table_name);
-    let default_db_conn_and_type_tokens =
-        consts::generate_default_db_conn_and_type_tokens();
+    let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
     Ok(quote! {
         async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {

@@ -1,8 +1,8 @@
+use crate::query_operations::consts;
 use crate::utils::helpers;
 use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use crate::query_operations::consts;
 
 pub fn generate_find_all_operations_tokens<'a>(
     mapper_ty: &Ident,
@@ -24,8 +24,7 @@ fn create_find_all_macro(
     table_schema_data: &str,
     columns: &TokenStream,
 ) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-    let default_db_conn_and_type_tokens =
-        consts::generate_default_db_conn_and_type_tokens();
+    let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
     Ok(quote! {
         async fn find_all()

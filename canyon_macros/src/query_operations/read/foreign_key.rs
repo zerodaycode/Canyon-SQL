@@ -36,7 +36,7 @@ mod __operations {
         macro_data: &MacroTokens<'_>,
         table_schema_data: &str,
     ) -> TokenStream {
-        let ty = &macro_data.ty;
+        let ty = macro_data.ty;
         let fk_trait_ident = fk_operations_trait_ident(ty);
 
         let parent_lookup_operations = generate_parent_lookup_tokens(macro_data);
@@ -188,7 +188,7 @@ mod __operations {
         let table = table.to_owned();
 
         quote! {
-            value.get_fk_column(#column)
+            value.foreign_key_value(#column)
                 .ok_or_else(|| format!(
                     "Column: {:?} not found in type: {:?}",
                     #column,

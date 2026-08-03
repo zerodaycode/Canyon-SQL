@@ -37,8 +37,8 @@ pub(crate) fn generate_update_method_tokens(
 
 mod __details {
     use super::*;
-    use proc_macro2::Ident;
     use crate::query_operations::consts;
+    use proc_macro2::Ident;
 
     pub(crate) fn generate_update_method_tokens(
         macro_data: &MacroTokens,
@@ -49,8 +49,7 @@ mod __details {
         let (_, ty_generics, _) = macro_data.generics.split_for_impl();
 
         let update_signature = __signatures::get_update_signature();
-        let default_db_conn_and_type_tokens =
-            consts::generate_default_db_conn_and_type_tokens();
+        let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
         quote! {
             #update_signature {

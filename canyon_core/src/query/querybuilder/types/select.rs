@@ -6,18 +6,13 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
+            QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps,
             syntax::{
-                ast::select::SelectAst,
-                column::ColumnRef,
-                join::JoinKind,
-                order::OrderByClause,
-                table_metadata::TableMetadata
+                ast::select::SelectAst, column::ColumnRef, join::JoinKind, order::OrderByClause,
+                table_metadata::TableMetadata,
             },
-            QueryBuilder,
-            QueryBuilderOps,
-            SelectQueryBuilderOps
-        }
-    }
+        },
+    },
 };
 use std::borrow::Cow;
 use std::error::Error;
@@ -230,10 +225,10 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
 mod __impl {
     use crate::query::operators::Operator;
+    use crate::query::querybuilder::SelectQueryBuilder;
     use crate::query::querybuilder::syntax::column::ColumnRef;
     use crate::query::querybuilder::syntax::join::{JoinClause, JoinKind};
     use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-    use crate::query::querybuilder::SelectQueryBuilder;
 
     pub(crate) fn build_and_append_join_clause<'a>(
         mut builder: SelectQueryBuilder<'a>,

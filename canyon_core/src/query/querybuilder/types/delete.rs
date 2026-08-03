@@ -3,15 +3,15 @@ use std::error::Error;
 use crate::{
     connection::database_type::DatabaseType,
     query::{
+        ColumnRef,
         bounds::{FieldIdentifier, FieldValueIdentifier},
         operators::Operator,
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            syntax::ast::delete::DeleteAst, types::TableMetadata, DeleteQueryBuilderOps,
-            QueryBuilder, QueryBuilderOps,
+            DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, syntax::ast::delete::DeleteAst,
+            types::TableMetadata,
         },
-        ColumnRef,
     },
 };
 

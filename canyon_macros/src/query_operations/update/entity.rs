@@ -3,99 +3,129 @@ use quote::quote;
 
 pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
     let update_entity_signature = quote! {
-        async fn update_entity<'canyon_lt, 'err_lt, Entity>(entity: &'canyon_lt Entity)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon_lt>
-            + Sync
-            + 'canyon_lt
+        async fn update_entity<'canyon_lt, 'err_lt, Entity>(
+            entity: &'canyon_lt Entity,
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+        where
+            Entity: canyon_sql::core::RowMapper
+                + canyon_sql::query::bounds::EntityRuntimeInfo
+                + Sync
+                + 'canyon_lt
     };
 
     let update_entity_with_signature = quote! {
-        async fn update_entity_with<'canyon_lt, 'err_lt, Entity, Input>(entity: &'canyon_lt Entity, input: Input)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+        async fn update_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
+            entity: &'canyon_lt Entity,
+            input: Input,
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon_lt>
+                + canyon_sql::query::bounds::EntityRuntimeInfo
                 + Sync
                 + 'canyon_lt,
-            Input: canyon_sql::connection::DbConnection + Send + 'canyon_lt
+            Input: canyon_sql::connection::DbConnection
+                + Send
+                + 'canyon_lt
     };
 
     let update_entity_body = __details::generate_update_entity_body(table_schema_data);
+
     let update_entity_with_body = __details::generate_update_entity_with_body(table_schema_data);
 
     quote! {
-        #update_entity_signature { #update_entity_body }
-        #update_entity_with_signature { #update_entity_with_body }
+        #update_entity_signature {
+            #update_entity_body
+        }
+
+        #update_entity_with_signature {
+            #update_entity_with_body
+        }
     }
 }
 
 mod __details {
-    use crate::query_operations::update::__err;
     use proc_macro2::TokenStream;
     use quote::quote;
+
     use crate::query_operations::consts;
 
     pub(crate) fn generate_update_entity_body(table_schema_data: &str) -> TokenStream {
-        let update_query = generate_update_query(table_schema_data);
-        let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
-        let no_pk_err = __err::generate_no_pk_err();
+        let default_db_conn_and_type = consts::generate_default_db_conn_and_type_tokens();
+
+        let update_execution =
+            generate_update_execution(table_schema_data, quote! { default_db_conn });
 
         quote! {
-            if let Some(primary_key) = entity.primary_key() {
-                #default_db_conn_and_type_tokens
+            #default_db_conn_and_type
+            #update_execution
 
-                let pk_actual_value = entity.primary_key_actual_value();
-                let mut update_values = entity.fields_actual_values();
-                update_values.push(pk_actual_value);
-
-                #update_query
-
-                let _ = default_db_conn.execute(query.as_ref(), &update_values).await?;
-                Ok(())
-            } else {
-                #no_pk_err
-            }
+            Ok(())
         }
     }
 
     pub(crate) fn generate_update_entity_with_body(table_schema_data: &str) -> TokenStream {
-        let update_query = generate_update_query(table_schema_data);
-        let no_pk_err = __err::generate_no_pk_err();
+        let update_execution = generate_update_execution(table_schema_data, quote! { input });
 
         quote! {
-            if let Some(primary_key) = entity.primary_key() {
-                let pk_actual_value = entity.primary_key_actual_value();
-                let mut update_values = entity.fields_actual_values();
-                update_values.push(pk_actual_value);
+            let db_type = input.get_database_type()?;
 
-                let db_type = input.get_database_type()?;
-                #update_query
+            #update_execution
 
-                let _ = input.execute(query.as_ref(), &update_values).await?;
-                Ok(())
-            } else {
-                #no_pk_err
-            }
+            Ok(())
         }
     }
 
-    fn generate_update_query(table_schema_data: &str, ) -> TokenStream {
+    fn generate_update_execution(table_schema_data: &str, connection: TokenStream) -> TokenStream {
         quote! {
-            let update_columns = entity.fields_as_column_refs();
+            use canyon_sql::query::querybuilder::{
+                QueryBuilderOps,
+                UpdateQueryBuilderOps,
+            };
 
-            use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
-            let query = canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
-                #table_schema_data, // TODO: construct a const value
-                db_type,
-            )
+            let primary_key_name =
+                match <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::primary_key_name() {
+                    Some(primary_key_name) => primary_key_name,
+                    None => {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Cannot update an entity without a primary key",
+                        )
+                        .into());
+                    }
+                };
+
+            let primary_key_value = match entity.primary_key_value() {
+                Some(primary_key_value) => primary_key_value,
+                None => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Cannot update an entity without a primary-key value",
+                    )
+                    .into());
+                }
+            };
+
+            let update_columns =
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::field_columns();
+
+            let mut update_values = entity.field_values();
+            update_values.push(primary_key_value);
+
+            let query =
+                canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
+                    #table_schema_data,
+                    db_type,
+                )
                 .set(update_columns)?
                 .r#where(
-                    primary_key,
+                    primary_key_name,
                     canyon_sql::query::operators::Operator::Eq,
                 )
                 .build()?;
+
+            #connection
+                .execute(query.as_ref(), &update_values)
+                .await?;
         }
     }
 }

@@ -169,7 +169,6 @@ pub trait LeagueHexRepository {
 #[canyon_crud(maps_to=LeagueHex)]
 #[canyon_entity(table_name = "league")]
 pub struct LeagueHexRepositoryAdapter<T: DbConnection + Send + Sync> {
-    // db_conn: &'b T,
     db_conn: T,
 }
 impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryAdapter<T> {

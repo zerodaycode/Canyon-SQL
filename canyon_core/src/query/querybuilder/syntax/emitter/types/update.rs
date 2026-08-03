@@ -41,9 +41,9 @@ macro_rules! update_default_plan {
 pub(crate) use update_default_plan;
 
 pub(crate) mod __impl {
-    
+
     use crate::query::querybuilder::syntax::column::Qualification;
-    
+
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, update::UpdateAst},

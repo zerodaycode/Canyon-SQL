@@ -3,88 +3,122 @@ use quote::quote;
 
 pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStream {
     let delete_entity_signature = quote! {
-        async fn delete_entity<'canyon, 'err, Entity>(entity: &'canyon Entity)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
-        where Entity: canyon_sql::core::RowMapper
-            + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon>
-            + Sync
-            + 'canyon
+        async fn delete_entity<'canyon_lt, 'err_lt, Entity>(
+            entity: &'canyon_lt Entity,
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+        where
+            Entity: canyon_sql::core::RowMapper
+                + canyon_sql::query::bounds::EntityRuntimeInfo
+                + Sync
+                + 'canyon_lt
     };
 
     let delete_entity_with_signature = quote! {
-        async fn delete_entity_with<'canyon, 'err, Entity, Input>(entity: &'canyon Entity, input: Input)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err>>
+        async fn delete_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
+            entity: &'canyon_lt Entity,
+            input: Input,
+        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         where
             Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo<'canyon>
+                + canyon_sql::query::bounds::EntityRuntimeInfo
                 + Sync
-                + 'canyon,
-            Input: canyon_sql::connection::DbConnection + Send + 'canyon
+                + 'canyon_lt,
+            Input: canyon_sql::connection::DbConnection
+                + Send
+                + 'canyon_lt
     };
 
-    let delete_entity_body = __detail::generate_delete_entity_body(table_schema_data);
-    let delete_entity_with_body = __detail::generate_delete_entity_with_body(&table_schema_data);
+    let delete_entity_body = __details::generate_delete_entity_body(table_schema_data);
+
+    let delete_entity_with_body = __details::generate_delete_entity_with_body(table_schema_data);
 
     quote! {
-        #delete_entity_signature { #delete_entity_body }
-        #delete_entity_with_signature { #delete_entity_with_body }
+        #delete_entity_signature {
+            #delete_entity_body
+        }
+
+        #delete_entity_with_signature {
+            #delete_entity_with_body
+        }
     }
 }
 
-mod __detail {
-    use crate::query_operations::consts;
+mod __details {
     use proc_macro2::TokenStream;
     use quote::quote;
 
+    use crate::query_operations::consts;
+
     pub(crate) fn generate_delete_entity_body(table_schema_data: &str) -> TokenStream {
-        let delete_stmt = generate_delete_query(table_schema_data);
-        let no_pk_err = consts::generate_no_pk_error();
-        let default_db_conn_and_type_tokens =
-            consts::generate_default_db_conn_and_type_tokens();
+        let default_db_conn_and_type = consts::generate_default_db_conn_and_type_tokens();
+
+        let delete_execution =
+            generate_delete_execution(table_schema_data, quote! { default_db_conn });
 
         quote! {
-            if let Some(primary_key) = entity.primary_key() {
-                #default_db_conn_and_type_tokens
-                #delete_stmt
-                let _ = default_db_conn.execute(&delete_stmt.as_ref(), &[pk_actual_value]).await?;
-                Ok(())
-            } else {
-                #no_pk_err
-            }
+            #default_db_conn_and_type
+            #delete_execution
+
+            Ok(())
         }
     }
 
     pub(crate) fn generate_delete_entity_with_body(table_schema_data: &str) -> TokenStream {
-        let delete_stmt = generate_delete_query(table_schema_data);
-        let no_pk_err = consts::generate_no_pk_error();
+        let delete_execution = generate_delete_execution(table_schema_data, quote! { input });
 
         quote! {
-            if let Some(primary_key) = entity.primary_key() {
-                let db_type = input.get_database_type()?;
-                #delete_stmt
-                let _ = input.execute(&delete_stmt.as_ref(), &[pk_actual_value]).await?;
-                Ok(())
-            } else {
-                #no_pk_err
-            }
+            let db_type = input.get_database_type()?;
+
+            #delete_execution
+
+            Ok(())
         }
     }
 
-    fn generate_delete_query(table_schema_data: &str) -> TokenStream {
+    fn generate_delete_execution(table_schema_data: &str, connection: TokenStream) -> TokenStream {
         quote! {
-            use canyon_sql::query::querybuilder::{QueryBuilderOps, DeleteQueryBuilderOps};
+            use canyon_sql::query::querybuilder::{
+                DeleteQueryBuilderOps,
+                QueryBuilderOps,
+            };
 
-            let pk_actual_value = entity.primary_key_actual_value();
-            let delete_stmt =
+            let primary_key_name =
+                match <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::primary_key_name() {
+                    Some(primary_key_name) => primary_key_name,
+                    None => {
+                        return Err(std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Cannot delete an entity without a primary key",
+                        )
+                        .into());
+                    }
+                };
+
+            let primary_key_value = match entity.primary_key_value() {
+                Some(primary_key_value) => primary_key_value,
+                None => {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "Cannot delete an entity without a primary-key value",
+                    )
+                    .into());
+                }
+            };
+
+            let query =
                 canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(
                     #table_schema_data,
                     db_type,
                 )
                 .r#where(
-                    primary_key,
+                    primary_key_name,
                     canyon_sql::query::operators::Operator::Eq,
                 )
                 .build()?;
+
+            #connection
+                .execute(query.as_ref(), &[primary_key_value])
+                .await?;
         }
     }
 }

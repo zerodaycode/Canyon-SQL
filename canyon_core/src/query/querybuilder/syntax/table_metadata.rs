@@ -1,8 +1,10 @@
 use crate::query::bounds;
-use crate::query::querybuilder::syntax::dialect::SqlDialect;
-use crate::query::querybuilder::syntax::emitter::types::helpers::push_quoted_ident;
-use crate::query::querybuilder::syntax::symbol::Symbol;
-use crate::query::querybuilder::syntax::tokens::{SqlToken, SqlTokens, ToSqlTokens};
+use crate::query::querybuilder::syntax::{
+    dialect::SqlDialect,
+    emitter::types::helpers::push_quoted_ident,
+    symbol::Symbol,
+    tokens::{SqlToken, SqlTokens, ToSqlTokens},
+};
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter};
 
@@ -14,10 +16,10 @@ pub struct TableMetadata<'a> {
 
 impl<'a, T> From<T> for TableMetadata<'a>
 where
-    T: bounds::TableMetadata<'a>,
+    T: bounds::EntityTable + 'a,
 {
     fn from(value: T) -> Self {
-        Self::from(value.as_str()) // this covers the need of producing <table>.<column>
+        Self::from(value.table_name()) // this covers the need of producing <table>.<column>
     }
 }
 

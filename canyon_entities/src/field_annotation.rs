@@ -212,7 +212,7 @@ mod tests {
     #[test]
     fn rejects_primary_key_with_missing_autoincremental_argument_when_args_are_present() {
         let field: Field = parse_quote! {
-            #[primary_key()]
+            #[primary_key]
             id: i32
         };
 

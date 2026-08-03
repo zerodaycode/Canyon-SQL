@@ -42,16 +42,16 @@ impl<'a> SqlEmitter<'a, DeleteAst> for SqlServerEmitter {
 
 mod __impl {
     use crate::query::ColumnRef;
+    use crate::query::querybuilder::syntax::column::Qualification;
     use crate::query::querybuilder::syntax::emitter::types::helpers;
+    use crate::query::querybuilder::syntax::symbol::Symbol;
+    use crate::query::querybuilder::syntax::symbol::Symbol::LParen;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, insert::InsertAst},
         dialect::SqlDialect,
         keyword::Keyword,
         tokens::SqlTokens,
     };
-    use crate::query::querybuilder::syntax::column::Qualification;
-    use crate::query::querybuilder::syntax::symbol::Symbol;
-    use crate::query::querybuilder::syntax::symbol::Symbol::LParen;
 
     pub(crate) fn emit_unqualified_columns<'a, D: SqlDialect>(
         columns: &[ColumnRef<'a>],

@@ -42,7 +42,7 @@ pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> Toke
         ///                    but adapted to the `snake_case` convention, which is the standard adopted
         ///                    by Canyon these early days to transform type Idents into table names
         ///
-        /// This enum implements the `TableMetadata` trait, providing the `as_str` method,
+        /// This enum implements the `EntityTable` trait, providing the `table_name` method,
         /// which is useful in code that needs to retrieve such metadata dynamically while
         /// keeping strong typing and avoiding magic strings.
         ///
@@ -70,12 +70,12 @@ pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> Toke
 
         impl #generics std::fmt::Display for #enum_name #generics {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                write!(f, "{}", self.as_str())
+                write!(f, "{}", self.table_name())
             }
         }
 
-        impl<'a> canyon_sql::query::bounds::TableMetadata<'a> for #generics #enum_name #generics {
-            fn as_str(&self) -> &'a str {
+        impl canyon_sql::query::bounds::EntityTable for #generics #enum_name #generics {
+            fn table_name<'a>(&self) -> &'a str {
                 match *self {
                     #enum_name::Name => #struct_name,
                     #enum_name::DbName => #db_target_table_name,
@@ -178,10 +178,15 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
     let enum_name = Ident::new((struct_name + "FieldValue").as_str(), Span::call_site());
 
     let fields_names = &canyon_entity.get_fields_as_enum_variants_with_value();
-    let match_arms = &canyon_entity
-        .create_match_arm_for_relate_fields_with_values(&enum_name, &db_target_table_name);
-
     let visibility = &canyon_entity.vis;
+
+    let column_match_arms = __detail::create_column_name_match_arms_for_enum_variants(
+        canyon_entity,
+        &enum_name,
+        &db_target_table_name,
+    );
+    let value_match_arms =
+        __detail::create_value_match_arms_for_enum_variants(canyon_entity, &enum_name);
 
     quote! {
         #[allow(non_camel_case_types)]
@@ -211,11 +216,53 @@ pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenSt
         }
 
         impl canyon_sql::query::bounds::FieldValueIdentifier for #enum_name {
-            fn value(&self) -> (canyon_sql::query::ColumnRef<'static>, &dyn canyon_sql::query::QueryParameter) {
+            fn column(&self) -> canyon_sql::query::ColumnRef<'static> {
                 match self {
-                    #(#match_arms),*
+                    #(#column_match_arms),*
+                }
+            }
+            fn value(&self) -> &dyn canyon_sql::query::QueryParameter {
+                match self {
+                    #(#value_match_arms),*
                 }
             }
         }
+    }
+}
+
+mod __detail {
+    use crate::entity::CanyonEntity;
+    use proc_macro2::{Ident, TokenStream};
+    use quote::quote;
+
+    pub(crate) fn create_column_name_match_arms_for_enum_variants<'a>(
+        entity: &'a CanyonEntity,
+        enum_ident: &'a Ident,
+        db_table_name: &'a str,
+    ) -> impl Iterator<Item = TokenStream> + 'a {
+        entity.fields.iter().map(move |f| {
+            let field_ident = &f.name;
+            let field_name = field_ident.to_string();
+
+            quote! {
+                #enum_ident::#field_ident(_) => canyon_sql::query::ColumnRef {
+                    table: Some(std::borrow::Cow::Borrowed(#db_table_name)),
+                    column: std::borrow::Cow::from(#field_name),
+                    alias: None
+                }
+            }
+        })
+    }
+
+    pub(crate) fn create_value_match_arms_for_enum_variants<'a>(
+        entity: &'a CanyonEntity,
+        enum_ident: &'a Ident,
+    ) -> impl Iterator<Item = TokenStream> + 'a {
+        entity.fields.iter().map(move |f| {
+            let field_ident = &f.name;
+            quote! {
+                #enum_ident::#field_ident(v) => v as &dyn canyon_sql::query::QueryParameter
+            }
+        })
     }
 }

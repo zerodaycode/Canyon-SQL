@@ -3,140 +3,173 @@
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use regex::Regex;
-use std::iter::Map;
-use std::slice::Iter;
 use syn::{DeriveInput, Type, Visibility};
+
+use crate::utils::macro_tokens::MacroTokens;
+use canyon_core::connection::database_type::DatabaseType;
+
+#[cfg(feature = "mssql")]
+use quote::ToTokens;
 
 #[cfg(feature = "mssql")]
 const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
+/// Generates the [`canyon_sql::core::RowMapper`] and
+/// [`canyon_sql::query::bounds::EntityRuntimeInfo`] implementations for an
+/// entity annotated with `CanyonMapper`.
 pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
-    let mut row_mapper_tokens = TokenStream::new();
-
     let ty = ast.ty;
     let ty_str = ty.to_string();
     let fields = ast.fields();
-    let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-    let mut impl_methods = TokenStream::new();
+    let mut mapper_methods = TokenStream::new();
 
     #[cfg(feature = "postgres")]
-    let pg_implementation = create_postgres_fields_mapping(&ty_str, &fields);
-    #[cfg(feature = "postgres")]
-    impl_methods.extend(quote! {
-        fn deserialize_postgresql(row: &canyon_sql::db_clients::tokio_postgres::Row) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(Self {
-                #(#pg_implementation),*
-            })
-        }
-    });
+    {
+        let field_mappings = create_postgres_fields_mapping(&ty_str, &fields);
+
+        mapper_methods.extend(quote! {
+            fn deserialize_postgresql(
+                row: &canyon_sql::db_clients::tokio_postgres::Row,
+            ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(Self {
+                    #(#field_mappings),*
+                })
+            }
+        });
+    }
 
     #[cfg(feature = "mssql")]
-    let sqlserver_implementation = create_sqlserver_fields_mapping(&ty_str, &fields);
-    #[cfg(feature = "mssql")]
-    impl_methods.extend(quote! {
-        fn deserialize_sqlserver(row: &canyon_sql::db_clients::tiberius::Row) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(Self {
-                #(#sqlserver_implementation),*
-            })
-        }
-    });
+    {
+        let field_mappings = create_sqlserver_fields_mapping(&ty_str, &fields);
+
+        mapper_methods.extend(quote! {
+            fn deserialize_sqlserver(
+                row: &canyon_sql::db_clients::tiberius::Row,
+            ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(Self {
+                    #(#field_mappings),*
+                })
+            }
+        });
+    }
 
     #[cfg(feature = "mysql")]
-    let mysql_implementation = create_mysql_fields_mapping(&ty_str, &fields);
-    #[cfg(feature = "mysql")]
-    impl_methods.extend(quote! {
-        fn deserialize_mysql(row: &canyon_sql::db_clients::mysql_async::Row) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
-            Ok(Self {
-                #(#mysql_implementation),*
-            })
-        }
-    });
+    {
+        let field_mappings = create_mysql_fields_mapping(&ty_str, &fields);
 
-    row_mapper_tokens.extend(quote! {
+        mapper_methods.extend(quote! {
+            fn deserialize_mysql(
+                row: &canyon_sql::db_clients::mysql_async::Row,
+            ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
+                Ok(Self {
+                    #(#field_mappings),*
+                })
+            }
+        });
+    }
+
+    let entity_runtime_info = __details::entity_runtime_info_macro::tokens(&ast);
+
+    quote! {
         use crate::canyon_sql::crud::CrudOperations;
-        impl #impl_generics canyon_sql::core::RowMapper for #ty #ty_generics #where_clause {
+
+        impl #impl_generics canyon_sql::core::RowMapper
+            for #ty #ty_generics
+            #where_clause
+        {
             type Output = #ty;
-            #impl_methods
+
+            #mapper_methods
         }
-    });
 
-    let entity_runtime_info_impl_tokens =
-        __details::entity_runtime_info_macro::tokens(&ast);
-    row_mapper_tokens.extend(quote! {
-        #entity_runtime_info_impl_tokens
-    });
-
-    row_mapper_tokens
+        #entity_runtime_info
+    }
 }
 
 #[cfg(feature = "postgres")]
 fn create_postgres_fields_mapping<'a>(
-    ty: &'a str,
+    entity_name: &'a str,
     fields: &'a [(Visibility, Ident, Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
-    fields.iter().map(|(_vis, ident, _ty)| {
-        let ident_name = ident.to_string();
-        let err = create_row_mapper_error_extracting_row(ident, ty, DatabaseType::PostgreSql);
+    fields.iter().map(move |(_, ident, field_type)| {
+        let column_name = ident.to_string();
+        let error =
+            create_row_mapper_error_extracting_row(ident, entity_name, DatabaseType::PostgreSql);
+
         quote! {
-            #ident: row.try_get::<&str, #_ty>(#ident_name).map_err(|_| #err)?
+            #ident: row
+                .try_get::<&str, #field_type>(#column_name)
+                .map_err(|_| #error)?
         }
     })
 }
 
 #[cfg(feature = "mysql")]
 fn create_mysql_fields_mapping<'a>(
-    ty: &'a str,
+    entity_name: &'a str,
     fields: &'a [(Visibility, Ident, Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
-    fields.iter().map(|(_vis, ident, _ty)| {
-        let ident_name = ident.to_string();
-        let err = create_row_mapper_error_extracting_row(ident, ty, DatabaseType::MySQL);
+    fields.iter().map(move |(_, ident, _)| {
+        let column_name = ident.to_string();
+        let error = create_row_mapper_error_extracting_row(ident, entity_name, DatabaseType::MySQL);
+
         quote! {
-            #ident: row.get_opt(#ident_name).ok_or_else(|| #err)??
+            #ident: row
+                .get_opt(#column_name)
+                .ok_or_else(|| #error)??
         }
     })
 }
 
 #[cfg(feature = "mssql")]
 fn create_sqlserver_fields_mapping<'a>(
-    struct_ty: &'a str,
+    entity_name: &'a str,
     fields: &'a [(Visibility, Ident, Type)],
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
-    fields.iter().map(move |(_vis, ident, ty)| {
-        let ident_name = ident.to_string();
-        let err = create_row_mapper_error_extracting_row(ident, struct_ty, DatabaseType::SqlServer);
+    fields.iter().map(move |(_, ident, field_type)| {
+        let column_name = ident.to_string();
+        let error =
+            create_row_mapper_error_extracting_row(ident, entity_name, DatabaseType::SqlServer);
 
-        let target_field_type_str = get_field_type_as_string(ty);
-        let field_deserialize_impl =
-            handle_stupid_tiberius_sql_conversions(&target_field_type_str, &ident_name, err);
+        let target_type = get_field_type_as_string(field_type);
+        let deserialization =
+            create_tiberius_field_deserialization(&target_type, &column_name, error);
 
         quote! {
-            #ident: #field_deserialize_impl
+            #ident: #deserialization
         }
     })
 }
 
+/// Builds the conversion required by Tiberius for fields whose borrowed SQL
+/// representation differs from the entity's owned Rust type.
+///
+/// In particular, `String` fields are read as `&str` and then converted into
+/// owned values.
 #[cfg(feature = "mssql")]
-fn handle_stupid_tiberius_sql_conversions(
+fn create_tiberius_field_deserialization(
     target_type: &str,
-    ident_name: &str,
-    err: String,
+    column_name: &str,
+    error: String,
 ) -> TokenStream {
-    let is_opt_type = target_type.contains("Option");
-    let handle_opt = if !is_opt_type {
-        quote! { .ok_or_else(|| #err)? }
-    } else {
+    let is_optional = target_type.contains("Option");
+
+    let require_value = if is_optional {
         quote! {}
+    } else {
+        quote! { .ok_or_else(|| #error)? }
     };
 
     let deserializing_type = get_deserializing_type(target_type);
-    let to_owned = if BY_VALUE_CONVERSION_TARGETS
+
+    let convert_to_owned = if BY_VALUE_CONVERSION_TARGETS
         .iter()
-        .any(|bv| target_type.contains(bv))
+        .any(|candidate| target_type.contains(candidate))
     {
-        if is_opt_type {
-            quote! { .map(|inner| inner.to_owned()) }
+        if is_optional {
+            quote! { .map(ToOwned::to_owned) }
         } else {
             quote! { .to_owned() }
         }
@@ -145,168 +178,156 @@ fn handle_stupid_tiberius_sql_conversions(
     };
 
     quote! {
-        // TODO: try_get
-        row.get::<#deserializing_type, &str>(#ident_name)
-            #handle_opt
-            #to_owned
+        row.get::<#deserializing_type, &str>(#column_name)
+            #require_value
+            #convert_to_owned
     }
 }
 
 #[cfg(feature = "mssql")]
 fn get_deserializing_type(target_type: &str) -> TokenStream {
-    let re = Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?").unwrap();
-    re.captures(target_type)
-        .map(|inner| String::from(&inner["type"]))
-        .map(|tt| {
-            if BY_VALUE_CONVERSION_TARGETS.contains(&tt.as_str()) {
+    let regex = Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?")
+        .expect("the Tiberius type extraction regex must be valid");
+
+    regex
+        .captures(target_type)
+        .map(|captures| captures["type"].to_owned())
+        .map(|extracted_type| {
+            if BY_VALUE_CONVERSION_TARGETS.contains(&extracted_type.as_str()) {
                 quote! { &str }
-                // potentially others on demand on the future
-            } else if tt.contains("Date") || tt.contains("Time") {
-                let dt = Ident::new(tt.as_str(), Span::call_site());
-                quote! { canyon_sql::date_time::#dt }
+            } else if extracted_type.contains("Date") || extracted_type.contains("Time") {
+                let ident = Ident::new(&extracted_type, Span::call_site());
+                quote! { canyon_sql::date_time::#ident }
             } else {
-                let tt = Ident::new(tt.as_str(), Span::call_site());
-                quote! { #tt }
+                let ident = Ident::new(&extracted_type, Span::call_site());
+                quote! { #ident }
             }
         })
         .unwrap_or_else(|| {
-            panic!(
-                "Unable to process type: {} on the given struct for SqlServer",
-                target_type
-            )
+            panic!("Unable to determine the SQL Server deserialization type for `{target_type}`")
         })
 }
 
 #[cfg(feature = "mssql")]
-fn __get_deserializing_type_str(target_type: &str) -> String {
-    let tt = get_deserializing_type(target_type);
-    tt.to_string()
+fn get_deserializing_type_str(target_type: &str) -> String {
+    get_deserializing_type(target_type)
+        .to_string()
         .chars()
-        .filter(|c| !c.is_whitespace())
-        .collect::<String>()
+        .filter(|character| !character.is_whitespace())
+        .collect()
 }
 
-use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::connection::database_type::DatabaseType;
 #[cfg(feature = "mssql")]
-use quote::ToTokens;
-
-#[cfg(feature = "mssql")]
-fn get_field_type_as_string(typ: &Type) -> String {
-    match typ {
-        Type::Array(type_) => type_.to_token_stream().to_string(),
-        Type::BareFn(type_) => type_.to_token_stream().to_string(),
-        Type::Group(type_) => type_.to_token_stream().to_string(),
-        Type::ImplTrait(type_) => type_.to_token_stream().to_string(),
-        Type::Infer(type_) => type_.to_token_stream().to_string(),
-        Type::Macro(type_) => type_.to_token_stream().to_string(),
-        Type::Never(type_) => type_.to_token_stream().to_string(),
-        Type::Paren(type_) => type_.to_token_stream().to_string(),
-        Type::Path(type_) => type_.to_token_stream().to_string(),
-        Type::Ptr(type_) => type_.to_token_stream().to_string(),
-        Type::Reference(type_) => type_.to_token_stream().to_string(),
-        Type::Slice(type_) => type_.to_token_stream().to_string(),
-        Type::TraitObject(type_) => type_.to_token_stream().to_string(),
-        Type::Tuple(type_) => type_.to_token_stream().to_string(),
-        Type::Verbatim(type_) => type_.to_token_stream().to_string(),
-        _ => "".to_owned(),
-    }
+fn get_field_type_as_string(field_type: &Type) -> String {
+    field_type.to_token_stream().to_string()
 }
 
 fn create_row_mapper_error_extracting_row(
     field_ident: &Ident,
-    ty: &str,
-    db_ty: DatabaseType,
+    entity_name: &str,
+    database_type: DatabaseType,
 ) -> String {
     std::io::Error::other(format!(
-        "Failed to retrieve the `{}` field for type: {} with {}",
-        field_ident, ty, db_ty
+        "Failed to retrieve field `{field_ident}` for entity `{entity_name}` using {database_type}"
     ))
     .to_string()
 }
 
-#[cfg(test)]
-#[cfg(feature = "mssql")]
+#[cfg(all(test, feature = "mssql"))]
 mod mapper_macro_tests {
-    use crate::canyon_mapper_macro::__get_deserializing_type_str;
+    use super::get_deserializing_type_str;
 
     #[test]
-    fn test_regex_extraction_for_the_tiberius_target_types() {
-        assert_eq!("&str", __get_deserializing_type_str("String"));
-        assert_eq!("&str", __get_deserializing_type_str("Option<String>"));
-        assert_eq!("i64", __get_deserializing_type_str("i64"));
+    fn extracts_tiberius_deserialization_types() {
+        assert_eq!("&str", get_deserializing_type_str("String"));
+        assert_eq!("&str", get_deserializing_type_str("Option<String>"));
+        assert_eq!("i64", get_deserializing_type_str("i64"));
 
         assert_eq!(
             "canyon_sql::date_time::DateTime",
-            __get_deserializing_type_str("DateTime")
+            get_deserializing_type_str("DateTime")
         );
         assert_eq!(
             "canyon_sql::date_time::NaiveDateTime",
-            __get_deserializing_type_str("NaiveDateTime")
+            get_deserializing_type_str("NaiveDateTime")
         );
     }
 }
 
 mod __details {
     use super::*;
+
     pub(crate) mod entity_runtime_info_macro {
         use super::*;
         use crate::utils::helpers;
-        use syn::{Field, Fields};
 
+        /// Generates runtime field access for CRUD operations.
+        ///
+        /// Insertable fields deliberately exclude the primary key. Primary-key
+        /// metadata and access are exposed separately so callers can handle
+        /// entities with and without generated keys.
         pub(crate) fn tokens(ast: &MacroTokens) -> TokenStream {
             let ty = ast.ty;
             let ty_str = ty.to_string();
-            let pk = ast.get_primary_key_field_annotation();
-            let pk_ident_ts = pk.map(|pk| pk.ident);
-            let pk_ty_ts = pk.map(|pk| pk.ty);
+            let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
 
-            let (impl_generics, ty_generics, where_clause) = &ast.generics.split_for_impl();
+            let primary_key = ast.get_primary_key_field_annotation();
+            let primary_key_ident = primary_key.map(|field| field.ident);
+            let primary_key_type = primary_key.map(|field| field.ty);
 
-            let fields = ast.get_fields_idents_skipping_pk().collect::<Vec<_>>();
-            let fields_values = get_fields_values_expr_tokens(&fields);
-            let fields_names = get_fields_names_expr_tokens(&fields);
+            let insertable_fields = ast.get_fields_idents_skipping_pk().collect::<Vec<_>>();
+            let field_values = insertable_fields
+                .iter()
+                .map(|ident| quote! { &self.#ident });
 
-            let fields_as_column_refs =
-                helpers::get_struct_fields_as_column_ref_token_stream(ast, true);
+            let field_columns = helpers::get_struct_fields_as_column_ref_token_stream(ast, true);
 
-            let pk_opt_val = get_pk_ident_as_str(ast);
-            let pk_actual_value = get_pk_actual_value_expr_tokens(ast);
-
-            let set_pk_val_method = set_pk_val_method(&pk_ident_ts);
-            let pk_assoc_ty = generate_pk_associated_type_tokens(&pk_ty_ts);
+            let primary_key_name = primary_key_name_tokens(ast);
+            let primary_key_value = primary_key_value_tokens(&primary_key_ident);
+            let primary_key_type = primary_key_associated_type_tokens(&primary_key_type);
+            let set_primary_key = set_primary_key_method_tokens(&primary_key_ident);
 
             quote! {
-                impl #impl_generics canyon_sql::query::bounds::EntityRuntimeInfo<'_> for #ty #ty_generics #where_clause {
+                impl #impl_generics
+                    canyon_sql::query::bounds::EntityRuntimeInfo
+                    for #ty #ty_generics
+                    #where_clause
+                {
+                    type PrimaryKey = #primary_key_type;
 
-                    type PrimaryKeyType = #pk_assoc_ty;
-
-                    fn fields_actual_values(&self) -> Vec<&dyn canyon_sql::query::QueryParameter> {
-                        vec![#(#fields_values),*]
+                    fn field_values(
+                        &self,
+                    ) -> Vec<&dyn canyon_sql::query::QueryParameter> {
+                        vec![#(#field_values),*]
                     }
 
-                    fn fields_as_column_refs(&self) -> Vec<canyon_sql::query::ColumnRef<'static>> {
-                        #fields_as_column_refs.collect()
-                    }
-
-                    fn primary_key(&self) -> Option<&'static str> {
-                        #pk_opt_val
+                    fn field_columns(
+                    ) -> Vec<canyon_sql::query::ColumnRef<'static>> {
+                        #field_columns.collect()
                     }
 
                     fn primary_key_name() -> Option<&'static str> {
-                        #pk_opt_val
+                        #primary_key_name
                     }
 
-                    fn primary_key_actual_value(&self) -> &'_ (dyn canyon_sql::query::QueryParameter + '_) {
-                         &#pk_actual_value
+                    fn primary_key_value(
+                        &self,
+                    ) -> Option<&dyn canyon_sql::query::QueryParameter> {
+                        #primary_key_value
                     }
 
-                    fn set_primary_key_actual_value(&mut self, value: Self::PrimaryKeyType) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-                        #set_pk_val_method
+                    fn set_primary_key(
+                        &mut self,
+                        value: Self::PrimaryKey,
+                    ) -> Result<
+                        (),
+                        Box<dyn std::error::Error + Send + Sync>,
+                    > {
+                        #set_primary_key
                     }
 
-                    fn primary_key_as_column_ref(&self) -> Option<canyon_sql::query::ColumnRef<'static>> {
-                        self.primary_key()
+                    fn primary_key_column() -> Option<canyon_sql::query::ColumnRef<'static>> {
+                        Self::primary_key_name()
                             .map(|pk| canyon_sql::query::ColumnRef::new(#ty_str, pk))
                     }
                 }
@@ -314,60 +335,51 @@ mod __details {
         }
     }
 
-    fn get_fields_values_expr_tokens<'a>(
-        fields: &'a Vec<&Ident>,
-    ) -> Map<Iter<'a, &'a Ident>, fn(&'a &Ident) -> TokenStream> {
-        fields.iter().map(|ident| {
-            quote! { &self.#ident }
-        })
-    }
-
-    fn get_fields_names_expr_tokens(fields: &Vec<&Ident>) -> Vec<String> {
-        fields
-            .iter()
-            .map(|ident| ident.to_string())
-            .collect::<Vec<_>>()
-    }
-
-    fn get_pk_ident_as_str(ast: &MacroTokens) -> TokenStream {
+    fn primary_key_name_tokens(ast: &MacroTokens) -> TokenStream {
         match ast.get_primary_key_annotation() {
             Some(primary_key) => quote! { Some(#primary_key) },
             None => quote! { None },
         }
     }
 
-    fn get_pk_actual_value_expr_tokens(ast: &MacroTokens) -> TokenStream {
-        match ast.get_primary_key_annotation() {
-            Some(primary_key) => {
-                let pk_ident = Ident::new(&primary_key, Span::call_site());
-                quote! { self.#pk_ident }
+    fn primary_key_value_tokens(primary_key_ident: &Option<&Ident>) -> TokenStream {
+        match primary_key_ident {
+            Some(ident) => {
+                quote! {
+                    Some(&self.#ident as &dyn canyon_sql::query::QueryParameter)
+                }
             }
-            None => quote! { -1 }, // TODO: yeah, big todo :)
+            None => quote! { None },
         }
     }
 
-    fn generate_pk_associated_type_tokens(pk_ident_ts: &Option<&Type>) -> TokenStream {
-        if let Some(pk_ty) = pk_ident_ts {
-            quote! {
-                #pk_ty
-            }
-        } else {
-            quote! { i64 } // TODO: NoPrimaryKey
+    fn primary_key_associated_type_tokens(primary_key_type: &Option<&Type>) -> TokenStream {
+        match primary_key_type {
+            Some(primary_key_type) => quote! { #primary_key_type },
+
+            // The associated type remains mandatory even for entities without a
+            // primary key. It is never consumed because `primary_key_value`
+            // returns `None` and `set_primary_key` returns an error.
+            None => quote! { i64 },
         }
     }
 
-    fn set_pk_val_method(pk_ident_ts: &Option<&Ident>) -> TokenStream {
-        if let Some(pk_ident) = pk_ident_ts {
-            quote! {
-                self.#pk_ident = value.into();
-                Ok(())
+    fn set_primary_key_method_tokens(primary_key_ident: &Option<&Ident>) -> TokenStream {
+        match primary_key_ident {
+            Some(ident) => {
+                quote! {
+                    self.#ident = value.into();
+                    Ok(())
+                }
             }
-        } else {
-            quote! {
-                Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "No primary key field defined for this entity"
-                )) as Box<dyn std::error::Error + Send + Sync>)
+            None => {
+                quote! {
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        "No primary key field is defined for this entity",
+                    )
+                    .into())
+                }
             }
         }
     }

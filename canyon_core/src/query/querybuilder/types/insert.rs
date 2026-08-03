@@ -9,16 +9,10 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            syntax::{
-                ast::insert::InsertAst,
-                column::ColumnRef,
-                table_metadata::TableMetadata
-            },
-            InsertQueryBuilderOps,
-            QueryBuilder,
-            QueryBuilderOps
-        }
-    }
+            InsertQueryBuilderOps, QueryBuilder, QueryBuilderOps,
+            syntax::{ast::insert::InsertAst, column::ColumnRef, table_metadata::TableMetadata},
+        },
+    },
 };
 
 /// Fluent builder for `INSERT` statements
@@ -159,10 +153,7 @@ impl<'a> InsertQueryBuilderOps<'a> for InsertQueryBuilder<'a> {
         self
     }
 
-    fn with_values<Q>(
-        mut self,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn with_values<Q>(mut self, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
     where
         Q: QueryParameter,
     {
@@ -173,8 +164,7 @@ impl<'a> InsertQueryBuilderOps<'a> for InsertQueryBuilder<'a> {
     }
 
     fn returning(mut self, columns: Vec<impl Into<ColumnRef<'a>>>) -> Self {
-        self._inner.ast.returning_columns =
-            columns.into_iter().map(Into::into).collect();
+        self._inner.ast.returning_columns = columns.into_iter().map(Into::into).collect();
         self
     }
 }

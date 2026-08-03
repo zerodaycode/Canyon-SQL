@@ -8,11 +8,7 @@ pub fn generate_delete_method_tokens(
 ) -> TokenStream {
     let mut delete_ops_tokens = TokenStream::new();
 
-    let ty = macro_data.ty;
-    let (_, ty_generics, _) = macro_data.generics.split_for_impl();
     let pk = macro_data.get_primary_key_field_annotation();
-
-    let delete_with_signature = __signatures::get_delete_with_signature();
 
     if let Some(primary_key) = pk {
         let query = __detail::generate_delete_stmt(table_schema_data, primary_key);
@@ -35,13 +31,13 @@ pub fn generate_delete_method_tokens(
 }
 
 mod __detail {
+    use crate::query_operations::consts;
     use crate::{
         query_operations::delete::{__err::generate_no_pk_err, method::__signatures},
         utils::{macro_tokens::MacroTokens, primary_key_attribute::PrimaryKeyAttribute},
     };
     use proc_macro2::{Ident, TokenStream};
     use quote::quote;
-    use crate::query_operations::consts;
 
     pub(crate) fn generate_delete_stmt(
         table_schema_data: &str,
@@ -74,8 +70,7 @@ mod __detail {
         let (_, ty_generics, _) = macro_tokens.generics.split_for_impl();
 
         let delete_signature = __signatures::get_delete_signature();
-        let default_db_conn_and_type_tokens =
-            consts::generate_default_db_conn_and_type_tokens();
+        let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
         quote! {
             #delete_signature {

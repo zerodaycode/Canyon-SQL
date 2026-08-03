@@ -131,31 +131,6 @@ impl CanyonEntity {
             .collect::<Vec<_>>()
     }
 
-    /// Generates an implementation of the match pattern to find whatever variant
-    /// is being requested when the method `.value()` it's invoked over some
-    /// instance that implements the `canyon_sql_root::crud::bounds::FieldValueIdentifier` trait
-    pub fn create_match_arm_for_relate_fields_with_values(
-        &self,
-        enum_name: &Ident,
-        db_table_name: &str,
-    ) -> Vec<TokenStream> {
-        self.fields
-            .iter()
-            .map(|f| {
-                let field_name = &f.name;
-                let field_name_as_string = f.name.to_string();
-
-                quote! {
-                    #enum_name::#field_name(v) => (canyon_sql::query::ColumnRef {
-                        table: Some(std::borrow::Cow::Borrowed(#db_table_name)),
-                        column: std::borrow::Cow::from(#field_name_as_string),
-                        alias: None
-                    }, v as &dyn canyon_sql::query::QueryParameter)
-                }
-            })
-            .collect::<Vec<_>>()
-    }
-
     pub fn get_attrs_as_token_stream(&self) -> Vec<TokenStream> {
         self.fields
             .iter()

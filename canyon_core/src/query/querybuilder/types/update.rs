@@ -6,16 +6,11 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            syntax::{
-                ast::update::UpdateAst,
-                column::ColumnRef
-            },
+            QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps,
+            syntax::{ast::update::UpdateAst, column::ColumnRef},
             types::TableMetadata,
-            QueryBuilder,
-            QueryBuilderOps,
-            UpdateQueryBuilderOps
-        }
-    }
+        },
+    },
 };
 use std::error::Error;
 
@@ -144,7 +139,8 @@ mod __validators {
                 // TODO: CanyonError
                 ErrorKind::Unsupported,
                 "SET clause already present",
-            ).into());
+            )
+            .into());
         }
         Ok(())
     }
@@ -158,7 +154,8 @@ mod __validators {
                 // TODO: CanyonError
                 ErrorKind::Unsupported,
                 "Empty SET clause",
-            ).into());
+            )
+            .into());
         }
         Ok(())
     }

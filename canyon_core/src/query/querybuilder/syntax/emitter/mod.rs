@@ -14,8 +14,6 @@ pub trait AstProcessor<'a>: Default {
     fn query_kind(&self) -> QueryKind;
 }
 
-
-
 pub type EmitStep<'a, P> = fn(&P, &mut BaseAst<'a>, &mut SqlTokens<'a>);
 
 pub trait BackendEmittable<'a>: AstProcessor<'a> {

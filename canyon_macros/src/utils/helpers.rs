@@ -4,7 +4,6 @@ pub(crate) use canyon_entities::helpers::default_database_table_name_from_entity
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 use std::borrow::Cow;
-use std::fmt::Write;
 use syn::{Attribute, Field, Fields, TypeGenerics, Visibility};
 
 #[derive(Copy, Clone)]
@@ -28,10 +27,6 @@ impl ToTokens for ReturnTypeTokens {
         tokens.extend(expanded);
     }
 }
-//
-// pub(crate) fn to_table_metadata_public_type(table_metadata: &str) -> TokenStream {
-//
-// }
 
 pub(crate) fn get_struct_fields_as_column_ref_token_stream(
     macro_tokens: &MacroTokens,

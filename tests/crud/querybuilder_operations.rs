@@ -259,16 +259,15 @@ fn test_crud_find_with_querybuilder_with_mysql() {
 fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let q = League::update_query()
+    League::update_query()
         .set_values(&[
             (LeagueField::slug, "Updated with the QueryBuilder"),
             (LeagueField::name, "Random"),
         ])
         .unwrap()
         .where_value(&LeagueFieldValue::id(1), Operator::Gt)
-        .and(&LeagueFieldValue::id(8), Operator::Lt);
-
-    let q = q.build()
+        .and(&LeagueFieldValue::id(8), Operator::Lt)
+        .build()
         .expect("Failed to update records with the querybuilder")
         .launch_default::<League>()
         .await
