@@ -538,13 +538,11 @@ impl MigrationsProcessor {
                     &canyon_register_entity_field,
                 )
             }
-        } else if !field_is_foreign_key && let Some(foreign_key_name) = current_column_metadata.foreign_key_name.as_ref() {
+        } else if !field_is_foreign_key
+            && let Some(foreign_key_name) = current_column_metadata.foreign_key_name.as_ref()
+        {
             // Case when field don't contain a foreign key annotation, but there is already one in the database column
-            Self::delete_foreign_key(
-                self,
-                entity_name,
-                foreign_key_name.to_owned(),
-            );
+            Self::delete_foreign_key(self, entity_name, foreign_key_name.to_owned());
         }
     }
 
