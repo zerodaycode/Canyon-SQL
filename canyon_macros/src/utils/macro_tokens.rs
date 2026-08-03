@@ -128,28 +128,6 @@ impl<'a> MacroTokens<'a> {
             .map(|field| field.ident.as_ref().unwrap())
     }
 
-    /// Returns a Vec populated with the name of the fields of the struct
-    /// already quote scaped for avoid the upper case column name mangling.
-    ///
-    /// If the type contains a `#[primary_key]` annotation (and), returns the
-    /// name of the columns without the fields that maps against the column designed as
-    /// primary key (if its present and its autoincremental attribute is set to true)
-    /// (autoincremental = true) or its without the autoincremental attribute, which leads
-    /// to the same behaviour.
-    ///
-    /// Returns every field if there's no PK, or if it's present but autoincremental = false
-    pub fn get_column_names_skipping_pk(&self) -> impl Iterator<Item = String> {
-        self.get_columns_skipping_pk()
-            .map(|c| format!("\"{}\"", c.ident.as_ref().unwrap()))
-    }
-
-    /// Retrieves the fields of the Struct as continuous String, comma separated
-    pub fn get_struct_fields_as_comma_sep_string(&self) -> String {
-        self.get_column_names_skipping_pk()
-            .collect::<Vec<String>>()
-            .join(", ")
-    }
-
     pub fn get_primary_key_field_annotation(&self) -> Option<&PrimaryKeyAttribute<'a>> {
         self.primary_key_attribute.as_ref()
     }

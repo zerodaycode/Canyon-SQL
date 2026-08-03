@@ -185,36 +185,35 @@ fn create_tiberius_field_deserialization(
 }
 
 #[cfg(feature = "mssql")]
-fn get_deserializing_type(target_type: &str) -> TokenStream {
-    let regex = Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?")
-        .expect("the Tiberius type extraction regex must be valid");
+fn extract_deserializing_type_name(target_type: &str) -> String {
+    static TYPE_REGEX: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+
+    let regex = TYPE_REGEX.get_or_init(|| {
+        Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?")
+            .expect("the Tiberius type extraction regex must be valid")
+    });
 
     regex
         .captures(target_type)
         .map(|captures| captures["type"].to_owned())
-        .map(|extracted_type| {
-            if BY_VALUE_CONVERSION_TARGETS.contains(&extracted_type.as_str()) {
-                quote! { &str }
-            } else if extracted_type.contains("Date") || extracted_type.contains("Time") {
-                let ident = Ident::new(&extracted_type, Span::call_site());
-                quote! { canyon_sql::date_time::#ident }
-            } else {
-                let ident = Ident::new(&extracted_type, Span::call_site());
-                quote! { #ident }
-            }
-        })
         .unwrap_or_else(|| {
             panic!("Unable to determine the SQL Server deserialization type for `{target_type}`")
         })
 }
 
 #[cfg(feature = "mssql")]
-fn get_deserializing_type_str(target_type: &str) -> String {
-    get_deserializing_type(target_type)
-        .to_string()
-        .chars()
-        .filter(|character| !character.is_whitespace())
-        .collect()
+fn get_deserializing_type(target_type: &str) -> TokenStream {
+    let extracted_type = extract_deserializing_type_name(target_type);
+
+    if BY_VALUE_CONVERSION_TARGETS.contains(&extracted_type.as_str()) {
+        quote! { &str }
+    } else if extracted_type.contains("Date") || extracted_type.contains("Time") {
+        let ident = Ident::new(&extracted_type, Span::call_site());
+        quote! { canyon_sql::date_time::#ident }
+    } else {
+        let ident = Ident::new(&extracted_type, Span::call_site());
+        quote! { #ident }
+    }
 }
 
 #[cfg(feature = "mssql")]
@@ -235,21 +234,39 @@ fn create_row_mapper_error_extracting_row(
 
 #[cfg(all(test, feature = "mssql"))]
 mod mapper_macro_tests {
-    use super::get_deserializing_type_str;
+    use super::{
+        extract_deserializing_type_name,
+        get_deserializing_type,
+    };
 
     #[test]
-    fn extracts_tiberius_deserialization_types() {
-        assert_eq!("&str", get_deserializing_type_str("String"));
-        assert_eq!("&str", get_deserializing_type_str("Option<String>"));
-        assert_eq!("i64", get_deserializing_type_str("i64"));
+    fn extracts_the_inner_tiberius_deserialization_type_name() {
+        assert_eq!("String", extract_deserializing_type_name("String"));
+        assert_eq!("String", extract_deserializing_type_name("Option<String>"));
+        assert_eq!("i64", extract_deserializing_type_name("i64"));
+        assert_eq!("DateTime", extract_deserializing_type_name("DateTime"));
+        assert_eq!(
+            "NaiveDateTime",
+            extract_deserializing_type_name("NaiveDateTime")
+        );
+    }
+
+    #[test]
+    fn maps_canyon_types_to_tiberius_deserialization_tokens() {
+        assert_eq!("& str", get_deserializing_type("String").to_string());
+        assert_eq!(
+            "& str",
+            get_deserializing_type("Option<String>").to_string()
+        );
+        assert_eq!("i64", get_deserializing_type("i64").to_string());
 
         assert_eq!(
-            "canyon_sql::date_time::DateTime",
-            get_deserializing_type_str("DateTime")
+            "canyon_sql :: date_time :: DateTime",
+            get_deserializing_type("DateTime").to_string()
         );
         assert_eq!(
-            "canyon_sql::date_time::NaiveDateTime",
-            get_deserializing_type_str("NaiveDateTime")
+            "canyon_sql :: date_time :: NaiveDateTime",
+            get_deserializing_type("NaiveDateTime").to_string()
         );
     }
 }

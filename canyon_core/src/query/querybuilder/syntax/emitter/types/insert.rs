@@ -94,25 +94,27 @@ pub(crate) use insert_default_plan;
 
 #[cfg(test)]
 mod tests {
-    use crate::query::querybuilder::syntax::dialect::{MsSql, PgDialect};
-    use crate::query::querybuilder::syntax::emitter::EmitStep;
-    use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
-        ast::BaseAst, ast::insert::InsertAst, column::ColumnRef, dialect::StandardDialect,
+        ast::BaseAst,
+        ast::insert::InsertAst,
+        column::ColumnRef,
+        dialect::{MsSql, MySql, PgDialect},
+        emitter::EmitStep,
         emitter::SqlEmitter,
+        writer::TokenWriter,
     };
 
     #[derive(Default)]
     struct TestInsertEmitter;
     impl<'a> SqlEmitter<'a, InsertAst<'a>> for TestInsertEmitter {
-        type Dialect = StandardDialect;
+        type Dialect = PgDialect;
         const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = insert_default_plan!(Self::Dialect);
     }
 
     #[derive(Default)]
     struct TestInsertEmitterNoReturning;
     impl<'a> SqlEmitter<'a, InsertAst<'a>> for TestInsertEmitterNoReturning {
-        type Dialect = MsSql;
+        type Dialect = MySql;
         const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = insert_default_plan!(Self::Dialect);
     }
 
@@ -129,7 +131,7 @@ mod tests {
     fn render_without_returning<'a>(ast: &InsertAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestInsertEmitterNoReturning;
         let tokens = emitter.emit(ast, base_ast);
-        TokenWriter::new().render::<MsSql>(tokens).unwrap()
+        TokenWriter::new().render::<MySql>(tokens).unwrap()
     }
 
     #[test]
@@ -160,7 +162,7 @@ mod tests {
         let sql = render_without_returning(&ast, &mut base_ast);
         assert_eq!(
             sql.trim(),
-            "INSERT INTO [users] ([id], [name]) VALUES (@P1, @P2);"
+            "INSERT INTO `users` (`id`, `name`) VALUES (?, ?);"
         );
     }
 

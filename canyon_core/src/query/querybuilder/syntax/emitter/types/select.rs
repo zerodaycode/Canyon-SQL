@@ -177,14 +177,22 @@ pub(crate) mod __impl {
 
 #[cfg(test)]
 mod tests {
-    use crate::query::querybuilder::syntax::dialect::PgDialect;
-    use crate::query::querybuilder::syntax::emitter::EmitStep;
-    use crate::query::{
-        operators::Operator,
-        querybuilder::syntax::{
-            ast::BaseAst, ast::select::SelectAst, column::ColumnRef, dialect::StandardDialect,
-            emitter::SqlEmitter, order::OrderByClause, writer::TokenWriter,
-        },
+    use crate::{
+        query::{
+            querybuilder::{
+                syntax::{
+                    dialect::PgDialect,
+                    emitter::EmitStep,
+                    ast::BaseAst,
+                    ast::select::SelectAst,
+                    column::ColumnRef,
+                    emitter::SqlEmitter,
+                    order::OrderByClause,
+                    writer::TokenWriter
+                }
+            },
+            operators::Operator,
+        }
     };
 
     struct TestEmitter;

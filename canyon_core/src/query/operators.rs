@@ -168,7 +168,6 @@ mod tests {
 
     fn full_like_tokens<D: SqlDialect>() -> Vec<SqlToken<'static>> {
         vec![
-            SqlToken::Keyword(Keyword::Like),
             SqlToken::Keyword(Keyword::Concat),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Symbol(Symbol::Quote),
@@ -193,7 +192,6 @@ mod tests {
 
     fn left_like_tokens<D: SqlDialect>() -> Vec<SqlToken<'static>> {
         vec![
-            SqlToken::Keyword(Keyword::Like),
             SqlToken::Keyword(Keyword::Concat),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Symbol(Symbol::Quote),
@@ -214,7 +212,6 @@ mod tests {
 
     fn right_like_tokens<D: SqlDialect>() -> Vec<SqlToken<'static>> {
         vec![
-            SqlToken::Keyword(Keyword::Like),
             SqlToken::Keyword(Keyword::Concat),
             SqlToken::Symbol(Symbol::LParen),
             SqlToken::Keyword(Keyword::Cast),

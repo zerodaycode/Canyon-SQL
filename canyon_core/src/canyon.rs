@@ -133,18 +133,6 @@ impl Canyon {
         Ok(CANYON_INSTANCE.get_or_init(|| canyon))
     }
 
-    /// Returns an immutable slice containing all configured datasources.
-    ///
-    /// This slice represents the datasources defined in your `canyon.toml` configuration.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use canyon_core::canyon::Canyon;
-    /// for ds in Canyon::instance()?.datasources() {
-    ///     println!("Datasource name: {}", ds.name);
-    /// }
-    /// ```
     #[inline(always)]
     pub fn datasources(&self) -> &[DatasourceConfig] {
         &self.config.datasources

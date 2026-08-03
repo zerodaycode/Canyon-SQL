@@ -85,19 +85,20 @@ pub(crate) mod __impl {
 mod tests {
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, delete::DeleteAst},
-        dialect::{MsSql, StandardDialect},
+        dialect::{MsSql, PgDialect},
         emitter::{AstProcessor, SqlEmitter, types::helpers::Range},
         writer::TokenWriter,
     };
+    use crate::query::querybuilder::syntax::emitter::EmitStep;
 
     #[derive(Default)]
     struct TestDeleteEmitter;
 
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitter {
-        type Dialect = StandardDialect;
+        type Dialect = PgDialect;
 
-        const PLAN: &'a [crate::query::querybuilder::syntax::emitter::EmitStep<'a, DeleteAst>] =
-            &[]; // TODO: Implement for DeleteAst
+        const PLAN: &'a [EmitStep<'a, DeleteAst>] =
+            delete_default_plan!(Self::Dialect);
     }
 
     #[derive(Default)]
@@ -105,16 +106,14 @@ mod tests {
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitterMsSql {
         type Dialect = MsSql;
 
-        const PLAN: &'a [crate::query::querybuilder::syntax::emitter::EmitStep<'a, DeleteAst>] =
-            &[]; // TODO: Implement for DeleteAst
+        const PLAN: &'a [EmitStep<'a, DeleteAst>] =
+            delete_default_plan!(Self::Dialect);
     }
 
     fn render_standard<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestDeleteEmitter;
         let tokens = emitter.emit(ast, base_ast);
-        TokenWriter::new()
-            .render::<StandardDialect>(tokens)
-            .unwrap()
+        TokenWriter::new().render::<PgDialect>(tokens).unwrap()
     }
 
     fn render_mssql<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {

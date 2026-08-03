@@ -93,14 +93,14 @@ mod tests {
     use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
-        ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::StandardDialect,
+        ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::PgDialect,
         emitter::SqlEmitter,
     };
 
     #[derive(Default)]
     struct TestUpdateEmitter;
     impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitter {
-        type Dialect = StandardDialect;
+        type Dialect = PgDialect;
         const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] = update_default_plan!(Self::Dialect);
     }
 
@@ -118,9 +118,7 @@ mod tests {
     fn render_standard<'a>(ast: &UpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitter;
         let tokens = emitter.emit(ast, base_ast);
-        TokenWriter::new()
-            .render::<StandardDialect>(tokens)
-            .unwrap()
+        TokenWriter::new().render::<PgDialect>(tokens).unwrap()
     }
 
     fn render_mssql<'a>(ast: &UpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {

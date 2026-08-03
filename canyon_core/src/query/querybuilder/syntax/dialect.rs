@@ -17,13 +17,6 @@ pub trait SqlDialect {
     const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Varchar;
 }
 
-/// Safe assuming that Canyon's default is PostgreSQL,
-/// which is the most widely used and standards-compliant database among the supported ones.
-pub struct StandardDialect; // TODO: isn't better just to use postgres directly as the default
-impl SqlDialect for StandardDialect {
-    const DB: DatabaseType = PostgreSql;
-}
-
 #[cfg(feature = "postgres")]
 pub struct PgDialect;
 #[cfg(feature = "postgres")]
@@ -48,6 +41,7 @@ pub struct MySql;
 #[cfg(feature = "mysql")]
 impl SqlDialect for MySql {
     const DB: DatabaseType = MySQL;
+    const SUPPORTS_RETURNING: bool = false;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Backtick;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::QuestionMark;
     const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Char;

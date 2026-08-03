@@ -122,19 +122,25 @@ pub(crate) fn emit_table<'a, D: SqlDialect>(table: &TableMetadata<'a>, tokens: &
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::dialect::{
-        IdentQuotingStyle, PlaceholderSymbol, StandardDialect,
+    use crate::{
+        query::{
+            querybuilder::{
+                syntax::{
+                    ast::BaseAst,
+                    tokens::SqlToken,
+                    dialect::{
+                        IdentQuotingStyle,
+                        PlaceholderSymbol,
+                        MsSql,
+                        MySql,
+                        PgDialect
+                    },
+                    table_metadata::TableMetadata,
+                }
+            }
+        }
     };
-    use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 
-    #[cfg(feature = "mssql")]
-    use crate::query::querybuilder::syntax::dialect::MsSql;
-    #[cfg(feature = "mysql")]
-    use crate::query::querybuilder::syntax::dialect::MySql;
-    #[cfg(feature = "postgres")]
-    use crate::query::querybuilder::syntax::dialect::PgDialect;
-    use crate::query::querybuilder::syntax::tokens::SqlToken;
 
     fn make_base_ast<'a>() -> BaseAst<'a> {
         BaseAst::new_ast(TableMetadata::from("users"))
@@ -166,11 +172,8 @@ mod tests {
 
     #[test]
     fn standard_dialect_uses_double_quotes_for_identifiers() {
-        assert_eq!(
-            StandardDialect::IDENT_QUOTING,
-            IdentQuotingStyle::DoubleQuote
-        );
-        assert_ident_quoting_contract::<StandardDialect>("\"", "\"");
+        assert_eq!(PgDialect::IDENT_QUOTING, IdentQuotingStyle::DoubleQuote);
+        assert_ident_quoting_contract::<PgDialect>("\"", "\"");
     }
 
     #[cfg(feature = "postgres")]
@@ -198,10 +201,10 @@ mod tests {
     fn push_quoted_ident_with_standard_dialect() {
         let mut tokens = SqlTokens::default();
         // TODO: this isn't taking in consideration the scape quotes, care
-        push_quoted_ident::<StandardDialect, &str>("users", &mut tokens);
+        push_quoted_ident::<PgDialect, &str>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
-            get_columns_test_expr_values::<StandardDialect>(&["users"])
+            get_columns_test_expr_values::<PgDialect>(&["users"])
         );
     }
 
@@ -259,7 +262,7 @@ mod tests {
     fn emit_qualified_columns_with_empty_vec_emits_asterisk() {
         let columns = vec![];
         let mut tokens = SqlTokens::default();
-        emit_qualified_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_qualified_columns::<PgDialect>(&columns, &mut tokens);
         assert_eq!(tokens.inner(), vec![SqlToken::Symbol(Symbol::Asterisk)]);
     }
 
@@ -267,10 +270,10 @@ mod tests {
     fn emit_qualified_columns_with_one_column_quotes_only_column_name_and_emit_column_alias() {
         let columns = vec![make_qualified_column("user", "name", Some("username"))];
         let mut tokens = SqlTokens::default();
-        emit_qualified_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_qualified_columns::<PgDialect>(&columns, &mut tokens);
         assert_eq!(
             tokens.inner(),
-            get_columns_test_expr_values::<StandardDialect>(&["user.name as username"])
+            get_columns_test_expr_values::<PgDialect>(&["user.name as username"])
         );
     }
 
@@ -282,15 +285,11 @@ mod tests {
             make_qualified_column("users", "email", None),
         ];
         let mut tokens = SqlTokens::default();
-        emit_qualified_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_qualified_columns::<PgDialect>(&columns, &mut tokens);
 
         assert_eq!(
             tokens.inner(),
-            get_columns_test_expr_values::<StandardDialect>(&[
-                "users.id",
-                "users.name",
-                "users.email"
-            ])
+            get_columns_test_expr_values::<PgDialect>(&["users.id", "users.name", "users.email"])
         );
     }
 
@@ -332,10 +331,9 @@ mod tests {
             make_qualified_column("account", "name", None),
         ];
         let mut tokens = SqlTokens::default();
-        emit_qualified_columns::<StandardDialect>(&columns, &mut tokens);
+        emit_qualified_columns::<PgDialect>(&columns, &mut tokens);
 
-        let expected =
-            get_columns_test_expr_values::<StandardDialect>(&["user.id", "account.name"]);
+        let expected = get_columns_test_expr_values::<PgDialect>(&["user.id", "account.name"]);
 
         assert_eq!(tokens.inner(), expected);
     }

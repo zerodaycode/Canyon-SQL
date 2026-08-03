@@ -78,7 +78,7 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for JoinClause<'a> {
 #[test]
 fn test_join_clause_basic() {
     use crate::query::operators::Operator;
-    use crate::query::querybuilder::syntax::dialect::StandardDialect;
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
     use crate::query::querybuilder::syntax::tokens::{SqlToken, Symbol};
     use std::borrow::Cow;
 
@@ -91,7 +91,9 @@ fn test_join_clause_basic() {
     );
 
     let mut tokens = SqlTokens::default();
-    tokens.extend(<JoinClause<'_> as ToSqlTokens<'_, StandardDialect>>::to_tokens(&join));
+    tokens.extend(<JoinClause<'_> as ToSqlTokens<'_, PgDialect>>::to_tokens(
+        &join,
+    ));
 
     let expected = vec![
         SqlToken::Keyword(Keyword::Inner),
