@@ -1,17 +1,13 @@
 //! Integration tests for the CRUD operations available in `Canyon` that
 //! generates and executes *INSERT* statements
 
-
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
 
 use crate::tests_models::league::*;
-use canyon_sql::crud::{
-    InsertOperations,
-    ReadOperations,
-};
+use canyon_sql::crud::{InsertOperations, ReadOperations};
 
 /// Inserts a new record on the database, given an entity that is
 /// annotated with `#[canyon_entity]` macro over a *T* type.

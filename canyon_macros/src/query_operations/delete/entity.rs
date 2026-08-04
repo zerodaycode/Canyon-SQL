@@ -3,9 +3,11 @@ use quote::quote;
 
 pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
     let delete_entity_signature = __detail::generate_delete_entity_signature();
+
     let delete_entity_with_signature = __detail::generate_delete_entity_with_signature();
 
     let delete_entity_body = __detail::generate_delete_entity_body(table_schema_data);
+
     let delete_entity_with_body = __detail::generate_delete_entity_with_body(table_schema_data);
 
     Ok(quote! {
@@ -44,6 +46,7 @@ mod __detail {
 
         quote! {
             let db_type = input.get_database_type()?;
+
             #delete_execution
 
             Ok(())
@@ -53,34 +56,30 @@ mod __detail {
     fn generate_delete_execution(table_schema_data: &str, connection: TokenStream) -> TokenStream {
         quote! {
             use canyon_sql::connection::DbConnection;
-            use canyon_sql::crud::EntityCrudOperations;
             use canyon_sql::query::querybuilder::{
                 DeleteQueryBuilderOps,
                 QueryBuilderOps,
             };
 
             let primary_key_name =
-                match <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::primary_key_name() {
-                    Some(primary_key_name) => primary_key_name,
-                    None => {
-                        return Err(std::io::Error::new(
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                    ::primary_key_name()
+                    .ok_or_else(|| {
+                        std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
                             "Cannot delete an entity without a primary key",
                         )
-                        .into());
-                    }
-                };
+                    })?;
 
-            let primary_key_value = match entity.primary_key_value() {
-                Some(primary_key_value) => primary_key_value,
-                None => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "Cannot delete an entity without a primary-key value",
-                    )
-                    .into());
-                }
-            };
+            let primary_key_value =
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                    ::primary_key_value(entity)
+                    .ok_or_else(|| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Cannot delete an entity without a primary-key value",
+                        )
+                    })?;
 
             let query =
                 canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(
@@ -94,7 +93,10 @@ mod __detail {
                 .build()?;
 
             #connection
-                .execute(query.as_ref(), &[primary_key_value])
+                .execute(
+                    query.as_ref(),
+                    &[primary_key_value],
+                )
                 .await?;
         }
     }

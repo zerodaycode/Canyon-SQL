@@ -10,28 +10,31 @@ pub fn generate_find_by_pk_operations_tokens(
     table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
     let ty = macro_data.ty;
+
     let mapping_target_ty = macro_data.retrieve_mapping_target_type().as_ref();
 
-    let result_ty = mapping_target_ty.unwrap_or(ty);
+    match mapping_target_ty {
+        Some(mapped_ty) => {
+            let query = generate_mapped_find_by_pk_query(mapped_ty, table_schema_data);
 
-    let Some(primary_key) = macro_data.get_primary_key_annotation() else {
-        return Ok(generate_unsupported_find_by_pk_operations(result_ty));
-    };
-
-    let query = match mapping_target_ty {
-        Some(_) => generate_mapped_find_by_pk_query(table_schema_data, &primary_key),
+            Ok(generate_find_by_pk_methods(mapped_ty, &query))
+        }
 
         None => {
+            let Some(primary_key) = macro_data.get_primary_key_annotation() else {
+                return Ok(generate_unsupported_find_by_pk_operations(ty));
+            };
+
             let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);
 
-            generate_find_by_pk_query(table_schema_data, &columns, &primary_key)
-        }
-    };
+            let query = generate_static_find_by_pk_query(table_schema_data, &columns, &primary_key);
 
-    Ok(generate_find_by_pk_operations(result_ty, &query))
+            Ok(generate_find_by_pk_methods(ty, &query))
+        }
+    }
 }
 
-fn generate_find_by_pk_query(
+fn generate_static_find_by_pk_query(
     table_schema_data: &str,
     columns: &TokenStream,
     primary_key: &str,
@@ -51,22 +54,36 @@ fn generate_find_by_pk_query(
     }
 }
 
-fn generate_mapped_find_by_pk_query(table_schema_data: &str, primary_key: &str) -> TokenStream {
+fn generate_mapped_find_by_pk_query(mapped_ty: &Ident, table_schema_data: &str) -> TokenStream {
     quote! {
+        let primary_key =
+            <#mapped_ty as canyon_sql::query::bounds::EntityRuntimeInfo>
+                ::primary_key_name()
+                .ok_or_else(|| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::InvalidInput,
+                        concat!(
+                            "Cannot find by primary key because mapped entity `",
+                            stringify!(#mapped_ty),
+                            "` has no primary key",
+                        ),
+                    )
+                })?;
+
         let stmt =
             canyon_sql::query::querybuilder::SelectQueryBuilder::new(
                 #table_schema_data,
                 db_type,
             )
             .r#where(
-                #primary_key,
+                primary_key,
                 canyon_sql::query::operators::Operator::Eq,
             )
             .build()?;
     }
 }
 
-fn generate_find_by_pk_operations(result_ty: &Ident, query: &TokenStream) -> TokenStream {
+fn generate_find_by_pk_methods(result_ty: &Ident, query: &TokenStream) -> TokenStream {
     let find_by_pk = generate_find_by_pk(result_ty, query);
 
     let find_by_pk_with = generate_find_by_pk_with(result_ty, query);
@@ -137,14 +154,14 @@ fn generate_find_by_pk_with(result_ty: &Ident, query: &TokenStream) -> TokenStre
 
 fn generate_unsupported_find_by_pk_operations(result_ty: &Ident) -> TokenStream {
     let find_by_pk_signature = __detail::generate_find_by_pk_signature(result_ty);
+
     let find_by_pk_with_signature = __detail::generate_find_by_pk_with_signature(result_ty);
 
-    let find_by_pk_error = consts::generate_no_pk_error();
-    let find_by_pk_with_error = consts::generate_no_pk_error();
+    let find_by_pk =
+        __detail::generate_method(find_by_pk_signature, consts::generate_no_pk_error());
 
-    let find_by_pk = __detail::generate_method(find_by_pk_signature, find_by_pk_error);
     let find_by_pk_with =
-        __detail::generate_method(find_by_pk_with_signature, find_by_pk_with_error);
+        __detail::generate_method(find_by_pk_with_signature, consts::generate_no_pk_error());
 
     quote! {
         #find_by_pk
@@ -160,26 +177,18 @@ mod __detail {
         quote! {
             async fn find_by_pk<'canyon_lt, 'err_lt>(
                 value: &'canyon_lt dyn canyon_sql::query::QueryParameter,
-            ) -> Result<
-                Option<#result_ty>,
-                Box<
-                    dyn std::error::Error
-                        + Send
-                        + Sync
-                        + 'err_lt
-                >,
-            >
+            ) -> Result<Option<#result_ty>, Box<dyn std::error::Error + Send + Sync + 'err_lt>>
         }
     }
 
     pub(super) fn generate_find_by_pk_with_signature(result_ty: &Ident) -> TokenStream {
         quote! {
-            async fn find_by_pk_with<'canyon_lt, 'err_lt, I>(
+            async fn find_by_pk_with<'canyon_lt, 'err_lt, Input>(
                 value: &'canyon_lt dyn canyon_sql::query::QueryParameter,
-                input: I,
+                input: Input,
             ) -> Result<Option<#result_ty>, Box<dyn std::error::Error + Send + Sync + 'err_lt>>
             where
-                I: canyon_sql::connection::DbConnection
+                Input: canyon_sql::connection::DbConnection
                     + Send
                     + 'canyon_lt
         }

@@ -4,9 +4,9 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-pub fn generate_find_all_operations_tokens<'a>(
+pub fn generate_find_all_operations_tokens(
     mapper_ty: &Ident,
-    table_schema_data: &'a str,
+    table_schema_data: &str,
     macro_data: &MacroTokens,
 ) -> TokenStream {
     let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);

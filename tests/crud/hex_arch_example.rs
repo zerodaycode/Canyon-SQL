@@ -1,13 +1,13 @@
 use std::error::Error;
 
 use canyon_sql::{
-    connection::DbConnection,
-    crud::EntityCrudOperations,
-    query::{QueryParameter, querybuilder::SelectQueryBuilder},
-    macros::{CanyonEntityCrud, CanyonRead, CanyonMapper, canyon_entity},
-    core::Canyon,
     connection::DatabaseConnector,
-    crud::ReadOperations
+    connection::DbConnection,
+    core::Canyon,
+    crud::EntityCrudOperations,
+    crud::ReadOperations,
+    macros::{CanyonEntityCrud, CanyonMapper, CanyonRead, canyon_entity},
+    query::{QueryParameter, querybuilder::SelectQueryBuilder},
 };
 
 #[cfg(feature = "postgres")]
@@ -121,14 +121,13 @@ fn test_hex_arch_delete_entity_ops() {
         image_url: "http://example.com/image.png".to_string(),
     };
 
-    LeagueHexRepositoryAdapter::<DatabaseConnector>::insert_entity(&mut league, )
+    LeagueHexRepositoryAdapter::<DatabaseConnector>::insert_entity(&mut league)
         .await
         .unwrap();
 
-    let inserted =
-        LeagueHexRepositoryAdapter::<DatabaseConnector>::find_by_pk(&league.id, )
-            .await
-            .unwrap();
+    let inserted = LeagueHexRepositoryAdapter::<DatabaseConnector>::find_by_pk(&league.id)
+        .await
+        .unwrap();
 
     assert!(inserted.is_some());
 
@@ -136,10 +135,9 @@ fn test_hex_arch_delete_entity_ops() {
         .await
         .unwrap();
 
-    let deleted =
-        LeagueHexRepositoryAdapter::<DatabaseConnector>::find_by_pk(&league.id, )
-            .await
-            .unwrap();
+    let deleted = LeagueHexRepositoryAdapter::<DatabaseConnector>::find_by_pk(&league.id)
+        .await
+        .unwrap();
 
     assert!(deleted.is_none());
 }

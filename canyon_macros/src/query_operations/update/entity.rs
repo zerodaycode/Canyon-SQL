@@ -3,9 +3,11 @@ use quote::quote;
 
 pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
     let update_entity_signature = __detail::generate_update_entity_signature();
+
     let update_entity_with_signature = __detail::generate_update_entity_with_signature();
 
     let update_entity_body = __detail::generate_update_entity_body(table_schema_data);
+
     let update_entity_with_body = __detail::generate_update_entity_with_body(table_schema_data);
 
     Ok(quote! {
@@ -44,6 +46,7 @@ mod __detail {
 
         quote! {
             let db_type = input.get_database_type()?;
+
             #update_execution
 
             Ok(())
@@ -53,36 +56,39 @@ mod __detail {
     fn generate_update_execution(table_schema_data: &str, connection: TokenStream) -> TokenStream {
         quote! {
             use canyon_sql::connection::DbConnection;
-            use canyon_sql::crud::EntityCrudOperations;
-            use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
+            use canyon_sql::query::querybuilder::{
+                QueryBuilderOps,
+                UpdateQueryBuilderOps,
+            };
 
             let primary_key_name =
-                match <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::primary_key_name() {
-                    Some(primary_key_name) => primary_key_name,
-                    None => {
-                        return Err(std::io::Error::new(
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                    ::primary_key_name()
+                    .ok_or_else(|| {
+                        std::io::Error::new(
                             std::io::ErrorKind::InvalidInput,
                             "Cannot update an entity without a primary key",
                         )
-                        .into());
-                    }
-                };
+                    })?;
 
-            let primary_key_value = match entity.primary_key_value() {
-                Some(primary_key_value) => primary_key_value,
-                None => {
-                    return Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "Cannot update an entity without a primary-key value",
-                    )
-                    .into());
-                }
-            };
+            let primary_key_value =
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                    ::primary_key_value(entity)
+                    .ok_or_else(|| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            "Cannot update an entity without a primary-key value",
+                        )
+                    })?;
 
             let update_columns =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::field_columns();
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                    ::field_columns();
 
-            let mut update_values = entity.field_values();
+            let mut update_values =
+                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                    ::field_values(entity);
+
             update_values.push(primary_key_value);
 
             let query =
@@ -98,7 +104,10 @@ mod __detail {
                 .build()?;
 
             #connection
-                .execute(query.as_ref(), &update_values)
+                .execute(
+                    query.as_ref(),
+                    &update_values,
+                )
                 .await?;
         }
     }
