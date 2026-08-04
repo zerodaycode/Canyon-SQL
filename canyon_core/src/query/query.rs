@@ -10,10 +10,6 @@ use std::fmt::Debug;
 // TODO: query should implement ToStatement (as the drivers underneath Canyon) or similar
 // to be usable directly in the input of Transaction and DbConnenction
 /// Holds a sql sentence details
-///
-/// Plan: The MacroTokens struct gets some generic bounds to retrieve the fields names at compile
-/// time (already does it) and the querybuilder uses it with const_format to introduce the names of the
-/// columns instead of just using * (in this case, is the same, unless we introduce new annotations like #[skip_mapping]
 #[derive(Debug)]
 pub struct Query<'a> {
     sql: String,

@@ -12,7 +12,7 @@ use std::fmt::Display;
 /// [`DatabaseType`].
 ///
 /// The variant used at runtime is determined either:
-/// - Explicitly, when passed to a [`QueryBuilder`] constructor, or
+/// - Explicitly, when passed to a [`crate::query::querybuilder::QueryBuilder`] constructor, or
 /// - Implicitly, from the first configured data source via
 ///   [`Canyon::get_default_db_type()`].
 ///
@@ -51,7 +51,7 @@ pub enum DatabaseType {
     /// (for example, through a procedural macro like `CanyonCrud`) before the
     /// actual database type is known — typically at compile-time code generation.
     ///
-    /// When using this variant, the [`QueryBuilder::build()`] method will automatically
+    /// When using this variant, the [`crate::query::querybuilder::QueryBuilder::build()`] method will automatically
     /// attempt to resolve the concrete database type from the active [`Canyon`]
     /// instance at runtime.
     ///
