@@ -170,10 +170,4 @@ Could not find openssl via pkg-config:
 `sudo apt install pkg-config` on *apt* based systems. For other systems, you must read your package manager
 docs and install it.
 
-### failed to run custom build command for `libgssapi-sys vX.X.X`
-
-The problem is missing a *C* header `gssapi.h`.
-
-- Alpine: `apk --update add krb5-pkinit krb5-dev krb5`
-- Ubuntu: `apt-get -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit`
 

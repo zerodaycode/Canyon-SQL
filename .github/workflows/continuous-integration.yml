@@ -23,17 +23,11 @@ jobs:
         - { rust: stable,            os: windows-latest }
 
     steps:
-      - name: Make the USER own the working directory. Installing required build dependencies
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: |
-          sudo chown -R $USER:$USER ${{ github.workspace }}
-          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit docker-compose
-      
       - uses: actions/checkout@v3
 
       - name: docker-compose
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: docker-compose -f ./docker/docker-compose.yml up -d 
+        run: docker compose -f ./docker/docker-compose.yml up -d 
 
       - name: Caching cargo dependencies
         id: project-cache

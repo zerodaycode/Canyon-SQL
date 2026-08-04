@@ -224,7 +224,7 @@ pub(crate) mod __impl {
 
     pub(crate) fn extract_mssql_auth(
         auth: &Auth,
-    ) -> Result<tiberius::AuthMethod, Box<dyn std::error::Error + Send + Sync>> {
+    ) -> Result<tiberius::AuthMethod, Box<dyn Error + Send + Sync>> {
         match auth {
             Auth::SqlServer(sql_server_auth) => match sql_server_auth {
                 SqlServerAuth::Basic { username, password } => {
