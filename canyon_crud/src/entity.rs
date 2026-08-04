@@ -5,8 +5,7 @@ use std::error::Error;
 
 /// CRUD operations over an entity supplied to the operation.
 ///
-/// This contract is separate from [`CrudOperations`]. It is intended for
-/// repository adapters and layered architectures where the persistence type is
+/// It is intended for repository adapters and layered architectures where the persistence type is
 /// not the entity being persisted.
 pub trait EntityCrudOperations: Send {
     fn insert_entity<'entity, 'error, T>(
