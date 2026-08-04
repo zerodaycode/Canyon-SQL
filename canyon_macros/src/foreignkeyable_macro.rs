@@ -1,9 +1,18 @@
 use crate::utils::helpers::filter_fields;
 use proc_macro2::TokenStream;
+use proc_macro::TokenStream as CompilerTokenStream;
 use quote::quote;
 use syn::DeriveInput;
+use crate::MacroResult;
 
-pub fn foreignkeyable_impl_tokens(ast: DeriveInput) -> TokenStream {
+pub fn foreignkeyable_tokens(
+    input: CompilerTokenStream,
+) -> MacroResult {
+    let ast = syn::parse::<DeriveInput>(input)?;
+    Ok(foreignkeyable_impl_tokens(ast))
+}
+
+fn foreignkeyable_impl_tokens(ast: DeriveInput) -> TokenStream {
     let ty = ast.ident;
 
     // Recovers the identifiers of the structs members

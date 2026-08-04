@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
 
 use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro::TokenStream as CompilerTokenStream;
 use quote::quote;
 use regex::Regex;
 use syn::{DeriveInput, Type, Visibility};
@@ -11,13 +12,24 @@ use canyon_core::connection::database_type::DatabaseType;
 #[cfg(feature = "mssql")]
 use quote::ToTokens;
 
+use crate::MacroResult;
+
 #[cfg(feature = "mssql")]
 const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
+
+pub fn canyon_mapper_tokens(
+    input: CompilerTokenStream,
+) -> MacroResult {
+    let ast = syn::parse::<DeriveInput>(input)?;
+    let macro_data = MacroTokens::new(&ast)?;
+
+    Ok(canyon_mapper_impl_tokens(macro_data))
+}
 
 /// Generates the [`canyon_sql::core::RowMapper`] and
 /// [`canyon_sql::query::bounds::EntityRuntimeInfo`] implementations for an
 /// entity annotated with `CanyonMapper`.
-pub fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
+fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
     let ty = ast.ty;
     let ty_str = ty.to_string();
     let fields = ast.fields();

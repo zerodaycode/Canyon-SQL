@@ -1,6 +1,11 @@
+mod entity;
+mod method;
+mod querybuilder;
+
 use crate::{
     query_operations::delete::{
-        entity::generate_delete_entity_tokens, method::generate_delete_method_tokens,
+        entity::generate_delete_entity_tokens as delete_entity_tokens,
+        method::generate_delete_method_tokens as delete_method_tokens,
         querybuilder::generate_delete_querybuilder_tokens,
     },
     utils::macro_tokens::MacroTokens,
@@ -8,20 +13,22 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::quote;
 
-mod entity;
-mod method;
-mod querybuilder;
+pub fn generate_delete_method_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> syn::Result<TokenStream> {
+    let delete_method_ops = delete_method_tokens(macro_data, table_schema_data)?;
+    let querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
 
-pub fn generate_delete_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
-    let delete_method_ops = generate_delete_method_tokens(macro_data, table_schema_data);
-    let delete_entity_ops = generate_delete_entity_tokens(table_schema_data);
-    let delete_querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
-
-    quote! {
+    Ok(quote! {
         #delete_method_ops
-        #delete_entity_ops
-        #delete_querybuilder_tokens
-    }
+        #querybuilder_tokens
+    })
+}
+
+pub fn generate_delete_entity_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
+    let entity_tokens = delete_entity_tokens(table_schema_data)?;
+
+    Ok(quote! {
+        #entity_tokens
+    })
 }
 
 mod __err {

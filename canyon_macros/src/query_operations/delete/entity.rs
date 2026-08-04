@@ -1,38 +1,14 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStream {
-    let delete_entity_signature = quote! {
-        async fn delete_entity<'canyon_lt, 'err_lt, Entity>(
-            entity: &'canyon_lt Entity,
-        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where
-            Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo
-                + Sync
-                + 'canyon_lt
-    };
+pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
+    let delete_entity_signature = __detail::generate_delete_entity_signature();
+    let delete_entity_with_signature = __detail::generate_delete_entity_with_signature();
 
-    let delete_entity_with_signature = quote! {
-        async fn delete_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
-            entity: &'canyon_lt Entity,
-            input: Input,
-        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where
-            Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo
-                + Sync
-                + 'canyon_lt,
-            Input: canyon_sql::connection::DbConnection
-                + Send
-                + 'canyon_lt
-    };
+    let delete_entity_body = __detail::generate_delete_entity_body(table_schema_data);
+    let delete_entity_with_body = __detail::generate_delete_entity_with_body(table_schema_data);
 
-    let delete_entity_body = __details::generate_delete_entity_body(table_schema_data);
-
-    let delete_entity_with_body = __details::generate_delete_entity_with_body(table_schema_data);
-
-    quote! {
+    Ok(quote! {
         #delete_entity_signature {
             #delete_entity_body
         }
@@ -40,10 +16,10 @@ pub(crate) fn generate_delete_entity_tokens(table_schema_data: &str) -> TokenStr
         #delete_entity_with_signature {
             #delete_entity_with_body
         }
-    }
+    })
 }
 
-mod __details {
+mod __detail {
     use proc_macro2::TokenStream;
     use quote::quote;
 
@@ -119,6 +95,36 @@ mod __details {
             #connection
                 .execute(query.as_ref(), &[primary_key_value])
                 .await?;
+        }
+    }
+
+    pub(crate) fn generate_delete_entity_signature() -> TokenStream {
+        quote! {
+            async fn delete_entity<'canyon_lt, 'err_lt, Entity>(
+                entity: &'canyon_lt Entity,
+            ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            where
+                Entity: canyon_sql::core::RowMapper
+                    + canyon_sql::query::bounds::EntityRuntimeInfo
+                    + Sync
+                    + 'canyon_lt
+        }
+    }
+
+    pub(crate) fn generate_delete_entity_with_signature() -> TokenStream {
+        quote! {
+            async fn delete_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
+                entity: &'canyon_lt Entity,
+                input: Input,
+            ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            where
+                Entity: canyon_sql::core::RowMapper
+                    + canyon_sql::query::bounds::EntityRuntimeInfo
+                    + Sync
+                    + 'canyon_lt,
+                Input: canyon_sql::connection::DbConnection
+                    + Send
+                    + 'canyon_lt
         }
     }
 }

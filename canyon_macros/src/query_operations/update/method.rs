@@ -7,7 +7,7 @@ use quote::quote;
 pub(crate) fn generate_update_method_tokens(
     macro_data: &MacroTokens,
     table_schema_data: &str,
-) -> TokenStream {
+) -> syn::Result<TokenStream> {
     let mut update_ops_tokens = TokenStream::new();
 
     if let Some(primary_key) = macro_data.get_primary_key_field_annotation() {
@@ -32,7 +32,7 @@ pub(crate) fn generate_update_method_tokens(
         __details::handle_no_primary_key_case(&mut update_ops_tokens);
     }
 
-    update_ops_tokens
+    Ok(update_ops_tokens)
 }
 
 mod __details {

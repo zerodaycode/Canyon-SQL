@@ -1,38 +1,14 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStream {
-    let update_entity_signature = quote! {
-        async fn update_entity<'canyon_lt, 'err_lt, Entity>(
-            entity: &'canyon_lt Entity,
-        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where
-            Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo
-                + Sync
-                + 'canyon_lt
-    };
+pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
+    let update_entity_signature = __detail::generate_update_entity_signature();
+    let update_entity_with_signature = __detail::generate_update_entity_with_signature();
 
-    let update_entity_with_signature = quote! {
-        async fn update_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
-            entity: &'canyon_lt Entity,
-            input: Input,
-        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where
-            Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo
-                + Sync
-                + 'canyon_lt,
-            Input: canyon_sql::connection::DbConnection
-                + Send
-                + 'canyon_lt
-    };
+    let update_entity_body = __detail::generate_update_entity_body(table_schema_data);
+    let update_entity_with_body = __detail::generate_update_entity_with_body(table_schema_data);
 
-    let update_entity_body = __details::generate_update_entity_body(table_schema_data);
-
-    let update_entity_with_body = __details::generate_update_entity_with_body(table_schema_data);
-
-    quote! {
+    Ok(quote! {
         #update_entity_signature {
             #update_entity_body
         }
@@ -40,10 +16,10 @@ pub(crate) fn generate_update_entity_tokens(table_schema_data: &str) -> TokenStr
         #update_entity_with_signature {
             #update_entity_with_body
         }
-    }
+    })
 }
 
-mod __details {
+mod __detail {
     use proc_macro2::TokenStream;
     use quote::quote;
 
@@ -126,6 +102,36 @@ mod __details {
             #connection
                 .execute(query.as_ref(), &update_values)
                 .await?;
+        }
+    }
+
+    pub(crate) fn generate_update_entity_signature() -> TokenStream {
+        quote! {
+            async fn update_entity<'canyon_lt, 'err_lt, Entity>(
+                entity: &'canyon_lt Entity,
+            ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            where
+                Entity: canyon_sql::core::RowMapper
+                    + canyon_sql::query::bounds::EntityRuntimeInfo
+                    + Sync
+                    + 'canyon_lt
+        }
+    }
+
+    pub(crate) fn generate_update_entity_with_signature() -> TokenStream {
+        quote! {
+            async fn update_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
+                entity: &'canyon_lt Entity,
+                input: Input,
+            ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            where
+                Entity: canyon_sql::core::RowMapper
+                    + canyon_sql::query::bounds::EntityRuntimeInfo
+                    + Sync
+                    + 'canyon_lt,
+                Input: canyon_sql::connection::DbConnection
+                    + Send
+                    + 'canyon_lt
         }
     }
 }

@@ -10,197 +10,287 @@ mod canyon_mapper_macro;
 mod foreignkeyable_macro;
 mod query_operations;
 mod utils;
+mod canyon_tokio_test;
 
 use proc_macro::TokenStream as CompilerTokenStream;
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::{DeriveInput, Error, parse_macro_input};
-use utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens};
 
-use crate::canyon_entity_macro::{CanyonEntityAttributeArgs, generate_canyon_entity_tokens};
-use crate::canyon_mapper_macro::canyon_mapper_impl_tokens;
-use crate::foreignkeyable_macro::foreignkeyable_impl_tokens;
-use crate::query_operations::impl_crud_operations_trait_for_struct;
-use canyon_entities::manager_builder::generated_enum_type_for_struct_data;
 use canyon_entities::{
     entity::CanyonEntity,
-    manager_builder::{generate_enum_with_fields, generate_enum_with_fields_values},
+    manager_builder::{
+        generate_enum_with_fields,
+        generate_enum_with_fields_values,
+        generated_enum_type_for_struct_data,
+    },
+};
+use crate::{
+    canyon_tokio_test::generate_canyon_tokio_test_tokens,
+    canyon_mapper_macro::canyon_mapper_tokens,
+    canyon_entity_macro::{
+        CanyonEntityAttributeArgs,
+        generate_canyon_entity_tokens,
+    },
+    query_operations::{
+        impl_crud_operations_trait_for_struct,
+        impl_crud_entity_operations_trait_for_struct,
+        read::generate_read_operations_tokens,
+        update::generate_update_method_tokens,
+        delete::generate_delete_method_tokens
+    },
+    utils::{
+        function_parser::FunctionParser,
+        helpers,
+        macro_tokens::MacroTokens,
+    },
+    foreignkeyable_macro::foreignkeyable_tokens,
+    query_operations::insert::generate_insert_method_tokens
 };
 
-/// Macro for handling the entry point to the program.
-///
-/// Avoids the user to write the tokio proc_attribute and
-/// the async modifier to the main fn()
-///
-/// Also, takes care about wire the necessary code that Canyon's need
-/// to run in order to check the provided code and in order to perform
-/// the necessary operations for the migrations
-#[proc_macro_attribute]
-pub fn main(_meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    let func = parse_macro_input!(input as FunctionParser);
+type MacroResult = syn::Result<TokenStream>;
 
-    if func.sig.ident != "main" {
-        // Ensure the function is literally named "main"
+type OperationsGenerator =
+    for<'a> fn(&MacroTokens<'a>, &str) -> MacroResult;
+
+/// Parses the derive input and delegates token generation to one of the
+/// operation-specific generators.
+///
+/// Errors are converted into `compile_error!` only at the proc-macro boundary.
+/// The internal generators can therefore propagate `syn::Error` with `?`.
+fn derive_operations(
+    input: CompilerTokenStream,
+    generator: OperationsGenerator,
+) -> CompilerTokenStream {
+    derive_operations_tokens(input, generator)
+        .unwrap_or_else(Error::into_compile_error)
+        .into()
+}
+
+fn derive_operations_tokens(
+    input: CompilerTokenStream,
+    generator: OperationsGenerator,
+) -> MacroResult {
+    let ast = syn::parse::<DeriveInput>(input)?;
+    let macro_data = MacroTokens::new(&ast)?;
+
+    let table_schema_data = helpers::table_schema_parser(&macro_data)
+        .map_err(|tokens| {
+            Error::new_spanned(
+                tokens,
+                "failed to parse Canyon table and schema metadata",
+            )
+        })?;
+
+    generator(&macro_data, &table_schema_data.sql())
+}
+
+/// Canyon's application entry point.
+///
+/// Initializes Canyon inside its Tokio runtime before executing the user's
+/// `main` body and, when enabled, runs the generated migration setup.
+#[proc_macro_attribute]
+pub fn main(
+    _meta: CompilerTokenStream,
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    let function = parse_macro_input!(input as FunctionParser);
+
+    if function.sig.ident != "main" {
         return Error::new(
-            func.sig.ident.span(),
-            "The #[canyon::main] macro can only be applied to `fn main()`",
+            function.sig.ident.span(),
+            "the #[canyon::main] attribute can only be applied to `fn main()`",
         )
-        .to_compile_error()
-        .into();
+            .into_compile_error()
+            .into();
     }
 
-    let vis = func.sig;
-    let sign = func.vis;
-    let attrs = func.attrs;
-    let body = func.block.stmts;
+    let signature = function.sig;
+    let visibility = function.vis;
+    let attributes = function.attrs;
+    let body = function.block.stmts;
 
     #[allow(unused_mut, unused_assignments)]
     let mut migrations_tokens = quote! {};
+
     #[cfg(feature = "migrations")]
     {
         migrations_tokens = main_with_queries();
     }
 
-    quote! { // The final code wired in main()
-        #(#attrs)*
-        #vis #sign {
+    quote! {
+        #(#attributes)*
+        #visibility #signature {
             canyon_sql::runtime::get_canyon_tokio_runtime()
                 .handle()
-                .block_on( async {
-                    canyon_sql::core::Canyon::init().await
-                        .expect("Error initializing the connections POOL");
+                .block_on(async {
+                    canyon_sql::core::Canyon::init()
+                        .await
+                        .expect("error initializing Canyon's connection pools");
+
                     #migrations_tokens
                     #(#body)*
-                }
-            )
+                })
         }
     }
-    .into()
+        .into()
 }
 
-/// Wraps the [`test`] proc macro in a convenient way to run tests within
-/// the tokio's current reactor
+/// Runs a test function inside Canyon's Tokio runtime.
 #[proc_macro_attribute]
 pub fn canyon_tokio_test(
     _meta: CompilerTokenStream,
     input: CompilerTokenStream,
 ) -> CompilerTokenStream {
-    let func_res = syn::parse::<FunctionParser>(input);
-    if func_res.is_err() {
-        quote! { fn non_valid_test_fn() {} }.into()
-    } else {
-        let func = func_res.ok().unwrap();
-        let vis = func.vis;
-        let sign = func.sig;
-        let body = func.block.stmts;
-        let attrs = func.attrs;
-        quote! {
-            #[test]
-            #(#attrs)*
-            #vis #sign {
-                canyon_sql::runtime::get_canyon_tokio_runtime()
-                    .handle()
-                    .block_on(async {
-                        canyon_sql::core::Canyon::init().await
-                            .expect("Error initializing the connections POOL");
-                        async {
-                            {
-                                #(#body)*
-                            }
-                            Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
-                        }
-                        .await
-                        .expect("Error executing `canyon_tokio_test` body");
-                    })
-            }
-        }
+    generate_canyon_tokio_test_tokens(input)
+        .unwrap_or_else(Error::into_compile_error)
         .into()
-    }
 }
 
-/// Takes data from the struct annotated with the `canyon_entity` macro to fill the Canyon Register
-/// where lives the data that Canyon needs to work.
-///
-/// Also, it's the responsible for generate the tokens for all the `Crud` methods available over
-/// your type
+/// Registers the table metadata and runtime field information required by
+/// Canyon.
 #[proc_macro_attribute]
-pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> CompilerTokenStream {
-    let attrs = syn::parse_macro_input!(meta with CanyonEntityAttributeArgs::parse_terminated);
-    // TODO: a table with table and schema fields maybe would have been more corret
-    generate_canyon_entity_tokens(attrs, input).into()
+pub fn canyon_entity(
+    meta: CompilerTokenStream,
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    let attributes = parse_macro_input!(
+        meta with CanyonEntityAttributeArgs::parse_terminated
+    );
+
+    generate_canyon_entity_tokens(attributes, input).into()
 }
 
-/// Allows the implementors to auto-derive the `CrudOperations` trait, which defines the methods
-/// that will perform the database communication and the implementation of the queries for every
-/// type, as defined in the `CrudOperations` + `Transaction` traits.
-#[proc_macro_derive(CanyonCrud, attributes(canyon_crud))]
-pub fn crud_operations(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let ast: DeriveInput = syn::parse(input).expect("Error implementing CanyonCrud AST");
-
-    let macro_data = MacroTokens::new(&ast);
-    let macro_data = if let Err(err) = macro_data {
-        return err.to_compile_error().into();
-    } else {
-        macro_data.unwrap()
-    };
-
-    let table_schema_data_res = helpers::table_schema_parser(&macro_data);
-
-    if let Ok(table_schema_data) = table_schema_data_res {
-        impl_crud_operations_trait_for_struct(&macro_data, &table_schema_data.sql())
-    } else {
-        table_schema_data_res.unwrap_err().into()
-    }
-}
-
-/// proc-macro for annotate struct fields that holds a foreign key relation.
+/// Derives Canyon's complete CRUD API.
 ///
-/// So basically, if you have some `ForeignKey` attribute, annotate the parent
-/// struct (where the ForeignKey table property points) with this macro
-/// to make it able to work with compound table relations
+/// This is the convenience derive. It includes both:
+///
+/// - operations tied directly to the annotated type;
+/// - operations that accept a separate Canyon entity, as used by repository
+///   adapters configured through `#[canyon_crud(maps_to = Entity)]`.
+#[proc_macro_derive(CanyonCrud, attributes(canyon_crud))]
+pub fn canyon_crud(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    derive_operations(
+        input,
+        impl_crud_operations_trait_for_struct,
+    )
+}
+
+/// Derives read operations tied directly to the annotated type.
+///
+/// This includes operations such as `find_all`, `find_by_pk`, `count` and
+/// `select_query`.
+#[proc_macro_derive(CanyonRead, attributes(canyon_crud))]
+pub fn canyon_read(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    // TODO: we should split the find_by_pk with the entity methods
+    derive_operations(
+        input,
+        generate_read_operations_tokens,
+    )
+}
+
+/// Derives insertion of instances of the annotated type.
+#[proc_macro_derive(CanyonInsert, attributes(canyon_crud))]
+pub fn canyon_insert(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    derive_operations(
+        input,
+        generate_insert_method_tokens,
+    )
+}
+
+/// Derives update operations tied directly to instances of the annotated type.
+#[proc_macro_derive(CanyonUpdate, attributes(canyon_crud))]
+pub fn canyon_update(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    derive_operations(
+        input,
+        generate_update_method_tokens,
+    )
+}
+
+/// Derives delete operations tied directly to instances of the annotated type.
+#[proc_macro_derive(CanyonDelete, attributes(canyon_crud))]
+pub fn canyon_delete(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    derive_operations(
+        input,
+        generate_delete_method_tokens,
+    )
+}
+
+/// Derives every operation that works with a separate Canyon entity.
+///
+/// This API is intended for repository adapters and layered architectures where
+/// the type performing persistence is not itself the domain entity being
+/// persisted.
+#[proc_macro_derive(CanyonEntityCrud, attributes(canyon_crud))]
+pub fn canyon_entity_crud(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    derive_operations(
+        input,
+        impl_crud_entity_operations_trait_for_struct,
+    )
+}
+
+/// Derives the metadata required to navigate foreign-key relationships.
 #[proc_macro_derive(ForeignKeyable)]
 pub fn implement_foreignkeyable_for_type(
-    input: proc_macro::TokenStream,
-) -> proc_macro::TokenStream {
-    let ast: DeriveInput = syn::parse(input).unwrap();
-    foreignkeyable_impl_tokens(ast).into()
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    foreignkeyable_tokens(input)
+        .unwrap_or_else(Error::into_compile_error)
+        .into()
 }
 
+/// Derives database-row deserialization for the annotated type.
 #[proc_macro_derive(CanyonMapper)]
-pub fn implement_row_mapper_for_type(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
-    let ast: DeriveInput = syn::parse(input).unwrap();
-    let macro_data = MacroTokens::new(&ast);
-    let macro_data = if let Err(err) = macro_data {
-        return err.to_compile_error().into();
-    } else {
-        macro_data.unwrap()
-    };
-    canyon_mapper_impl_tokens(macro_data).into()
+pub fn implement_row_mapper_for_type(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    canyon_mapper_tokens(input)
+        .unwrap_or_else(Error::into_compile_error)
+        .into()
 }
 
+/// Generates the field identifiers used by Canyon's typed query builder.
 #[proc_macro_derive(Fields)]
-pub fn querybuilder_fields(input: CompilerTokenStream) -> CompilerTokenStream {
-    let entity_res = syn::parse::<CanyonEntity>(input);
+pub fn querybuilder_fields(
+    input: CompilerTokenStream,
+) -> CompilerTokenStream {
+    querybuilder_fields_tokens(input)
+        .unwrap_or_else(Error::into_compile_error)
+        .into()
+}
 
-    if entity_res.is_err() {
-        return entity_res
-            .expect_err("Unexpected error parsing the struct")
-            .into_compile_error()
-            .into();
-    }
+fn querybuilder_fields_tokens(
+    input: CompilerTokenStream,
+) -> MacroResult {
+    let entity = syn::parse::<CanyonEntity>(input)?;
 
-    // No errors detected on the parsing, so we can safely unwrap the parse result
-    let entity = entity_res.expect("Unexpected error parsing the struct");
-    let generated_enum_type_for_struct_data = generated_enum_type_for_struct_data(&entity);
-    let generated_enum_type_for_fields = generate_enum_with_fields(&entity);
-    let generated_enum_type_for_fields_values = generate_enum_with_fields_values(&entity);
+    let struct_metadata =
+        generated_enum_type_for_struct_data(&entity);
 
-    quote! {
+    let fields =
+        generate_enum_with_fields(&entity);
+
+    let field_values =
+        generate_enum_with_fields_values(&entity);
+
+    Ok(quote! {
         use canyon_sql::query::bounds::EntityTable;
         use canyon_sql::query::bounds::FieldIdentifier;
 
-        #generated_enum_type_for_struct_data
-        #generated_enum_type_for_fields
-        #generated_enum_type_for_fields_values
-    }
-    .into()
+        #struct_metadata
+        #fields
+        #field_values
+    })
 }

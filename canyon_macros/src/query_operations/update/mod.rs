@@ -1,6 +1,11 @@
+mod entity;
+mod method;
+mod querybuilder;
+
 use crate::{
     query_operations::update::{
-        entity::generate_update_entity_tokens, method::generate_update_method_tokens,
+        entity::generate_update_entity_tokens as update_entity_tokens,
+        method::generate_update_method_tokens as update_method_tokens,
         querybuilder::generate_update_querybuilder_tokens,
     },
     utils::macro_tokens::MacroTokens,
@@ -8,20 +13,18 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::quote;
 
-mod entity;
-mod method;
-mod querybuilder;
+pub fn generate_update_method_tokens(macro_tokens: &MacroTokens, table_schema_data: &str) -> syn::Result<TokenStream> {
+    let update_tokens = update_method_tokens(macro_tokens, table_schema_data)?;
+    let querybuilder_tokens = generate_update_querybuilder_tokens(table_schema_data);
+    
+    Ok(quote! {
+        #update_tokens
+        #querybuilder_tokens
+    })
+}
 
-pub fn generate_update_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
-    let update_method_ops = generate_update_method_tokens(macro_data, table_schema_data);
-    let update_entity_ops = generate_update_entity_tokens(table_schema_data);
-    let update_querybuilder_tokens = generate_update_querybuilder_tokens(table_schema_data);
-
-    quote! {
-        #update_method_ops
-        #update_entity_ops
-        #update_querybuilder_tokens
-    }
+pub fn generate_update_entity_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
+    update_entity_tokens(table_schema_data)
 }
 
 mod __err {

@@ -14,10 +14,10 @@ mod select_querybuilder;
 
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
-pub fn generate_read_operations_tokens<'a>(
+pub(crate) fn generate_read_operations_tokens<'a>(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &'a str,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
+) -> syn::Result<TokenStream> {
     let ty = macro_data.ty;
     let mapper_ty = macro_data
         .retrieve_mapping_target_type()
@@ -25,8 +25,8 @@ pub fn generate_read_operations_tokens<'a>(
         .unwrap_or(ty);
 
     let find_all_tokens =
-        generate_find_all_operations_tokens(mapper_ty, table_schema_data, macro_data)?;
-    let count_tokens = generate_count_operations_tokens(table_schema_data)?;
+        generate_find_all_operations_tokens(mapper_ty, table_schema_data, macro_data);
+    let count_tokens = generate_count_operations_tokens(table_schema_data);
     let find_by_pk_tokens = generate_find_by_pk_operations_tokens(macro_data, table_schema_data)?;
     let read_querybuilder_ops = generate_select_querybuilder_tokens(table_schema_data);
 

@@ -8,25 +8,25 @@ pub fn generate_find_all_operations_tokens<'a>(
     mapper_ty: &Ident,
     table_schema_data: &'a str,
     macro_data: &MacroTokens,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
+) -> TokenStream {
     let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);
-    let find_all = create_find_all_macro(mapper_ty, table_schema_data, &columns)?;
-    let find_all_with = create_find_all_with_macro(mapper_ty, table_schema_data, &columns)?;
-
-    Ok(quote! {
+    let find_all = create_find_all_macro(mapper_ty, table_schema_data, &columns);
+    let find_all_with = create_find_all_with_macro(mapper_ty, table_schema_data, &columns);
+    
+    quote! {
         #find_all
         #find_all_with
-    })
+    }
 }
 
 fn create_find_all_macro(
     mapper_ty: &Ident,
     table_schema_data: &str,
     columns: &TokenStream,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
+) -> TokenStream {
     let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
-    Ok(quote! {
+    quote! {
         async fn find_all()
             -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
         {
@@ -38,15 +38,15 @@ fn create_find_all_macro(
                 .build()?;
             default_db_conn.query(stmt.sql(), &[]).await
         }
-    })
+    }
 }
 
 fn create_find_all_with_macro(
     mapper_ty: &Ident,
     table_schema_data: &str,
     columns: &TokenStream,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
-    Ok(quote! {
+) -> TokenStream {
+    quote! {
         async fn find_all_with<'a, I>(input: I)
             -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
         where
@@ -60,5 +60,5 @@ fn create_find_all_with_macro(
                 .build()?;
             input.query::<&str, #mapper_ty>(stmt.sql(), &[]).await
         }
-    })
+    }
 }

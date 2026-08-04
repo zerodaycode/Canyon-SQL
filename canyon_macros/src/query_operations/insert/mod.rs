@@ -1,20 +1,24 @@
 mod entity;
 mod method;
 
-use crate::query_operations::insert::entity::generate_insert_entity_function_tokens;
-use crate::query_operations::insert::method::generate_insert_method_tokens;
-use crate::utils::macro_tokens::MacroTokens;
+use crate::{
+    query_operations::{
+        insert::{
+            method::generate_insert_method_tokens as insert_method_tokens,
+            entity::generate_insert_entity_function_tokens as insert_entity_function_tokens,
+        }
+    },
+    utils::macro_tokens::MacroTokens
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn generate_insert_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> TokenStream {
-    let insert_method_ops = generate_insert_method_tokens(macro_data, table_schema_data);
-    let insert_entity_ops = generate_insert_entity_function_tokens(macro_data, table_schema_data);
+pub fn generate_insert_method_tokens(macro_tokens: &MacroTokens, table_schema_data: &str) -> syn::Result<TokenStream> {
+    insert_method_tokens(macro_tokens, table_schema_data)
+}
 
-    quote! {
-        #insert_method_ops
-        #insert_entity_ops
-    }
+pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
+    insert_entity_function_tokens(table_schema_data)
 }
 
 mod __shared {

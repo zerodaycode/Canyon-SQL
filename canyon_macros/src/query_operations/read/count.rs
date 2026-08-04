@@ -3,34 +3,34 @@ use proc_macro2::TokenStream;
 use quote::quote;
 use std::borrow::Cow;
 
-pub fn generate_count_operations_tokens<'a>(
-    table_schema_data: &'a str,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync + 'a>> {
+pub fn generate_count_operations_tokens(
+    table_schema_data: &str,
+) -> TokenStream {
     let table_metadata =
         canyon_core::query::querybuilder::syntax::table_metadata::TableMetadata::from(
             table_schema_data,
         );
     let schema_name = table_metadata.schema;
     let table_name = table_metadata.name;
-    let count = create_count_macro(schema_name.clone(), table_name.as_ref())?;
-    let count_with = create_count_with_macro(schema_name, table_name.as_ref())?;
-
-    Ok(quote! {
+    let count = create_count_macro(schema_name.clone(), table_name.as_ref());
+    let count_with = create_count_with_macro(schema_name, table_name.as_ref());
+    
+    quote! {
         #count
         #count_with
-    })
+    }
 }
 
 pub fn create_count_macro(
     schema_name: Option<Cow<str>>,
     table_name: &str,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
+) -> TokenStream {
     let mssql_arm = get_mssql_arm_tokens_if_enabled(false);
     let schema_tokens = get_schema_tokens(schema_name);
     let table_name = create_cow_borrowed_table_name(table_name);
     let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
-    Ok(quote! {
+    quote! {
         async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
             use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
 
@@ -50,18 +50,18 @@ pub fn create_count_macro(
                 }
             }
         }
-    })
+    }
 }
 
 pub fn create_count_with_macro(
     schema_name: Option<Cow<str>>,
     table_name: &str,
-) -> Result<TokenStream, Box<dyn std::error::Error + Send + Sync>> {
+) -> TokenStream {
     let mssql_arm = get_mssql_arm_tokens_if_enabled(true);
     let schema_tokens = get_schema_tokens(schema_name);
     let table_name = create_cow_borrowed_table_name(table_name);
 
-    Ok(quote! {
+    quote! {
         async fn count_with<'a, I>(input: I)
             -> Result<i64, Box<dyn std::error::Error + Send + Sync + 'a>>
         where
@@ -84,7 +84,7 @@ pub fn create_count_with_macro(
                 }
             }
         }
-    })
+    }
 }
 
 fn get_mssql_arm_tokens_if_enabled(is_with_input: bool) -> TokenStream {

@@ -6,7 +6,7 @@ use quote::quote;
 pub(crate) fn generate_insert_method_tokens(
     macro_data: &MacroTokens,
     table_schema_data: &str,
-) -> TokenStream {
+) -> syn::Result<TokenStream> {
     let insert_signature = quote! {
         async fn insert<'a>(&mut self)
             -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>
@@ -35,17 +35,17 @@ pub(crate) fn generate_insert_method_tokens(
             __details::generate_insert_fn_body_tokens(macro_data, table_schema_data, true);
     };
 
-    quote! {
+    Ok(quote! {
         #insert_signature {
             #insert_values
             #insert_body
         }
-
+    
         #insert_with_signature {
             #insert_values
             #insert_with_body
         }
-    }
+    })
 }
 
 mod __details {

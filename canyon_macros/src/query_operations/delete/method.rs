@@ -2,10 +2,10 @@ use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn generate_delete_method_tokens(
+pub(crate) fn generate_delete_method_tokens(
     macro_data: &MacroTokens,
     table_schema_data: &str,
-) -> TokenStream {
+) -> syn::Result<TokenStream> {
     let mut delete_ops_tokens = TokenStream::new();
 
     let pk = macro_data.get_primary_key_field_annotation();
@@ -27,7 +27,7 @@ pub fn generate_delete_method_tokens(
         __detail::handle_no_primary_key_case(&mut delete_ops_tokens);
     }
 
-    delete_ops_tokens
+    Ok(delete_ops_tokens)
 }
 
 mod __detail {

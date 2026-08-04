@@ -1,36 +1,12 @@
-use crate::utils::macro_tokens::MacroTokens;
 use proc_macro2::TokenStream;
 use quote::quote;
 
 pub fn generate_insert_entity_function_tokens(
-    _macro_data: &MacroTokens,
     table_schema_data: &str,
-) -> TokenStream {
-    let insert_entity_signature = quote! {
-        async fn insert_entity<'canyon_lt, 'err_lt, Entity>(
-            entity: &'canyon_lt mut Entity,
-        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where
-            Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo
-                + Sync
-                + 'canyon_lt
-    };
-
-    let insert_entity_with_signature = quote! {
-        async fn insert_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
-            entity: &'canyon_lt mut Entity,
-            input: Input,
-        ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
-        where
-            Entity: canyon_sql::core::RowMapper
-                + canyon_sql::query::bounds::EntityRuntimeInfo
-                + Sync
-                + 'canyon_lt,
-            Input: canyon_sql::connection::DbConnection
-                + Send
-                + 'canyon_lt
-    };
+) -> syn::Result<TokenStream> {
+    let insert_entity_signature = __detail::generate_insert_entity_signature();
+    let insert_entity_with_signature =
+        __detail::generate_insert_entity_with_signature();
 
     let no_fields_to_insert_err =
         crate::query_operations::insert::__shared::no_fields_to_insert_err();
@@ -82,7 +58,7 @@ pub fn generate_insert_entity_function_tokens(
         }
     };
 
-    quote! {
+    Ok(quote! {
         #insert_entity_signature {
             let db_conn =
                 canyon_sql::core::Canyon::instance()?.get_default_connection()?;
@@ -100,6 +76,30 @@ pub fn generate_insert_entity_function_tokens(
             #statement_execution
 
             Ok(())
+        }
+    })
+}
+
+mod __detail {
+    pub(crate) fn generate_insert_entity_signature() -> proc_macro2::TokenStream {
+        quote::quote! {
+            fn insert_entity<'a, 'b, Entity>(
+                entity: &'a mut Entity,
+            ) -> impl ::core::future::Future<Output = Result<(), Box<dyn ::std::error::Error + Send + Sync + 'b>>>
+            where
+                Entity: canyon_sql::query::bounds::RowMapper + canyon_sql::query::bounds::EntityRuntimeInfo + Sync + 'a
+        }
+    }
+    
+    pub(crate) fn generate_insert_entity_with_signature() -> proc_macro2::TokenStream {
+        quote::quote! {
+            fn insert_entity_with<'a, 'b, Entity, I>(
+                entity: &'a mut Entity,
+                input: I,
+            ) -> impl ::core::future::Future<Output = Result<(), Box<dyn ::std::error::Error + Send + Sync + 'b>>>
+            where
+                Entity: canyon_sql::query::bounds::RowMapper + canyon_sql::query::bounds::EntityRuntimeInfo + Sync + 'a,
+                I: canyon_sql::connection::DbConnection + Send + 'a
         }
     }
 }
