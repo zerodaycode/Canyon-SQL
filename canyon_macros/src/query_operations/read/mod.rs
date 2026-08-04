@@ -14,9 +14,9 @@ mod select_querybuilder;
 
 /// Facade function that acts as the unique API for export to the real macro implementation
 /// of all the generated macros for the READ operations
-pub(crate) fn generate_read_operations_tokens<'a>(
+pub(crate) fn generate_read_operations_tokens(
     macro_data: &MacroTokens<'_>,
-    table_schema_data: &'a str,
+    table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
     let ty = macro_data.ty;
     let mapper_ty = macro_data

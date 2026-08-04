@@ -44,7 +44,6 @@ mod __detail {
 
         quote! {
             let db_type = input.get_database_type()?;
-
             #delete_execution
 
             Ok(())
@@ -53,6 +52,8 @@ mod __detail {
 
     fn generate_delete_execution(table_schema_data: &str, connection: TokenStream) -> TokenStream {
         quote! {
+            use canyon_sql::connection::DbConnection;
+            use canyon_sql::crud::EntityCrudOperations;
             use canyon_sql::query::querybuilder::{
                 DeleteQueryBuilderOps,
                 QueryBuilderOps,

@@ -13,7 +13,10 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn generate_delete_method_tokens(macro_data: &MacroTokens, table_schema_data: &str) -> syn::Result<TokenStream> {
+pub fn generate_delete_method_tokens(
+    macro_data: &MacroTokens,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
     let delete_method_ops = delete_method_tokens(macro_data, table_schema_data)?;
     let querybuilder_tokens = generate_delete_querybuilder_tokens(table_schema_data);
 

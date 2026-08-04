@@ -1,25 +1,16 @@
-use proc_macro2::TokenStream;
-use quote::quote;
 use crate::{
+    query_operations::{
+        delete::{generate_delete_entity_tokens, generate_delete_method_tokens},
+        insert::{generate_insert_entity_function_tokens, generate_insert_method_tokens},
+        read::{foreign_key::generate_find_by_fk_ops, generate_read_operations_tokens},
+        update::{generate_update_entity_tokens, generate_update_method_tokens},
+    },
     utils::{
         helpers::compute_crud_ops_mapping_target_type_with_generics, macro_tokens::MacroTokens,
     },
-    query_operations::{
-        read::{foreign_key::generate_find_by_fk_ops, generate_read_operations_tokens},
-        insert::{
-            generate_insert_entity_function_tokens,
-            generate_insert_method_tokens
-        },
-        update::{
-            generate_update_entity_tokens,
-            generate_update_method_tokens
-        },
-        delete::{
-            generate_delete_method_tokens,
-            generate_delete_entity_tokens
-        },
-    }
 };
+use proc_macro2::TokenStream;
+use quote::quote;
 
 pub mod delete;
 pub mod insert;
@@ -29,12 +20,38 @@ pub mod update;
 mod consts;
 mod doc_comments;
 
+/// Generates every static CRUD implementation.
+///
+/// `CrudOperations` itself is provided by its blanket implementation once the
+/// type implements `ReadOperations`, `InsertOperations`, `UpdateOperations`
+/// and `DeleteOperations`.
 pub fn impl_crud_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
-    let mut crud_ops_tokens = TokenStream::new();
+    let read_operations = impl_read_operations_trait_for_struct(macro_data, table_schema_data)?;
+    let insert_operations = impl_insert_operations_trait_for_struct(macro_data, table_schema_data)?;
+    let update_operations = impl_update_operations_trait_for_struct(macro_data, table_schema_data)?;
+    let delete_operations = impl_delete_operations_trait_for_struct(macro_data, table_schema_data)?;
+    let transaction = impl_transaction_trait_for_struct(macro_data);
 
+    Ok(quote! {
+        #read_operations
+        #insert_operations
+        #update_operations
+        #delete_operations
+        #transaction
+    })
+}
+
+/// Generates the static read implementation.
+///
+/// The mapping target only determines the type returned by read operations. It
+/// does not switch the operation to the runtime entity API.
+pub fn impl_read_operations_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
     let ty = macro_data.ty;
     let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
     let mapper_ty = compute_crud_ops_mapping_target_type_with_generics(
@@ -43,70 +60,99 @@ pub fn impl_crud_operations_trait_for_struct(
         macro_data.retrieve_mapping_target_type().as_ref(),
     );
 
-    let read_operations_tokens = generate_read_operations_tokens(macro_data, table_schema_data)?;
-    let insert_tokens = generate_insert_method_tokens(macro_data, table_schema_data)?;
-    let update_tokens = generate_update_method_tokens(macro_data, table_schema_data)?;
-    let delete_tokens = generate_delete_method_tokens(macro_data, table_schema_data)?;
+    let methods = generate_read_operations_tokens(macro_data, table_schema_data)?;
+    let foreign_key_operations = generate_find_by_fk_ops(macro_data, table_schema_data);
 
-    let methods = quote! {
-        #read_operations_tokens
-        #insert_tokens
-        #update_tokens
-        #delete_tokens
-    };
-
-    crud_ops_tokens.extend(quote! {
-        use canyon_sql::connection::DbConnection;
-        use canyon_sql::core::RowMapper;
-
-        impl #impl_generics canyon_sql::crud::CrudOperations<#mapper_ty> for #ty #ty_generics #where_clause {
+    Ok(quote! {
+        impl #impl_generics
+            canyon_sql::crud::ReadOperations<#mapper_ty> for #ty #ty_generics #where_clause {
             #methods
         }
 
-        impl #impl_generics canyon_sql::core::Transaction for #ty #ty_generics #where_clause {}
-    });
-
-    // NOTE: this extends should be documented WHY is needed to be after the base impl of CrudOperations
-    let foreign_key_ops_tokens = generate_find_by_fk_ops(macro_data, table_schema_data);
-    crud_ops_tokens.extend(quote! { #foreign_key_ops_tokens });
-
-    Ok(crud_ops_tokens)
+        #foreign_key_operations
+    })
 }
 
+/// Generates the static insert implementation.
+pub fn impl_insert_operations_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
+    let ty = macro_data.ty;
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+
+    let methods = generate_insert_method_tokens(macro_data, table_schema_data)?;
+
+    Ok(quote! {
+        impl #impl_generics canyon_sql::crud::InsertOperations for #ty #ty_generics #where_clause {
+            #methods
+        }
+    })
+}
+
+/// Generates the static update implementation.
+pub fn impl_update_operations_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
+    let ty = macro_data.ty;
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+
+    let methods = generate_update_method_tokens(macro_data, table_schema_data)?;
+
+    Ok(quote! {
+        impl #impl_generics canyon_sql::crud::UpdateOperations for #ty #ty_generics #where_clause {
+            #methods
+        }
+    })
+}
+
+/// Generates the static delete implementation.
+pub fn impl_delete_operations_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
+    let ty = macro_data.ty;
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+
+    let methods = generate_delete_method_tokens(macro_data, table_schema_data)?;
+
+    Ok(quote! {
+        impl #impl_generics canyon_sql::crud::DeleteOperations for #ty #ty_generics #where_clause {
+            #methods
+        }
+    })
+}
+
+/// Generates the runtime entity CRUD implementation.
+///
+/// This contract is completely separate from `CrudOperations`: its methods
+/// receive the entity to persist instead of operating on `self`.
 pub fn impl_crud_entity_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
-    let mut crud_entity_ops_tokens = TokenStream::new();
-
     let ty = macro_data.ty;
     let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
-    let mapper_ty = compute_crud_ops_mapping_target_type_with_generics(
-        ty,
-        &ty_generics,
-        macro_data.retrieve_mapping_target_type().as_ref(),
-    );
+    let insert_operations = generate_insert_entity_function_tokens(table_schema_data)?;
+    let update_operations = generate_update_entity_tokens(table_schema_data)?;
+    let delete_operations = generate_delete_entity_tokens(table_schema_data)?;
 
-    // let read_operations_tokens = generate_read_operations_tokens(macro_data, table_schema_data)?;
-    let insert_tokens = generate_insert_entity_function_tokens(table_schema_data)?;
-    let update_tokens = generate_update_entity_tokens(table_schema_data)?;
-    let delete_tokens = generate_delete_entity_tokens(table_schema_data)?;
+    Ok(quote! {
+        impl #impl_generics canyon_sql::crud::EntityCrudOperations for #ty #ty_generics #where_clause {
+            #insert_operations
+            #update_operations
+            #delete_operations
+        }
+    })
+}
 
-    let crud_entity_operations_tokens = quote! {
-        // #read_operations_tokens
-        #insert_tokens
-        #update_tokens
-        #delete_tokens
-    };
+fn impl_transaction_trait_for_struct(macro_data: &MacroTokens<'_>) -> TokenStream {
+    let ty = macro_data.ty;
 
-    crud_entity_ops_tokens.extend(quote! {
-        // use canyon_sql::connection::DbConnection;
-        // use canyon_sql::core::{RowMapper, EntityRuntimeInfo};
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
 
-        // impl #impl_generics canyon_sql::crud::CrudEntityOperations<#mapper_ty> for #ty #ty_generics #where_clause {
-        //     #crud_entity_operations_tokens
-        // }
-    });
-
-    Ok(crud_entity_ops_tokens)
+    quote! {
+        impl #impl_generics canyon_sql::core::Transaction for #ty #ty_generics #where_clause {}
+    }
 }

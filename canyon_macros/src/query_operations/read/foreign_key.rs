@@ -439,6 +439,7 @@ mod __detail {
 
         quote! {
             {
+                use canyon_sql::connection::DbConnection;
                 use crate::canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
 
                 #lookup_value_binding

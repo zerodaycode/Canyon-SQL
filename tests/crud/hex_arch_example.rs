@@ -1,8 +1,14 @@
-use canyon_sql::connection::DatabaseConnector;
-use canyon_sql::core::Canyon;
-use canyon_sql::macros::{CanyonCrud, CanyonMapper, canyon_entity};
-use canyon_sql::query::{QueryParameter, querybuilder::SelectQueryBuilder};
 use std::error::Error;
+
+use canyon_sql::{
+    connection::DbConnection,
+    crud::EntityCrudOperations,
+    query::{QueryParameter, querybuilder::SelectQueryBuilder},
+    macros::{CanyonEntityCrud, CanyonRead, CanyonMapper, canyon_entity},
+    core::Canyon,
+    connection::DatabaseConnector,
+    crud::ReadOperations
+};
 
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
@@ -103,6 +109,41 @@ fn test_hex_arch_update_entity_ops() {
     assert_eq!(updated.unwrap().ext_id, 5);
 }
 
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_hex_arch_delete_entity_ops() {
+    let mut league = LeagueHex {
+        id: Default::default(),
+        ext_id: Default::default(),
+        slug: "leaguehex-delete".to_string(),
+        name: "LeagueHex to delete".to_string(),
+        region: "LeagueHex Region".to_string(),
+        image_url: "http://example.com/image.png".to_string(),
+    };
+
+    LeagueHexRepositoryAdapter::<DatabaseConnector>::insert_entity(&mut league, )
+        .await
+        .unwrap();
+
+    let inserted =
+        LeagueHexRepositoryAdapter::<DatabaseConnector>::find_by_pk(&league.id, )
+            .await
+            .unwrap();
+
+    assert!(inserted.is_some());
+
+    LeagueHexRepositoryAdapter::<DatabaseConnector>::delete_entity(&league)
+        .await
+        .unwrap();
+
+    let deleted =
+        LeagueHexRepositoryAdapter::<DatabaseConnector>::find_by_pk(&league.id, )
+            .await
+            .unwrap();
+
+    assert!(deleted.is_none());
+}
+
 #[derive(CanyonMapper, Debug)]
 #[canyon_entity]
 pub struct LeagueHex {
@@ -165,7 +206,7 @@ pub trait LeagueHexRepository {
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>>;
 } // As a domain boundary for the infrastructure side of the hexagon
 
-#[derive(CanyonCrud)]
+#[derive(CanyonRead, CanyonEntityCrud)]
 #[canyon_crud(maps_to=LeagueHex)]
 #[canyon_entity(table_name = "league")]
 pub struct LeagueHexRepositoryAdapter<T: DbConnection + Send + Sync> {

@@ -2,18 +2,18 @@ mod entity;
 mod method;
 
 use crate::{
-    query_operations::{
-        insert::{
-            method::generate_insert_method_tokens as insert_method_tokens,
-            entity::generate_insert_entity_function_tokens as insert_entity_function_tokens,
-        }
+    query_operations::insert::{
+        entity::generate_insert_entity_function_tokens as insert_entity_function_tokens,
+        method::generate_insert_method_tokens as insert_method_tokens,
     },
-    utils::macro_tokens::MacroTokens
+    utils::macro_tokens::MacroTokens,
 };
 use proc_macro2::TokenStream;
-use quote::quote;
 
-pub fn generate_insert_method_tokens(macro_tokens: &MacroTokens, table_schema_data: &str) -> syn::Result<TokenStream> {
+pub fn generate_insert_method_tokens(
+    macro_tokens: &MacroTokens,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
     insert_method_tokens(macro_tokens, table_schema_data)
 }
 

@@ -1,6 +1,5 @@
 //! Integration tests for the CRUD operations available in `Canyon` that
 //! generates and executes *INSERT* statements
-use canyon_sql::crud::CrudOperations;
 
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
@@ -10,6 +9,8 @@ use crate::constants::PSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 
 use crate::tests_models::league::*;
+
+use canyon_sql::crud::{DeleteOperations, InsertOperations, ReadOperations};
 
 /// Deletes a row from the database that is mapped into some instance of a `T` entity.
 ///

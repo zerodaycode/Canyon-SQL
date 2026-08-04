@@ -8,8 +8,7 @@ use crate::constants::SQL_SERVER_DS;
 // Integration tests for the CRUD operations available in `Canyon` that
 /// generates and executes *SELECT* statements
 use crate::Error;
-use canyon_sql::crud::CrudOperations;
-
+use canyon_sql::crud::ReadOperations;
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 

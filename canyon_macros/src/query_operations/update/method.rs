@@ -53,6 +53,7 @@ mod __details {
 
         quote! {
             #update_signature {
+                use canyon_sql::connection::DbConnection;
                 use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
 
                 #default_db_conn_and_type_tokens
@@ -72,6 +73,7 @@ mod __details {
 
         quote! {
             #update_with_signature {
+                use canyon_sql::connection::DbConnection;
                 use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
                 let db_type = input.get_database_type()?;
                 let query = #query;

@@ -74,6 +74,7 @@ mod __detail {
 
         quote! {
             #delete_signature {
+                use canyon_sql::connection::DbConnection;
                 use canyon_sql::query::querybuilder::{QueryBuilderOps, DeleteQueryBuilderOps};
 
                 #default_db_conn_and_type_tokens
@@ -93,6 +94,7 @@ mod __detail {
 
         quote! {
             #delete_with_signature {
+                use canyon_sql::connection::DbConnection;
                 use canyon_sql::query::querybuilder::{QueryBuilderOps, DeleteQueryBuilderOps};
 
                 let db_type = input.get_database_type()?;

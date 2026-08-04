@@ -1,17 +1,16 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn generate_insert_entity_function_tokens(
-    table_schema_data: &str,
-) -> syn::Result<TokenStream> {
+pub fn generate_insert_entity_function_tokens(table_schema_data: &str) -> syn::Result<TokenStream> {
     let insert_entity_signature = __detail::generate_insert_entity_signature();
-    let insert_entity_with_signature =
-        __detail::generate_insert_entity_with_signature();
+    let insert_entity_with_signature = __detail::generate_insert_entity_with_signature();
 
     let no_fields_to_insert_err =
         crate::query_operations::insert::__shared::no_fields_to_insert_err();
 
     let statement_initialization = quote! {
+        use canyon_sql::connection::DbConnection;
+        use canyon_sql::crud::EntityCrudOperations;
         use canyon_sql::query::querybuilder::QueryBuilderOps;
 
         let columns =
@@ -83,22 +82,22 @@ pub fn generate_insert_entity_function_tokens(
 mod __detail {
     pub(crate) fn generate_insert_entity_signature() -> proc_macro2::TokenStream {
         quote::quote! {
-            fn insert_entity<'a, 'b, Entity>(
+            async fn insert_entity<'a, 'b, Entity>(
                 entity: &'a mut Entity,
-            ) -> impl ::core::future::Future<Output = Result<(), Box<dyn ::std::error::Error + Send + Sync + 'b>>>
+            ) -> Result<(), Box<dyn ::std::error::Error + Send + Sync + 'b>>
             where
-                Entity: canyon_sql::query::bounds::RowMapper + canyon_sql::query::bounds::EntityRuntimeInfo + Sync + 'a
+                Entity: canyon_sql::core::RowMapper + canyon_sql::query::bounds::EntityRuntimeInfo + Sync + 'a
         }
     }
-    
+
     pub(crate) fn generate_insert_entity_with_signature() -> proc_macro2::TokenStream {
         quote::quote! {
-            fn insert_entity_with<'a, 'b, Entity, I>(
+            async fn insert_entity_with<'a, 'b, Entity, I>(
                 entity: &'a mut Entity,
                 input: I,
-            ) -> impl ::core::future::Future<Output = Result<(), Box<dyn ::std::error::Error + Send + Sync + 'b>>>
+            ) -> Result<(), Box<dyn ::std::error::Error + Send + Sync + 'b>>
             where
-                Entity: canyon_sql::query::bounds::RowMapper + canyon_sql::query::bounds::EntityRuntimeInfo + Sync + 'a,
+                Entity: canyon_sql::core::RowMapper + canyon_sql::query::bounds::EntityRuntimeInfo + Sync + 'a,
                 I: canyon_sql::connection::DbConnection + Send + 'a
         }
     }

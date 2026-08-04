@@ -13,10 +13,13 @@ use crate::{
 use proc_macro2::TokenStream;
 use quote::quote;
 
-pub fn generate_update_method_tokens(macro_tokens: &MacroTokens, table_schema_data: &str) -> syn::Result<TokenStream> {
+pub fn generate_update_method_tokens(
+    macro_tokens: &MacroTokens,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
     let update_tokens = update_method_tokens(macro_tokens, table_schema_data)?;
     let querybuilder_tokens = generate_update_querybuilder_tokens(table_schema_data);
-    
+
     Ok(quote! {
         #update_tokens
         #querybuilder_tokens

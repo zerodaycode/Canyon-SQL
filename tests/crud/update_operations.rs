@@ -1,7 +1,7 @@
 use crate::tests_models::league::*;
 // Integration tests for the CRUD operations available in `Canyon` that
 /// generates and executes *UPDATE* statements
-use canyon_sql::crud::CrudOperations;
+use canyon_sql::crud::{ReadOperations, UpdateOperations};
 
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;

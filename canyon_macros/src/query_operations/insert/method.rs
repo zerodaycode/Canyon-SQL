@@ -40,7 +40,7 @@ pub(crate) fn generate_insert_method_tokens(
             #insert_values
             #insert_body
         }
-    
+
         #insert_with_signature {
             #insert_values
             #insert_with_body
@@ -72,6 +72,7 @@ mod __details {
 
         let mut insert_body_tokens = TokenStream::new();
         insert_body_tokens.extend(quote! {
+            use canyon_sql::connection::DbConnection;
             use canyon_sql::query::querybuilder::{InsertQueryBuilderOps, QueryBuilderOps};
 
             let db_conn = #connection_initializer;

@@ -1,7 +1,7 @@
 #![allow(unused_imports)]
 
-use proc_macro2::{Ident, Span, TokenStream};
 use proc_macro::TokenStream as CompilerTokenStream;
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use regex::Regex;
 use syn::{DeriveInput, Type, Visibility};
@@ -17,9 +17,7 @@ use crate::MacroResult;
 #[cfg(feature = "mssql")]
 const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
-pub fn canyon_mapper_tokens(
-    input: CompilerTokenStream,
-) -> MacroResult {
+pub fn canyon_mapper_tokens(input: CompilerTokenStream) -> MacroResult {
     let ast = syn::parse::<DeriveInput>(input)?;
     let macro_data = MacroTokens::new(&ast)?;
 
@@ -314,11 +312,7 @@ mod __details {
             let set_primary_key = set_primary_key_method_tokens(&primary_key_ident);
 
             quote! {
-                impl #impl_generics
-                    canyon_sql::query::bounds::EntityRuntimeInfo
-                    for #ty #ty_generics
-                    #where_clause
-                {
+                impl #impl_generics canyon_sql::query::bounds::EntityRuntimeInfo for #ty #ty_generics #where_clause {
                     type PrimaryKey = #primary_key_type;
 
                     fn field_values(

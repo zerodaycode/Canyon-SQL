@@ -3,7 +3,7 @@ use crate::constants::SQL_SERVER_DS;
 use crate::constants::SQL_SERVER_FILL_TABLE_VALUES;
 use crate::tests_models::league::League;
 
-use canyon_sql::crud::CrudOperations;
+use canyon_sql::crud::ReadOperations;
 use canyon_sql::db_clients::tiberius::{Client, Config, EncryptionLevel};
 use canyon_sql::runtime::tokio::net::TcpStream;
 use canyon_sql::runtime::tokio_util::compat::TokioAsyncWriteCompatExt;

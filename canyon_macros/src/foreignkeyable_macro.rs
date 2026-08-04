@@ -1,13 +1,11 @@
+use crate::MacroResult;
 use crate::utils::helpers::filter_fields;
-use proc_macro2::TokenStream;
 use proc_macro::TokenStream as CompilerTokenStream;
+use proc_macro2::TokenStream;
 use quote::quote;
 use syn::DeriveInput;
-use crate::MacroResult;
 
-pub fn foreignkeyable_tokens(
-    input: CompilerTokenStream,
-) -> MacroResult {
+pub fn foreignkeyable_tokens(input: CompilerTokenStream) -> MacroResult {
     let ast = syn::parse::<DeriveInput>(input)?;
     Ok(foreignkeyable_impl_tokens(ast))
 }

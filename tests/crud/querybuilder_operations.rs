@@ -23,8 +23,8 @@ use canyon_sql::query::operators::{
 /// with the SQL filters
 ///
 use canyon_sql::{
-    crud::CrudOperations,
     query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
+    crud::{ReadOperations, UpdateOperations, DeleteOperations},
 };
 
 use crate::tests_models::league::*;

@@ -1,13 +1,8 @@
-use crate::{
-    MacroResult,
-    utils::function_parser::FunctionParser,
-};
+use crate::{MacroResult, utils::function_parser::FunctionParser};
 use proc_macro::TokenStream;
 use quote::quote;
 
-pub(crate) fn generate_canyon_tokio_test_tokens(
-    input: TokenStream,
-) -> MacroResult {
+pub(crate) fn generate_canyon_tokio_test_tokens(input: TokenStream) -> MacroResult {
     let function = syn::parse::<FunctionParser>(input)?;
 
     let visibility = function.vis;

@@ -44,7 +44,6 @@ mod __detail {
 
         quote! {
             let db_type = input.get_database_type()?;
-
             #update_execution
 
             Ok(())
@@ -53,10 +52,9 @@ mod __detail {
 
     fn generate_update_execution(table_schema_data: &str, connection: TokenStream) -> TokenStream {
         quote! {
-            use canyon_sql::query::querybuilder::{
-                QueryBuilderOps,
-                UpdateQueryBuilderOps,
-            };
+            use canyon_sql::connection::DbConnection;
+            use canyon_sql::crud::EntityCrudOperations;
+            use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
 
             let primary_key_name =
                 match <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>::primary_key_name() {
