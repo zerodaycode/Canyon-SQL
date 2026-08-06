@@ -18,7 +18,6 @@ mysql_async = { workspace = true, optional = true }
 mysql_common = { workspace = true, optional = true }
 
 chrono = { workspace = true }
-regex = { workspace = true }
 
 [features]
 postgres = ["tokio-postgres", "canyon_core/postgres"]

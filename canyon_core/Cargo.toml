@@ -25,7 +25,6 @@ futures = { workspace = true }
 toml = { workspace = true }
 serde = { workspace = true }
 walkdir = { workspace = true }
-cfg-if = "1.0.4"
 bb8-postgres = "0.9.0"
 bb8-tiberius = "0.16.0"
 bb8 = "0.9.1"
