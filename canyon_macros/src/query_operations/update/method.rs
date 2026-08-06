@@ -89,7 +89,7 @@ mod __details {
         pk_name: &str,
     ) -> TokenStream {
         quote! {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(
                 #table_schema_data, // TODO: construct a const value
                 db_type,
             )

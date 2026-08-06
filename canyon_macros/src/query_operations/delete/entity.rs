@@ -82,7 +82,7 @@ mod __detail {
                     })?;
 
             let query =
-                canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(
+                canyon_sql::query::querybuilder::DeleteQueryBuilder::new(
                     #table_schema_data,
                     db_type,
                 )

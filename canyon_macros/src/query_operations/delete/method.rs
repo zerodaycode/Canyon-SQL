@@ -45,7 +45,7 @@ mod __detail {
     ) -> TokenStream {
         let pk_name = &primary_key_attribute.name;
         quote! {
-            canyon_sql::query::querybuilder::DeleteQueryBuilder::new_for(
+            canyon_sql::query::querybuilder::DeleteQueryBuilder::new(
                 #table_schema_data, // TODO: construct a const value
                 db_type,
             )

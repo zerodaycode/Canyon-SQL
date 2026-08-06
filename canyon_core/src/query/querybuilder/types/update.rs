@@ -13,7 +13,6 @@ use crate::{
     },
 };
 use std::error::Error;
-use crate::query::querybuilder::syntax::ast::delete::DeleteAst;
 
 /// Fluent builder for `UPDATE` statements
 pub struct UpdateQueryBuilder<'a> {
@@ -21,16 +20,16 @@ pub struct UpdateQueryBuilder<'a> {
 }
 impl<'a> UpdateQueryBuilder<'a> {
     /// Creates an update builder whose database dialect will be resolved later.
-    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>, database_type: DatabaseType) -> Self {
+    pub fn new(
+        table_schema_data: impl Into<TableMetadata<'a>>,
+        database_type: DatabaseType,
+    ) -> Self {
         Self {
             _inner: QueryBuilder::new(table_schema_data, UpdateAst::new(), database_type),
         }
     }
     /// Creates an update builder for a specific database dialect.
-    pub fn new_for(
-        table_schema_data: TableMetadata<'a>,
-        database_type: DatabaseType,
-    ) -> Self {
+    pub fn new_for(table_schema_data: TableMetadata<'a>, database_type: DatabaseType) -> Self {
         Self {
             _inner: QueryBuilder::new_querybuilder(
                 table_schema_data,

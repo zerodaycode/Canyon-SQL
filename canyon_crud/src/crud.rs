@@ -70,7 +70,10 @@ pub trait UpdateOperations: Send {
     where
         I: DbConnection + Send + 'connection;
 
-    fn update_query<'a>() -> UpdateQueryBuilder<'a>;
+    fn update_query<'canyon, 'err>()
+    -> Result<UpdateQueryBuilder<'canyon>, Box<dyn Error + Send + Sync + 'err>>
+    where
+        'canyon: 'err;
 
     fn update_query_with<'a>(database_type: DatabaseType) -> UpdateQueryBuilder<'a>;
 }
@@ -85,13 +88,12 @@ pub trait DeleteOperations: Send {
     where
         I: DbConnection + Send + 'connection;
 
-    fn delete_query<'a, 'b>() -> DeleteQueryBuilder<'a>
+    fn delete_query<'canyon, 'err>()
+    -> Result<DeleteQueryBuilder<'canyon>, Box<dyn Error + Send + Sync + 'err>>
     where
-        'a: 'b;
+        'canyon: 'err;
 
-    fn delete_query_with<'a, 'b>(database_type: DatabaseType) -> DeleteQueryBuilder<'a>
-    where
-        'a: 'b;
+    fn delete_query_with<'a>(database_type: DatabaseType) -> DeleteQueryBuilder<'a>;
 }
 
 pub trait CrudOperations<R>:

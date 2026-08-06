@@ -12,8 +12,11 @@ pub(crate) fn generate_update_querybuilder_tokens(table_schema_data: &str) -> To
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn update_query<'a>() -> canyon_sql::query::querybuilder::UpdateQueryBuilder<'a> {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data)
+        fn update_query<'canyon, 'err>() -> Result<canyon_sql::query::querybuilder::UpdateQueryBuilder<'canyon>, Box<dyn std::error::Error + Send + Sync + 'err>>
+            where 'canyon: 'err
+        {
+            let default_db_type = canyon_sql::core::Canyon::instance()?.get_default_db_type()?;
+            Ok(canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, default_db_type))
         }
 
         /// Generates a [`canyon_sql::query::querybuilder::UpdateQueryBuilder`]
@@ -28,7 +31,7 @@ pub(crate) fn generate_update_querybuilder_tokens(table_schema_data: &str) -> To
         /// described in the configuration file, and selected with the input parameter
         fn update_query_with<'a>(database_type: canyon_sql::connection::DatabaseType) ->
             canyon_sql::query::querybuilder::UpdateQueryBuilder<'a> {
-            canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(#table_schema_data, database_type)
+            canyon_sql::query::querybuilder::UpdateQueryBuilder::new(#table_schema_data, database_type)
         }
     }
 }

@@ -259,7 +259,7 @@ fn test_crud_find_with_querybuilder_with_mysql() {
 fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    League::update_query()
+    League::update_query()?
         .set_values(&[
             (LeagueField::slug, "Updated with the QueryBuilder"),
             (LeagueField::name, "Random"),
@@ -372,7 +372,7 @@ fn test_crud_update_with_querybuilder_with_mysql() {
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder() {
-    Tournament::delete_query()
+    Tournament::delete_query()?
         .where_value(&TournamentFieldValue::id(14), Operator::Gt)
         .and(&TournamentFieldValue::id(16), Operator::Lt)
         .build()?
@@ -386,7 +386,7 @@ fn test_crud_delete_with_querybuilder() {
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder_lt_creation() {
-    let q = Tournament::delete_query().where_value(&TournamentFieldValue::id(10), Operator::Gt);
+    let q = Tournament::delete_query()?.where_value(&TournamentFieldValue::id(10), Operator::Gt);
     assert_eq!(
         q.build()?.sql(),
         "DELETE FROM \"tournament\" WHERE \"tournament\".\"id\" > $1;"

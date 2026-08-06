@@ -18,9 +18,6 @@ use std::{error::Error, fmt::Display};
 /// # Example
 /// ```rust,ignore
 /// use canyon_core::connection::database_type::DatabaseType;
-///
-/// // Create a query builder explicitly targeting PostgreSQL:
-/// let builder = QueryBuilder::new_for(table, columns, DatabaseType::PostgreSql)?;
 /// ```
 #[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {

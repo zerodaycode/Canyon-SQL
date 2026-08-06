@@ -92,7 +92,7 @@ mod __detail {
             update_values.push(primary_key_value);
 
             let query =
-                canyon_sql::query::querybuilder::UpdateQueryBuilder::new_for(
+                canyon_sql::query::querybuilder::UpdateQueryBuilder::new(
                     #table_schema_data,
                     db_type,
                 )
