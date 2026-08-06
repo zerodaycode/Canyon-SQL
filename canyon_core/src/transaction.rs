@@ -67,7 +67,7 @@ pub trait Transaction {
         async move { input.query_one::<R>(stmt.as_ref(), params.as_ref()).await }
     }
 
-    fn query_one_for<'a, S, Z, F: FromSqlOwnedValue<F>>(
+    fn query_one_for<'a, S, Z, F: FromSqlOwnedValue>(
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,

@@ -54,14 +54,14 @@ impl<'a> Query<'a> {
         <T as Transaction>::query(&self.sql, &self.params, default_conn).await
     }
 
-    pub async fn launch_one_for_default<T: Transaction, F: FromSqlOwnedValue<F>>(
+    pub async fn launch_one_for_default<T: Transaction, F: FromSqlOwnedValue>(
         self,
     ) -> Result<F, Box<dyn Error + Send + Sync>> {
         let default_conn = Canyon::instance()?.get_default_connection()?;
         <T as Transaction>::query_one_for(&self.sql, &self.params, default_conn).await
     }
 
-    pub async fn launch_one_for_with<T: Transaction, F: FromSqlOwnedValue<F>, I: DbConnection>(
+    pub async fn launch_one_for_with<T: Transaction, F: FromSqlOwnedValue, I: DbConnection>(
         self,
         input: I,
     ) -> Result<F, Box<dyn Error + Send + Sync>> {

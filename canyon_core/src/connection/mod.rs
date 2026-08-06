@@ -100,7 +100,7 @@ where
         self.lock().await.query_one::<R>(stmt, params).await
     }
 
-    async fn query_one_for<F: FromSqlOwnedValue<F>>(
+    async fn query_one_for<F: FromSqlOwnedValue>(
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],

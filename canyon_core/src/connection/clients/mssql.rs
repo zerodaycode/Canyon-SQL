@@ -87,7 +87,7 @@ impl DbConnection for SqlServerConnector {
         }
     }
 
-    async fn query_one_for<T: FromSqlOwnedValue<T>>(
+    async fn query_one_for<T: FromSqlOwnedValue>(
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],

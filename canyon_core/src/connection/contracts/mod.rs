@@ -90,7 +90,7 @@ pub trait DbConnection {
     /// A [Future] that resolves to a [Result] containing the value of type `T` on success or an error on failure.
     ///
     /// The `T` type must implement the [`FromSqlOwnedValue`] trait.
-    fn query_one_for<T: FromSqlOwnedValue<T>>(
+    fn query_one_for<T: FromSqlOwnedValue>(
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],

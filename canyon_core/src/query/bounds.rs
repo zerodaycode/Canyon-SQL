@@ -11,7 +11,7 @@ use crate::rows::FromSqlOwnedValue;
 /// Field collections exclude the primary key because they currently represent
 /// the values and columns used by entity insertion.
 pub trait EntityRuntimeInfo {
-    type PrimaryKey: FromSqlOwnedValue<Self::PrimaryKey>;
+    type PrimaryKey: FromSqlOwnedValue;
 
     /// Returns the insertable field values in declaration order.
     ///

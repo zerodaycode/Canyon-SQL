@@ -68,7 +68,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 }
             }
 
-            async fn query_one_for<T: FromSqlOwnedValue<T>>(
+            async fn query_one_for<T: FromSqlOwnedValue>(
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn QueryParameter],
@@ -150,7 +150,7 @@ macro_rules! impl_db_connection_for_str {
                 conn.query_one::<R>(stmt, params).await
             }
 
-            async fn query_one_for<T: $crate::rows::FromSqlOwnedValue<T>>(
+            async fn query_one_for<T: $crate::rows::FromSqlOwnedValue>(
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn $crate::query::parameters::QueryParameter],
