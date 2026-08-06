@@ -1,8 +1,7 @@
 use super::datasources::Auth;
 use crate::canyon::Canyon;
 use serde::Deserialize;
-use std::error::Error;
-use std::fmt::Display;
+use std::{error::Error, fmt::Display};
 
 /// Represents the supported database backends in **Canyon-SQL**.
 ///
@@ -22,12 +21,8 @@ use std::fmt::Display;
 ///
 /// // Create a query builder explicitly targeting PostgreSQL:
 /// let builder = QueryBuilder::new_for(table, columns, DatabaseType::PostgreSql)?;
-///
-/// // Or defer the database type resolution until runtime:
-/// let builder = QueryBuilder::new_for(table, columns, DatabaseType::Deferred)?;
-/// let query = builder.build()?; // will resolve to the default DB type
 /// ```
-#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy, Default)]
+#[derive(Deserialize, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum DatabaseType {
     /// The Postgres database backend.
     #[cfg(feature = "postgres")]
@@ -43,35 +38,6 @@ pub enum DatabaseType {
     #[cfg(feature = "mysql")]
     #[serde(alias = "mysql")]
     MySQL,
-
-    /// A **placeholder variant** used when the database dialect
-    /// cannot be determined at compile time.
-    ///
-    /// The [`Deferred`](Self::Deferred) variant allows you to construct a query
-    /// (for example, through a procedural macro like `CanyonCrud`) before the
-    /// actual database type is known — typically at compile-time code generation.
-    ///
-    /// When using this variant, the [`crate::query::querybuilder::QueryBuilder::build()`] method will automatically
-    /// attempt to resolve the concrete database type from the active [`Canyon`]
-    /// instance at runtime.
-    ///
-    /// # Use case
-    /// This is particularly useful for macros and compile-time query generation,
-    /// where it’s desirable to emit code that’s agnostic of the target database.
-    /// The macro can safely emit `DatabaseType::Deferred` in the generated code,
-    /// and Canyon will resolve it dynamically when executing queries.
-    ///
-    /// # Example
-    /// ```rust,ignore
-    /// let query = SelectQueryBuilder::new(
-    ///     &table_metadata,
-    ///     DatabaseType::Deferred
-    /// )?
-    /// .where_("id", Operator::Eq, &42)
-    /// .build()?; // resolved dynamically to the active database type
-    /// ```
-    #[default]
-    Deferred, // TODO: review if this is yet viable
 }
 
 impl Display for DatabaseType {

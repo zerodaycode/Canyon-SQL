@@ -792,7 +792,6 @@ impl DatabaseOperation for TableOperation {
                 .replace('"', ""),
                 #[cfg(feature = "mysql")]
                 DatabaseType::MySQL => todo!(),
-                DatabaseType::Deferred => todo!("Deferred"),
             },
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
@@ -822,7 +821,6 @@ impl DatabaseOperation for TableOperation {
                     }
                     #[cfg(feature = "mysql")]
                     DatabaseType::MySQL => todo!(),
-                    DatabaseType::Deferred => todo!("Deferred"),
                 }
             }
 
@@ -844,7 +842,6 @@ impl DatabaseOperation for TableOperation {
                 }
                 #[cfg(feature = "mysql")]
                 DatabaseType::MySQL => todo!(),
-                DatabaseType::Deferred => todo!("Deferred"),
             },
 
             TableOperation::DeleteTableForeignKey(_table_with_foreign_key, _constraint_name) => {
@@ -859,7 +856,6 @@ impl DatabaseOperation for TableOperation {
                     ),
                     #[cfg(feature = "mysql")]
                     DatabaseType::MySQL => todo!(),
-                    DatabaseType::Deferred => todo!("Deferred"),
                 }
             }
 
@@ -875,7 +871,6 @@ impl DatabaseOperation for TableOperation {
                 }
                 #[cfg(feature = "mysql")]
                 DatabaseType::MySQL => todo!(),
-                DatabaseType::Deferred => todo!("Deferred"),
             },
 
             TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => match db_type {
@@ -889,7 +884,6 @@ impl DatabaseOperation for TableOperation {
                 }
                 #[cfg(feature = "mysql")]
                 DatabaseType::MySQL => todo!(),
-                DatabaseType::Deferred => todo!("Deferred"),
             },
         };
 
@@ -940,8 +934,7 @@ impl DatabaseOperation for ColumnOperation {
                             entity_field.field_name,
                             to_sqlserver_syntax(entity_field)
                         ),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!(),
-                    DatabaseType::Deferred => todo!("Deferred")
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
                 }
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is different
@@ -956,8 +949,7 @@ impl DatabaseOperation for ColumnOperation {
                         ),
                     #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!(),
-                    DatabaseType::Deferred => todo!("Deferred")
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
 
                 }
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
@@ -969,8 +961,7 @@ impl DatabaseOperation for ColumnOperation {
                             "ALTER TABLE \"{table_name}\" ALTER COLUMN {} {} NULL",
                             entity_field.field_name, to_sqlserver_alter_syntax(entity_field)
                         ),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!(),
-                    DatabaseType::Deferred => todo!("Deferred")
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
                 }
             #[cfg(feature = "mssql")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
                 format!(
@@ -997,8 +988,7 @@ impl DatabaseOperation for ColumnOperation {
                         entity_field.field_name,
                         to_sqlserver_alter_syntax(entity_field)
                     ),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!(),
-                    DatabaseType::Deferred => todo!("Deferred")
+                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
                 }
             }
 

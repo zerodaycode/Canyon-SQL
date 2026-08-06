@@ -36,11 +36,9 @@ where
         base_ast: &mut BaseAst<'a>,
     ) -> SqlTokens<'a> {
         match database_type {
-            DatabaseType::PostgreSql | DatabaseType::Deferred => {
-                PgEmitter::default().emit(ast, base_ast)
-            }
-            DatabaseType::MySQL => MySqlEmitter::default().emit(ast, base_ast),
+            DatabaseType::PostgreSql => PgEmitter::default().emit(ast, base_ast),
             DatabaseType::SqlServer => SqlServerEmitter::default().emit(ast, base_ast),
+            DatabaseType::MySQL => MySqlEmitter::default().emit(ast, base_ast),
         }
     }
 }

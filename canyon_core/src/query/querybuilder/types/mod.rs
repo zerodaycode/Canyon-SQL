@@ -281,7 +281,7 @@ mod __detail {
     ) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         let writer = TokenWriter::new();
         match db {
-            DatabaseType::PostgreSql | DatabaseType::Deferred => writer.render::<PgDialect>(tokens),
+            DatabaseType::PostgreSql => writer.render::<PgDialect>(tokens),
             DatabaseType::MySQL => writer.render::<MySql>(tokens),
             DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
         }

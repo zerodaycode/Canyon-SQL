@@ -22,17 +22,26 @@ pub struct DeleteQueryBuilder<'a> {
 
 impl<'a> DeleteQueryBuilder<'a> {
     /// Creates a delete builder whose database dialect will be resolved later.
-    pub fn new(table_schema_data: impl Into<TableMetadata<'a>>) -> Self {
-        Self::new_for(table_schema_data, DatabaseType::Deferred)
-    }
-
-    /// Creates a delete builder for a specific database dialect.
-    pub fn new_for(
+    pub fn new(
         table_schema_data: impl Into<TableMetadata<'a>>,
         database_type: DatabaseType,
     ) -> Self {
         Self {
             _inner: QueryBuilder::new(table_schema_data, DeleteAst::new(), database_type),
+        }
+    }
+
+    /// Creates a delete builder for a specific database dialect.
+    pub const fn new_querybuilder(
+        table_schema_data: TableMetadata<'a>,
+        database_type: DatabaseType,
+    ) -> Self {
+        Self {
+            _inner: QueryBuilder::new_querybuilder(
+                table_schema_data,
+                DeleteAst::new(),
+                database_type,
+            ),
         }
     }
 

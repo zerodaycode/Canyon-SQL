@@ -48,8 +48,6 @@ impl DatabaseConnector {
 
             #[cfg(feature = "mysql")]
             DatabaseType::MySQL => Ok(Self::MySQL(MySQLConnector::new(datasource).await?)),
-
-            DatabaseType::Deferred => panic!("Deferred connection"),
         }
     }
 

@@ -1,6 +1,7 @@
 use crate::query::querybuilder::syntax::{emitter::AstProcessor, query_kind::QueryKind};
 
 /// Structured representation of a `DELETE` statement.
+#[derive(Default)]
 pub struct DeleteAst {}
 
 impl<'a> AstProcessor<'a> for DeleteAst {
@@ -9,14 +10,8 @@ impl<'a> AstProcessor<'a> for DeleteAst {
     }
 }
 
-impl Default for DeleteAst {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl DeleteAst {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 }
