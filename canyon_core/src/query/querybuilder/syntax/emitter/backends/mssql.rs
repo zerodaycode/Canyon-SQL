@@ -1,19 +1,9 @@
 use crate::query::querybuilder::syntax::{
-    ast::{
-        delete::DeleteAst,
-        insert::InsertAst,
-        select::SelectAst,
-        update::UpdateAst,
-    },
+    ast::{delete::DeleteAst, insert::InsertAst, select::SelectAst, update::UpdateAst},
     dialect::MsSql,
     emitter::{
-        EmitStep,
-        SqlEmitter,
-        types::delete::delete_default_plan,
-        types::helpers,
-        types::insert,
-        types::select::select_default_plan,
-        types::update::update_default_plan,
+        EmitStep, SqlEmitter, types::delete::delete_default_plan, types::helpers, types::insert,
+        types::select::select_default_plan, types::update::update_default_plan,
     },
 };
 
@@ -23,8 +13,7 @@ pub struct SqlServerEmitter {}
 impl<'a> SqlEmitter<'a, SelectAst<'a>> for SqlServerEmitter {
     type Dialect = MsSql;
 
-    const PLAN: &'a [EmitStep<'a, SelectAst<'a>>] =
-        select_default_plan!(Self::Dialect);
+    const PLAN: &'a [EmitStep<'a, SelectAst<'a>>] = select_default_plan!(Self::Dialect);
 }
 
 impl<'a> SqlEmitter<'a, InsertAst<'a>> for SqlServerEmitter {
@@ -32,47 +21,25 @@ impl<'a> SqlEmitter<'a, InsertAst<'a>> for SqlServerEmitter {
 
     const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = &[
         insert::__impl::emit_insert_into_keywords,
-        |_ast, base_ast, tokens| {
-            helpers::emit_table::<Self::Dialect>(
-                base_ast.table(),
-                tokens,
-            )
-        },
+        |_ast, base_ast, tokens| helpers::emit_table::<Self::Dialect>(base_ast.table(), tokens),
         |ast, _base_ast, tokens| {
-            __impl::emit_unqualified_columns::<Self::Dialect>(
-                &ast.columns,
-                tokens,
-            )
+            __impl::emit_unqualified_columns::<Self::Dialect>(&ast.columns, tokens)
         },
-        |ast, base_ast, tokens| {
-            __impl::emit_output::<Self::Dialect>(
-                ast,
-                base_ast,
-                tokens,
-            )
-        },
-        |ast, base_ast, tokens| {
-            insert::__impl::emit_values(
-                ast,
-                base_ast,
-                tokens,
-            )
-        },
+        |ast, base_ast, tokens| __impl::emit_output::<Self::Dialect>(ast, base_ast, tokens),
+        |ast, base_ast, tokens| insert::__impl::emit_values(ast, base_ast, tokens),
     ];
 }
 
 impl<'a> SqlEmitter<'a, UpdateAst<'a>> for SqlServerEmitter {
     type Dialect = MsSql;
 
-    const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] =
-        update_default_plan!(Self::Dialect);
+    const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] = update_default_plan!(Self::Dialect);
 }
 
 impl<'a> SqlEmitter<'a, DeleteAst> for SqlServerEmitter {
     type Dialect = MsSql;
 
-    const PLAN: &'a [EmitStep<'a, DeleteAst>] =
-        delete_default_plan!(Self::Dialect);
+    const PLAN: &'a [EmitStep<'a, DeleteAst>] = delete_default_plan!(Self::Dialect);
 }
 
 mod __impl {
@@ -82,10 +49,7 @@ mod __impl {
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::symbol::Symbol::LParen;
     use crate::query::querybuilder::syntax::{
-        ast::{
-            BaseAst,
-            insert::InsertAst,
-        },
+        ast::{BaseAst, insert::InsertAst},
         dialect::SqlDialect,
         keyword::Keyword,
         tokens::SqlTokens,
@@ -96,11 +60,7 @@ mod __impl {
         tokens: &mut SqlTokens<'a>,
     ) {
         tokens.symbol(LParen);
-        helpers::emit_columns::<D>(
-            columns,
-            Qualification::Unqualified,
-            tokens,
-        );
+        helpers::emit_columns::<D>(columns, Qualification::Unqualified, tokens);
         tokens.symbol(Symbol::RParen);
     }
 
@@ -117,9 +77,7 @@ mod __impl {
 
         tokens.keyword(Keyword::Output);
 
-        for (index, column) in
-            ast.returning_columns.iter().enumerate()
-        {
+        for (index, column) in ast.returning_columns.iter().enumerate() {
             if index != 0 {
                 tokens.comma();
             }
@@ -127,10 +85,7 @@ mod __impl {
             tokens.keyword(Keyword::Inserted);
             tokens.dot();
 
-            helpers::push_quoted_ident::<D, _>(
-                column.name(),
-                tokens,
-            );
+            helpers::push_quoted_ident::<D, _>(column.name(), tokens);
         }
     }
 }
@@ -139,33 +94,22 @@ mod __impl {
 mod tests {
     use super::__impl::emit_output;
     use crate::query::querybuilder::syntax::{
-        ast::{
-            BaseAst,
-            insert::InsertAst,
-        },
+        ast::{BaseAst, insert::InsertAst},
         column::ColumnRef,
         dialect::MsSql,
         tokens::SqlTokens,
         writer::TokenWriter,
     };
 
-    fn render_output<'a>(
-        ast: &'a InsertAst<'a>,
-    ) -> String {
+    fn render_output<'a>(ast: &'a InsertAst<'a>) -> String {
         let mut base_ast = BaseAst::default();
         let mut tokens = SqlTokens::default();
 
-        emit_output::<MsSql>(
-            ast,
-            &mut base_ast,
-            &mut tokens,
-        );
+        emit_output::<MsSql>(ast, &mut base_ast, &mut tokens);
 
         TokenWriter::new()
             .render::<MsSql>(tokens)
-            .expect(
-                "OUTPUT tokens should render successfully",
-            )
+            .expect("OUTPUT tokens should render successfully")
     }
 
     #[test]
@@ -181,16 +125,11 @@ mod tests {
     #[test]
     fn emits_output_for_one_returning_column() {
         let ast = InsertAst {
-            returning_columns: vec![
-                ColumnRef::from("id"),
-            ],
+            returning_columns: vec![ColumnRef::from("id")],
             ..Default::default()
         };
 
-        assert_eq!(
-            render_output(&ast),
-            "OUTPUT INSERTED.[id];"
-        );
+        assert_eq!(render_output(&ast), "OUTPUT INSERTED.[id];");
     }
 
     #[test]

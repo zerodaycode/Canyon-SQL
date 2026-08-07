@@ -44,8 +44,7 @@ pub(crate) mod __impl {
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::{
-        ast::insert::InsertAst, emitter::types::helpers, keyword::Keyword,
-        tokens::SqlTokens,
+        ast::insert::InsertAst, emitter::types::helpers, keyword::Keyword, tokens::SqlTokens,
     };
 
     #[cfg(any(feature = "postgres", feature = "mysql"))]

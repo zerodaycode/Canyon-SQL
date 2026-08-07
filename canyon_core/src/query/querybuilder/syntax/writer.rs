@@ -134,11 +134,9 @@ mod __impl {
 }
 
 mod __detail {
-    use crate::{
-        query::querybuilder::syntax::{dialect::SqlDialect, symbol::Symbol},
-    };
-    use std::fmt::Write;
     use crate::query::querybuilder::syntax::dialect::PlaceholderSymbol;
+    use crate::query::querybuilder::syntax::{dialect::SqlDialect, symbol::Symbol};
+    use std::fmt::Write;
 
     pub(crate) fn render_symbol(sym: Symbol, f: &mut String) -> Result<(), std::fmt::Error> {
         let _: () = match sym {
@@ -172,12 +170,7 @@ mod __detail {
         if D::PLACEHOLDER_SYMBOL.eq(&PlaceholderSymbol::QuestionMark) {
             write!(f, "{}", D::PLACEHOLDER_SYMBOL)?;
         } else {
-            write!(
-                f,
-                "{}{}",
-                D::PLACEHOLDER_SYMBOL,
-                placeholder_counter
-            )?;
+            write!(f, "{}{}", D::PLACEHOLDER_SYMBOL, placeholder_counter)?;
             *placeholder_counter += 1;
         }
 

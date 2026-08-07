@@ -4,10 +4,7 @@
 //! It includes support for multiple database backends and provides utilities for managing
 //! datasource properties.
 
-use serde::{
-    Deserialize,
-    Deserializer,
-};
+use serde::{Deserialize, Deserializer};
 
 use super::database_type::DatabaseType;
 
@@ -52,25 +49,13 @@ struct RawDatasourceConfig {
 
 #[derive(Deserialize)]
 enum RawAuth {
-    #[serde(
-        alias = "PostgresSQL",
-        alias = "postgresql",
-        alias = "postgres"
-    )]
+    #[serde(alias = "PostgresSQL", alias = "postgresql", alias = "postgres")]
     Postgres(RawPostgresAuth),
 
-    #[serde(
-        alias = "SqlServer",
-        alias = "sqlserver",
-        alias = "mssql"
-    )]
+    #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
     SqlServer(RawSqlServerAuth),
 
-    #[serde(
-        alias = "MYSQL",
-        alias = "mysql",
-        alias = "MySQL"
-    )]
+    #[serde(alias = "MYSQL", alias = "mysql", alias = "MySQL")]
     MySQL(RawMySQLAuth),
 }
 
@@ -141,14 +126,13 @@ impl DatasourceConfig {
     pub fn has_migrations_enabled(&self) -> bool {
         self.properties
             .migrations
-            .is_some_and(|migrations| {
-                migrations.has_migrations_enabled()
-            })
+            .is_some_and(|migrations| migrations.has_migrations_enabled())
     }
 
     pub fn get_port_or_default_by_db(&self) -> u16 {
-        self.properties.port.unwrap_or_else(|| {
-            match self.get_db_type() {
+        self.properties
+            .port
+            .unwrap_or_else(|| match self.get_db_type() {
                 #[cfg(feature = "postgres")]
                 DatabaseType::PostgreSql => 5432,
 
@@ -157,8 +141,7 @@ impl DatasourceConfig {
 
                 #[cfg(feature = "mysql")]
                 DatabaseType::MySQL => 3306,
-            }
-        })
+            })
     }
 }
 
@@ -193,30 +176,21 @@ impl Auth {
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum PostgresAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic {
-        username: String,
-        password: String,
-    },
+    Basic { username: String, password: String },
 }
 
 #[cfg(feature = "mssql")]
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic {
-        username: String,
-        password: String,
-    },
+    Basic { username: String, password: String },
 }
 
 #[cfg(feature = "mysql")]
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum MySQLAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic {
-        username: String,
-        password: String,
-    },
+    Basic { username: String, password: String },
 }
 
 #[derive(Deserialize, Debug, Clone)]

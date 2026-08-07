@@ -30,7 +30,7 @@ use canyon_sql::{
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 
-#[cfg(any(feature = "postgres"))]
+#[cfg(feature = "postgres")]
 use crate::tests_models::tournament::*;
 
 #[canyon_sql::macros::canyon_tokio_test]
@@ -469,19 +469,13 @@ fn test_where_clause() {
 
         let expected = match database_type {
             #[cfg(feature = "postgres")]
-            DatabaseType::PostgreSql => {
-                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1;"
-            }
+            DatabaseType::PostgreSql => "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1;",
 
             #[cfg(feature = "mssql")]
-            DatabaseType::SqlServer => {
-                "SELECT * FROM [league] WHERE [league].[name] = @P1;"
-            }
+            DatabaseType::SqlServer => "SELECT * FROM [league] WHERE [league].[name] = @P1;",
 
             #[cfg(feature = "mysql")]
-            DatabaseType::MySQL => {
-                "SELECT * FROM `league` WHERE `league`.`name` = ?;"
-            }
+            DatabaseType::MySQL => "SELECT * FROM `league` WHERE `league`.`name` = ?;",
         };
 
         assert_eq!(query.sql(), expected);

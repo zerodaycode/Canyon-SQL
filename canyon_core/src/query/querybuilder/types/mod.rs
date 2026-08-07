@@ -289,9 +289,12 @@ mod __detail {
     ) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         let writer = TokenWriter::new();
         match db {
-            #[cfg(feature = "postgres")] DatabaseType::PostgreSql => writer.render::<PgDialect>(tokens),
-            #[cfg(feature = "mysql")] DatabaseType::MySQL => writer.render::<MySql>(tokens),
-            #[cfg(feature = "mssql")] DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => writer.render::<PgDialect>(tokens),
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => writer.render::<MySql>(tokens),
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
         }
         .map_err(|e| e.into())
     }
