@@ -2,6 +2,19 @@
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
+use canyon_sql::connection::DatabaseType;
+
+/// Tests for the QueryBuilder available operations within Canyon.
+///
+/// QueryBuilder are the way of obtain more flexibility that with
+/// the default generated queries, essentially for build the queries
+/// with the SQL filters
+///
+use canyon_sql::query::operators::{
+    LikeKind::{Full, Left, Right},
+    Operator,
+    Operator::*,
+};
 
 /// Tests for the QueryBuilder available operations within Canyon.
 ///
@@ -10,47 +23,49 @@ use crate::constants::SQL_SERVER_DS;
 /// with the SQL filters
 ///
 use canyon_sql::{
-    crud::CrudOperations,
-    query::{operators::Comp, operators::Like, ops::QueryBuilder},
+    crud::{DeleteOperations, ReadOperations, UpdateOperations},
+    query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
 };
 
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
+
+#[cfg(feature = "postgres")]
 use crate::tests_models::tournament::*;
 
-/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[canyon_sql::macros::canyon_tokio_test]
+#[cfg(feature = "postgres")]
 fn test_generated_sql_by_the_select_querybuilder() {
-    let mut select_with_joins = League::select_query();
-    select_with_joins
-        .inner_join("tournament", "league.id", "tournament.league_id")
-        .left_join("team", "tournament.id", "player.tournament_id")
-        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
-        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+    let fv = LeagueFieldValue::name("KOREA".to_string());
+    let select_with_joins = League::select_query()?
+        .inner_join(
+            TournamentTable::DbName,
+            LeagueField::id,
+            TournamentField::league,
+        )
+        .left_join(PlayerTable::DbName, TournamentField::id, PlayerField::id)
+        .where_value(&LeagueFieldValue::id(7), Operator::Gt)
+        .and(&fv, Operator::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
-    // .query()
-    // .await;
-    // NOTE: We don't have in the docker the generated relationships
-    // with the joins, so for now, we are just going to check that the
-    // generated SQL by the SelectQueryBuilder<T> is the spected
+
     assert_eq!(
-        select_with_joins.read_sql(),
-        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2 AND name IN ($2, $3)"
+        select_with_joins?.build().unwrap().sql(), // TODO: That .unwrap instead of '?' because the lt issues associated with the &'a Z on .and
+        "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"league\".\"id\" > $1 AND \"league\".\"name\" = $2 AND \"name\" IN ($3, $4);"
     )
 }
 
-/// Builds a new SQL statement for retrieves entities of the `T` type, filtered
-/// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let filtered_leagues_result: Result<Vec<League>, _> = League::select_query()
-        .r#where(LeagueFieldValue::id(&50), Comp::LtEq)
-        .and(LeagueFieldValue::region(&"KOREA"), Comp::Eq)
-        .query()
+    let fv = LeagueFieldValue::region("KOREA".to_string());
+    let filtered_leagues_result: Result<Vec<League>, _> = League::select_query()?
+        .where_value(&LeagueFieldValue::id(50), Operator::LtEq)
+        .and(&fv, Operator::Eq)
+        .build()
+        .unwrap()
+        .launch_default()
         .await;
 
     let filtered_leagues: Vec<League> = filtered_leagues_result.unwrap();
@@ -67,12 +82,12 @@ fn test_crud_find_with_querybuilder() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_fulllike() {
     // Find all the leagues with "LC" in their name
-    let mut filtered_leagues_result = League::select_query();
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+    let binding = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result = League::select_query()?.where_value(&binding, Like(Full));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR), '%');"
     )
 }
 
@@ -80,14 +95,15 @@ fn test_crud_find_with_querybuilder_and_fulllike() {
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_and_fulllike_datasource_mssql() {
+fn test_crud_find_with_querybuilder_and_fulllike_with_mssql() {
     // Find all the leagues with "LC" in their name
-    let mut filtered_leagues_result = League::select_query_datasource(SQL_SERVER_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+    let fv = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result =
+        League::select_query_with(DatabaseType::SqlServer)?.where_value(&fv, Like(Full));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR) ,'%')"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM [league] WHERE [league].[name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR), '%');"
     )
 }
 
@@ -95,14 +111,15 @@ fn test_crud_find_with_querybuilder_and_fulllike_datasource_mssql() {
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_and_fulllike_datasource_mysql() {
+fn test_crud_find_with_querybuilder_and_fulllike_with_mysql() {
     // Find all the leagues with "LC" in their name
-    let mut filtered_leagues_result = League::select_query_datasource(MYSQL_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Full);
+    let fv = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result =
+        League::select_query_with(DatabaseType::MySQL)?.where_value(&fv, Like(Full));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS CHAR) ,'%')"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM `league` WHERE `league`.`name` LIKE CONCAT ('%', CAST (? AS CHAR), '%');"
     )
 }
 
@@ -112,12 +129,12 @@ fn test_crud_find_with_querybuilder_and_fulllike_datasource_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_leftlike() {
     // Find all the leagues whose name ends with "CK"
-    let mut filtered_leagues_result = League::select_query();
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+    let fv = LeagueFieldValue::name("CK".to_string());
+    let filtered_leagues_result = League::select_query()?.where_value(&fv, Like(Left));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR))"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" LIKE CONCAT ('%', CAST ($1 AS VARCHAR));"
     )
 }
 
@@ -125,14 +142,15 @@ fn test_crud_find_with_querybuilder_and_leftlike() {
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_and_leftlike_datasource_mssql() {
+fn test_crud_find_with_querybuilder_and_leftlike_with_mssql() {
     // Find all the leagues whose name ends with "CK"
-    let mut filtered_leagues_result = League::select_query();
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+    let fv = LeagueFieldValue::name("CK".to_string());
+    let filtered_leagues_result =
+        League::select_query_with(DatabaseType::SqlServer)?.where_value(&fv, Like(Left));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS VARCHAR))"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM [league] WHERE [league].[name] LIKE CONCAT ('%', CAST (@P1 AS VARCHAR));"
     )
 }
 
@@ -140,14 +158,15 @@ fn test_crud_find_with_querybuilder_and_leftlike_datasource_mssql() {
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_and_leftlike_datasource_mysql() {
+fn test_crud_find_with_querybuilder_and_leftlike_with_mysql() {
     // Find all the leagues whose name ends with "CK"
-    let mut filtered_leagues_result = League::select_query_datasource(MYSQL_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"CK"), Like::Left);
+    let fv = LeagueFieldValue::name("CK".to_string());
+    let filtered_leagues_result =
+        League::select_query_with(DatabaseType::MySQL)?.where_value(&fv, Like(Left));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT('%', CAST($1 AS CHAR))"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM `league` WHERE `league`.`name` LIKE CONCAT ('%', CAST (? AS CHAR));"
     )
 }
 
@@ -157,12 +176,12 @@ fn test_crud_find_with_querybuilder_and_leftlike_datasource_mysql() {
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_with_querybuilder_and_rightlike() {
     // Find all the leagues whose name starts with "LC"
-    let mut filtered_leagues_result = League::select_query();
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+    let fv = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result = League::select_query()?.where_value(&fv, Like(Right));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT(CAST($1 AS VARCHAR) ,'%')"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM \"league\" WHERE \"league\".\"name\" LIKE CONCAT (CAST ($1 AS VARCHAR), '%');"
     )
 }
 
@@ -170,39 +189,44 @@ fn test_crud_find_with_querybuilder_and_rightlike() {
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_and_rightlike_datasource_mssql() {
+fn test_crud_find_with_querybuilder_and_rightlike_with_mssql() {
     // Find all the leagues whose name starts with "LC"
-    let mut filtered_leagues_result = League::select_query_datasource(SQL_SERVER_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+    let fv = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result =
+        League::select_query_with(DatabaseType::SqlServer)?.where_value(&fv, Like(Right));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT(CAST($1 AS VARCHAR) ,'%')"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM [league] WHERE [league].[name] LIKE CONCAT (CAST (@P1 AS VARCHAR), '%');"
     )
 }
+
 /// Builds a new SQL statement for retrieves entities of the `T` type, filtered
 /// with the parameters that modifies the base SQL to SELECT * FROM <entity>
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_and_rightlike_datasource_mysql() {
+fn test_crud_find_with_querybuilder_and_rightlike_with_mysql() {
     // Find all the leagues whose name starts with "LC"
-    let mut filtered_leagues_result = League::select_query_datasource(MYSQL_DS);
-    filtered_leagues_result.r#where(LeagueFieldValue::name(&"LC"), Like::Right);
+    let wh = LeagueFieldValue::name("LEC".to_string());
+    let filtered_leagues_result =
+        League::select_query_with(DatabaseType::MySQL)?.where_value(&wh, Like(Right));
 
     assert_eq!(
-        filtered_leagues_result.read_sql(),
-        "SELECT * FROM league WHERE name LIKE CONCAT(CAST($1 AS CHAR) ,'%')"
+        filtered_leagues_result.build().unwrap().sql(),
+        "SELECT * FROM `league` WHERE `league`.`name` LIKE CONCAT (CAST (? AS CHAR), '%');"
     )
 }
 
 /// Same than the above but with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_datasource_mssql() {
-    // Find all the players where its ID column value is greater that 50
-    let filtered_find_players = Player::select_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(&50), Comp::Gt)
-        .query()
+fn test_crud_find_with_querybuilder_with_mssql() {
+    // Find all the players where its ID column value is greater than 50
+    let filtered_find_players = Player::select_query_with(DatabaseType::SqlServer)?
+        .where_value(&PlayerFieldValue::id(50), Operator::Gt)
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await;
 
     assert!(!filtered_find_players.unwrap().is_empty());
@@ -211,14 +235,23 @@ fn test_crud_find_with_querybuilder_datasource_mssql() {
 /// Same than the above but with the specified datasource
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_find_with_querybuilder_datasource_mysql() {
-    // Find all the players where its ID column value is greater that 50
-    let filtered_find_players = Player::select_query_datasource(MYSQL_DS)
-        .r#where(PlayerFieldValue::id(&50), Comp::Gt)
-        .query()
+fn test_crud_find_with_querybuilder_with_mysql() {
+    // Find all the players where its ID column value is greater than 50
+    let filtered_find_players = Player::select_query_with(DatabaseType::MySQL)?
+        .where_value(&PlayerFieldValue::id(50), Operator::Gt)
+        .build()
+        .unwrap();
+
+    assert_eq!(
+        filtered_find_players.sql(),
+        "SELECT * FROM `player` WHERE `player`.`id` > ?;"
+    );
+
+    let result = filtered_find_players
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await;
 
-    assert!(!filtered_find_players.unwrap().is_empty());
+    assert!(!result.unwrap().is_empty());
 }
 
 /// Updates the values of the range on entries defined by the constraint parameters
@@ -228,28 +261,26 @@ fn test_crud_find_with_querybuilder_datasource_mysql() {
 fn test_crud_update_with_querybuilder() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let mut q = League::update_query();
-    q.set(&[
-        (LeagueField::slug, "Updated with the QueryBuilder"),
-        (LeagueField::name, "Random"),
-    ])
-    .r#where(LeagueFieldValue::id(&1), Comp::Gt)
-    .and(LeagueFieldValue::id(&8), Comp::Lt);
-
-    /*  NOTE: Family of QueryBuilders are clone, useful in case of need to read the generated SQL
-        let qpr = q.clone();
-        println!("PSQL: {:?}", qpr.read_sql());
-    */
-
-    // We can now back to the original an throw the query
-    q.query()
+    League::update_query()?
+        .set_values(&[
+            (LeagueField::slug, "Updated with the QueryBuilder"),
+            (LeagueField::name, "Random"),
+        ])
+        .unwrap()
+        .where_value(&LeagueFieldValue::id(1), Operator::Gt)
+        .and(&LeagueFieldValue::id(8), Operator::Lt)
+        .build()
+        .expect("Failed to update records with the querybuilder")
+        .launch_default::<League>()
         .await
-        .expect("Failed to update records with the querybuilder");
+        .unwrap();
 
-    let found_updated_values = League::select_query()
-        .r#where(LeagueFieldValue::id(&1), Comp::Gt)
-        .and(LeagueFieldValue::id(&7), Comp::Lt)
-        .query()
+    let found_updated_values = League::select_query()?
+        .where_value(&LeagueFieldValue::id(1), Operator::Gt)
+        .and(&LeagueFieldValue::id(8), Operator::Lt)
+        .build()
+        .unwrap()
+        .launch_default::<League>()
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
@@ -261,24 +292,29 @@ fn test_crud_update_with_querybuilder() {
 /// Same as above, but with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_update_with_querybuilder_datasource_mssql() {
+fn test_crud_update_with_querybuilder_with_mssql() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
-    let mut q = Player::update_query_datasource(SQL_SERVER_DS);
-    q.set(&[
+    let q = Player::update_query_with(DatabaseType::SqlServer);
+    q.set_values(&[
         (PlayerField::summoner_name, "Random updated player name"),
         (PlayerField::first_name, "I am an updated first name"),
     ])
-    .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-    .and(PlayerFieldValue::id(&8), Comp::Lt)
-    .query()
+    .unwrap()
+    .where_value(&PlayerFieldValue::id(1), Operator::Gt)
+    .and(&PlayerFieldValue::id(8), Operator::Lt)
+    .build()
+    .unwrap()
+    .launch_with::<&str, Player>(SQL_SERVER_DS)
     .await
     .expect("Failed to update records with the querybuilder");
 
-    let found_updated_values = Player::select_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-        .and(PlayerFieldValue::id(&7), Comp::LtEq)
-        .query()
+    let found_updated_values = Player::select_query_with(DatabaseType::SqlServer)?
+        .where_value(&PlayerFieldValue::id(1), Operator::Gt)
+        .and(&PlayerFieldValue::id(7), Operator::LtEq)
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
@@ -291,25 +327,35 @@ fn test_crud_update_with_querybuilder_datasource_mssql() {
 /// Same as above, but with the specified datasource
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_update_with_querybuilder_datasource_mysql() {
+fn test_crud_update_with_querybuilder_with_mysql() {
     // Find all the leagues with ID less or equals that 7
     // and where it's region column value is equals to 'Korea'
 
-    let mut q = Player::update_query_datasource(MYSQL_DS);
-    q.set(&[
-        (PlayerField::summoner_name, "Random updated player name"),
-        (PlayerField::first_name, "I am an updated first name"),
-    ])
-    .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-    .and(PlayerFieldValue::id(&8), Comp::Lt)
-    .query()
-    .await
-    .expect("Failed to update records with the querybuilder");
+    let q = Player::update_query_with(DatabaseType::MySQL);
+    let update_query = q
+        .set_values(&[
+            (PlayerField::summoner_name, "Random updated player name"),
+            (PlayerField::first_name, "I am an updated first name"),
+        ])?
+        .where_value(&PlayerFieldValue::id(1), Operator::Gt)
+        .and(&PlayerFieldValue::id(8), Operator::Lt)
+        .build()?;
 
-    let found_updated_values = Player::select_query_datasource(MYSQL_DS)
-        .r#where(PlayerFieldValue::id(&1), Comp::Gt)
-        .and(PlayerFieldValue::id(&7), Comp::LtEq)
-        .query()
+    assert_eq!(
+        update_query.sql(),
+        "UPDATE `player` SET `summoner_name` = ?, `first_name` = ? WHERE `player`.`id` > ? AND `player`.`id` < ?;"
+    );
+
+    update_query
+        .launch_with::<&str, Player>(MYSQL_DS)
+        .await
+        .expect("Failed to update records with the querybuilder");
+
+    let found_updated_values = Player::select_query_with(DatabaseType::MySQL)?
+        .where_value(&PlayerFieldValue::id(1), Operator::Gt)
+        .and(&PlayerFieldValue::id(7), Operator::LtEq)
+        .build()?
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await
         .expect("Failed to retrieve database League entries with the querybuilder");
 
@@ -324,134 +370,279 @@ fn test_crud_update_with_querybuilder_datasource_mysql() {
 ///
 /// Note if the database is persisted (not created and destroyed on every docker or
 /// GitHub Action wake up), it won't delete things that already have been deleted,
-/// but this isn't an error. They just don't exists.
+/// but this isn't an error. They just don't exist.
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_with_querybuilder() {
-    Tournament::delete_query()
-        .r#where(TournamentFieldValue::id(&14), Comp::Gt)
-        .and(TournamentFieldValue::id(&16), Comp::Lt)
-        .query()
+    Tournament::delete_query()?
+        .where_value(&TournamentFieldValue::id(14), Operator::Gt)
+        .and(&TournamentFieldValue::id(16), Operator::Lt)
+        .build()?
+        .launch_default::<Tournament>()
         .await
         .expect("Error connecting with the database on the delete operation");
 
     assert_eq!(Tournament::find_by_pk(&15).await.unwrap(), None);
 }
 
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_delete_with_querybuilder_lt_creation() {
+    let q = Tournament::delete_query()?.where_value(&TournamentFieldValue::id(10), Operator::Gt);
+    assert_eq!(
+        q.build()?.sql(),
+        "DELETE FROM \"tournament\" WHERE \"tournament\".\"id\" > $1;"
+    );
+}
+
 /// Same as the above delete, but with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_delete_with_querybuilder_datasource_mssql() {
-    Player::delete_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(&120), Comp::Gt)
-        .and(PlayerFieldValue::id(&130), Comp::Lt)
-        .query()
+fn test_crud_delete_with_querybuilder_with_mssql() {
+    Player::delete_query_with(DatabaseType::SqlServer)
+        .where_value(&PlayerFieldValue::id(120), Operator::Gt)
+        .and(&PlayerFieldValue::id(130), Operator::Lt)
+        .build()?
+        .launch_with::<&str, Player>(SQL_SERVER_DS)
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(Player::select_query_datasource(SQL_SERVER_DS)
-        .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-        .query()
-        .await
-        .unwrap()
-        .is_empty());
+    assert!(
+        Player::select_query_with(DatabaseType::SqlServer)?
+            .where_value(&PlayerFieldValue::id(122), Operator::Eq)
+            .build()
+            .unwrap()
+            .launch_with::<&str, Player>(SQL_SERVER_DS)
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
 /// Same as the above delete, but with the specified datasource
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_delete_with_querybuilder_datasource_mysql() {
-    Player::delete_query_datasource(MYSQL_DS)
-        .r#where(PlayerFieldValue::id(&120), Comp::Gt)
-        .and(PlayerFieldValue::id(&130), Comp::Lt)
-        .query()
+fn test_crud_delete_with_querybuilder_with_mysql() {
+    Player::delete_query_with(DatabaseType::MySQL)
+        .where_value(&PlayerFieldValue::id(120), Operator::Gt)
+        .and(&PlayerFieldValue::id(130), Operator::Lt)
+        .build()
+        .unwrap()
+        .launch_with::<&str, Player>(MYSQL_DS)
         .await
         .expect("Error connecting with the database when we are going to delete data! :)");
 
-    assert!(Player::select_query_datasource(MYSQL_DS)
-        .r#where(PlayerFieldValue::id(&122), Comp::Eq)
-        .query()
-        .await
-        .unwrap()
-        .is_empty());
+    assert!(
+        Player::select_query_with(DatabaseType::MySQL)?
+            .where_value(&PlayerFieldValue::id(122), Operator::Eq)
+            .build()
+            .unwrap()
+            .launch_with::<&str, Player>(MYSQL_DS)
+            .await
+            .unwrap()
+            .is_empty()
+    );
 }
 
-/// Tests for the generated SQL query after use the
-/// WHERE clause
+/// Returns every database backend enabled for this compilation.
+fn enabled_database_types() -> Vec<DatabaseType> {
+    vec![
+        #[cfg(feature = "postgres")]
+        DatabaseType::PostgreSql,
+        #[cfg(feature = "mssql")]
+        DatabaseType::SqlServer,
+        #[cfg(feature = "mysql")]
+        DatabaseType::MySQL,
+    ]
+}
+
+/// Tests for the generated SQL query after using the WHERE clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_where_clause() {
-    let mut l = League::select_query();
-    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(l.read_sql(), "SELECT * FROM league WHERE name = $1")
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1;",
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => "SELECT * FROM [league] WHERE [league].[name] = @P1;",
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => "SELECT * FROM `league` WHERE `league`.`name` = ?;",
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using the AND clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause() {
-    let mut l = League::select_query();
-    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .and(LeagueFieldValue::id(&10), Comp::LtEq);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.read_sql().trim(),
-        "SELECT * FROM league WHERE name = $1 AND id <= $2"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .and(&LeagueFieldValue::id(10), Operator::LtEq)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"league\".\"id\" <= $2;"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 AND [league].[id] <= @P2;"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? AND `league`.`id` <= ?;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using AND with an IN constraint.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause_with_in_constraint() {
-    let mut l = League::select_query();
-    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .and_values_in(LeagueField::id, &[1, 7, 10]);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.read_sql().trim(),
-        "SELECT * FROM league WHERE name = $1 AND id IN ($1, $2, $3)"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .and_values_in(LeagueField::id, &[1, 7, 10])?
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"id\" IN ($2, $3, $4);"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 AND [id] IN (@P2, @P3, @P4);"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? AND `id` IN (?, ?, ?);"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using the OR clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause() {
-    let mut l = League::select_query();
-    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .or(LeagueFieldValue::id(&10), Comp::LtEq);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.read_sql().trim(),
-        "SELECT * FROM league WHERE name = $1 OR id <= $2"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .or(&LeagueFieldValue::id(10), Operator::LtEq)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"league\".\"id\" <= $2;"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 OR [league].[id] <= @P2;"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? OR `league`.`id` <= ?;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using OR with an IN constraint.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause_with_in_constraint() {
-    let mut l = League::select_query();
-    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .or_values_in(LeagueField::id, &[1, 7, 10]);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.read_sql(),
-        "SELECT * FROM league WHERE name = $1 OR id IN ($1, $2, $3)"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .or_values_in(LeagueField::id, &[1, 7, 10])?
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"id\" IN ($2, $3, $4);"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 OR [id] IN (@P2, @P3, @P4);"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? OR `id` IN (?, ?, ?);"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using the ORDER BY clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_order_by_clause() {
-    let mut l = League::select_query();
-    l.r#where(LeagueFieldValue::name(&"LEC"), Comp::Eq)
-        .order_by(LeagueField::id, false);
+    for database_type in enabled_database_types() {
+        let fv = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.read_sql(),
-        "SELECT * FROM league WHERE name = $1 ORDER BY id"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&fv, Operator::Eq)
+            .order_by(LeagueField::id, false)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 ORDER BY \"league\".\"id\";"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 ORDER BY [league].[id];"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? ORDER BY `league`.`id`;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }

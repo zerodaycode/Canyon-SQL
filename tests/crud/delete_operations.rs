@@ -1,6 +1,5 @@
 //! Integration tests for the CRUD operations available in `Canyon` that
 //! generates and executes *INSERT* statements
-use canyon_sql::crud::CrudOperations;
 
 #[cfg(feature = "mysql")]
 use crate::constants::MYSQL_DS;
@@ -10,6 +9,8 @@ use crate::constants::PSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 
 use crate::tests_models::league::*;
+
+use canyon_sql::crud::{DeleteOperations, InsertOperations, ReadOperations};
 
 /// Deletes a row from the database that is mapped into some instance of a `T` entity.
 ///
@@ -23,7 +24,7 @@ use crate::tests_models::league::*;
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_delete_method_operation() {
-    // For test the delete, we will insert a new instance of the database, and then,
+    // For test the delete operation, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
         id: Default::default(),
@@ -39,7 +40,7 @@ fn test_crud_delete_method_operation() {
 
     assert_eq!(
         new_league.id,
-        League::find_by_pk_datasource(&new_league.id, PSQL_DS)
+        League::find_by_pk_with(&new_league.id, PSQL_DS)
             .await
             .expect("Request error")
             .expect("None value")
@@ -55,7 +56,7 @@ fn test_crud_delete_method_operation() {
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter) -> Result<Option<T>>, Err>
     assert_eq!(
         League::find_by_pk(&new_league.id)
             .await
@@ -67,7 +68,7 @@ fn test_crud_delete_method_operation() {
 /// Same as the delete test, but performing the operations with the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_delete_datasource_mssql_method_operation() {
+fn test_crud_delete_with_mssql_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
@@ -81,12 +82,12 @@ fn test_crud_delete_datasource_mssql_method_operation() {
 
     // We insert the instance on the database, on the `League` entity
     new_league
-        .insert_datasource(SQL_SERVER_DS)
+        .insert_with(SQL_SERVER_DS)
         .await
         .expect("Failed insert operation");
     assert_eq!(
         new_league.id,
-        League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
+        League::find_by_pk_with(&new_league.id, SQL_SERVER_DS)
             .await
             .expect("Request error")
             .expect("None value")
@@ -96,15 +97,15 @@ fn test_crud_delete_datasource_mssql_method_operation() {
     // Now that we have an instance mapped to some entity by a primary key, we can now
     // remove that entry from the database with the delete operation
     new_league
-        .delete_datasource(SQL_SERVER_DS)
+        .delete_with(SQL_SERVER_DS)
         .await
         .expect("Failed to delete the operation");
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter) -> Result<Option<T>>, Err>
     assert_eq!(
-        League::find_by_pk_datasource(&new_league.id, SQL_SERVER_DS)
+        League::find_by_pk_with(&new_league.id, SQL_SERVER_DS)
             .await
             .expect("Unwrapping the result, letting the Option<T>"),
         None
@@ -114,7 +115,7 @@ fn test_crud_delete_datasource_mssql_method_operation() {
 /// Same as the delete test, but performing the operations with the specified datasource
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
-fn test_crud_delete_datasource_mysql_method_operation() {
+fn test_crud_delete_with_mysql_method_operation() {
     // For test the delete, we will insert a new instance of the database, and then,
     // after inspect it, we will proceed to delete it
     let mut new_league: League = League {
@@ -128,12 +129,12 @@ fn test_crud_delete_datasource_mysql_method_operation() {
 
     // We insert the instance on the database, on the `League` entity
     new_league
-        .insert_datasource(MYSQL_DS)
+        .insert_with(MYSQL_DS)
         .await
         .expect("Failed insert operation");
     assert_eq!(
         new_league.id,
-        League::find_by_pk_datasource(&new_league.id, MYSQL_DS)
+        League::find_by_pk_with(&new_league.id, MYSQL_DS)
             .await
             .expect("Request error")
             .expect("None value")
@@ -143,15 +144,15 @@ fn test_crud_delete_datasource_mysql_method_operation() {
     // Now that we have an instance mapped to some entity by a primary key, we can now
     // remove that entry from the database with the delete operation
     new_league
-        .delete_datasource(MYSQL_DS)
+        .delete_with(MYSQL_DS)
         .await
         .expect("Failed to delete the operation");
 
     // To check the success, we can query by the primary key value and check if, after unwrap()
     // the result of the operation, the find by primary key contains Some(v) or None
-    // Remember that `find_by_primary_key(&dyn QueryParameter<'a>) -> Result<Option<T>>, Err>
+    // Remember that `find_by_primary_key(&dyn QueryParameter) -> Result<Option<T>>, Err>
     assert_eq!(
-        League::find_by_pk_datasource(&new_league.id, MYSQL_DS)
+        League::find_by_pk_with(&new_league.id, MYSQL_DS)
             .await
             .expect("Unwrapping the result, letting the Option<T>"),
         None

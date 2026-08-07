@@ -1,17 +1,19 @@
 //! File that contains all the datatypes and logic to perform the migrations
 //! over a target database
-use async_trait::async_trait;
+use crate::canyon_crud::DatasourceConfig;
+use crate::constants::regex_patterns;
+use crate::save_migrations_query_to_execute;
+use canyon_core::canyon::Canyon;
+use canyon_core::connection::contracts::DbConnection;
+use canyon_core::transaction::Transaction;
 use canyon_crud::DatabaseType;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::future::Future;
 use std::ops::Not;
 
-use crate::canyon_crud::{crud::Transaction, DatasourceConfig};
-use crate::constants::regex_patterns;
-use crate::save_migrations_query_to_execute;
-
-use super::information_schema::{ColumnMetadata, TableMetadata};
+use super::information_schema::{ColumnMetadata, MacroTableMetadata};
 use super::memory::CanyonMemory;
 #[cfg(feature = "postgres")]
 use crate::migrations::transforms::{to_postgres_alter_syntax, to_postgres_syntax};
@@ -23,19 +25,23 @@ use canyon_entities::register_types::{CanyonRegisterEntity, CanyonRegisterEntity
 /// Rust source code managed by Canyon, for successfully make the migrations
 #[derive(Debug, Default)]
 pub struct MigrationsProcessor {
-    operations: Vec<Box<dyn DatabaseOperation>>,
-    set_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
-    drop_primary_key_operations: Vec<Box<dyn DatabaseOperation>>,
-    constraints_operations: Vec<Box<dyn DatabaseOperation>>,
+    table_operations: Vec<TableOperation>,
+    column_operations: Vec<ColumnOperation>,
+    set_primary_key_operations: Vec<TableOperation>,
+    drop_primary_key_operations: Vec<TableOperation>,
+    constraints_table_operations: Vec<TableOperation>,
+    constraints_column_operations: Vec<ColumnOperation>,
+    #[cfg(feature = "postgres")]
+    constraints_sequence_operations: Vec<SequenceOperation>,
 }
-impl Transaction<Self> for MigrationsProcessor {}
+impl Transaction for MigrationsProcessor {}
 
 impl MigrationsProcessor {
     pub async fn process<'a>(
         &'a mut self,
         canyon_memory: CanyonMemory,
         canyon_entities: Vec<CanyonRegisterEntity<'a>>,
-        database_tables: Vec<&'a TableMetadata>,
+        database_tables: Vec<&'a MacroTableMetadata>,
         datasource: &'_ DatasourceConfig,
     ) {
         // The database type formally represented in Canyon
@@ -66,7 +72,7 @@ impl MigrationsProcessor {
                 db_type,
             );
 
-            // For each field (column) on the this canyon register entity
+            // For each field (column) on the canyon register entity
             for canyon_register_field in canyon_register_entity.entity_fields {
                 let current_column_metadata = MigrationsHelper::get_current_column_metadata(
                     canyon_register_field.field_name.clone(),
@@ -106,7 +112,10 @@ impl MigrationsProcessor {
             }
         }
 
-        for operation in &self.operations {
+        for operation in &self.table_operations {
+            operation.generate_sql(datasource).await; // This should be moved again to runtime
+        }
+        for operation in &self.column_operations {
             operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
         for operation in &self.drop_primary_key_operations {
@@ -115,8 +124,18 @@ impl MigrationsProcessor {
         for operation in &self.set_primary_key_operations {
             operation.generate_sql(datasource).await; // This should be moved again to runtime
         }
-        for operation in &self.constraints_operations {
+        for operation in &self.constraints_table_operations {
             operation.generate_sql(datasource).await; // This should be moved again to runtime
+        }
+        for operation in &self.constraints_column_operations {
+            operation.generate_sql(datasource).await; // This should be moved again to runtime
+        }
+
+        #[cfg(feature = "postgres")]
+        {
+            for operation in &self.constraints_sequence_operations {
+                operation.generate_sql(datasource).await; // This should be moved again to runtime
+            }
         }
         // TODO Still pending to decouple de executions of cargo check to skip the process if this
         // code is not processed by cargo build or cargo run
@@ -129,7 +148,7 @@ impl MigrationsProcessor {
         canyon_memory: &'_ CanyonMemory,
         entity_name: &'a str,
         entity_fields: Vec<CanyonRegisterEntityField>,
-        database_tables: &'a [&'a TableMetadata],
+        database_tables: &'a [&'a MacroTableMetadata],
     ) {
         // 1st operation -> Check if the current entity is already on the target database.
         if !MigrationsHelper::entity_already_on_database(entity_name, database_tables) {
@@ -153,19 +172,16 @@ impl MigrationsProcessor {
 
     /// Generates a database agnostic query to change the name of a table
     fn create_table(&mut self, table_name: String, entity_fields: Vec<CanyonRegisterEntityField>) {
-        self.operations.push(Box::new(TableOperation::CreateTable(
-            table_name,
-            entity_fields,
-        )));
+        self.table_operations
+            .push(TableOperation::CreateTable(table_name, entity_fields));
     }
 
     /// Generates a database agnostic query to change the name of a table
     fn table_rename(&mut self, old_table_name: String, new_table_name: String) {
-        self.operations
-            .push(Box::new(TableOperation::AlterTableName(
-                old_table_name,
-                new_table_name,
-            )));
+        self.table_operations.push(TableOperation::AlterTableName(
+            old_table_name,
+            new_table_name,
+        ));
     }
 
     // Creates or modify (currently only datatype) a column for a given canyon register entity field
@@ -173,7 +189,7 @@ impl MigrationsProcessor {
         &mut self,
         entity_name: &'a str,
         entity_fields: Vec<CanyonRegisterEntityField>,
-        current_table_metadata: Option<&'a TableMetadata>,
+        current_table_metadata: Option<&'a MacroTableMetadata>,
         _db_type: DatabaseType,
     ) {
         if current_table_metadata.is_none() {
@@ -215,40 +231,42 @@ impl MigrationsProcessor {
         canyon_register_entity_field: CanyonRegisterEntityField,
         current_column_metadata: Option<&ColumnMetadata>,
     ) {
-        // If we do not retrieve data for this database column, it does not exist yet
-        // and therefore it has to be created
-        if current_column_metadata.is_none() {
+        if let Some(current_col_met) = current_column_metadata {
+            if !MigrationsHelper::is_same_datatype(
+                db_type,
+                &canyon_register_entity_field,
+                current_col_met,
+            ) {
+                self.change_column_datatype(
+                    entity_name.to_string(),
+                    canyon_register_entity_field.clone(),
+                )
+            }
+        } else {
+            // If we do not retrieve data for this database column, it does not exist yet,
+            // and therefore it has to be created
             self.create_column(
-                entity_name.to_string(),
-                canyon_register_entity_field.clone(),
-            )
-        } else if !MigrationsHelper::is_same_datatype(
-            db_type,
-            &canyon_register_entity_field,
-            current_column_metadata.unwrap(),
-        ) {
-            self.change_column_datatype(
                 entity_name.to_string(),
                 canyon_register_entity_field.clone(),
             )
         }
 
-        if let Some(column_metadata) = current_column_metadata {
-            if canyon_register_entity_field.is_nullable() != column_metadata.is_nullable {
-                if column_metadata.is_nullable {
-                    self.set_not_null(entity_name.to_string(), canyon_register_entity_field)
-                } else {
-                    self.drop_not_null(entity_name.to_string(), canyon_register_entity_field)
-                }
+        if let Some(column_metadata) = current_column_metadata
+            && canyon_register_entity_field.is_nullable() != column_metadata.is_nullable
+        {
+            if column_metadata.is_nullable {
+                self.set_not_null(entity_name.to_string(), canyon_register_entity_field)
+            } else {
+                self.drop_not_null(entity_name.to_string(), canyon_register_entity_field)
             }
         }
     }
 
     fn delete_column(&mut self, table_name: &str, column_name: String) {
-        self.operations.push(Box::new(ColumnOperation::DeleteColumn(
+        self.column_operations.push(ColumnOperation::DeleteColumn(
             table_name.to_string(),
             column_name,
-        )));
+        ));
     }
 
     #[cfg(feature = "mssql")]
@@ -258,38 +276,32 @@ impl MigrationsProcessor {
         column_name: String,
         column_datatype: String,
     ) {
-        self.operations
-            .push(Box::new(ColumnOperation::DropNotNullBeforeDropColumn(
+        self.column_operations
+            .push(ColumnOperation::DropNotNullBeforeDropColumn(
                 table_name.to_string(),
                 column_name,
                 column_datatype,
-            )));
+            ));
     }
 
     fn create_column(&mut self, table_name: String, field: CanyonRegisterEntityField) {
-        self.operations
-            .push(Box::new(ColumnOperation::CreateColumn(table_name, field)));
+        self.column_operations
+            .push(ColumnOperation::CreateColumn(table_name, field));
     }
 
     fn change_column_datatype(&mut self, table_name: String, field: CanyonRegisterEntityField) {
-        self.operations
-            .push(Box::new(ColumnOperation::AlterColumnType(
-                table_name, field,
-            )));
+        self.column_operations
+            .push(ColumnOperation::AlterColumnType(table_name, field));
     }
 
     fn set_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
-        self.operations
-            .push(Box::new(ColumnOperation::AlterColumnSetNotNull(
-                table_name, field,
-            )));
+        self.column_operations
+            .push(ColumnOperation::AlterColumnSetNotNull(table_name, field));
     }
 
     fn drop_not_null(&mut self, table_name: String, field: CanyonRegisterEntityField) {
-        self.operations
-            .push(Box::new(ColumnOperation::AlterColumnDropNotNull(
-                table_name, field,
-            )));
+        self.column_operations
+            .push(ColumnOperation::AlterColumnDropNotNull(table_name, field));
     }
 
     fn add_constraints(
@@ -308,7 +320,7 @@ impl MigrationsProcessor {
 
                 let foreign_key_name = format!(
                     "{entity_name}_{}_fkey",
-                    &canyon_register_entity_field.field_name
+                    canyon_register_entity_field.field_name
                 );
 
                 Self::add_foreign_key(
@@ -341,14 +353,14 @@ impl MigrationsProcessor {
         column_to_reference: String,
         canyon_register_entity_field: &CanyonRegisterEntityField,
     ) {
-        self.constraints_operations
-            .push(Box::new(TableOperation::AddTableForeignKey(
+        self.constraints_table_operations
+            .push(TableOperation::AddTableForeignKey(
                 entity_name.to_string(),
                 foreign_key_name,
                 canyon_register_entity_field.field_name.clone(),
                 table_to_reference,
                 column_to_reference,
-            )));
+            ));
     }
 
     fn add_primary_key(
@@ -357,25 +369,25 @@ impl MigrationsProcessor {
         canyon_register_entity_field: CanyonRegisterEntityField,
     ) {
         self.set_primary_key_operations
-            .push(Box::new(TableOperation::AddTablePrimaryKey(
+            .push(TableOperation::AddTablePrimaryKey(
                 entity_name.to_string(),
                 canyon_register_entity_field,
-            )));
+            ));
     }
 
     #[cfg(feature = "postgres")]
     fn add_identity(&mut self, entity_name: &str, field: CanyonRegisterEntityField) {
-        self.constraints_operations
-            .push(Box::new(ColumnOperation::AlterColumnAddIdentity(
+        self.constraints_column_operations
+            .push(ColumnOperation::AlterColumnAddIdentity(
                 entity_name.to_string(),
                 field.clone(),
-            )));
+            ));
 
-        self.constraints_operations
-            .push(Box::new(SequenceOperation::ModifySequence(
+        self.constraints_sequence_operations
+            .push(SequenceOperation::ModifySequence(
                 entity_name.to_string(),
                 field,
-            )));
+            ));
     }
 
     fn add_modify_or_remove_constraints(
@@ -419,7 +431,7 @@ impl MigrationsProcessor {
                 }
             }
         }
-        // Case when field doesn't contains a primary key annotation, but there is one in the database column
+        // Case when field doesn't contain a primary key annotation, but there is one in the database column
         else if !field_is_primary_key && current_column_metadata.primary_key_info.is_some() {
             Self::drop_primary_key(
                 self,
@@ -449,7 +461,7 @@ impl MigrationsProcessor {
 
                 let foreign_key_name = format!(
                     "{entity_name}_{}_fkey",
-                    &canyon_register_entity_field.field_name
+                    canyon_register_entity_field.field_name
                 );
 
                 Self::add_foreign_key(
@@ -471,7 +483,7 @@ impl MigrationsProcessor {
 
             let foreign_key_name = format!(
                 "{entity_name}_{}_fkey",
-                &canyon_register_entity_field.field_name
+                canyon_register_entity_field.field_name
             );
 
             // Example of information in foreign_key_info: FOREIGN KEY (league) REFERENCES leagues(id)
@@ -526,26 +538,20 @@ impl MigrationsProcessor {
                     &canyon_register_entity_field,
                 )
             }
-        } else if !field_is_foreign_key && current_column_metadata.foreign_key_name.is_some() {
-            // Case when field don't contains a foreign key annotation, but there is already one in the database column
-            Self::delete_foreign_key(
-                self,
-                entity_name,
-                current_column_metadata
-                    .foreign_key_name
-                    .as_ref()
-                    .expect("ForeignKey constrain name not found")
-                    .to_string(),
-            );
+        } else if !field_is_foreign_key
+            && let Some(foreign_key_name) = current_column_metadata.foreign_key_name.as_ref()
+        {
+            // Case when field don't contain a foreign key annotation, but there is already one in the database column
+            Self::delete_foreign_key(self, entity_name, foreign_key_name.to_owned());
         }
     }
 
     fn drop_primary_key(&mut self, entity_name: &str, primary_key_name: String) {
         self.drop_primary_key_operations
-            .push(Box::new(TableOperation::DeleteTablePrimaryKey(
+            .push(TableOperation::DeleteTablePrimaryKey(
                 entity_name.to_string(),
                 primary_key_name,
-            )));
+            ));
     }
 
     #[cfg(feature = "postgres")]
@@ -554,37 +560,46 @@ impl MigrationsProcessor {
         entity_name: &str,
         canyon_register_entity_field: CanyonRegisterEntityField,
     ) {
-        self.constraints_operations
-            .push(Box::new(ColumnOperation::AlterColumnDropIdentity(
+        self.constraints_column_operations
+            .push(ColumnOperation::AlterColumnDropIdentity(
                 entity_name.to_string(),
                 canyon_register_entity_field,
-            )));
+            ));
     }
 
     fn delete_foreign_key(&mut self, entity_name: &str, constrain_name: String) {
-        self.constraints_operations
-            .push(Box::new(TableOperation::DeleteTableForeignKey(
+        self.constraints_table_operations
+            .push(TableOperation::DeleteTableForeignKey(
                 // table_with_foreign_key,constrain_name
                 entity_name.to_string(),
                 constrain_name,
-            )));
+            ));
     }
 
     /// Make the detected migrations for the next Canyon-SQL run
-    #[allow(clippy::await_holding_lock)]
     pub async fn from_query_register(queries_to_execute: &HashMap<&str, Vec<&str>>) {
         for datasource in queries_to_execute.iter() {
-            for query_to_execute in datasource.1 {
-                let res = Self::query(query_to_execute, [], datasource.0).await;
+            let datasource_name = datasource.0;
+            let db_conn = Canyon::instance()
+                .expect("Error getting db connection on `from_query_register`")
+                .get_connection(datasource_name)
+                .unwrap_or_else(|_| {
+                    panic!(
+                        "Unable to get a database connection on Canyon Memory: {:?}",
+                        datasource_name
+                    )
+                });
 
+            for query_to_execute in datasource.1 {
+                let res = db_conn.query_rows(query_to_execute, &[]).await;
                 match res {
                     Ok(_) => println!(
                         "\t[OK] - {:?} - Query: {:?}",
-                        datasource.0, &query_to_execute
+                        datasource.0, query_to_execute
                     ),
                     Err(e) => println!(
                         "\t[ERR] - {:?} - Query: {:?}\nCause: {:?}",
-                        datasource.0, &query_to_execute, e
+                        datasource.0, query_to_execute, e
                     ),
                 }
                 // TODO Ask for user input?
@@ -600,7 +615,7 @@ impl MigrationsHelper {
     /// Checks if a tracked Canyon entity is already present in the database
     fn entity_already_on_database<'a>(
         entity_name: &'a str,
-        database_tables: &'a [&'_ TableMetadata],
+        database_tables: &'a [&'_ MacroTableMetadata],
     ) -> bool {
         database_tables
             .iter()
@@ -610,8 +625,8 @@ impl MigrationsHelper {
     fn get_current_table_metadata<'a>(
         canyon_memory: &'_ CanyonMemory,
         entity_name: &'a str,
-        database_tables: &'a [&'_ TableMetadata],
-    ) -> Option<&'a TableMetadata> {
+        database_tables: &'a [&'_ MacroTableMetadata],
+    ) -> Option<&'a MacroTableMetadata> {
         let correct_entity_name = canyon_memory
             .renamed_entities
             .get(&entity_name.to_lowercase())
@@ -629,7 +644,7 @@ impl MigrationsHelper {
     /// Get the column metadata for a given column name
     fn get_current_column_metadata(
         column_name: String,
-        current_table_metadata: Option<&TableMetadata>,
+        current_table_metadata: Option<&MacroTableMetadata>,
     ) -> Option<&ColumnMetadata> {
         if let Some(metadata_table) = current_table_metadata {
             metadata_table
@@ -716,40 +731,8 @@ impl MigrationsHelper {
     }
 }
 
-#[cfg(test)]
-mod migrations_helper_tests {
-    use super::*;
-    use crate::constants;
-
-    const MOCKED_ENTITY_NAME: &str = "league";
-
-    #[test]
-    fn test_entity_already_on_database() {
-        let parse_result_empty_db_tables =
-            MigrationsHelper::entity_already_on_database(MOCKED_ENTITY_NAME, &[]);
-        // Always should be false
-        assert!(!parse_result_empty_db_tables);
-
-        // Rust has a League entity. Database has a `league` entity. Case should be normalized
-        // and a match must raise
-        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
-            MOCKED_ENTITY_NAME,
-            &[&constants::mocked_data::TABLE_METADATA_LEAGUE_EX],
-        );
-        assert!(mocked_league_entity_on_database);
-
-        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
-            MOCKED_ENTITY_NAME,
-            &[&constants::mocked_data::NON_MATCHING_TABLE_METADATA],
-        );
-        assert!(!mocked_league_entity_on_database)
-    }
-}
-
-/// Trait that enables implementors to generate the migration queries
-#[async_trait]
 trait DatabaseOperation: Debug {
-    async fn generate_sql(&self, datasource: &DatasourceConfig);
+    fn generate_sql(&self, datasource: &DatasourceConfig) -> impl Future<Output = ()>;
 }
 
 /// Helper to relate the operations that Canyon should do when it's managing a schema
@@ -769,73 +752,75 @@ enum TableOperation {
     DeleteTablePrimaryKey(String, String),
 }
 
-impl<T: Debug> Transaction<T> for TableOperation {}
+impl Transaction for TableOperation {}
 
-#[async_trait]
 impl DatabaseOperation for TableOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig) {
         let db_type = datasource.get_db_type();
 
         let stmt = match self {
-            TableOperation::CreateTable(table_name, table_fields) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql => {
-                        format!(
-                            "CREATE TABLE \"{table_name}\" ({});",
-                            table_fields
-                                .iter()
-                                .map(|entity_field| format!(
-                                    "\"{}\" {}",
-                                    entity_field.field_name,
-                                    to_postgres_syntax(entity_field)
-                                ))
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        )
-                    }
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer => {
-                        format!(
-                            "CREATE TABLE {:?} ({:?});",
-                            table_name,
-                            table_fields
-                                .iter()
-                                .map(|entity_field| format!(
-                                    "{} {}",
-                                    entity_field.field_name,
-                                    to_sqlserver_syntax(entity_field)
-                                ))
-                                .collect::<Vec<String>>()
-                                .join(", ")
-                        )
-                            .replace('"', "")
-                    },
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+            TableOperation::CreateTable(table_name, table_fields) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => {
+                    format!(
+                        "CREATE TABLE \"{table_name}\" ({});",
+                        table_fields
+                            .iter()
+                            .map(|entity_field| format!(
+                                "\"{}\" {}",
+                                entity_field.field_name,
+                                to_postgres_syntax(entity_field)
+                            ))
+                            .collect::<Vec<String>>()
+                            .join(", ")
+                    )
                 }
-            }
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => format!(
+                    "CREATE TABLE {:?} ({:?});",
+                    table_name,
+                    table_fields
+                        .iter()
+                        .map(|entity_field| format!(
+                            "{} {}",
+                            entity_field.field_name,
+                            to_sqlserver_syntax(entity_field)
+                        ))
+                        .collect::<Vec<String>>()
+                        .join(", ")
+                )
+                .replace('"', ""),
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
 
             TableOperation::AlterTableName(old_table_name, new_table_name) => {
                 match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};"),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        /*
-                            Notes: Brackets around `old_table_name`, p.e.
-                                exec sp_rename ['league'], 'leagues'  // NOT VALID!
-                            is only allowed for compound names split by a dot.
-                                exec sp_rename ['random.league'], 'leagues'  // OK
+                    #[cfg(feature = "postgres")]
+                    DatabaseType::PostgreSql => {
+                        format!("ALTER TABLE {old_table_name} RENAME TO {new_table_name};")
+                    }
+                    #[cfg(feature = "mssql")]
+                    DatabaseType::SqlServer =>
+                    /*
+                        Notes: Brackets around `old_table_name`, p.e.
+                            exec sp_rename ['league'], 'leagues'  // NOT VALID!
+                        is only allowed for compound names split by a dot.
+                            exec sp_rename ['random.league'], 'leagues'  // OK
 
-                            CARE! This doesn't mean that we are including the schema.
-                                exec sp_rename ['dbo.random.league'], 'leagues' // OK
-                                exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
+                        CARE! This doesn't mean that we are including the schema.
+                            exec sp_rename ['dbo.random.league'], 'leagues' // OK
+                            exec sp_rename 'dbo.league', 'leagues' // OK - Schema doesn't need brackets
 
-                            Due to the automatic mapped name from Rust to DB and vice-versa, this won't
-                            be an allowed behaviour for now, only with the table_name parameter on the
-                            CanyonEntity annotation.
-                        */
-                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+                        Due to the automatic mapped name from Rust to DB and vice versa, this won't
+                        be an allowed behaviour for now, only with the table_name parameter on the
+                        CanyonEntity annotation.
+                    */
+                    {
+                        format!("exec sp_rename '{old_table_name}', '{new_table_name}';")
+                    }
+                    #[cfg(feature = "mysql")]
+                    DatabaseType::MySQL => todo!(),
                 }
             }
 
@@ -845,57 +830,61 @@ impl DatabaseOperation for TableOperation {
                 _column_foreign_key,
                 _table_to_reference,
                 _column_to_reference,
-            ) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "ALTER TABLE {_table_name} ADD CONSTRAINT {_foreign_key_name} \
+            ) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => format!(
+                    "ALTER TABLE {_table_name} ADD CONSTRAINT {_foreign_key_name} \
                             FOREIGN KEY ({_column_foreign_key}) REFERENCES {_table_to_reference} ({_column_to_reference});"
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+                ),
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => {
+                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
-            }
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
 
             TableOperation::DeleteTableForeignKey(_table_with_foreign_key, _constraint_name) => {
                 match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "ALTER TABLE {_table_with_foreign_key} DROP CONSTRAINT {_constraint_name};",
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+                    #[cfg(feature = "postgres")]
+                    DatabaseType::PostgreSql => format!(
+                        "ALTER TABLE {_table_with_foreign_key} DROP CONSTRAINT {_constraint_name};",
+                    ),
+                    #[cfg(feature = "mssql")]
+                    DatabaseType::SqlServer => todo!(
+                        "[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"
+                    ),
+                    #[cfg(feature = "mysql")]
+                    DatabaseType::MySQL => todo!(),
                 }
             }
 
-            TableOperation::AddTablePrimaryKey(_table_name, _entity_field) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!(
-                            "ALTER TABLE \"{_table_name}\" ADD PRIMARY KEY (\"{}\");",
-                            _entity_field.field_name
-                        ),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+            TableOperation::AddTablePrimaryKey(_table_name, _entity_field) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => format!(
+                    "ALTER TABLE \"{_table_name}\" ADD PRIMARY KEY (\"{}\");",
+                    _entity_field.field_name
+                ),
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => {
+                    todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]")
                 }
-            }
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
 
-            TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => {
-                match db_type {
-                    #[cfg(feature = "postgres")] DatabaseType::PostgreSql =>
-                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
-                    #[cfg(feature = "mssql")] DatabaseType::SqlServer =>
-                        format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;"),
-                    #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
+            TableOperation::DeleteTablePrimaryKey(table_name, primary_key_name) => match db_type {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => {
+                    format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
                 }
-            }
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => {
+                    format!("ALTER TABLE {table_name} DROP CONSTRAINT {primary_key_name} CASCADE;")
+                }
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => todo!(),
+            },
         };
 
         save_migrations_query_to_execute(stmt, &datasource.name);
@@ -922,9 +911,8 @@ enum ColumnOperation {
     AlterColumnDropIdentity(String, CanyonRegisterEntityField),
 }
 
-impl Transaction<Self> for ColumnOperation {}
+impl Transaction for ColumnOperation {}
 
-#[async_trait]
 impl DatabaseOperation for ColumnOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig) {
         let db_type = datasource.get_db_type();
@@ -947,7 +935,6 @@ impl DatabaseOperation for ColumnOperation {
                             to_sqlserver_syntax(entity_field)
                         ),
                     #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
                 }
             ColumnOperation::DeleteColumn(table_name, column_name) => {
                 // TODO Check if operation for SQL server is different
@@ -964,7 +951,6 @@ impl DatabaseOperation for ColumnOperation {
                         todo!("[MS-SQL -> Operation still won't supported by Canyon for Sql Server]"),
                     #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
 
-
                 }
             ColumnOperation::AlterColumnDropNotNull(table_name, entity_field) =>
                 match db_type {
@@ -976,7 +962,6 @@ impl DatabaseOperation for ColumnOperation {
                             entity_field.field_name, to_sqlserver_alter_syntax(entity_field)
                         ),
                     #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
                 }
             #[cfg(feature = "mssql")] ColumnOperation::DropNotNullBeforeDropColumn(table_name, column_name, column_datatype) =>
                 format!(
@@ -1004,7 +989,6 @@ impl DatabaseOperation for ColumnOperation {
                         to_sqlserver_alter_syntax(entity_field)
                     ),
                     #[cfg(feature = "mysql")] DatabaseType::MySQL => todo!()
-
                 }
             }
 
@@ -1028,10 +1012,9 @@ enum SequenceOperation {
     ModifySequence(String, CanyonRegisterEntityField),
 }
 #[cfg(feature = "postgres")]
-impl Transaction<Self> for SequenceOperation {}
+impl Transaction for SequenceOperation {}
 
 #[cfg(feature = "postgres")]
-#[async_trait]
 impl DatabaseOperation for SequenceOperation {
     async fn generate_sql(&self, datasource: &DatasourceConfig) {
         let stmt = match self {
@@ -1043,5 +1026,134 @@ impl DatabaseOperation for SequenceOperation {
             }
         };
         save_migrations_query_to_execute(stmt, &datasource.name);
+    }
+}
+
+#[cfg(test)]
+mod migrations_helper_tests {
+    use super::*;
+    const MOCKED_ENTITY_NAME: &str = "league";
+
+    #[test]
+    fn test_entity_already_on_database() {
+        mocked_data::init_mocked_data();
+
+        let parse_result_empty_db_tables =
+            MigrationsHelper::entity_already_on_database(MOCKED_ENTITY_NAME, &[]);
+        // Always should be false
+        assert!(!parse_result_empty_db_tables);
+
+        // Rust has a League entity. Database has a `league` entity. Case should be normalized
+        // and a match must raise
+        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME,
+            &[mocked_data::TABLE_METADATA_LEAGUE_EX.get().unwrap()],
+        );
+        assert!(mocked_league_entity_on_database);
+
+        let mocked_league_entity_on_database = MigrationsHelper::entity_already_on_database(
+            MOCKED_ENTITY_NAME,
+            &[mocked_data::NON_MATCHING_TABLE_METADATA.get().unwrap()],
+        );
+        assert!(!mocked_league_entity_on_database)
+    }
+
+    pub mod mocked_data {
+        use crate::migrations::information_schema::{ColumnMetadata, MacroTableMetadata};
+        use std::sync::OnceLock;
+
+        pub static TABLE_METADATA_LEAGUE_EX: OnceLock<MacroTableMetadata> = OnceLock::new();
+        pub static NON_MATCHING_TABLE_METADATA: OnceLock<MacroTableMetadata> = OnceLock::new();
+
+        pub fn init_mocked_data() {
+            TABLE_METADATA_LEAGUE_EX.get_or_init(|| MacroTableMetadata {
+                table_name: "league".to_string(),
+                columns: vec![
+                    ColumnMetadata {
+                        column_name: "id".to_owned(),
+                        datatype: "int".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: Some("PK__league__3213E83FBDA92571".to_owned()),
+                        primary_key_name: Some("PK__league__3213E83FBDA92571".to_owned()),
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "ext_id".to_owned(),
+                        datatype: "bigint".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "slug".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "name".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "region".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                    ColumnMetadata {
+                        column_name: "image_url".to_owned(),
+                        datatype: "nvarchar".to_owned(),
+                        character_maximum_length: None,
+                        is_nullable: false,
+                        column_default: None,
+                        foreign_key_info: None,
+                        foreign_key_name: None,
+                        primary_key_info: None,
+                        primary_key_name: None,
+                        is_identity: false,
+                        identity_generation: None,
+                    },
+                ],
+            });
+
+            NON_MATCHING_TABLE_METADATA.get_or_init(|| MacroTableMetadata {
+                table_name: "random_name_to_assert_false".to_string(),
+                columns: vec![],
+            });
+        }
     }
 }

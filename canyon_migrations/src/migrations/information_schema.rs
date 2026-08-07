@@ -1,16 +1,19 @@
 #[cfg(feature = "mssql")]
-use canyon_connection::tiberius::ColumnType as TIB_TY;
+use canyon_core::connection::tiberius::ColumnType as TIB_TY;
 #[cfg(feature = "postgres")]
-use canyon_connection::tokio_postgres::types::Type as TP_TYP;
-use canyon_crud::bounds::{Column, ColumnType, Row, RowOperations};
+use canyon_core::connection::tokio_postgres::types::Type as TP_TYP;
+use canyon_core::{
+    column::{Column, ColumnType},
+    row::{Row, RowOperations},
+};
 
 /// Model that represents the database entities that belongs to the current schema.
 ///
 /// Basically, it's an agrupation of rows of results when Canyon queries the `information schema`
-/// table, grouping by table name (one [`TableMetadata`] is the rows that contains the information
+/// table, grouping by table name (one [`MacroTableMetadata`] is the rows that contains the information
 /// of a table)
 #[derive(Debug)]
-pub struct TableMetadata {
+pub struct MacroTableMetadata {
     pub table_name: String,
     pub columns: Vec<ColumnMetadata>,
 }

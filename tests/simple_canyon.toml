@@ -1,0 +1,12 @@
+[canyon_sql]
+
+[[canyon_sql.datasources]]
+name = 'postgres_docker'
+
+[canyon_sql.datasources.auth]
+postgresql = { basic = { username = 'postgres', password = 'postgres'}}
+
+[canyon_sql.datasources.properties]
+host = 'localhost'
+port = 5438
+db_name = 'postgres' 

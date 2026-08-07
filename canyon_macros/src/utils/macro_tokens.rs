@@ -1,8 +1,12 @@
-use std::convert::TryFrom;
-
-use canyon_entities::field_annotation::EntityFieldAnnotation;
+use crate::utils::{
+    canyon_crud_attribute::CanyonCrudAttribute, primary_key_attribute::PrimaryKeyAttribute,
+};
+use canyon_entities::{
+    field_annotation::EntityFieldAnnotation, helpers::default_database_table_name_from_entity_name,
+};
 use proc_macro2::Ident;
-use syn::{Attribute, DeriveInput, Fields, Generics, Type, Visibility};
+use std::convert::TryFrom;
+use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
 
 /// Provides a convenient way of store the data for the TokenStream
 /// received on a macro
@@ -13,32 +17,57 @@ pub struct MacroTokens<'a> {
     pub generics: &'a Generics,
     pub attrs: &'a Vec<Attribute>,
     pub fields: &'a Fields,
+    // -------- the new fields that must help to avoid recalculations every time that the user compiles
+    pub(crate) canyon_crud_attribute: Option<CanyonCrudAttribute>, // Type level
+    pub(crate) primary_key_attribute: Option<PrimaryKeyAttribute<'a>>, // Field level, quick access without iterations
 }
 
 impl<'a> MacroTokens<'a> {
-    pub fn new(ast: &'a DeriveInput) -> Self {
-        Self {
-            vis: &ast.vis,
-            ty: &ast.ident,
-            generics: &ast.generics,
-            attrs: &ast.attrs,
-            fields: match &ast.data {
-                syn::Data::Struct(ref s) => &s.fields,
-                _ => panic!("This derive macro can only be automatically derived for structs"),
-            },
+    pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
+        // TODO: impl syn::parse instead
+        if let syn::Data::Struct(ref s) = ast.data {
+            let attrs = &ast.attrs;
+
+            let primary_key_attribute = __details::find_primary_key_field_annotation(&s.fields)
+                .map(PrimaryKeyAttribute::from);
+
+            let mut canyon_crud_attribute = None;
+            for attr in attrs {
+                if attr.path().is_ident("canyon_crud") {
+                    canyon_crud_attribute = Some(attr.parse_args::<CanyonCrudAttribute>()?);
+                }
+            }
+
+            Ok(Self {
+                vis: &ast.vis,
+                ty: &ast.ident,
+                generics: &ast.generics,
+                attrs: &ast.attrs,
+                fields: &s.fields,
+                canyon_crud_attribute,
+                primary_key_attribute,
+            })
+        } else {
+            __details::raise_canyon_crud_only_for_structs_err()
         }
     }
 
-    /// Gives a Vec of tuples that contains the visibility, the name and
-    /// the type of every field on a Struct
-    pub fn _fields_with_visibility_and_types(&self) -> Vec<(Visibility, Ident, Type)> {
+    pub fn retrieve_mapping_target_type(&self) -> &Option<Ident> {
+        if let Some(canyon_crud_attribute) = &self.canyon_crud_attribute {
+            &canyon_crud_attribute.maps_to
+        } else {
+            &None
+        }
+    }
+
+    pub fn fields(&self) -> Vec<(Visibility, Ident, Type)> {
         self.fields
             .iter()
             .map(|field| {
                 (
                     field.vis.clone(),
-                    field.ident.as_ref().unwrap().clone(),
-                    field.ty.clone(),
+                    field.ident.clone().unwrap(),
+                    field.clone().ty,
                 )
             })
             .collect::<Vec<_>>()
@@ -46,102 +75,80 @@ impl<'a> MacroTokens<'a> {
 
     /// Gives a Vec of tuples that contains the name and
     /// the type of every field on a Struct
-    pub fn _fields_with_types(&self) -> Vec<(Ident, Type)> {
+    pub fn fields_with_types(&self) -> Vec<(&Ident, &Type)> {
         self.fields
             .iter()
-            .map(|field| (field.ident.as_ref().unwrap().clone(), field.ty.clone()))
+            .map(|field| (field.ident.as_ref().unwrap(), &field.ty))
             .collect::<Vec<_>>()
     }
 
-    /// Gives a Vec of Ident with the fields of a Struct
-    pub fn get_struct_fields(&self) -> Vec<Ident> {
+    pub fn get_struct_fields_as_table_column_pairs(&self) -> Vec<(String, String)> {
+        let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
+
         self.fields
             .iter()
-            .map(|field| field.ident.as_ref().unwrap().clone())
-            .collect::<Vec<_>>()
-    }
-
-    /// Gives a Vec populated with the name of the fields of the struct
-    pub fn _get_struct_fields_as_collection_strings(&self) -> Vec<String> {
-        self.get_struct_fields()
-            .iter()
-            .map(|ident| ident.to_owned().to_string())
-            .collect::<Vec<String>>()
-    }
-
-    /// Returns a Vec populated with the name of the fields of the struct
-    /// already quote scaped for avoid the upper case column name mangling.
-    ///
-    /// If the type contains a `#[primary_key]` annotation (and), returns the
-    /// name of the columns without the fields that maps against the column designed as
-    /// primary key (if its present and its autoincremental attribute is set to true)
-    /// (autoincremental = true) or its without the autoincremental attribute, which leads
-    /// to the same behaviour.
-    ///
-    /// Returns every field if there's no PK, or if it's present but autoincremental = false
-    pub fn get_column_names_pk_parsed(&self) -> Vec<String> {
-        self.fields
-            .iter()
-            .filter(|field| {
-                if !field.attrs.is_empty() {
-                    field.attrs.iter().any(|attr| {
-                        let a = attr.path.segments[0].clone().ident;
-                        let b = attr.tokens.to_string();
-                        !(a == "primary_key" || b.contains("false"))
-                    })
-                } else {
-                    true
-                }
+            .map(|field| {
+                let column_name = field.ident.as_ref().unwrap().to_string();
+                (table_name.clone(), column_name)
             })
-            .map(|c| format!("\"{}\"", c.ident.as_ref().unwrap()))
-            .collect::<Vec<String>>()
+            .collect()
     }
 
-    /// Retrieves the fields of the Struct as continuous String, comma separated
-    pub fn get_struct_fields_as_strings(&self) -> String {
-        let column_names: String = self
-            .get_struct_fields()
-            .iter()
-            .map(|ident| ident.to_owned().to_string())
-            .collect::<Vec<String>>()
-            .iter()
-            .map(|column| column.to_owned() + ", ")
-            .collect::<String>();
+    pub fn get_columns_skipping_pk(&self) -> impl Iterator<Item = &Field> {
+        let primary_key = self.primary_key_attribute.as_ref().map(|pk| &pk.ident);
 
-        let mut column_names_as_chars = column_names.chars();
-        column_names_as_chars.next_back();
-        column_names_as_chars.next_back();
-
-        column_names_as_chars.as_str().to_owned()
+        self.fields.iter().filter(move |field| {
+            !matches!(
+                (primary_key, field.ident.as_ref()),
+                (Some(pk), Some(field_ident))
+                    if field_ident == *pk && __details::primary_key_is_autoincremental(field)
+            )
+        })
     }
 
-    /// Retrieves the value of the index of an annotated field with #[primary_key]
-    pub fn get_pk_index(&self) -> Option<usize> {
-        let mut pk_index = None;
-        for (idx, field) in self.fields.iter().enumerate() {
-            for attr in &field.attrs {
-                if attr.path.segments[0].clone().ident == "primary_key" {
-                    pk_index = Some(idx);
-                }
-            }
-        }
-        pk_index
+    pub fn get_struct_fields_as_table_column_pairs_skipping_pk(&self) -> Vec<(String, String)> {
+        let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
+
+        self.get_columns_skipping_pk()
+            .map(|field| {
+                let column_name = field
+                    .ident
+                    .as_ref()
+                    .expect("Struct fields must be named")
+                    .to_string();
+
+                (table_name.clone(), column_name)
+            })
+            .collect()
+    }
+
+    /// Returns a collection with all the [`syn::Ident`] for all the type members, skipping (if present)
+    /// the field which is annotated with #[primary_key]
+    pub fn get_fields_idents_skipping_pk(&self) -> impl Iterator<Item = &Ident> {
+        self.get_columns_skipping_pk()
+            .map(|field| field.ident.as_ref().unwrap())
+    }
+
+    pub fn get_primary_key_field_annotation(&self) -> Option<&PrimaryKeyAttribute<'a>> {
+        self.primary_key_attribute.as_ref()
     }
 
     /// Utility for find the primary key attribute (if exists) and the
     /// column name (field) which belongs
     pub fn get_primary_key_annotation(&self) -> Option<String> {
-        let f = self.fields.iter().find(|field| {
-            field
-                .attrs
-                .iter()
-                .map(|attr| attr.path.segments[0].clone().ident)
-                .map(|ident| ident.to_string())
-                .find(|a| a == "primary_key")
-                == Some("primary_key".to_string())
-        });
+        self.get_primary_key_field_annotation()
+            .map(|attr| attr.ident.clone().to_string())
+    }
 
-        f.map(|v| v.ident.clone().unwrap().to_string())
+    pub fn get_primary_key_ident_and_type(&self) -> Option<(&Ident, &Type)> {
+        let primary_key = self.get_primary_key_annotation();
+        if let Some(primary_key) = primary_key {
+            self.fields_with_types()
+                .into_iter()
+                .find(|(i, _t)| i.to_string() == primary_key)
+        } else {
+            None
+        }
     }
 
     /// Utility for find the `foreign_key` attributes (if exists)
@@ -152,7 +159,7 @@ impl<'a> MacroTokens<'a> {
             let attrs = field
                 .attrs
                 .iter()
-                .filter(|attr| attr.path.segments[0].clone().ident == "foreign_key");
+                .filter(|attr| attr.path().segments[0].clone().ident == "foreign_key");
             attrs.for_each(|attr| {
                 let fk_parse = EntityFieldAnnotation::try_from(&attr);
                 if let Ok(fk_annotation) = fk_parse {
@@ -163,46 +170,39 @@ impl<'a> MacroTokens<'a> {
 
         foreign_key_annotations
     }
+}
 
-    /// Boolean that returns true if the type contains a `#[primary_key]`
-    /// annotation. False otherwise.
-    pub fn type_has_primary_key(&self) -> bool {
-        self.fields.iter().any(|field| {
-            field
-                .attrs
-                .iter()
-                .map(|attr| attr.path.segments[0].clone().ident)
-                .map(|ident| ident.to_string())
-                .find(|a| a == "primary_key")
-                == Some("primary_key".to_string())
+mod __details {
+    use crate::utils::{helpers, macro_tokens::MacroTokens};
+    use canyon_entities::field_annotation::EntityFieldAnnotation;
+    use proc_macro2::Span;
+    use syn::{Field, Fields};
+
+    pub(super) fn find_primary_key_field_annotation(fields: &Fields) -> Option<&Field> {
+        fields.iter().enumerate().find_map(|index_and_field| {
+            let field = index_and_field.1;
+            if helpers::field_has_target_attribute(field, "primary_key") {
+                Some(field)
+            } else {
+                None
+            }
         })
     }
 
-    /// Returns an String ready to be inserted on the VALUES Sql clause
-    /// representing generic query parameters ($x).
-    ///
-    /// Already returns the correct number of placeholders, skipping one
-    /// entry in the type contains a `#[primary_key]`
-    pub fn placeholders_generator(&self) -> String {
-        let mut placeholders = String::new();
-        if self.type_has_primary_key() {
-            for num in 1..self.fields.len() {
-                if num < self.fields.len() - 1 {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string() + ", "));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string()));
-                }
-            }
-        } else {
-            for num in 1..self.fields.len() + 1 {
-                if num < self.fields.len() {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string() + ", "));
-                } else {
-                    placeholders.push_str(&("$".to_owned() + &(num).to_string()));
-                }
-            }
-        }
+    pub(super) fn primary_key_is_autoincremental(field: &Field) -> bool {
+        field
+            .attrs
+            .iter()
+            .find(|attr| attr.path().is_ident("primary_key"))
+            .and_then(|attr| EntityFieldAnnotation::try_from(&attr).ok())
+            .is_none_or(|annotation| matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)))
+    }
 
-        placeholders
+    pub(crate) fn raise_canyon_crud_only_for_structs_err<'a>() -> Result<MacroTokens<'a>, syn::Error>
+    {
+        Err(syn::Error::new(
+            Span::call_site(),
+            "CanyonCrud may only be implemented for structs",
+        ))
     }
 }

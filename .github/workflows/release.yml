@@ -2,7 +2,7 @@ name: Generate Canyon-SQL release
 
 on:
   push:
-    tags:        
+    tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+rc[0-9]+'
 
@@ -13,11 +13,6 @@ jobs:
     steps:
       - name: Checkout sources
         uses: actions/checkout@v3
-
-      - name: Installing `docker-compose`
-        run: sudo apt -y install docker-compose
-      - name: Installing `gssapi` headers
-        run: sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
 
       - name: Install stable toolchain
         uses: actions-rs/toolchain@v1

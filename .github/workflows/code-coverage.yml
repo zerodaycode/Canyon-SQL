@@ -25,11 +25,6 @@ jobs:
         run: |
           rustup toolchain install nightly
           rustup override set nightly
-
-      - name: Make the USER own the working directory. Installing `gssapi` headers
-        run: |
-          sudo chown -R $USER:$USER ${{ github.workspace }}
-          sudo apt -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit
       
       - name: Caching cargo dependencies
         id: project-cache

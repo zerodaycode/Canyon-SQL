@@ -1,0 +1,129 @@
+use crate::query::bounds;
+use crate::query::querybuilder::syntax::{
+    dialect::SqlDialect,
+    emitter::types::helpers::push_quoted_ident,
+    symbol::Symbol,
+    tokens::{SqlToken, SqlTokens, ToSqlTokens},
+};
+use std::borrow::Cow;
+use std::fmt::{Display, Formatter};
+
+#[derive(Clone, Default, Debug)]
+pub struct TableMetadata<'a> {
+    pub schema: Option<Cow<'a, str>>,
+    pub name: Cow<'a, str>,
+}
+
+impl<'a, T> From<T> for TableMetadata<'a>
+where
+    T: bounds::EntityTable + 'a,
+{
+    fn from(value: T) -> Self {
+        Self::from(value.table_name()) // this covers the need of producing <table>.<column>
+    }
+}
+
+impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for TableMetadata<'a> {
+    fn to_tokens(&self) -> impl IntoIterator<Item = SqlToken<'a>> + 'a {
+        let mut out = SqlTokens::with_capacity(3);
+
+        if let Some(schema) = &self.schema {
+            push_quoted_ident::<D, _>(schema.clone(), &mut out);
+            out.symbol(Symbol::Dot);
+        };
+
+        push_quoted_ident::<D, _>(self.name.clone(), &mut out);
+        out
+    }
+}
+
+impl<'a> From<&'a str> for TableMetadata<'a> {
+    /// Creates a new [`TableMetadata<'a>`] from a string slice.
+    ///
+    /// If the slice contains a dot, we assume that is a schema.table_name format, otherwise,
+    /// we assume that the client is just creating a [`Self`] from the passed in string
+    fn from(value: &'a str) -> Self {
+        if let Some((schema, table)) = value.split_once('.') {
+            Self {
+                schema: Some(Cow::Borrowed(schema)),
+                name: Cow::Borrowed(table),
+            }
+        } else {
+            Self {
+                schema: None,
+                name: Cow::Borrowed(value),
+            }
+        }
+    }
+}
+
+impl From<String> for TableMetadata<'static> {
+    /// Creates a new [`TableMetadata`] from an owned string.
+    ///
+    /// If the string contains a dot, we split it into owned schema and table name components.
+    fn from(value: String) -> Self {
+        if let Some((schema, table)) = value.split_once('.') {
+            Self {
+                schema: Some(Cow::Owned(schema.to_owned())),
+                name: Cow::Owned(table.to_owned()),
+            }
+        } else {
+            Self {
+                schema: None,
+                name: Cow::Owned(value),
+            }
+        }
+    }
+}
+
+impl<'a> TableMetadata<'a> {
+    pub fn new(table_name: &'a str) -> Self {
+        Self::from(table_name)
+    }
+
+    pub const fn new_table(schema: Option<Cow<'a, str>>, name: Cow<'a, str>) -> Self {
+        Self { schema, name }
+    }
+
+    pub fn schema<S>(&mut self, schema: S)
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        self.schema = Some(schema.into());
+    }
+
+    pub fn table_name<S>(&mut self, table_name: S)
+    where
+        S: Into<Cow<'a, str>>,
+    {
+        self.name = table_name.into();
+    }
+
+    /// Returns an already formatted version of the schema and table of a target database table
+    /// ready to be used in a SQL statement.
+    ///
+    /// This method allocates a new string, so it returns an owned one to the callee.
+    /// Just take it in consideration if someday someone uses it outside the macro generation
+    /// and there's some heavy callee procedure
+    pub fn sql(&self) -> String {
+        match &self.schema {
+            Some(schema_name) => {
+                format!("{}.{}", schema_name, self.name)
+            }
+            None => self.name.to_string(),
+        }
+    }
+}
+
+impl<'a> Display for TableMetadata<'a> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match &self.schema {
+            Some(schema_name) => {
+                write!(f, "{}.{}", schema_name, self.name)
+            }
+            None => {
+                write!(f, "{}", self.name)
+            }
+        }
+    }
+}

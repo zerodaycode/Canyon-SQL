@@ -84,7 +84,7 @@ assert_eq!(
 );
 ```
 
-Note the leading reference on the `find_by_pk(...)` parameter. This associated function receives an `&dyn QueryParameter<'_>` as argument, not a value.
+Note the leading reference on the `find_by_pk(...)` parameter. This associated function receives an `&dyn QueryParameter` as argument, not a value.
 
 ### :wrench: Building more complex queries
 
@@ -96,8 +96,8 @@ let mut select_with_joins = LeagueTournament::select_query();
     select_with_joins
         .inner_join("tournament", "league.id", "tournament.league_id")
         .left_join("team", "tournament.id", "player.tournament_id")
-        .r#where(LeagueFieldValue::id(&7), Comp::Gt)
-        .and(LeagueFieldValue::name(&"KOREA"), Comp::Eq)
+        .r#where(LeagueFieldValue::id(&7), Operator::Gt)
+        .and(LeagueFieldValue::name(&"KOREA"), Operator::Eq)
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
     // NOTE: We don't have in the docker the generated relationships
     // with the joins, so for now, we are just going to check that the
@@ -170,10 +170,4 @@ Could not find openssl via pkg-config:
 `sudo apt install pkg-config` on *apt* based systems. For other systems, you must read your package manager
 docs and install it.
 
-### failed to run custom build command for `libgssapi-sys vX.X.X`
-
-The problem is missing a *C* header `gssapi.h`.
-
-- Alpine: `apk --update add krb5-pkinit krb5-dev krb5`
-- Ubuntu: `apt-get -y install gcc libgssapi-krb5-2 libkrb5-dev libsasl2-modules-gssapi-mit`
 

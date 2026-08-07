@@ -11,35 +11,26 @@
 /// in order to perform the migrations
 pub mod migrations;
 
-extern crate canyon_connection;
 extern crate canyon_crud;
 extern crate canyon_entities;
 
 mod constants;
 
-use canyon_connection::lazy_static::lazy_static;
+use std::sync::OnceLock;
 use std::{collections::HashMap, sync::Mutex};
 
-lazy_static! {
-    pub static ref QUERIES_TO_EXECUTE: Mutex<HashMap<String, Vec<String>>> =
-        Mutex::new(HashMap::new());
-    pub static ref CM_QUERIES_TO_EXECUTE: Mutex<HashMap<String, Vec<String>>> =
-        Mutex::new(HashMap::new());
-}
+pub static QUERIES_TO_EXECUTE: OnceLock<Mutex<HashMap<String, Vec<String>>>> = OnceLock::new();
+pub static CM_QUERIES_TO_EXECUTE: OnceLock<Mutex<HashMap<String, Vec<String>>>> = OnceLock::new();
 
 /// Stores a newly generated SQL statement from the migrations into the register
 pub fn save_migrations_query_to_execute(stmt: String, ds_name: &str) {
-    if QUERIES_TO_EXECUTE.lock().unwrap().contains_key(ds_name) {
-        QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .get_mut(ds_name)
-            .unwrap()
-            .push(stmt);
+    // Access the QUERIES_TO_EXECUTE hash map and lock it for safe access
+    let queries_to_execute = QUERIES_TO_EXECUTE.get_or_init(|| Mutex::new(HashMap::new()));
+    let mut queries = queries_to_execute.lock().unwrap();
+
+    if queries.contains_key(ds_name) {
+        queries.get_mut(ds_name).unwrap().push(stmt);
     } else {
-        QUERIES_TO_EXECUTE
-            .lock()
-            .unwrap()
-            .insert(ds_name.to_owned(), vec![stmt]);
+        queries.insert(ds_name.to_owned(), vec![stmt]);
     }
 }

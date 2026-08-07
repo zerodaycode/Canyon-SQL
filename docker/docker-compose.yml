@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: postgres:14
+    image: postgres:latest
     restart: always
     hostname: postgres
     environment:
@@ -13,7 +13,7 @@ services:
     ports:
       - '5438:5432'
     volumes: 
-      - ./postgres-data:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql
       # copy the sql script to create tables
       - ./sql/10-create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
       # copy the sql script to fill tables
@@ -21,7 +21,8 @@ services:
   sql-server:
     container_name: sql-server
     image: mcr.microsoft.com/mssql/server:2022-latest
-    restart: always
+    platform: linux/amd64
+    restart: unless-stopped
     ports:
       - "1434:1433"
     environment:

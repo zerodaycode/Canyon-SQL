@@ -10,28 +10,21 @@ license.workspace = true
 description.workspace = true
 
 [dependencies]
+canyon_core = { workspace = true }
 canyon_crud = { workspace = true }
-canyon_connection = { workspace = true }
 canyon_entities = { workspace = true }
 
-tokio = { workspace = true }
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }
 mysql_common = { workspace = true, optional = true }
 
-
-async-trait = { workspace = true }
-
 regex = { workspace = true }
 partialdebug = { workspace = true }
 walkdir = { workspace = true }
-proc-macro2 = { workspace = true }
-quote = { workspace = true }
-syn = { version = "1.0.86", features = ["full", "parsing"] } # TODO Pending to refactor and upgrade
 
 [features]
-postgres = ["tokio-postgres", "canyon_connection/postgres", "canyon_crud/postgres"]
-mssql = ["tiberius", "canyon_connection/mssql", "canyon_crud/mssql"]
-mysql = ["mysql_async","mysql_common", "canyon_connection/mysql", "canyon_crud/mysql"]
+postgres = ["tokio-postgres", "canyon_core/postgres", "canyon_crud/postgres"]
+mssql = ["tiberius", "canyon_core/mssql", "canyon_crud/mssql"]
+mysql = ["mysql_async", "mysql_common", "canyon_core/mysql", "canyon_crud/mysql"]
 

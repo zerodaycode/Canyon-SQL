@@ -1,0 +1,11 @@
+{
+    "rust-analyzer.cargo.features": ["postgres, mssql, mysql, migrations"],
+    "rust-analyzer.check.workspace": true,
+    "rust-analyzer.cargo.buildScripts.enable": true,
+    "rust-analyzer.procMacro.enable": true,
+    "rust-analyzer.diagnostics.disabled": ["unresolved-proc-macro"],
+    "rust-analyzer.linkedProjects": [
+        "./Cargo.toml"
+    ]
+  }
+  

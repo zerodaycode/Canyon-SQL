@@ -11,17 +11,17 @@ description.workspace = true
 
 [workspace]
 members = [
-    "canyon_connection",
+    "canyon_core",
     "canyon_crud",
     "canyon_entities",
     "canyon_migrations",
     "canyon_macros",
-    "tests"
+    "tests",
 ]
 
 [dependencies]
 # Project crates
-canyon_connection = { workspace = true }
+canyon_core = { workspace = true }
 canyon_crud = { workspace = true }
 canyon_entities = { workspace = true }
 canyon_migrations = { workspace = true, optional = true  }
@@ -35,8 +35,8 @@ mysql_common = { workspace = true, optional = true }
 
 
 [workspace.dependencies]
+canyon_core = { version = "0.5.1", path = "canyon_core" }
 canyon_crud = { version = "0.5.1", path = "canyon_crud" }
-canyon_connection = { version = "0.5.1", path = "canyon_connection" }
 canyon_entities = { version = "0.5.1", path = "canyon_entities" }
 canyon_migrations = { version = "0.5.1", path = "canyon_migrations"}
 canyon_macros = { version = "0.5.1", path = "canyon_macros" }
@@ -44,30 +44,27 @@ canyon_macros = { version = "0.5.1", path = "canyon_macros" }
 tokio = { version = "1.27.0", features = ["full"]  }
 tokio-util = { version = "0.7.4", features = ["compat"]  }
 tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
-tiberius = { version = "0.12.1", features = ["tds73", "chrono", "integrated-auth-gssapi"] }
-mysql_async = { version = "0.32.2" }
-mysql_common = { version = "0.30.6", features = [ "chrono" ]}
+tiberius = { version = "0.12.3", features = ["tds73", "chrono"] }
+mysql_async = { version = "0.36.1" }
+mysql_common = { version = "0.35.4", features = [ "chrono" ]}
 
 chrono = { version = "0.4", features = ["serde"] }  # Just from TP better?
 serde = { version = "1.0.138", features = ["derive"] }
 
 futures = "0.3.25"
-indexmap = "1.9.1"
 async-std = "1.12.0"
-lazy_static = "1.4.0"
 toml = "0.7.3"
-async-trait = "0.1.68"
 walkdir = "2.3.3"
 regex = "1.9.3"
 partialdebug = "0.2.0"
 
-quote = "1.0.9"
-proc-macro2 = "1.0.27"
+quote = "1.0.47"
+proc-macro2 = "1.0.107"
 
 [workspace.package]
 version = "0.5.1"
-edition = "2021"
-authors = ["Alex Vergara<pyzyryab@tutanota.com>, Gonzalo Busto Musi<gonzalo.busto@gmail.com>"]
+edition = "2024"
+authors = ["Alex Vergara<alex.vergara@tuta.io>, Gonzalo Busto Musi<gonzalo.busto@gmail.com>"]
 documentation = "https://zerodaycode.github.io/canyon-book/"
 homepage = "https://github.com/zerodaycode/Canyon-SQL"
 readme = "README.md"
@@ -75,7 +72,32 @@ license = "MIT"
 description = "A Rust ORM and QueryBuilder"
 
 [features]
-postgres =   ["tokio-postgres",    "canyon_connection/postgres", "canyon_crud/postgres",    "canyon_migrations/postgres", "canyon_macros/postgres"]
-mssql =      ["tiberius",          "canyon_connection/mssql",    "canyon_crud/mssql",       "canyon_migrations/mssql",    "canyon_macros/mssql"]
-mysql =      ["mysql_async",       "mysql_common",               "canyon_connection/mysql", "canyon_crud/mysql",          "canyon_migrations/mysql", "canyon_macros/mysql"]
-migrations = ["canyon_migrations", "canyon_macros/migrations"]
+postgres = [
+    "dep:tokio-postgres",
+    "canyon_core/postgres",
+    "canyon_crud/postgres",
+    "canyon_migrations?/postgres",
+    "canyon_macros/postgres",
+]
+
+mssql = [
+    "dep:tiberius",
+    "canyon_core/mssql",
+    "canyon_crud/mssql",
+    "canyon_migrations?/mssql",
+    "canyon_macros/mssql",
+]
+
+mysql = [
+    "dep:mysql_async",
+    "dep:mysql_common",
+    "canyon_core/mysql",
+    "canyon_crud/mysql",
+    "canyon_migrations?/mysql",
+    "canyon_macros/mysql",
+]
+
+migrations = [
+    "dep:canyon_migrations",
+    "canyon_macros/migrations",
+]

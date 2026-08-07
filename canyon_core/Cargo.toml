@@ -1,0 +1,35 @@
+[package]
+name = "canyon_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+description.workspace = true
+
+[dependencies]
+tokio-postgres = { workspace = true, optional = true }
+tiberius = { workspace = true, optional = true }
+mysql_async = { workspace = true, optional = true }
+mysql_common = { workspace = true, optional = true }
+
+chrono = { workspace = true }
+async-std = { workspace = true, optional = true }
+
+tokio = { workspace = true, features = ["sync"] }
+tokio-util = { workspace = true }
+
+futures = { workspace = true }
+toml = { workspace = true }
+serde = { workspace = true }
+walkdir = { workspace = true }
+bb8-postgres = "0.9.0"
+bb8-tiberius = "0.16.0"
+bb8 = "0.9.1"
+
+[features]
+postgres = ["tokio-postgres"]
+mssql = ["tiberius", "async-std"]
+mysql = ["mysql_async", "mysql_common"]

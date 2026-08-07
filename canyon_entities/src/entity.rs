@@ -1,10 +1,10 @@
 use partialdebug::placeholder::PartialDebug;
-use proc_macro2::{Ident, TokenStream};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use std::convert::TryFrom;
 use syn::{
+    Attribute, Generics, ItemStruct, LitStr, Visibility,
     parse::{Parse, ParseBuffer},
-    Attribute, Generics, ItemStruct, Visibility,
 };
 
 use super::entity_fields::EntityField;
@@ -44,13 +44,14 @@ impl CanyonEntity {
     /// which this enum is related to.
     ///
     /// Makes a variant `#field_name(#ty)` where `#ty` it's a trait object
-    /// of type [`canyon_crud::bounds::QueryParameter`]
+    /// of type `canyon_core::QueryParameter` TODO: correct the comment when refactored
     pub fn get_fields_as_enum_variants_with_value(&self) -> Vec<TokenStream> {
         self.fields
             .iter()
             .map(|f| {
                 let field_name = &f.name;
-                quote! { #field_name(&'a dyn canyon_sql::crud::bounds::QueryParameter<'a>) }
+                let field_ty = &f.field_type;
+                quote! { #field_name(#field_ty) }
             })
             .collect::<Vec<_>>()
     }
@@ -69,6 +70,47 @@ impl CanyonEntity {
             .collect::<Vec<_>>()
     }
 
+    pub fn create_match_arm_for_table_and_column_name(
+        &self,
+        enum_name: &Ident,
+        db_table_name: &str,
+    ) -> Vec<TokenStream> {
+        self.fields
+            .iter()
+            .map(|f| {
+                let field_name = &f.name;
+                let full_name = format!("{}.{}", db_table_name, f.name);
+                let full_name_lit = LitStr::new(&full_name, Span::call_site());
+
+                quote! {
+                    #enum_name::#field_name => #full_name_lit
+                }
+            })
+            .collect()
+    }
+
+    pub fn create_match_arm_for_column_ref(
+        &self,
+        enum_name: &Ident,
+        db_table_name: &str,
+    ) -> Vec<TokenStream> {
+        self.fields
+            .iter()
+            .map(|f| {
+                let field_name = &f.name;
+                let field_name_as_str = f.name.to_string();
+
+                quote! {
+                    #enum_name::#field_name => canyon_sql::query::ColumnRef {
+                        table: Some(std::borrow::Cow::Borrowed(#db_table_name)),
+                        column: std::borrow::Cow::from(#field_name_as_str),
+                        alias: None
+                    }
+                }
+            })
+            .collect()
+    }
+
     /// Generates an implementation of the match pattern to find whatever variant
     /// is being requested when the method `.field_name_as_str(self)` it's invoked over some
     /// instance that implements the `canyon_sql_root::crud::bounds::FieldIdentifier` trait
@@ -84,26 +126,6 @@ impl CanyonEntity {
 
                 quote! {
                     #enum_name::#field_name => #field_name_as_string.to_string()
-                }
-            })
-            .collect::<Vec<_>>()
-    }
-
-    /// Generates an implementation of the match pattern to find whatever variant
-    /// is being requested when the method `.value()` it's invoked over some
-    /// instance that implements the `canyon_sql_root::crud::bounds::FieldValueIdentifier` trait
-    pub fn create_match_arm_for_relate_fields_with_values(
-        &self,
-        enum_name: &Ident,
-    ) -> Vec<TokenStream> {
-        self.fields
-            .iter()
-            .map(|f| {
-                let field_name = &f.name;
-                let field_name_as_string = f.name.to_string();
-
-                quote! {
-                    #enum_name::#field_name(v) => (#field_name_as_string, v)
                 }
             })
             .collect::<Vec<_>>()
