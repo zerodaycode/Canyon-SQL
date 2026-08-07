@@ -2,7 +2,6 @@
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
-#[cfg(any(feature = "mssql", feature = "mysql"))]
 use canyon_sql::connection::DatabaseType;
 
 /// Tests for the QueryBuilder available operations within Canyon.
@@ -445,90 +444,211 @@ fn test_crud_delete_with_querybuilder_with_mysql() {
     );
 }
 
-/// Tests for the generated SQL query after use the
-/// WHERE clause
+/// Returns every database backend enabled for this compilation.
+fn enabled_database_types() -> Vec<DatabaseType> {
+    vec![
+        #[cfg(feature = "postgres")]
+        DatabaseType::PostgreSql,
+        #[cfg(feature = "mssql")]
+        DatabaseType::SqlServer,
+        #[cfg(feature = "mysql")]
+        DatabaseType::MySQL,
+    ]
+}
+
+/// Tests for the generated SQL query after using the WHERE clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_where_clause() {
-    let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()?.where_value(&wh, Operator::Eq);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1;"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1;"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1;"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ?;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using the AND clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause() {
-    let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()?
-        .where_value(&wh, Operator::Eq)
-        .and(&LeagueFieldValue::id(10), Operator::LtEq);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"league\".\"id\" <= $2;"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .and(&LeagueFieldValue::id(10), Operator::LtEq)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"league\".\"id\" <= $2;"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 AND [league].[id] <= @P2;"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? AND `league`.`id` <= ?;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using AND with an IN constraint.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_and_clause_with_in_constraint() {
-    let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()?
-        .where_value(&wh, Operator::Eq)
-        .and_values_in(LeagueField::id, &[1, 7, 10]);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.unwrap().build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"id\" IN ($2, $3, $4);"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .and_values_in(LeagueField::id, &[1, 7, 10])?
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 AND \"id\" IN ($2, $3, $4);"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 AND [id] IN (@P2, @P3, @P4);"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? AND `id` IN (?, ?, ?);"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using the OR clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause() {
-    let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()?
-        .where_value(&wh, Operator::Eq)
-        .or(&LeagueFieldValue::id(10), Operator::LtEq);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"league\".\"id\" <= $2;"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .or(&LeagueFieldValue::id(10), Operator::LtEq)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"league\".\"id\" <= $2;"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 OR [league].[id] <= @P2;"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? OR `league`.`id` <= ?;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using OR with an IN constraint.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_or_clause_with_in_constraint() {
-    let wh = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()?
-        .where_value(&wh, Operator::Eq)
-        .or_values_in(LeagueField::id, &[1, 7, 10]);
+    for database_type in enabled_database_types() {
+        let wh = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.unwrap().build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"id\" IN ($2, $3, $4);"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&wh, Operator::Eq)
+            .or_values_in(LeagueField::id, &[1, 7, 10])?
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 OR \"id\" IN ($2, $3, $4);"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 OR [id] IN (@P2, @P3, @P4);"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? OR `id` IN (?, ?, ?);"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
 
-/// Tests for the generated SQL query after use the
-/// AND clause
+/// Tests for the generated SQL query after using the ORDER BY clause.
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_order_by_clause() {
-    let fv = LeagueFieldValue::name("LEC".to_string());
-    let l = League::select_query()?
-        .where_value(&fv, Operator::Eq)
-        .order_by(LeagueField::id, false);
+    for database_type in enabled_database_types() {
+        let fv = LeagueFieldValue::name("LEC".to_string());
 
-    assert_eq!(
-        l.build().unwrap().sql(),
-        "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 ORDER BY \"league\".\"id\";"
-    )
+        let query = League::select_query_with(database_type)?
+            .where_value(&fv, Operator::Eq)
+            .order_by(LeagueField::id, false)
+            .build()
+            .unwrap();
+
+        let expected = match database_type {
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => {
+                "SELECT * FROM \"league\" WHERE \"league\".\"name\" = $1 ORDER BY \"league\".\"id\";"
+            }
+
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => {
+                "SELECT * FROM [league] WHERE [league].[name] = @P1 ORDER BY [league].[id];"
+            }
+
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => {
+                "SELECT * FROM `league` WHERE `league`.`name` = ? ORDER BY `league`.`id`;"
+            }
+        };
+
+        assert_eq!(query.sql(), expected);
+    }
 }
