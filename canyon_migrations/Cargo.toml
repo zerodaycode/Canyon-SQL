@@ -24,7 +24,6 @@ partialdebug = { workspace = true }
 walkdir = { workspace = true }
 
 [features]
-migrations = []
 postgres = ["tokio-postgres", "canyon_core/postgres", "canyon_crud/postgres"]
 mssql = ["tiberius", "canyon_core/mssql", "canyon_crud/mssql"]
 mysql = ["mysql_async", "mysql_common", "canyon_core/mysql", "canyon_crud/mysql"]

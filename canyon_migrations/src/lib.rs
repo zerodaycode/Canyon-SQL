@@ -1,4 +1,3 @@
-#![cfg(feature = "migrations")]
 /// Holds the data needed by Canyon when the user
 /// application it's running.
 ///
