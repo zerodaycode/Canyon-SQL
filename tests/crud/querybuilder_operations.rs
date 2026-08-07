@@ -2,6 +2,7 @@
 use crate::constants::MYSQL_DS;
 #[cfg(feature = "mssql")]
 use crate::constants::SQL_SERVER_DS;
+#[cfg(any(feature = "mssql", feature = "mysql"))]
 use canyon_sql::connection::DatabaseType;
 
 /// Tests for the QueryBuilder available operations within Canyon.
@@ -29,6 +30,8 @@ use canyon_sql::{
 
 use crate::tests_models::league::*;
 use crate::tests_models::player::*;
+
+#[cfg(any(feature = "postgres"))]
 use crate::tests_models::tournament::*;
 
 #[canyon_sql::macros::canyon_tokio_test]

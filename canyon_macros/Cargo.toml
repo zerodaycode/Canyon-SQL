@@ -28,4 +28,6 @@ postgres = ["canyon_core/postgres", "canyon_crud/postgres", "canyon_migrations/p
 mssql = ["canyon_core/mssql", "canyon_crud/mssql", "canyon_migrations/mssql"]
 mysql = ["canyon_core/mysql", "canyon_crud/mysql", "canyon_migrations/mysql"]
 
-migrations = ["canyon_migrations"]
+migrations = [
+    "dep:canyon_migrations",
+]

@@ -14,7 +14,6 @@ canyon_core = { workspace = true }
 canyon_crud = { workspace = true }
 canyon_entities = { workspace = true }
 
-tokio = { workspace = true }
 tokio-postgres = { workspace = true, optional = true }
 tiberius = { workspace = true, optional = true }
 mysql_async = { workspace = true, optional = true }

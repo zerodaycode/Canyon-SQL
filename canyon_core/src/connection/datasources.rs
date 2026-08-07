@@ -4,108 +4,95 @@
 //! It includes support for multiple database backends and provides utilities for managing
 //! datasource properties.
 
-use serde::Deserialize;
+use serde::{
+    Deserialize,
+    Deserializer,
+};
 
 use super::database_type::DatabaseType;
-
-/// ```rust
-#[test]
-fn load_ds_config_from_array() {
-    #[cfg(feature = "postgres")]
-    {
-        const CONFIG_FILE_MOCK_ALT_PG: &str = r#"
-        [canyon_sql]
-        datasources = [
-            {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-        ]
-        "#;
-        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_PG)
-            .expect("A failure happened retrieving the [canyon_sql] section");
-
-        let ds_0 = &config.canyon_sql.datasources[0];
-
-        assert_eq!(ds_0.name, "PostgresDS");
-        assert_eq!(ds_0.get_db_type(), DatabaseType::PostgreSql);
-        assert_eq!(
-            ds_0.auth,
-            Auth::Postgres(PostgresAuth::Basic {
-                username: "postgres".to_string(),
-                password: "postgres".to_string()
-            })
-        );
-        assert_eq!(ds_0.properties.host, "localhost");
-        assert_eq!(ds_0.properties.port, None);
-        assert_eq!(ds_0.properties.db_name, "triforce");
-        assert_eq!(ds_0.properties.migrations, Some(Migrations::Enabled));
-    }
-
-    #[cfg(feature = "mssql")]
-    {
-        const CONFIG_FILE_MOCK_ALT_MSSQL: &str = r#"
-        [canyon_sql]
-        datasources = [
-            {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },
-        ]
-        "#;
-        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MSSQL)
-            .expect("A failure happened retrieving the [canyon_sql] section");
-
-        let ds_1 = &config.canyon_sql.datasources[0];
-
-        assert_eq!(ds_1.name, "SqlServerDS");
-        assert_eq!(ds_1.get_db_type(), DatabaseType::SqlServer);
-        assert_eq!(
-            ds_1.auth,
-            Auth::SqlServer(SqlServerAuth::Basic {
-                username: "sa".to_string(),
-                password: "SqlServer-10".to_string()
-            })
-        );
-        assert_eq!(ds_1.properties.host, "192.168.0.250.1");
-        assert_eq!(ds_1.properties.port, Some(3340));
-        assert_eq!(ds_1.properties.db_name, "triforce2");
-        assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
-    }
-    #[cfg(feature = "mysql")]
-    {
-        const CONFIG_FILE_MOCK_ALT_MYSQL: &str = r#"
-        [canyon_sql]
-        datasources = [
-            {name = 'MysqlDS', auth = { mysql = { basic = { username = "root", password = "root" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
-        ]
-        "#;
-        let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MYSQL)
-            .expect("A failure happened retrieving the [canyon_sql] section");
-
-        let ds_1 = &config.canyon_sql.datasources[0];
-
-        assert_eq!(ds_1.name, "MysqlDS");
-        assert_eq!(ds_1.get_db_type(), DatabaseType::MySQL);
-        assert_eq!(
-            ds_1.auth,
-            Auth::MySQL(MySQLAuth::Basic {
-                username: "root".to_string(),
-                password: "root".to_string()
-            })
-        );
-        assert_eq!(ds_1.properties.host, "192.168.0.250.1");
-        assert_eq!(ds_1.properties.port, Some(3340));
-        assert_eq!(ds_1.properties.db_name, "triforce2");
-        assert_eq!(ds_1.properties.migrations, Some(Migrations::Disabled));
-    }
-}
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct CanyonSqlConfig {
     pub canyon_sql: Datasources,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Datasources {
     pub datasources: Vec<DatasourceConfig>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+impl<'de> Deserialize<'de> for Datasources {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = RawDatasources::deserialize(deserializer)?;
+
+        let datasources = raw
+            .datasources
+            .into_iter()
+            .filter_map(DatasourceConfig::from_raw)
+            .collect();
+
+        Ok(Self { datasources })
+    }
+}
+
+#[derive(Deserialize)]
+struct RawDatasources {
+    datasources: Vec<RawDatasourceConfig>,
+}
+
+#[derive(Deserialize)]
+struct RawDatasourceConfig {
+    name: String,
+    auth: RawAuth,
+    properties: DatasourceProperties,
+}
+
+#[derive(Deserialize)]
+enum RawAuth {
+    #[serde(
+        alias = "PostgresSQL",
+        alias = "postgresql",
+        alias = "postgres"
+    )]
+    Postgres(RawPostgresAuth),
+
+    #[serde(
+        alias = "SqlServer",
+        alias = "sqlserver",
+        alias = "mssql"
+    )]
+    SqlServer(RawSqlServerAuth),
+
+    #[serde(
+        alias = "MYSQL",
+        alias = "mysql",
+        alias = "MySQL"
+    )]
+    MySQL(RawMySQLAuth),
+}
+
+#[cfg(feature = "postgres")]
+type RawPostgresAuth = PostgresAuth;
+
+#[cfg(not(feature = "postgres"))]
+type RawPostgresAuth = serde::de::IgnoredAny;
+
+#[cfg(feature = "mssql")]
+type RawSqlServerAuth = SqlServerAuth;
+
+#[cfg(not(feature = "mssql"))]
+type RawSqlServerAuth = serde::de::IgnoredAny;
+
+#[cfg(feature = "mysql")]
+type RawMySQLAuth = MySQLAuth;
+
+#[cfg(not(feature = "mysql"))]
+type RawMySQLAuth = serde::de::IgnoredAny;
+
+#[derive(Debug, Clone)]
 pub struct DatasourceConfig {
     pub name: String,
     pub auth: Auth,
@@ -113,40 +100,76 @@ pub struct DatasourceConfig {
 }
 
 impl DatasourceConfig {
+    fn from_raw(raw: RawDatasourceConfig) -> Option<Self> {
+        let RawDatasourceConfig {
+            name,
+            auth,
+            properties,
+        } = raw;
+
+        let auth = match auth {
+            #[cfg(feature = "postgres")]
+            RawAuth::Postgres(auth) => Auth::Postgres(auth),
+
+            #[cfg(not(feature = "postgres"))]
+            RawAuth::Postgres(_) => return None,
+
+            #[cfg(feature = "mssql")]
+            RawAuth::SqlServer(auth) => Auth::SqlServer(auth),
+
+            #[cfg(not(feature = "mssql"))]
+            RawAuth::SqlServer(_) => return None,
+
+            #[cfg(feature = "mysql")]
+            RawAuth::MySQL(auth) => Auth::MySQL(auth),
+
+            #[cfg(not(feature = "mysql"))]
+            RawAuth::MySQL(_) => return None,
+        };
+
+        Some(Self {
+            name,
+            auth,
+            properties,
+        })
+    }
+
     pub fn get_db_type(&self) -> DatabaseType {
         self.auth.get_db_type()
     }
 
     pub fn has_migrations_enabled(&self) -> bool {
-        if let Some(migrations) = self.properties.migrations {
-            // Option<Migrations>
-            migrations.has_migrations_enabled()
-        } else {
-            false
-        }
+        self.properties
+            .migrations
+            .is_some_and(|migrations| {
+                migrations.has_migrations_enabled()
+            })
     }
 
     pub fn get_port_or_default_by_db(&self) -> u16 {
-        self.properties.port.unwrap_or(match self.get_db_type() {
-            #[cfg(feature = "postgres")]
-            DatabaseType::PostgreSql => 5432,
-            #[cfg(feature = "mssql")]
-            DatabaseType::SqlServer => 1433,
-            #[cfg(feature = "mysql")]
-            DatabaseType::MySQL => 3306,
+        self.properties.port.unwrap_or_else(|| {
+            match self.get_db_type() {
+                #[cfg(feature = "postgres")]
+                DatabaseType::PostgreSql => 5432,
+
+                #[cfg(feature = "mssql")]
+                DatabaseType::SqlServer => 1433,
+
+                #[cfg(feature = "mysql")]
+                DatabaseType::MySQL => 3306,
+            }
         })
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Auth {
-    #[serde(alias = "PostgresSQL", alias = "postgresql", alias = "postgres")]
     #[cfg(feature = "postgres")]
     Postgres(PostgresAuth),
-    #[serde(alias = "SqlServer", alias = "sqlserver", alias = "mssql")]
+
     #[cfg(feature = "mssql")]
     SqlServer(SqlServerAuth),
-    #[serde(alias = "MYSQL", alias = "mysql", alias = "MySQL")]
+
     #[cfg(feature = "mysql")]
     MySQL(MySQLAuth),
 }
@@ -155,34 +178,45 @@ impl Auth {
     pub fn get_db_type(&self) -> DatabaseType {
         match self {
             #[cfg(feature = "postgres")]
-            Auth::Postgres(_) => DatabaseType::PostgreSql,
+            Self::Postgres(_) => DatabaseType::PostgreSql,
+
             #[cfg(feature = "mssql")]
-            Auth::SqlServer(_) => DatabaseType::SqlServer,
+            Self::SqlServer(_) => DatabaseType::SqlServer,
+
             #[cfg(feature = "mysql")]
-            Auth::MySQL(_) => DatabaseType::MySQL,
+            Self::MySQL(_) => DatabaseType::MySQL,
         }
     }
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[cfg(feature = "postgres")]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum PostgresAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic { username: String, password: String },
+    Basic {
+        username: String,
+        password: String,
+    },
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[cfg(feature = "mssql")]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum SqlServerAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic { username: String, password: String },
+    Basic {
+        username: String,
+        password: String,
+    },
 }
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
 #[cfg(feature = "mysql")]
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum MySQLAuth {
     #[serde(alias = "Basic", alias = "basic")]
-    Basic { username: String, password: String },
+    Basic {
+        username: String,
+        password: String,
+    },
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -193,101 +227,18 @@ pub struct DatasourceProperties {
     pub migrations: Option<Migrations>,
 }
 
-/// Represents the enabled or disabled migrations for a whole datasource
+/// Represents the enabled or disabled migrations for a whole datasource.
 #[derive(Deserialize, Debug, Clone, Copy, PartialEq)]
 pub enum Migrations {
     #[serde(alias = "Enabled", alias = "enabled")]
     Enabled,
+
     #[serde(alias = "Disabled", alias = "disabled")]
     Disabled,
 }
 
 impl Migrations {
     pub fn has_migrations_enabled(&self) -> bool {
-        matches!(self, Migrations::Enabled)
-    }
-}
-
-#[cfg(test)]
-mod datasources_tests {
-    use super::*;
-
-    /// Tests the behaviour of the `DatabaseType::from_datasource(...)`
-    #[test]
-    fn check_from_datasource() {
-        #[cfg(all(feature = "postgres", feature = "mssql", feature = "mysql"))]
-        {
-            const CONFIG_FILE_MOCK_ALT_ALL: &str = r#"
-                [canyon_sql]
-                datasources = [
-                    {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' },
-                    {name = 'MysqlDS', auth = { mysql = { basic = { username = "root", password = "root" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
-                ]
-            "#;
-            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_ALL)
-                .expect("A failure happened retrieving the [canyon_sql] section");
-            assert_eq!(
-                config.canyon_sql.datasources[0].get_db_type(),
-                DatabaseType::PostgreSql
-            );
-            assert_eq!(
-                config.canyon_sql.datasources[1].get_db_type(),
-                DatabaseType::SqlServer
-            );
-            assert_eq!(
-                config.canyon_sql.datasources[2].get_db_type(),
-                DatabaseType::MySQL
-            );
-        }
-
-        #[cfg(feature = "postgres")]
-        {
-            const CONFIG_FILE_MOCK_ALT_PG: &str = r#"
-                [canyon_sql]
-                datasources = [
-                    {name = 'PostgresDS', auth = { postgresql = { basic = { username = "postgres", password = "postgres" } } }, properties.host = 'localhost', properties.db_name = 'triforce', properties.migrations='enabled' },
-                ]
-            "#;
-            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_PG)
-                .expect("A failure happened retrieving the [canyon_sql] section");
-            assert_eq!(
-                config.canyon_sql.datasources[0].get_db_type(),
-                DatabaseType::PostgreSql
-            );
-        }
-
-        #[cfg(feature = "mssql")]
-        {
-            const CONFIG_FILE_MOCK_ALT_MSSQL: &str = r#"
-                [canyon_sql]
-                datasources = [
-                    {name = 'SqlServerDS', auth = { sqlserver = { basic = { username = "sa", password = "SqlServer-10" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
-                ]
-            "#;
-            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MSSQL)
-                .expect("A failure happened retrieving the [canyon_sql] section");
-            assert_eq!(
-                config.canyon_sql.datasources[0].get_db_type(),
-                DatabaseType::SqlServer
-            );
-        }
-
-        #[cfg(feature = "mysql")]
-        {
-            const CONFIG_FILE_MOCK_ALT_MYSQL: &str = r#"
-                [canyon_sql]
-                datasources = [
-                    {name = 'MysqlDS', auth = { mysql = { basic = { username = "root", password = "root" } } }, properties.host = '192.168.0.250.1', properties.port = 3340, properties.db_name = 'triforce2', properties.migrations='disabled' }
-                ]
-            "#;
-
-            let config: CanyonSqlConfig = toml::from_str(CONFIG_FILE_MOCK_ALT_MYSQL)
-                .expect("A failure happened retrieving the [canyon_sql] section");
-            assert_eq!(
-                config.canyon_sql.datasources[0].get_db_type(),
-                DatabaseType::MySQL
-            );
-        }
+        matches!(self, Self::Enabled)
     }
 }

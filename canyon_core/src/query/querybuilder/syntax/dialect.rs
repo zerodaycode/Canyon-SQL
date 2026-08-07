@@ -1,5 +1,4 @@
 use crate::connection::database_type::DatabaseType;
-use crate::connection::database_type::DatabaseType::{MySQL, PostgreSql, SqlServer};
 use std::fmt::Display;
 
 /// Governs syntax rules such as placeholder format,
@@ -21,7 +20,7 @@ pub trait SqlDialect {
 pub struct PgDialect;
 #[cfg(feature = "postgres")]
 impl SqlDialect for PgDialect {
-    const DB: DatabaseType = PostgreSql;
+    const DB: DatabaseType = DatabaseType::PostgreSql;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::DoubleQuote;
 
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::DollarNumbered;
@@ -31,7 +30,7 @@ impl SqlDialect for PgDialect {
 pub struct MsSql;
 #[cfg(feature = "mssql")]
 impl SqlDialect for MsSql {
-    const DB: DatabaseType = SqlServer;
+    const DB: DatabaseType = DatabaseType::SqlServer;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Bracket;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::AtPNumbered;
 }
@@ -40,7 +39,7 @@ impl SqlDialect for MsSql {
 pub struct MySql;
 #[cfg(feature = "mysql")]
 impl SqlDialect for MySql {
-    const DB: DatabaseType = MySQL;
+    const DB: DatabaseType = DatabaseType::MySQL;
     const SUPPORTS_RETURNING: bool = false;
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::Backtick;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::QuestionMark;

@@ -9,7 +9,7 @@ use crate::constants::SQL_SERVER_DS;
 /// generates and executes *SELECT* statements
 use crate::Error;
 use crate::tests_models::league::*;
-use crate::tests_models::player::*;
+#[cfg(any(feature = "postgres"))] use crate::tests_models::player::*;
 use canyon_sql::crud::ReadOperations;
 
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the

@@ -217,7 +217,15 @@ mod __impl {
 mod __detail {
     use crate::connection::database_type::DatabaseType;
     use crate::query::querybuilder::syntax::ast::BaseAst;
-    use crate::query::querybuilder::syntax::dialect::{MsSql, MySql, PgDialect};
+
+    #[cfg(feature = "postgres")]
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
+
+    #[cfg(feature = "mssql")]
+    use crate::query::querybuilder::syntax::dialect::MsSql;
+
+    #[cfg(feature = "mysql")]
+    use crate::query::querybuilder::syntax::dialect::MySql;
 
     use crate::query::querybuilder::syntax::emitter::BackendEmittable;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
@@ -281,9 +289,9 @@ mod __detail {
     ) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
         let writer = TokenWriter::new();
         match db {
-            DatabaseType::PostgreSql => writer.render::<PgDialect>(tokens),
-            DatabaseType::MySQL => writer.render::<MySql>(tokens),
-            DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
+            #[cfg(feature = "postgres")] DatabaseType::PostgreSql => writer.render::<PgDialect>(tokens),
+            #[cfg(feature = "mysql")] DatabaseType::MySQL => writer.render::<MySql>(tokens),
+            #[cfg(feature = "mssql")] DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
         }
         .map_err(|e| e.into())
     }

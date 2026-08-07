@@ -86,6 +86,7 @@ pub(crate) fn emit_qualified_columns<'a, D: SqlDialect>(
     emit_columns::<D>(columns, Qualification::Qualified, tokens);
 }
 
+#[cfg(any(feature = "postgres", feature = "mysql"))]
 pub(crate) fn emit_unqualified_columns<'a, D: SqlDialect>(
     columns: &[ColumnRef<'a>],
     tokens: &mut SqlTokens<'a>,

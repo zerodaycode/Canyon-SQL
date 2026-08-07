@@ -135,10 +135,10 @@ mod __impl {
 
 mod __detail {
     use crate::{
-        connection::database_type::DatabaseType,
         query::querybuilder::syntax::{dialect::SqlDialect, symbol::Symbol},
     };
     use std::fmt::Write;
+    use crate::query::querybuilder::syntax::dialect::PlaceholderSymbol;
 
     pub(crate) fn render_symbol(sym: Symbol, f: &mut String) -> Result<(), std::fmt::Error> {
         let _: () = match sym {
@@ -169,13 +169,17 @@ mod __detail {
         placeholder_counter: &mut usize,
         f: &mut String,
     ) -> Result<(), std::fmt::Error> {
-        let placeholder_symbol = D::PLACEHOLDER_SYMBOL;
-        let _ = match D::DB {
-            DatabaseType::MySQL => write!(f, "{}", placeholder_symbol),
-            _ => write!(f, "{}{}", placeholder_symbol, placeholder_counter),
-        };
-
-        *placeholder_counter += 1;
+        if D::PLACEHOLDER_SYMBOL.eq(&PlaceholderSymbol::QuestionMark) {
+            write!(f, "{}", D::PLACEHOLDER_SYMBOL)?;
+        } else {
+            write!(
+                f,
+                "{}{}",
+                D::PLACEHOLDER_SYMBOL,
+                placeholder_counter
+            )?;
+            *placeholder_counter += 1;
+        }
 
         Ok(())
     }

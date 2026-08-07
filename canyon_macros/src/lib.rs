@@ -3,9 +3,11 @@ extern crate regex;
 
 #[cfg(feature = "migrations")]
 use canyon_macro::main_with_queries;
+#[cfg(feature = "migrations")]
+mod canyon_macro;
 
 mod canyon_entity_macro;
-mod canyon_macro;
+
 mod canyon_mapper_macro;
 mod canyon_tokio_test;
 mod foreignkeyable_macro;

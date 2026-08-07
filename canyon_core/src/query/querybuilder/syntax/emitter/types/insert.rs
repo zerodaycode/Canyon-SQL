@@ -1,3 +1,4 @@
+#[cfg(any(feature = "postgres", feature = "mysql"))]
 macro_rules! insert_default_plan {
     ($dialect:ty) => {
         &[
@@ -43,9 +44,12 @@ pub(crate) mod __impl {
     use crate::query::querybuilder::syntax::ast::BaseAst;
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::{
-        ast::insert::InsertAst, dialect::SqlDialect, emitter::types::helpers, keyword::Keyword,
+        ast::insert::InsertAst, emitter::types::helpers, keyword::Keyword,
         tokens::SqlTokens,
     };
+
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
+    use crate::query::querybuilder::syntax::dialect::SqlDialect;
 
     pub(crate) fn emit_insert_into_keywords<'a>(
         _ast: &InsertAst<'a>,
@@ -56,6 +60,7 @@ pub(crate) mod __impl {
         tokens.keyword(Keyword::Into);
     }
 
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
     pub(crate) fn emit_columns<'a, D: SqlDialect>(
         ast: &InsertAst<'a>,
         _base_ast: &mut BaseAst<'a>,
@@ -77,6 +82,7 @@ pub(crate) mod __impl {
         tokens.symbol(Symbol::RParen);
     }
 
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
     pub(crate) fn emit_returning<'a, D: SqlDialect>(
         ast: &InsertAst<'a>,
         _base_ast: &mut BaseAst<'a>,
@@ -90,6 +96,7 @@ pub(crate) mod __impl {
     }
 }
 
+#[cfg(any(feature = "postgres", feature = "mysql"))]
 pub(crate) use insert_default_plan;
 
 #[cfg(test)]

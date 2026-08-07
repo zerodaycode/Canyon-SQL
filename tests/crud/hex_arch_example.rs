@@ -1,3 +1,5 @@
+#![cfg(feature = "postgres")]
+
 use std::error::Error;
 
 use canyon_sql::{

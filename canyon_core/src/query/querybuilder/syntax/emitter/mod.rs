@@ -2,19 +2,164 @@ pub(crate) mod backends;
 pub(crate) mod types;
 
 use crate::connection::database_type::DatabaseType;
-use crate::query::querybuilder::syntax::emitter::backends::{
-    MySqlEmitter, PgEmitter, SqlServerEmitter,
-};
 use crate::query::querybuilder::syntax::{
-    ast::BaseAst, dialect::SqlDialect, query_kind::QueryKind, tokens::SqlTokens,
+    ast::BaseAst,
+    dialect::SqlDialect,
+    query_kind::QueryKind,
+    tokens::SqlTokens,
 };
 
+#[cfg(feature = "postgres")]
+use crate::query::querybuilder::syntax::emitter::backends::PgEmitter;
+
+#[cfg(feature = "mssql")]
+use crate::query::querybuilder::syntax::emitter::backends::SqlServerEmitter;
+
+#[cfg(feature = "mysql")]
+use crate::query::querybuilder::syntax::emitter::backends::MySqlEmitter;
+
 // ---------- AST Processor marker trait ----------
+
 pub trait AstProcessor<'a>: Default {
     fn query_kind(&self) -> QueryKind;
 }
 
-pub type EmitStep<'a, P> = fn(&P, &mut BaseAst<'a>, &mut SqlTokens<'a>);
+pub type EmitStep<'a, P> =
+fn(&P, &mut BaseAst<'a>, &mut SqlTokens<'a>);
+
+// ---------- Backend-specific conditional bounds ----------
+
+mod backend_bounds {
+    use super::{AstProcessor, BaseAst, SqlEmitter, SqlTokens};
+
+    // -------------------------------------------------------------------------
+    // PostgreSQL
+    // -------------------------------------------------------------------------
+
+    #[cfg(feature = "postgres")]
+    use super::PgEmitter;
+
+    #[cfg(feature = "postgres")]
+    pub trait PostgresBackendEmittable<'a>: AstProcessor<'a> {
+        fn emit_postgres(
+            &self,
+            base_ast: &mut BaseAst<'a>,
+        ) -> SqlTokens<'a>;
+    }
+
+    #[cfg(feature = "postgres")]
+    impl<'a, P> PostgresBackendEmittable<'a> for P
+    where
+        P: AstProcessor<'a> + 'a,
+        PgEmitter: SqlEmitter<'a, P>,
+    {
+        #[inline]
+        fn emit_postgres(
+            &self,
+            base_ast: &mut BaseAst<'a>,
+        ) -> SqlTokens<'a> {
+            PgEmitter::default().emit(self, base_ast)
+        }
+    }
+
+    #[cfg(not(feature = "postgres"))]
+    pub trait PostgresBackendEmittable<'a>: AstProcessor<'a> {}
+
+    #[cfg(not(feature = "postgres"))]
+    impl<'a, P> PostgresBackendEmittable<'a> for P
+    where
+        P: AstProcessor<'a> + 'a,
+    {
+    }
+
+    // -------------------------------------------------------------------------
+    // MySQL
+    // -------------------------------------------------------------------------
+
+    #[cfg(feature = "mysql")]
+    use super::MySqlEmitter;
+
+    #[cfg(feature = "mysql")]
+    pub trait MySqlBackendEmittable<'a>: AstProcessor<'a> {
+        fn emit_mysql(
+            &self,
+            base_ast: &mut BaseAst<'a>,
+        ) -> SqlTokens<'a>;
+    }
+
+    #[cfg(feature = "mysql")]
+    impl<'a, P> MySqlBackendEmittable<'a> for P
+    where
+        P: AstProcessor<'a> + 'a,
+        MySqlEmitter: SqlEmitter<'a, P>,
+    {
+        #[inline]
+        fn emit_mysql(
+            &self,
+            base_ast: &mut BaseAst<'a>,
+        ) -> SqlTokens<'a> {
+            MySqlEmitter::default().emit(self, base_ast)
+        }
+    }
+
+    #[cfg(not(feature = "mysql"))]
+    pub trait MySqlBackendEmittable<'a>: AstProcessor<'a> {}
+
+    #[cfg(not(feature = "mysql"))]
+    impl<'a, P> MySqlBackendEmittable<'a> for P
+    where
+        P: AstProcessor<'a> + 'a,
+    {
+    }
+
+    // -------------------------------------------------------------------------
+    // SQL Server
+    // -------------------------------------------------------------------------
+
+    #[cfg(feature = "mssql")]
+    use super::SqlServerEmitter;
+
+    #[cfg(feature = "mssql")]
+    pub trait SqlServerBackendEmittable<'a>: AstProcessor<'a> {
+        fn emit_sql_server(
+            &self,
+            base_ast: &mut BaseAst<'a>,
+        ) -> SqlTokens<'a>;
+    }
+
+    #[cfg(feature = "mssql")]
+    impl<'a, P> SqlServerBackendEmittable<'a> for P
+    where
+        P: AstProcessor<'a> + 'a,
+        SqlServerEmitter: SqlEmitter<'a, P>,
+    {
+        #[inline]
+        fn emit_sql_server(
+            &self,
+            base_ast: &mut BaseAst<'a>,
+        ) -> SqlTokens<'a> {
+            SqlServerEmitter::default().emit(self, base_ast)
+        }
+    }
+
+    #[cfg(not(feature = "mssql"))]
+    pub trait SqlServerBackendEmittable<'a>: AstProcessor<'a> {}
+
+    #[cfg(not(feature = "mssql"))]
+    impl<'a, P> SqlServerBackendEmittable<'a> for P
+    where
+        P: AstProcessor<'a> + 'a,
+    {
+    }
+}
+
+use backend_bounds::{
+    MySqlBackendEmittable,
+    PostgresBackendEmittable,
+    SqlServerBackendEmittable,
+};
+
+// ---------- Runtime backend dispatch ----------
 
 pub trait BackendEmittable<'a>: AstProcessor<'a> {
     fn emit_for(
@@ -23,12 +168,14 @@ pub trait BackendEmittable<'a>: AstProcessor<'a> {
         base_ast: &mut BaseAst<'a>,
     ) -> SqlTokens<'a>;
 }
+
 impl<'a, P> BackendEmittable<'a> for P
 where
-    P: AstProcessor<'a> + 'a,
-    PgEmitter: SqlEmitter<'a, P>,
-    MySqlEmitter: SqlEmitter<'a, P>,
-    SqlServerEmitter: SqlEmitter<'a, P>,
+    P: AstProcessor<'a>
+    + PostgresBackendEmittable<'a>
+    + MySqlBackendEmittable<'a>
+    + SqlServerBackendEmittable<'a>
+    + 'a,
 {
     fn emit_for(
         database_type: DatabaseType,
@@ -36,12 +183,18 @@ where
         base_ast: &mut BaseAst<'a>,
     ) -> SqlTokens<'a> {
         match database_type {
-            DatabaseType::PostgreSql => PgEmitter::default().emit(ast, base_ast),
-            DatabaseType::SqlServer => SqlServerEmitter::default().emit(ast, base_ast),
-            DatabaseType::MySQL => MySqlEmitter::default().emit(ast, base_ast),
+            #[cfg(feature = "postgres")]
+            DatabaseType::PostgreSql => ast.emit_postgres(base_ast),
+            #[cfg(feature = "mssql")]
+            DatabaseType::SqlServer => ast.emit_sql_server(base_ast),
+            #[cfg(feature = "mysql")]
+            DatabaseType::MySQL => ast.emit_mysql(base_ast),
         }
     }
 }
+
+// ---------- SQL emitter ----------
+
 pub trait SqlEmitter<'a, P>
 where
     Self: Sized,
@@ -49,31 +202,19 @@ where
 {
     type Dialect: SqlDialect;
 
-    /// Emit SQL tokens for the given AST node and table metadata.
-    ///
-    /// This method is the central entry point for query emission.
-    /// Given:
-    /// - an AST of type `P` representing the query structure,
-    /// - a `TableMetadata` reference describing the target table,
-    ///   the emitter must generate the appropriate SQL tokens into its
-    ///   internal buffer.
-    ///
-    /// # Semantics
-    ///
-    /// The implementation of `emit` must produce tokens **in the correct
-    /// order** determined by the semantics of `P` and the rules of the
-    /// selected SQL dialect (`Self::Dialect`). For example, a `SELECT`
-    /// emission writes: `SELECT ... FROM ... WHERE ...`. A backend
-    /// emitter may choose to include or omit certain clauses (e.g.,
-    /// `RETURNING`) depending on dialect support.
+    /// Ordered emission plan for this AST and backend combination.
     const PLAN: &'a [EmitStep<'a, P>];
 
     #[inline]
-    fn emit(&mut self, ast: &P, base_ast: &mut BaseAst<'a>) -> SqlTokens<'a> {
+    fn emit(
+        &mut self,
+        ast: &P,
+        base_ast: &mut BaseAst<'a>,
+    ) -> SqlTokens<'a> {
         let mut tokens = SqlTokens::default();
 
         for step in Self::PLAN {
-            step(ast, base_ast, &mut tokens)
+            step(ast, base_ast, &mut tokens);
         }
 
         tokens
