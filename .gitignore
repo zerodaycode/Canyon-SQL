@@ -6,3 +6,4 @@ canyon_tester/
 macro_utils.rs
 postgres-data/
 mysql-data/
+.DS_Store
