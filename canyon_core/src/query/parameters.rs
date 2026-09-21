@@ -10,29 +10,6 @@ use tokio_postgres::{self, types::ToSql};
 // TODO: cfg feature for this re-exports, as date-time or something
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
-pub trait QueryParameterValue<'a> {
-    fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T>;
-    fn to_owned_any<T: Clone + 'a + 'static>(&'a self) -> Box<T>;
-}
-impl<'a> QueryParameterValue<'a> for dyn QueryParameter {
-    fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
-        self.as_any().downcast_ref()
-    }
-
-    fn to_owned_any<T: Clone + 'a + 'static>(&'a self) -> Box<T> {
-        Box::new(self.downcast_ref::<T>().cloned().unwrap())
-    }
-}
-impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter {
-    fn downcast_ref<T: 'static>(&'a self) -> Option<&'a T> {
-        self.as_any().downcast_ref()
-    }
-
-    fn to_owned_any<T>(&self) -> Box<T> {
-        todo!()
-    }
-}
-
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
 pub trait QueryParameter: Debug + Send + Sync {
