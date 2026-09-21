@@ -12,7 +12,7 @@ use tiberius::{self};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self};
 
-use crate::mapper::RowMapper;
+use crate::mapper::{CanyonError, RowMapper};
 use crate::row::Row;
 
 /// Lightweight wrapper over the collection of results of the different crates
@@ -70,17 +70,17 @@ impl CanyonRows {
         }
     }
 
-    pub fn first_row<T: RowMapper<Output = T>>(&self) -> Option<T> {
-        let row = match self {
+    /// Maps the first row, preserving the distinction between an empty result and a mapping error.
+    pub fn first<T: RowMapper>(&self) -> Result<Option<T::Output>, CanyonError> {
+        match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.first().map(|r| T::deserialize_postgresql(r)),
             #[cfg(feature = "mssql")]
             Self::Tiberius(v) => v.first().map(|r| T::deserialize_sqlserver(r)),
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.first().map(|r| T::deserialize_mysql(r)),
-        };
-
-        row?.ok()
+        }
+        .transpose()
     }
 
     /// Returns the number of elements present on the wrapped collection
@@ -105,6 +105,86 @@ impl CanyonRows {
             #[cfg(feature = "mysql")]
             Self::MySQL(v) => v.is_empty(),
         }
+    }
+}
+
+#[cfg(all(test, feature = "mysql"))]
+mod tests {
+    use super::CanyonRows;
+    use crate::mapper::{CanyonError, RowMapper};
+    use mysql_async::Row;
+    use mysql_common::row;
+    use std::io;
+    use std::sync::Arc;
+
+    struct SuccessfulMapper;
+
+    impl RowMapper for SuccessfulMapper {
+        type Output = u8;
+
+        #[cfg(feature = "postgres")]
+        fn deserialize_postgresql(_row: &tokio_postgres::Row) -> Result<Self::Output, CanyonError> {
+            Ok(42)
+        }
+
+        #[cfg(feature = "mssql")]
+        fn deserialize_sqlserver(_row: &tiberius::Row) -> Result<Self::Output, CanyonError> {
+            Ok(42)
+        }
+
+        fn deserialize_mysql(_row: &Row) -> Result<Self::Output, CanyonError> {
+            Ok(42)
+        }
+    }
+
+    struct FailingMapper;
+
+    impl RowMapper for FailingMapper {
+        type Output = ();
+
+        #[cfg(feature = "postgres")]
+        fn deserialize_postgresql(_row: &tokio_postgres::Row) -> Result<Self::Output, CanyonError> {
+            Err(mapping_error())
+        }
+
+        #[cfg(feature = "mssql")]
+        fn deserialize_sqlserver(_row: &tiberius::Row) -> Result<Self::Output, CanyonError> {
+            Err(mapping_error())
+        }
+
+        fn deserialize_mysql(_row: &Row) -> Result<Self::Output, CanyonError> {
+            Err(mapping_error())
+        }
+    }
+
+    fn mapping_error() -> CanyonError {
+        io::Error::new(io::ErrorKind::InvalidData, "could not map row").into()
+    }
+
+    fn empty_mysql_row() -> Row {
+        row::new_row(Vec::new(), Arc::from([]))
+    }
+
+    #[test]
+    fn first_returns_none_for_an_empty_result() {
+        let rows = CanyonRows::MySQL(Vec::new());
+
+        assert!(matches!(rows.first::<FailingMapper>(), Ok(None)));
+    }
+
+    #[test]
+    fn first_returns_the_mapped_first_row() {
+        let rows = CanyonRows::MySQL(vec![empty_mysql_row()]);
+
+        assert!(matches!(rows.first::<SuccessfulMapper>(), Ok(Some(42))));
+    }
+
+    #[test]
+    fn first_propagates_mapping_errors() {
+        let rows = CanyonRows::MySQL(vec![empty_mysql_row()]);
+
+        let error = rows.first::<FailingMapper>().unwrap_err();
+        assert_eq!(error.to_string(), "could not map row");
     }
 }
 
