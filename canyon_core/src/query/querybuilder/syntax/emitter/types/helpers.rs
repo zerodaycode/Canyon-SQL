@@ -2,7 +2,7 @@
 
 use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::column::{ColumnRef, Qualification};
-use crate::query::querybuilder::syntax::dialect::SqlDialect;
+use crate::query::querybuilder::syntax::dialect::{IdentQuotingStyle, SqlDialect};
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
@@ -48,15 +48,30 @@ impl IntoIterator for &Range {
     }
 }
 
-/// Helper function to push a quoted identifier (like table or column names) into the token stream
+/// Pushes a raw identifier (such as a table or column name) into the token stream,
+/// quoting it and escaping embedded closing delimiters for the target dialect.
 pub fn push_quoted_ident<'a, D, S>(element: S, tokens: &mut SqlTokens<'a>)
 where
     D: SqlDialect,
     S: Into<Cow<'a, str>>,
 {
     let q = D::IDENT_QUOTING;
+    let element = element.into();
+    let escaped = match q {
+        IdentQuotingStyle::DoubleQuote if element.contains('"') => {
+            Cow::Owned(element.replace('"', "\"\""))
+        }
+        IdentQuotingStyle::Backtick if element.contains('`') => {
+            Cow::Owned(element.replace('`', "``"))
+        }
+        IdentQuotingStyle::Bracket if element.contains(']') => {
+            Cow::Owned(element.replace(']', "]]"))
+        }
+        _ => element,
+    };
+
     tokens.symbol(q.opening().into());
-    tokens.ident(element);
+    tokens.ident(escaped);
     tokens.symbol(q.closing().into());
 }
 
@@ -129,7 +144,9 @@ mod tests {
     use crate::query::querybuilder::syntax::dialect::PgDialect;
     #[cfg(feature = "mssql")]
     use crate::query::querybuilder::syntax::dialect::{MsSql, PlaceholderSymbol};
-    use crate::query::querybuilder::syntax::{dialect::IdentQuotingStyle, tokens::SqlToken};
+    use crate::query::querybuilder::syntax::{
+        dialect::IdentQuotingStyle, tokens::SqlToken, writer::TokenWriter,
+    };
 
     fn make_column(column: &'_ str) -> ColumnRef<'_> {
         ColumnRef::from(column)
@@ -188,7 +205,6 @@ mod tests {
     #[test]
     fn push_quoted_ident_with_standard_dialect() {
         let mut tokens = SqlTokens::default();
-        // TODO: this isn't taking in consideration the scape quotes, care
         push_quoted_ident::<PgDialect, &str>("users", &mut tokens);
         assert_eq!(
             tokens.inner(),
@@ -205,6 +221,16 @@ mod tests {
             tokens.inner(),
             get_columns_test_expr_values::<PgDialect>(&["users"])
         );
+    }
+
+    #[cfg(feature = "postgres")]
+    #[test]
+    fn postgres_escapes_embedded_identifier_quotes() {
+        let mut tokens = SqlTokens::default();
+        push_quoted_ident::<PgDialect, &str>("users\"archive", &mut tokens);
+
+        let sql = TokenWriter::new().render::<PgDialect>(tokens).unwrap();
+        assert_eq!(sql, "\"users\"\"archive\";");
     }
 
     fn get_columns_test_expr_values<D: SqlDialect>(
@@ -235,6 +261,16 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "mysql")]
+    #[test]
+    fn mysql_escapes_embedded_identifier_backticks() {
+        let mut tokens = SqlTokens::default();
+        push_quoted_ident::<MySql, &str>("users`archive", &mut tokens);
+
+        let sql = TokenWriter::new().render::<MySql>(tokens).unwrap();
+        assert_eq!(sql, "`users``archive`;");
+    }
+
     #[cfg(feature = "mssql")]
     #[test]
     fn push_quoted_ident_with_mssql() {
@@ -244,6 +280,16 @@ mod tests {
             tokens.inner(),
             get_columns_test_expr_values::<MsSql>(&["users"])
         );
+    }
+
+    #[cfg(feature = "mssql")]
+    #[test]
+    fn mssql_escapes_embedded_identifier_closing_brackets() {
+        let mut tokens = SqlTokens::default();
+        push_quoted_ident::<MsSql, &str>("users]archive", &mut tokens);
+
+        let sql = TokenWriter::new().render::<MsSql>(tokens).unwrap();
+        assert_eq!(sql, "[users]]archive];");
     }
 
     #[cfg(feature = "postgres")]
