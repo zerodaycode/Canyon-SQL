@@ -146,7 +146,8 @@ impl QueryParameter for u32 {
     }
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        panic!("Unsupported sqlserver parameter type <u32>");
+        // SQL Server has no unsigned integer type. BIGINT represents every u32 losslessly.
+        ColumnData::I64(Some(i64::from(*self)))
     }
     #[cfg(feature = "mysql")]
     fn as_mysql_param(&self) -> Value {
@@ -165,7 +166,7 @@ impl QueryParameter for Option<u32> {
     }
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        panic!("Unsupported sqlserver parameter type <u32>");
+        ColumnData::I64(self.map(i64::from))
     }
     #[cfg(feature = "mysql")]
     fn as_mysql_param(&self) -> Value {
@@ -598,6 +599,40 @@ mod mssql_tests {
             ColumnData::I16(Some(42))
         ));
         assert!(matches!(none.as_sqlserver_param(), ColumnData::I16(None)));
+    }
+
+    #[test]
+    fn u32_parameter_uses_lossless_sql_server_bigint() {
+        let first_value_beyond_i32 = i32::MAX as u32 + 1;
+
+        assert!(matches!(
+            0_u32.as_sqlserver_param(),
+            ColumnData::I64(Some(0))
+        ));
+        assert!(matches!(
+            (i32::MAX as u32).as_sqlserver_param(),
+            ColumnData::I64(Some(value)) if value == i64::from(i32::MAX)
+        ));
+        assert!(matches!(
+            first_value_beyond_i32.as_sqlserver_param(),
+            ColumnData::I64(Some(value)) if value == i64::from(first_value_beyond_i32)
+        ));
+        assert!(matches!(
+            u32::MAX.as_sqlserver_param(),
+            ColumnData::I64(Some(value)) if value == i64::from(u32::MAX)
+        ));
+    }
+
+    #[test]
+    fn optional_u32_parameter_preserves_some_and_none() {
+        assert!(matches!(
+            Some(u32::MAX).as_sqlserver_param(),
+            ColumnData::I64(Some(value)) if value == i64::from(u32::MAX)
+        ));
+        assert!(matches!(
+            Option::<u32>::None.as_sqlserver_param(),
+            ColumnData::I64(None)
+        ));
     }
 }
 
