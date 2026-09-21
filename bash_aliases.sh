@@ -1,54 +1,152 @@
 #!/bin/sh
 
-# This file provides command alias commonly used by the developers involved in Canyon-SQL 
-# This alias avoid the usage of a bunch of commands for performn an integrated task that 
-# depends on several concatenated commands.
+# Canyon-SQL development commands, grouped by database backend and feature set.
+#
+# Load them from the repository root with:
+#   . ./bash_aliases.sh
+#
+# Stable aliases never enable the experimental `migrations` feature. Migration
+# aliases are deliberately explicit so they cannot be selected accidentally.
 
-# In order to run the script, simply type `$ . ./bash_aliases.sh` from the root of the project.
-# (refreshing the current terminal session could be required)
+_canyon_unit_test() {
+    if [ "$2" = "with-migrations" ]; then
+        cargo test --workspace --lib --no-default-features --features "$1" --no-fail-fast -- --show-output --nocapture
+    else
+        cargo test --workspace --exclude canyon_migrations --lib --no-default-features --features "$1" --no-fail-fast -- --show-output --nocapture
+    fi
+}
 
-# Executes the docker compose script to wake up the containers
-alias DockerUp='docker-compose -f ./docker/docker-compose.yml up'
-# Shutdown the postgres container
-alias DockerDown='docker-compose -f ./docker/docker-compose.yml down'
-# Cleans the generated cache folder for the postgres in the docker
-alias CleanPostgres='rm -rf ./docker/postgres-data'
+_canyon_doc_test() {
+    if [ "$2" = "with-migrations" ]; then
+        cargo test --workspace --doc --no-default-features --features "$1" --no-fail-fast -- --show-output --nocapture
+    else
+        cargo test --workspace --exclude canyon_migrations --doc --no-default-features --features "$1" --no-fail-fast -- --show-output --nocapture
+    fi
+}
 
-# Code Quality
-alias Clippy='cargo clippy --all-targets --all-features --workspace -- -D warnings'
-alias Fmt='cargo fmt --all -- --check'
+_canyon_it_test() {
+    cargo test -p tests --no-default-features --features "$1" --no-fail-fast -- --show-output --nocapture --test-threads=1
+}
 
-# Build the project for Windows targets
-alias BuildCanyonWin='cargo build --all-features --target=x86_64-pc-windows-msvc'
-alias BuildCanyonWinFull='cargo clean && cargo build --all-features --target=x86_64-pc-windows-msvc'
+_canyon_test() {
+    _canyon_unit_test "$1" "$2" &&
+        _canyon_doc_test "$1" "$2" &&
+        _canyon_it_test "$1"
+}
 
-# Build the project for Linux targets
-alias BuildCanyonLinux='cargo build --all-features --target=x86_64-unknown-linux-gnu'
-alias BuildCanyonLinuxFull='cargo clean && cargo build --all-features --target=x86_64-unknown-linux-gnu'
+_canyon_check() {
+    if [ "$2" = "with-migrations" ]; then
+        cargo check --workspace --all-targets --no-default-features --features "$1"
+    else
+        cargo check --workspace --exclude canyon_migrations --all-targets --no-default-features --features "$1"
+    fi
+}
 
-# Runs all the tests within Canyon-SQL for Windows targets
-alias TestsWin='cargo test --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --nocapture'
-# Runs all the tests within Canyon-SQL for Linux targets
-alias TestsLinux='cargo test --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu -- --show-output --nocapture'
+_canyon_build() {
+    if [ "$2" = "with-migrations" ]; then
+        cargo build --workspace --all-targets --no-default-features --features "$1"
+    else
+        cargo build --workspace --exclude canyon_migrations --all-targets --no-default-features --features "$1"
+    fi
+}
 
-# Runs the integration tests of the project for a Windows target
-alias IntegrationTestsWin='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture'
-alias ITIncludeIgnoredWin='cargo test --all-features --no-fail-fast -p tests --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
-alias SqlServerInitializationWin='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-pc-windows-msvc -- --show-output --test-threads=1 --nocapture --include-ignored'
+_canyon_clippy() {
+    if [ "$2" = "with-migrations" ]; then
+        cargo clippy --workspace --all-targets --no-default-features --features "$1" -- -D warnings
+    else
+        cargo clippy --workspace --exclude canyon_migrations --all-targets --no-default-features --features "$1" -- -D warnings
+    fi
+}
 
-# Runs the integration tests of the project for a Linux target
-alias IntegrationTestsLinux='cargo test --all-features --no-fail-fast -p tests --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture'
-alias ITIncludeIgnoredLinux='cargo test --all-features --no-fail-fast -p tests --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture --test-threads=1 --include-ignored'
-alias SqlServerInitializationLinux='cargo test initialize_sql_server_docker_instance -p tests --all-features --no-fail-fast --target=x86_64-unknown-linux-gnu -- --show-output --test-threads=1 --nocapture --include-ignored'
+_canyon_init_mssql() {
+    cargo test initialize_sql_server_docker_instance -p tests --no-default-features --features "$1" --no-fail-fast -- --show-output --nocapture --test-threads=1 --include-ignored
+}
 
-# -----
-# Publish Canyon-SQL to the registry with its dependencies
-alias PublishCanyon='cargo publish -p canyon_connection && cargo publish -p canyon_crud && cargo publish -p canyon_migrations && cargo publish -p canyon_macros && cargo publish -p canyon_sql_root'
+# Stable PostgreSQL commands.
+alias TEST_PG='_canyon_test postgres without-migrations'
+alias UNIT_TEST_PG='_canyon_unit_test postgres without-migrations'
+alias DOC_TEST_PG='_canyon_doc_test postgres without-migrations'
+alias IT_TEST_PG='_canyon_it_test postgres'
+alias CHECK_PG='_canyon_check postgres without-migrations'
+alias BUILD_PG='_canyon_build postgres without-migrations'
+alias CLIPPY_PG='_canyon_clippy postgres without-migrations'
 
-# -----
-# Collects the code coverage for the project (tests must run before this)
-alias CcEnvVars='export CARGO_INCREMENTAL=0
-export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
-export RUSTDOCFLAGS="-Cpanic=abort"'
+# Stable MySQL commands.
+alias TEST_MYSQL='_canyon_test mysql without-migrations'
+alias UNIT_TEST_MYSQL='_canyon_unit_test mysql without-migrations'
+alias DOC_TEST_MYSQL='_canyon_doc_test mysql without-migrations'
+alias IT_TEST_MYSQL='_canyon_it_test mysql'
+alias CHECK_MYSQL='_canyon_check mysql without-migrations'
+alias BUILD_MYSQL='_canyon_build mysql without-migrations'
+alias CLIPPY_MYSQL='_canyon_clippy mysql without-migrations'
 
-alias CodeCov='grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage'
+# Stable SQL Server commands.
+alias TEST_MSSQL='_canyon_test mssql without-migrations'
+alias UNIT_TEST_MSSQL='_canyon_unit_test mssql without-migrations'
+alias DOC_TEST_MSSQL='_canyon_doc_test mssql without-migrations'
+alias IT_TEST_MSSQL='_canyon_it_test mssql'
+alias CHECK_MSSQL='_canyon_check mssql without-migrations'
+alias BUILD_MSSQL='_canyon_build mssql without-migrations'
+alias CLIPPY_MSSQL='_canyon_clippy mssql without-migrations'
+alias INIT_MSSQL='_canyon_init_mssql mssql'
+
+# Stable commands for all database backends. These do not enable migrations.
+alias TEST_ALL='_canyon_test postgres,mysql,mssql without-migrations'
+alias UNIT_TEST_ALL='_canyon_unit_test postgres,mysql,mssql without-migrations'
+alias DOC_TEST_ALL='_canyon_doc_test postgres,mysql,mssql without-migrations'
+alias IT_TEST_ALL='_canyon_it_test postgres,mysql,mssql'
+alias CHECK_ALL='_canyon_check postgres,mysql,mssql without-migrations'
+alias BUILD_ALL='_canyon_build postgres,mysql,mssql without-migrations'
+alias CLIPPY_ALL='_canyon_clippy postgres,mysql,mssql without-migrations'
+
+# Experimental migrations commands, kept separate from the stable test line.
+alias TEST_MIGRATIONS_PG='_canyon_test postgres,migrations with-migrations'
+alias UNIT_TEST_MIGRATIONS_PG='_canyon_unit_test postgres,migrations with-migrations'
+alias DOC_TEST_MIGRATIONS_PG='_canyon_doc_test postgres,migrations with-migrations'
+alias IT_TEST_MIGRATIONS_PG='_canyon_it_test postgres,migrations'
+alias CHECK_MIGRATIONS_PG='_canyon_check postgres,migrations with-migrations'
+alias BUILD_MIGRATIONS_PG='_canyon_build postgres,migrations with-migrations'
+alias CLIPPY_MIGRATIONS_PG='_canyon_clippy postgres,migrations with-migrations'
+
+alias TEST_MIGRATIONS_MYSQL='_canyon_test mysql,migrations with-migrations'
+alias UNIT_TEST_MIGRATIONS_MYSQL='_canyon_unit_test mysql,migrations with-migrations'
+alias DOC_TEST_MIGRATIONS_MYSQL='_canyon_doc_test mysql,migrations with-migrations'
+alias IT_TEST_MIGRATIONS_MYSQL='_canyon_it_test mysql,migrations'
+alias CHECK_MIGRATIONS_MYSQL='_canyon_check mysql,migrations with-migrations'
+alias BUILD_MIGRATIONS_MYSQL='_canyon_build mysql,migrations with-migrations'
+alias CLIPPY_MIGRATIONS_MYSQL='_canyon_clippy mysql,migrations with-migrations'
+
+alias TEST_MIGRATIONS_MSSQL='_canyon_test mssql,migrations with-migrations'
+alias UNIT_TEST_MIGRATIONS_MSSQL='_canyon_unit_test mssql,migrations with-migrations'
+alias DOC_TEST_MIGRATIONS_MSSQL='_canyon_doc_test mssql,migrations with-migrations'
+alias IT_TEST_MIGRATIONS_MSSQL='_canyon_it_test mssql,migrations'
+alias CHECK_MIGRATIONS_MSSQL='_canyon_check mssql,migrations with-migrations'
+alias BUILD_MIGRATIONS_MSSQL='_canyon_build mssql,migrations with-migrations'
+alias CLIPPY_MIGRATIONS_MSSQL='_canyon_clippy mssql,migrations with-migrations'
+alias INIT_MIGRATIONS_MSSQL='_canyon_init_mssql mssql,migrations'
+
+alias TEST_MIGRATIONS_ALL='_canyon_test postgres,mysql,mssql,migrations with-migrations'
+alias UNIT_TEST_MIGRATIONS_ALL='_canyon_unit_test postgres,mysql,mssql,migrations with-migrations'
+alias DOC_TEST_MIGRATIONS_ALL='_canyon_doc_test postgres,mysql,mssql,migrations with-migrations'
+alias IT_TEST_MIGRATIONS_ALL='_canyon_it_test postgres,mysql,mssql,migrations'
+alias CHECK_MIGRATIONS_ALL='_canyon_check postgres,mysql,mssql,migrations with-migrations'
+alias BUILD_MIGRATIONS_ALL='_canyon_build postgres,mysql,mssql,migrations with-migrations'
+alias CLIPPY_MIGRATIONS_ALL='_canyon_clippy postgres,mysql,mssql,migrations with-migrations'
+
+# Shared tooling.
+alias FMT='cargo fmt --all -- --check'
+alias DOCKER_UP='docker compose -f ./docker/docker-compose.yml up -d'
+alias DOCKER_DOWN='docker compose -f ./docker/docker-compose.yml down'
+alias CLEAN_DB_DATA='rm -rf ./docker/postgres-data ./docker/mysql-data'
+
+# Coverage support. Run the desired TEST_* alias before CODE_COV.
+COVERAGE_ENV() {
+    export CARGO_INCREMENTAL=0
+    export RUSTFLAGS="-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort"
+    export RUSTDOCFLAGS="-Cpanic=abort"
+}
+
+alias CODE_COV='grcov . -s . --binary-path ./target/debug/ -t html --branch --ignore-not-existing -o ./target/debug/coverage'
+
+# Publishing remains intentionally explicit because crate order matters.
+alias PUBLISH_CANYON='cargo publish -p canyon_core && cargo publish -p canyon_crud && cargo publish -p canyon_entities && cargo publish -p canyon_migrations && cargo publish -p canyon_macros && cargo publish -p canyon_sql'
