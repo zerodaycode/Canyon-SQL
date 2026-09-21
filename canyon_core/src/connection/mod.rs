@@ -36,7 +36,7 @@ use std::error::Error;
 use std::sync::{Arc, OnceLock};
 
 use tokio::runtime::Runtime;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, MutexGuard};
 
 // // TODO's: DatabaseConnector and DataSource can implement default, so there's no need to use str and &str
 // // as defaults anymore, since the can load as the default the first one defined in the config file, or have more
@@ -58,6 +58,14 @@ pub fn get_canyon_tokio_runtime() -> &'static Runtime {
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
+
+fn try_lock_connection<T>(
+    connection: &Mutex<T>,
+) -> Result<MutexGuard<'_, T>, Box<dyn Error + Send + Sync>> {
+    connection
+        .try_lock()
+        .map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>)
+}
 
 // Apply the macro to implement DbConnection for &str and str
 impl_db_connection_for_str!(str);
@@ -117,6 +125,27 @@ where
     }
 
     fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
-        todo!()
+        try_lock_connection(self)?.get_database_type()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Mutex, try_lock_connection};
+
+    #[test]
+    fn try_lock_connection_returns_the_guard_when_available() {
+        let connection = Mutex::new(42);
+        let guard = try_lock_connection(&connection).unwrap();
+
+        assert_eq!(*guard, 42);
+    }
+
+    #[tokio::test]
+    async fn try_lock_connection_returns_an_error_when_busy() {
+        let connection = Mutex::new(42);
+        let _guard = connection.lock().await;
+
+        assert!(try_lock_connection(&connection).is_err());
     }
 }
