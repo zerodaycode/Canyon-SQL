@@ -89,7 +89,7 @@ impl QueryParameter for Option<&'static i16> {
     }
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-        ColumnData::I16(Some(*self.unwrap()))
+        ColumnData::I16(self.copied())
     }
     #[cfg(feature = "mysql")]
     fn as_mysql_param(&self) -> Value {
@@ -581,11 +581,72 @@ impl QueryParameter for Option<DateTime<Utc>> {
     }
 }
 
+#[cfg(all(test, feature = "mssql"))]
+mod mssql_tests {
+    use super::QueryParameter;
+    use tiberius::ColumnData;
+
+    static VALUE: i16 = 42;
+
+    #[test]
+    fn optional_i16_parameter_preserves_some_and_none() {
+        let some: Option<&'static i16> = Some(&VALUE);
+        let none: Option<&'static i16> = None;
+
+        assert!(matches!(
+            some.as_sqlserver_param(),
+            ColumnData::I16(Some(42))
+        ));
+        assert!(matches!(none.as_sqlserver_param(), ColumnData::I16(None)));
+    }
+}
+
+#[cfg(all(test, feature = "postgres"))]
+mod postgres_tests {
+    use super::QueryParameter;
+    use tokio_postgres::types::{IsNull, Type, private::BytesMut};
+
+    static VALUE: i16 = 42;
+
+    #[test]
+    fn optional_i16_parameter_preserves_some_and_none() {
+        let some: Option<&'static i16> = Some(&VALUE);
+        let none: Option<&'static i16> = None;
+        let mut some_bytes = BytesMut::new();
+        let mut none_bytes = BytesMut::new();
+
+        let some_nullability = some
+            .as_postgres_param()
+            .to_sql_checked(&Type::INT2, &mut some_bytes)
+            .unwrap();
+        let none_nullability = none
+            .as_postgres_param()
+            .to_sql_checked(&Type::INT2, &mut none_bytes)
+            .unwrap();
+
+        assert!(matches!(some_nullability, IsNull::No));
+        assert_eq!(some_bytes.as_ref(), VALUE.to_be_bytes());
+        assert!(matches!(none_nullability, IsNull::Yes));
+        assert!(none_bytes.is_empty());
+    }
+}
+
 #[cfg(all(test, feature = "mysql"))]
-mod tests {
+mod mysql_tests {
     use super::QueryParameter;
     use chrono::{DateTime, FixedOffset, TimeZone, Utc};
     use mysql_async::Value;
+
+    static I16_VALUE: i16 = 42;
+
+    #[test]
+    fn optional_i16_parameter_preserves_some_and_none() {
+        let some: Option<&'static i16> = Some(&I16_VALUE);
+        let none: Option<&'static i16> = None;
+
+        assert_eq!(some.as_mysql_param(), Value::Int(42));
+        assert_eq!(none.as_mysql_param(), Value::NULL);
+    }
 
     #[test]
     fn mysql_datetime_parameters_are_normalized_to_utc() {
