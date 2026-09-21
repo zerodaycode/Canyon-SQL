@@ -260,7 +260,7 @@ mod mssql_tests {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "postgres"))]
 mod spacing_tests {
     use super::*;
     use crate::query::{

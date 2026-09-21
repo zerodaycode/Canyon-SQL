@@ -75,6 +75,7 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for JoinClause<'a> {
         out
     }
 }
+#[cfg(all(test, feature = "postgres"))]
 #[test]
 fn test_join_clause_basic() {
     use crate::query::operators::Operator;

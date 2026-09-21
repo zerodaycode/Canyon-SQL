@@ -150,7 +150,7 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for LikeKind {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "postgres"))]
 mod tests {
     use super::*;
 

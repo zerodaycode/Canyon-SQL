@@ -84,28 +84,37 @@ pub(crate) mod __impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "postgres", feature = "mssql")))]
 mod tests {
+    #[cfg(feature = "postgres")]
     use crate::query::operators::Operator;
+    #[cfg(feature = "postgres")]
     use crate::query::querybuilder::syntax::clause::{ConditionClause, ConditionClauseKind};
+    #[cfg(feature = "mssql")]
     use crate::query::querybuilder::syntax::dialect::MsSql;
+    #[cfg(feature = "postgres")]
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
     use crate::query::querybuilder::syntax::emitter::EmitStep;
+    #[cfg(feature = "postgres")]
     use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
     use crate::query::querybuilder::syntax::{
-        ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, dialect::PgDialect,
-        emitter::SqlEmitter,
+        ast::BaseAst, ast::update::UpdateAst, column::ColumnRef, emitter::SqlEmitter,
     };
 
+    #[cfg(feature = "postgres")]
     #[derive(Default)]
     struct TestUpdateEmitter;
+    #[cfg(feature = "postgres")]
     impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitter {
         type Dialect = PgDialect;
         const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] = update_default_plan!(Self::Dialect);
     }
 
+    #[cfg(feature = "mssql")]
     #[derive(Default)]
     struct TestUpdateEmitterMsSql;
+    #[cfg(feature = "mssql")]
     impl<'a> SqlEmitter<'a, UpdateAst<'a>> for TestUpdateEmitterMsSql {
         type Dialect = MsSql;
         const PLAN: &'a [EmitStep<'a, UpdateAst<'a>>] = update_default_plan!(Self::Dialect);
@@ -115,18 +124,21 @@ mod tests {
         ColumnRef::from(name)
     }
 
+    #[cfg(feature = "postgres")]
     fn render_standard<'a>(ast: &UpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitter;
         let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<PgDialect>(tokens).unwrap()
     }
 
+    #[cfg(feature = "mssql")]
     fn render_mssql<'a>(ast: &UpdateAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestUpdateEmitterMsSql;
         let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<MsSql>(tokens).unwrap()
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_update_with_single_set_column() {
         let ast = UpdateAst {
@@ -139,6 +151,7 @@ mod tests {
         assert_eq!(sql, "UPDATE \"users\" SET \"name\" = $1;");
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_update_with_multiple_set_columns() {
         let ast = UpdateAst {
@@ -155,6 +168,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_update_with_where_conditions() {
         let ast = UpdateAst {
@@ -178,6 +192,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "mssql")]
     #[test]
     fn emits_update_in_mssql_with_dialect_specific_identifiers_and_placeholders() {
         let ast = UpdateAst {
@@ -191,6 +206,7 @@ mod tests {
         assert_eq!(sql, "UPDATE [users] SET [name] = @P1, [email] = @P2;");
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn preserves_placeholder_sequence_between_set_and_where() {
         let ast = UpdateAst {

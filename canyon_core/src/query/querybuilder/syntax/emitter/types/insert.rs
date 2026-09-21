@@ -98,27 +98,30 @@ pub(crate) mod __impl {
 #[cfg(any(feature = "postgres", feature = "mysql"))]
 pub(crate) use insert_default_plan;
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "postgres", feature = "mysql")))]
 mod tests {
+    #[cfg(feature = "mysql")]
+    use crate::query::querybuilder::syntax::dialect::MySql;
+    #[cfg(feature = "postgres")]
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
     use crate::query::querybuilder::syntax::{
-        ast::BaseAst,
-        ast::insert::InsertAst,
-        column::ColumnRef,
-        dialect::{MySql, PgDialect},
-        emitter::EmitStep,
-        emitter::SqlEmitter,
-        writer::TokenWriter,
+        ast::BaseAst, ast::insert::InsertAst, column::ColumnRef, emitter::EmitStep,
+        emitter::SqlEmitter, writer::TokenWriter,
     };
 
+    #[cfg(feature = "postgres")]
     #[derive(Default)]
     struct TestInsertEmitter;
+    #[cfg(feature = "postgres")]
     impl<'a> SqlEmitter<'a, InsertAst<'a>> for TestInsertEmitter {
         type Dialect = PgDialect;
         const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = insert_default_plan!(Self::Dialect);
     }
 
+    #[cfg(feature = "mysql")]
     #[derive(Default)]
     struct TestInsertEmitterNoReturning;
+    #[cfg(feature = "mysql")]
     impl<'a> SqlEmitter<'a, InsertAst<'a>> for TestInsertEmitterNoReturning {
         type Dialect = MySql;
         const PLAN: &'a [EmitStep<'a, InsertAst<'a>>] = insert_default_plan!(Self::Dialect);
@@ -128,18 +131,21 @@ mod tests {
         ColumnRef::from(name)
     }
 
+    #[cfg(feature = "postgres")]
     fn render_with_returning<'a>(ast: &InsertAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestInsertEmitter;
         let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<PgDialect>(tokens).unwrap()
     }
 
+    #[cfg(feature = "mysql")]
     fn render_without_returning<'a>(ast: &InsertAst<'a>, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestInsertEmitterNoReturning;
         let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<MySql>(tokens).unwrap()
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_insert_columns_values_and_returning_when_supported() {
         let ast = InsertAst {
@@ -156,6 +162,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "mysql")]
     #[test]
     fn omits_returning_when_dialect_does_not_support_it() {
         let ast = InsertAst {
@@ -172,6 +179,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_multiple_returning_columns_when_supported() {
         let ast = InsertAst {
@@ -188,6 +196,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn does_not_emit_returning_keyword_when_returning_columns_are_empty_and_dialect_supports_returning()
      {

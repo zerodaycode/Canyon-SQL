@@ -123,15 +123,19 @@ pub(crate) fn emit_table<'a, D: SqlDialect>(table: &TableMetadata<'a>, tokens: &
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::query::querybuilder::syntax::{
-        dialect::{IdentQuotingStyle, MsSql, MySql, PgDialect, PlaceholderSymbol},
-        tokens::SqlToken,
-    };
+    #[cfg(feature = "mysql")]
+    use crate::query::querybuilder::syntax::dialect::MySql;
+    #[cfg(feature = "postgres")]
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
+    #[cfg(feature = "mssql")]
+    use crate::query::querybuilder::syntax::dialect::{MsSql, PlaceholderSymbol};
+    use crate::query::querybuilder::syntax::{dialect::IdentQuotingStyle, tokens::SqlToken};
 
     fn make_column(column: &'_ str) -> ColumnRef<'_> {
         ColumnRef::from(column)
     }
 
+    #[cfg(any(feature = "postgres", feature = "mysql"))]
     fn make_qualified_column<'a>(
         table: &'a str,
         column: &'a str,
@@ -152,6 +156,7 @@ mod tests {
         assert_eq!(D::IDENT_QUOTING.closing().to_string(), expected_closing);
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn standard_dialect_uses_double_quotes_for_identifiers() {
         assert_eq!(PgDialect::IDENT_QUOTING, IdentQuotingStyle::DoubleQuote);
@@ -179,6 +184,7 @@ mod tests {
         assert_ident_quoting_contract::<MsSql>("[", "]");
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn push_quoted_ident_with_standard_dialect() {
         let mut tokens = SqlTokens::default();
@@ -240,6 +246,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emit_qualified_columns_with_empty_vec_emits_asterisk() {
         let columns = vec![];
@@ -248,6 +255,7 @@ mod tests {
         assert_eq!(tokens.inner(), vec![SqlToken::Symbol(Symbol::Asterisk)]);
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emit_qualified_columns_with_one_column_quotes_only_column_name_and_emit_column_alias() {
         let columns = vec![make_qualified_column("user", "name", Some("username"))];
@@ -259,6 +267,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emit_qualified_columns_with_many_columns_separates_with_comma_and_space() {
         let columns = vec![
@@ -306,6 +315,7 @@ mod tests {
         );
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emit_qualified_columns_ignores_table_and_alias_and_only_emits_column_names() {
         let columns = vec![

@@ -175,7 +175,7 @@ pub(crate) mod __impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "postgres"))]
 mod tests {
     use crate::query::{
         operators::Operator,

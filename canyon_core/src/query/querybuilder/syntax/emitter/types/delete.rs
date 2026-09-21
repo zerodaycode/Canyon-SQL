@@ -81,45 +81,57 @@ pub(crate) mod __impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, any(feature = "postgres", feature = "mssql")))]
 mod tests {
+    #[cfg(feature = "mssql")]
+    use crate::query::querybuilder::syntax::dialect::MsSql;
+    #[cfg(feature = "postgres")]
+    use crate::query::querybuilder::syntax::dialect::PgDialect;
     use crate::query::querybuilder::syntax::emitter::EmitStep;
+    #[cfg(feature = "postgres")]
+    use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::{
         ast::{BaseAst, delete::DeleteAst},
-        dialect::{MsSql, PgDialect},
-        emitter::{SqlEmitter, types::helpers::Range},
+        emitter::SqlEmitter,
         writer::TokenWriter,
     };
 
+    #[cfg(feature = "postgres")]
     #[derive(Default)]
     struct TestDeleteEmitter;
 
+    #[cfg(feature = "postgres")]
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitter {
         type Dialect = PgDialect;
 
         const PLAN: &'a [EmitStep<'a, DeleteAst>] = delete_default_plan!(Self::Dialect);
     }
 
+    #[cfg(feature = "mssql")]
     #[derive(Default)]
     struct TestDeleteEmitterMsSql;
+    #[cfg(feature = "mssql")]
     impl<'a> SqlEmitter<'a, DeleteAst> for TestDeleteEmitterMsSql {
         type Dialect = MsSql;
 
         const PLAN: &'a [EmitStep<'a, DeleteAst>] = delete_default_plan!(Self::Dialect);
     }
 
+    #[cfg(feature = "postgres")]
     fn render_standard<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestDeleteEmitter;
         let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<PgDialect>(tokens).unwrap()
     }
 
+    #[cfg(feature = "mssql")]
     fn render_mssql<'a>(ast: &DeleteAst, base_ast: &mut BaseAst<'a>) -> String {
         let mut emitter = TestDeleteEmitterMsSql;
         let tokens = emitter.emit(ast, base_ast);
         TokenWriter::new().render::<MsSql>(tokens).unwrap()
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_delete_from_table_without_conditions() {
         let ast = DeleteAst::default();
@@ -130,6 +142,7 @@ mod tests {
         assert_eq!(sql.trim(), "DELETE FROM \"users\";");
     }
 
+    #[cfg(feature = "mssql")]
     #[test]
     fn emits_delete_from_table_without_conditions_in_mssql() {
         let ast = DeleteAst::default();
@@ -140,6 +153,7 @@ mod tests {
         assert_eq!(sql.trim(), "DELETE FROM [users];");
     }
 
+    #[cfg(feature = "postgres")]
     #[test]
     fn emits_delete_with_where_condition() {
         use crate::query::operators::Operator;
