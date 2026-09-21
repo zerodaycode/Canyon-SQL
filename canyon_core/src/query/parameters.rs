@@ -33,30 +33,6 @@ impl<'a> QueryParameterValue<'a> for &'a dyn QueryParameter {
     }
 }
 
-// Define a zero-sized type to represent the absence of a primary key
-// #[derive(Debug, Clone, Copy)]
-// pub struct NoPrimaryKey;
-//
-// // Implement the QueryParameter trait for the zero-sized type
-// impl QueryParameter for NoPrimaryKey {
-//     fn as_any(&'a self) -> &'a dyn Any {
-//         todo!()
-//     }
-//
-//     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
-//         todo!()
-//     }
-//
-//     fn as_sqlserver_param(&self) -> ColumnData<'_> {
-//         todo!()
-//     }
-//
-//     fn as_mysql_param(&self) -> &dyn ToValue {
-//         todo!()
-//     }
-// }
-//
-
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
 pub trait QueryParameter: Debug + Send + Sync {
