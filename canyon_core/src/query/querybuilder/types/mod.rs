@@ -29,9 +29,6 @@ pub struct QueryBuilder<'a, P: BackendEmittable<'a> + 'a> {
     pub(crate) params: Vec<&'a dyn QueryParameter>,
 }
 
-unsafe impl<'a, P: BackendEmittable<'a>> Send for QueryBuilder<'a, P> {}
-unsafe impl<'a, P: BackendEmittable<'a>> Sync for QueryBuilder<'a, P> {}
-
 impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
     pub fn new(
         table_metadata: impl Into<TableMetadata<'a>>,
@@ -136,6 +133,21 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
     pub fn or<Z: FieldValueIdentifier>(&mut self, r#or: &'a Z, operator: Operator) {
         self.params.push(or.value());
         __impl::create_condition_clause(self, ConditionClauseKind::Or, or.column(), operator);
+    }
+}
+
+#[cfg(test)]
+mod thread_safety_tests {
+    use super::{DeleteQueryBuilder, InsertQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder};
+
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    #[test]
+    fn built_in_query_builders_are_send_and_sync_without_manual_unsafe_impls() {
+        assert_send_sync::<DeleteQueryBuilder<'static>>();
+        assert_send_sync::<InsertQueryBuilder<'static>>();
+        assert_send_sync::<SelectQueryBuilder<'static>>();
+        assert_send_sync::<UpdateQueryBuilder<'static>>();
     }
 }
 

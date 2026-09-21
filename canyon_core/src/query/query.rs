@@ -22,9 +22,6 @@ impl AsRef<str> for Query<'_> {
     }
 }
 
-unsafe impl Send for Query<'_> {}
-unsafe impl Sync for Query<'_> {}
-
 impl<'a> Query<'a> {
     /// Constructs a new [`Self`] but receiving the number of expected query parameters, allowing
     /// to pre-allocate the underlying linear collection that holds the arguments to the exact capacity,
@@ -81,3 +78,15 @@ impl<'a> Query<'a> {
 }
 
 impl<'a> Transaction for Query<'a> {}
+
+#[cfg(test)]
+mod tests {
+    use super::Query;
+
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    #[test]
+    fn query_is_send_and_sync_without_manual_unsafe_impls() {
+        assert_send_sync::<Query<'static>>();
+    }
+}

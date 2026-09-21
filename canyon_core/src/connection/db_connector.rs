@@ -25,9 +25,6 @@ pub enum DatabaseConnector {
     MySQL(MySQLConnector),
 }
 
-unsafe impl Send for DatabaseConnector {}
-unsafe impl Sync for DatabaseConnector {}
-
 crate::impl_db_connection_for_db_connector!(DatabaseConnector);
 crate::impl_db_connection_for_db_connector!(&DatabaseConnector);
 crate::impl_db_connection_for_db_connector!(&mut DatabaseConnector);
@@ -60,5 +57,17 @@ impl DatabaseConnector {
             #[cfg(feature = "mysql")]
             DatabaseConnector::MySQL(_) => DatabaseType::MySQL,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DatabaseConnector;
+
+    fn assert_send_sync<T: Send + Sync>() {}
+
+    #[test]
+    fn database_connector_is_send_and_sync_without_manual_unsafe_impls() {
+        assert_send_sync::<DatabaseConnector>();
     }
 }
