@@ -135,10 +135,7 @@ pub(crate) mod mysql_query_launcher {
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
     ) -> Result<MySqlGeneratedStmt, Box<dyn Error + Send + Sync>> {
-        let params = params
-            .iter()
-            .map(|param| param.as_mysql_param().to_value())
-            .collect();
+        let params = params.iter().map(|param| param.as_mysql_param()).collect();
 
         Ok(MySqlGeneratedStmt {
             stmt: QueryWithParams {

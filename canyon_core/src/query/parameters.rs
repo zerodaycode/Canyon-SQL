@@ -1,5 +1,5 @@
 #[cfg(feature = "mysql")]
-use mysql_async::{self, prelude::ToValue};
+use mysql_async::{self, Value, prelude::ToValue};
 use std::any::Any;
 use std::fmt::Debug;
 #[cfg(feature = "mssql")]
@@ -20,7 +20,7 @@ pub trait QueryParameter: Debug + Send + Sync {
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_>;
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue;
+    fn as_mysql_param(&self) -> Value;
 }
 
 /// The implementation of the [`crate::connection::tiberius`] [`IntoSql`] for the
@@ -54,8 +54,8 @@ impl QueryParameter for bool {
         ColumnData::Bit(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -73,8 +73,8 @@ impl QueryParameter for i16 {
         ColumnData::I16(Option::from(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -92,8 +92,8 @@ impl QueryParameter for Option<&'static i16> {
         ColumnData::I16(Some(*self.unwrap()))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -111,8 +111,8 @@ impl QueryParameter for i32 {
         ColumnData::I32(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -130,8 +130,8 @@ impl QueryParameter for Option<i32> {
         ColumnData::I32(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -149,8 +149,8 @@ impl QueryParameter for u32 {
         panic!("Unsupported sqlserver parameter type <u32>");
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -168,8 +168,8 @@ impl QueryParameter for Option<u32> {
         panic!("Unsupported sqlserver parameter type <u32>");
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -187,8 +187,8 @@ impl QueryParameter for f32 {
         ColumnData::F32(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -206,8 +206,8 @@ impl QueryParameter for Option<f32> {
         ColumnData::F32(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -225,8 +225,8 @@ impl QueryParameter for f64 {
         ColumnData::F64(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -244,8 +244,8 @@ impl QueryParameter for Option<f64> {
         ColumnData::F64(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -263,8 +263,8 @@ impl QueryParameter for i64 {
         ColumnData::I64(Some(*self))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -282,8 +282,8 @@ impl QueryParameter for Option<i64> {
         ColumnData::I64(*self)
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -301,8 +301,8 @@ impl QueryParameter for String {
         ColumnData::String(Some(std::borrow::Cow::Owned(self.to_owned())))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -323,8 +323,8 @@ impl QueryParameter for Option<String> {
         }
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -345,8 +345,8 @@ impl QueryParameter for Option<&'static String> {
         }
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -364,8 +364,8 @@ impl QueryParameter for &'static str {
         ColumnData::String(Some(std::borrow::Cow::Borrowed(self)))
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -386,8 +386,8 @@ impl QueryParameter for Option<&'static str> {
         }
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -405,8 +405,8 @@ impl QueryParameter for NaiveDate {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -424,8 +424,8 @@ impl QueryParameter for Option<NaiveDate> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -443,8 +443,8 @@ impl QueryParameter for NaiveTime {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -462,8 +462,8 @@ impl QueryParameter for Option<NaiveTime> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -481,8 +481,8 @@ impl QueryParameter for NaiveDateTime {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn mysql_async::prelude::ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
@@ -500,12 +500,11 @@ impl QueryParameter for Option<NaiveDateTime> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        self
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
     }
 }
 
-//TODO pending
 impl QueryParameter for DateTime<FixedOffset> {
     fn as_any(&'_ self) -> &'_ dyn Any {
         self
@@ -520,8 +519,8 @@ impl QueryParameter for DateTime<FixedOffset> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        todo!()
+    fn as_mysql_param(&self) -> Value {
+        self.naive_utc().to_value()
     }
 }
 
@@ -539,8 +538,8 @@ impl QueryParameter for Option<DateTime<FixedOffset>> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        todo!()
+    fn as_mysql_param(&self) -> Value {
+        self.as_ref().map(DateTime::naive_utc).to_value()
     }
 }
 
@@ -558,8 +557,8 @@ impl QueryParameter for DateTime<Utc> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        todo!()
+    fn as_mysql_param(&self) -> Value {
+        self.naive_utc().to_value()
     }
 }
 
@@ -577,7 +576,35 @@ impl QueryParameter for Option<DateTime<Utc>> {
         self.into_sql()
     }
     #[cfg(feature = "mysql")]
-    fn as_mysql_param(&self) -> &dyn ToValue {
-        todo!()
+    fn as_mysql_param(&self) -> Value {
+        self.as_ref().map(DateTime::naive_utc).to_value()
+    }
+}
+
+#[cfg(all(test, feature = "mysql"))]
+mod tests {
+    use super::QueryParameter;
+    use chrono::{DateTime, FixedOffset, TimeZone, Utc};
+    use mysql_async::Value;
+
+    #[test]
+    fn mysql_datetime_parameters_are_normalized_to_utc() {
+        let fixed_offset = FixedOffset::east_opt(2 * 60 * 60).unwrap();
+        let fixed_datetime = fixed_offset
+            .with_ymd_and_hms(2024, 1, 2, 3, 4, 5)
+            .single()
+            .unwrap();
+        let utc_datetime = Utc.with_ymd_and_hms(2024, 1, 2, 1, 4, 5).unwrap();
+        let expected = Value::Date(2024, 1, 2, 1, 4, 5, 0);
+
+        assert_eq!(fixed_datetime.as_mysql_param(), expected);
+        assert_eq!(utc_datetime.as_mysql_param(), expected);
+        assert_eq!(Some(fixed_datetime).as_mysql_param(), expected);
+        assert_eq!(Some(utc_datetime).as_mysql_param(), expected);
+
+        let no_fixed_datetime: Option<DateTime<FixedOffset>> = None;
+        let no_utc_datetime: Option<DateTime<Utc>> = None;
+        assert_eq!(no_fixed_datetime.as_mysql_param(), Value::NULL);
+        assert_eq!(no_utc_datetime.as_mysql_param(), Value::NULL);
     }
 }
