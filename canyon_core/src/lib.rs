@@ -30,6 +30,8 @@ pub mod column;
 #[cfg(any(feature = "postgres", feature = "mysql", feature = "mssql"))]
 pub mod connection;
 #[cfg(any(feature = "postgres", feature = "mysql", feature = "mssql"))]
+pub mod error;
+#[cfg(any(feature = "postgres", feature = "mysql", feature = "mssql"))]
 pub mod mapper;
 #[cfg(any(feature = "postgres", feature = "mysql", feature = "mssql"))]
 pub mod query;

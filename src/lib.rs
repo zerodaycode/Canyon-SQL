@@ -16,9 +16,15 @@ pub mod migrations {
     pub use canyon_migrations::migrations::{handler, processor};
 }
 
+pub use canyon_core::error::{CanyonError, CanyonResult};
 /// The top level reexport. Here we define the path to some really important
 /// things in `Canyon-SQL`, like the `main` macro, the IT macro.
 pub use canyon_macros::main;
+
+/// Typed errors returned by Canyon-SQL.
+pub mod error {
+    pub use canyon_core::error::*;
+}
 
 /// Public API for the `Canyon-SQL` proc-macros, and for the external ones
 pub mod macros {
@@ -35,6 +41,7 @@ pub mod connection {
 
 pub mod core {
     pub use canyon_core::canyon::Canyon;
+    pub use canyon_core::error::*;
     pub use canyon_core::mapper::*;
     pub use canyon_core::rows::CanyonRows;
     pub use canyon_core::transaction::Transaction;

@@ -12,7 +12,7 @@ use tiberius::{self};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self};
 
-use crate::mapper::{CanyonError, RowMapper};
+use crate::mapper::{CanyonResult, RowMapper};
 use crate::row::Row;
 
 /// Lightweight wrapper over the collection of results of the different crates
@@ -71,7 +71,7 @@ impl CanyonRows {
     }
 
     /// Maps the first row, preserving the distinction between an empty result and a mapping error.
-    pub fn first<T: RowMapper>(&self) -> Result<Option<T::Output>, CanyonError> {
+    pub fn first<T: RowMapper>(&self) -> CanyonResult<Option<T::Output>> {
         match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(v) => v.first().map(|r| T::deserialize_postgresql(r)),
@@ -111,10 +111,9 @@ impl CanyonRows {
 #[cfg(all(test, feature = "mysql"))]
 mod tests {
     use super::CanyonRows;
-    use crate::mapper::{CanyonError, RowMapper};
+    use crate::mapper::{CanyonError, MappingError, RowMapper};
     use mysql_async::Row;
     use mysql_common::row;
-    use std::io;
     use std::sync::Arc;
 
     struct SuccessfulMapper;
@@ -158,7 +157,7 @@ mod tests {
     }
 
     fn mapping_error() -> CanyonError {
-        io::Error::new(io::ErrorKind::InvalidData, "could not map row").into()
+        MappingError::custom("could not map row").into()
     }
 
     fn empty_mysql_row() -> Row {

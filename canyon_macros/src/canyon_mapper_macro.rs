@@ -7,8 +7,6 @@ use regex::Regex;
 use syn::{DeriveInput, Type, Visibility};
 
 use crate::utils::macro_tokens::MacroTokens;
-use canyon_core::connection::database_type::DatabaseType;
-
 #[cfg(feature = "mssql")]
 use quote::ToTokens;
 
@@ -42,7 +40,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         mapper_methods.extend(quote! {
             fn deserialize_postgresql(
                 row: &canyon_sql::db_clients::tokio_postgres::Row,
-            ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> canyon_sql::core::CanyonResult<Self::Output> {
                 Ok(Self {
                     #(#field_mappings),*
                 })
@@ -57,7 +55,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         mapper_methods.extend(quote! {
             fn deserialize_sqlserver(
                 row: &canyon_sql::db_clients::tiberius::Row,
-            ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> canyon_sql::core::CanyonResult<Self::Output> {
                 Ok(Self {
                     #(#field_mappings),*
                 })
@@ -72,7 +70,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         mapper_methods.extend(quote! {
             fn deserialize_mysql(
                 row: &canyon_sql::db_clients::mysql_async::Row,
-            ) -> Result<Self::Output, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> canyon_sql::core::CanyonResult<Self::Output> {
                 Ok(Self {
                     #(#field_mappings),*
                 })
@@ -105,13 +103,15 @@ fn create_postgres_fields_mapping<'a>(
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(move |(_, ident, field_type)| {
         let column_name = ident.to_string();
-        let error =
-            create_row_mapper_error_extracting_row(ident, entity_name, DatabaseType::PostgreSql);
 
         quote! {
             #ident: row
                 .try_get::<&str, #field_type>(#column_name)
-                .map_err(|_| #error)?
+                .map_err(|source| canyon_sql::core::MappingError::postgres(
+                    #entity_name,
+                    #column_name,
+                    source,
+                ))?
         }
     })
 }
@@ -123,12 +123,20 @@ fn create_mysql_fields_mapping<'a>(
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(move |(_, ident, _)| {
         let column_name = ident.to_string();
-        let error = create_row_mapper_error_extracting_row(ident, entity_name, DatabaseType::MySQL);
 
         quote! {
             #ident: row
                 .get_opt(#column_name)
-                .ok_or_else(|| #error)??
+                .ok_or_else(|| canyon_sql::core::MappingError::column_not_found(
+                    #entity_name,
+                    #column_name,
+                    canyon_sql::connection::DatabaseType::MySQL,
+                ))?
+                .map_err(|source| canyon_sql::core::MappingError::mysql(
+                    #entity_name,
+                    #column_name,
+                    source,
+                ))?
         }
     })
 }
@@ -140,12 +148,10 @@ fn create_sqlserver_fields_mapping<'a>(
 ) -> impl Iterator<Item = TokenStream> + use<'a> {
     fields.iter().map(move |(_, ident, field_type)| {
         let column_name = ident.to_string();
-        let error =
-            create_row_mapper_error_extracting_row(ident, entity_name, DatabaseType::SqlServer);
 
         let target_type = get_field_type_as_string(field_type);
         let deserialization =
-            create_tiberius_field_deserialization(&target_type, &column_name, error);
+            create_tiberius_field_deserialization(entity_name, &target_type, &column_name);
 
         quote! {
             #ident: #deserialization
@@ -160,16 +166,22 @@ fn create_sqlserver_fields_mapping<'a>(
 /// owned values.
 #[cfg(feature = "mssql")]
 fn create_tiberius_field_deserialization(
+    entity_name: &str,
     target_type: &str,
     column_name: &str,
-    error: String,
 ) -> TokenStream {
     let is_optional = target_type.contains("Option");
 
     let require_value = if is_optional {
         quote! {}
     } else {
-        quote! { .ok_or_else(|| #error)? }
+        quote! {
+            .ok_or_else(|| canyon_sql::core::MappingError::unexpected_null(
+                #entity_name,
+                #column_name,
+                canyon_sql::connection::DatabaseType::SqlServer,
+            ))?
+        }
     };
 
     let deserializing_type = get_deserializing_type(target_type);
@@ -188,7 +200,12 @@ fn create_tiberius_field_deserialization(
     };
 
     quote! {
-        row.get::<#deserializing_type, &str>(#column_name)
+        row.try_get::<#deserializing_type, &str>(#column_name)
+            .map_err(|source| canyon_sql::core::MappingError::sql_server(
+                #entity_name,
+                #column_name,
+                source,
+            ))?
             #require_value
             #convert_to_owned
     }
@@ -229,17 +246,6 @@ fn get_deserializing_type(target_type: &str) -> TokenStream {
 #[cfg(feature = "mssql")]
 fn get_field_type_as_string(field_type: &Type) -> String {
     field_type.to_token_stream().to_string()
-}
-
-fn create_row_mapper_error_extracting_row(
-    field_ident: &Ident,
-    entity_name: &str,
-    database_type: DatabaseType,
-) -> String {
-    std::io::Error::other(format!(
-        "Failed to retrieve field `{field_ident}` for entity `{entity_name}` using {database_type}"
-    ))
-    .to_string()
 }
 
 #[cfg(all(test, feature = "mssql"))]
