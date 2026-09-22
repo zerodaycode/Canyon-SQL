@@ -22,9 +22,6 @@ pub struct CanyonEntity {
     pub attrs: Vec<Attribute>,
 }
 
-unsafe impl Send for CanyonEntity {}
-unsafe impl Sync for CanyonEntity {}
-
 impl CanyonEntity {
     /// Returns the database table name explicitly configured for the entity, or
     /// the name inferred from the Rust type when no override was provided.
