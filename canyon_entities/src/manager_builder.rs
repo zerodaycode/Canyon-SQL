@@ -1,5 +1,4 @@
 use super::entity::CanyonEntity;
-use crate::helpers;
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::{Attribute, Generics, Visibility};
@@ -24,7 +23,7 @@ pub fn generate_user_struct(canyon_entity: &CanyonEntity) -> TokenStream {
 pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> TokenStream {
     let struct_name = canyon_entity.struct_name.to_string();
     let enum_name = Ident::new(&(String::from(&struct_name) + "Table"), Span::call_site());
-    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name); // TODO: same as the other to-do, we need some way of know what's the db name if it's changed in the canyon_entity macro
+    let db_target_table_name = canyon_entity.database_table_name();
 
     let generics = &canyon_entity.generics;
     let visibility = &canyon_entity.vis;
@@ -96,7 +95,7 @@ pub fn generated_enum_type_for_struct_data(canyon_entity: &CanyonEntity) -> Toke
 /// of the field name.
 pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
     let struct_name = canyon_entity.struct_name.to_string();
-    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name); // TODO: this could be a bug, because the macros may let the user change the target table name, so it won't be accurate here
+    let db_target_table_name = canyon_entity.database_table_name();
 
     let enum_name = Ident::new((struct_name + "Field").as_str(), Span::call_site());
 
@@ -174,7 +173,7 @@ pub fn generate_enum_with_fields(canyon_entity: &CanyonEntity) -> TokenStream {
 /// that the field that the variant represents
 pub fn generate_enum_with_fields_values(canyon_entity: &CanyonEntity) -> TokenStream {
     let struct_name = canyon_entity.struct_name.to_string();
-    let db_target_table_name = helpers::default_database_table_name_from_entity_name(&struct_name); // TODO: this could be a bug, because the macros may let the user change the target table name, so it won't be accurate here
+    let db_target_table_name = canyon_entity.database_table_name();
     let enum_name = Ident::new((struct_name + "FieldValue").as_str(), Span::call_site());
 
     let fields_names = &canyon_entity.get_fields_as_enum_variants_with_value();
@@ -264,5 +263,46 @@ mod __detail {
                 #enum_ident::#field_ident(v) => v as &dyn canyon_sql::query::QueryParameter
             }
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        generate_enum_with_fields, generate_enum_with_fields_values,
+        generated_enum_type_for_struct_data,
+    };
+    use crate::entity::CanyonEntity;
+    use quote::quote;
+
+    fn entity_with_custom_table_name() -> CanyonEntity {
+        syn::parse2(quote! {
+            #[canyon_entity(table_name = "actual_table")]
+            pub struct RustEntity {
+                pub id: i32,
+            }
+        })
+        .expect("the test entity must parse")
+    }
+
+    #[test]
+    fn generated_metadata_uses_custom_table_name() {
+        let entity = entity_with_custom_table_name();
+
+        for generated in [
+            generated_enum_type_for_struct_data(&entity),
+            generate_enum_with_fields(&entity),
+            generate_enum_with_fields_values(&entity),
+        ] {
+            let generated = generated.to_string();
+            assert!(
+                generated.contains("actual_table"),
+                "generated metadata ignored the custom table name: {generated}"
+            );
+            assert!(
+                !generated.contains("rust_entity"),
+                "generated metadata fell back to the inferred table name: {generated}"
+            );
+        }
     }
 }

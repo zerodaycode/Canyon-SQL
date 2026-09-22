@@ -26,6 +26,16 @@ unsafe impl Send for CanyonEntity {}
 unsafe impl Sync for CanyonEntity {}
 
 impl CanyonEntity {
+    /// Returns the database table name explicitly configured for the entity, or
+    /// the name inferred from the Rust type when no override was provided.
+    pub fn database_table_name(&self) -> String {
+        self.user_table_name.clone().unwrap_or_else(|| {
+            super::helpers::default_database_table_name_from_entity_name(
+                &self.struct_name.to_string(),
+            )
+        })
+    }
+
     /// Generates as many variants for the enum as fields has the type
     /// which this enum is related to, and that type it's the entity
     /// stored in [`CanyonEntity`]
@@ -147,6 +157,23 @@ impl Parse for CanyonEntity {
     fn parse(input: &ParseBuffer) -> syn::Result<Self> {
         let _struct = input.parse::<ItemStruct>()?;
 
+        let mut user_table_name = None;
+        let mut user_schema_name = None;
+        for attr in &_struct.attrs {
+            if !attr.path().is_ident("canyon_entity") {
+                continue;
+            }
+
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("table_name") {
+                    user_table_name = Some(meta.value()?.parse::<LitStr>()?.value());
+                } else if meta.path.is_ident("schema") {
+                    user_schema_name = Some(meta.value()?.parse::<LitStr>()?.value());
+                }
+                Ok(())
+            })?;
+        }
+
         // Retrieve the struct fields
         let mut parsed_fields: Vec<EntityField> = Vec::new();
         for field in _struct.fields {
@@ -156,8 +183,8 @@ impl Parse for CanyonEntity {
 
         Ok(Self {
             struct_name: _struct.ident,
-            user_table_name: None,
-            user_schema_name: None,
+            user_table_name,
+            user_schema_name,
             vis: _struct.vis,
             generics: _struct.generics,
             fields: parsed_fields,
