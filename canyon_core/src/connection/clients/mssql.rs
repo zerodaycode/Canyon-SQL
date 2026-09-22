@@ -187,10 +187,10 @@ pub(crate) mod sqlserver_query_launcher {
 
 pub(crate) mod __impl {
     use super::*;
-    use crate::connection::datasources::{Auth, SqlServerAuth};
+    use crate::connection::datasources::{Auth, SqlServerAuth, SqlServerTlsMode};
     use bb8::Pool;
     use std::sync::Arc;
-    use tiberius::Config;
+    use tiberius::{Config, EncryptionLevel};
 
     pub(crate) async fn create_sqlserver_connector(
         datasource: &DatasourceConfig,
@@ -214,12 +214,23 @@ pub(crate) mod __impl {
 
         let auth_config = extract_mssql_auth(&datasource.auth)?;
         tiberius_config.authentication(auth_config);
-        tiberius_config.trust_cert(); // TODO: this should be specifically set via user input
-        tiberius_config.encryption(tiberius::EncryptionLevel::NotSupported); // TODO: user input
-        // TODO: in MacOS 15, this is the actual workaround. We need to investigate further
-        // https://github.com/prisma/tiberius/issues/364
+
+        let (encryption, trust_server_certificate) =
+            sqlserver_tls_options(datasource.properties.mssql_tls);
+        tiberius_config.encryption(encryption);
+        if trust_server_certificate {
+            tiberius_config.trust_cert();
+        }
 
         Ok(tiberius_config)
+    }
+
+    pub(crate) const fn sqlserver_tls_options(mode: SqlServerTlsMode) -> (EncryptionLevel, bool) {
+        match mode {
+            SqlServerTlsMode::Required => (EncryptionLevel::Required, false),
+            SqlServerTlsMode::TrustServerCertificate => (EncryptionLevel::Required, true),
+            SqlServerTlsMode::Disabled => (EncryptionLevel::NotSupported, false),
+        }
     }
 
     pub(crate) fn extract_mssql_auth(
@@ -240,9 +251,9 @@ pub(crate) mod __impl {
 mod tests {
     use super::__impl;
     use crate::connection::datasources::{
-        Auth, DatasourceConfig, DatasourceProperties, SqlServerAuth,
+        Auth, DatasourceConfig, DatasourceProperties, SqlServerAuth, SqlServerTlsMode,
     };
-    use tiberius::AuthMethod;
+    use tiberius::{AuthMethod, EncryptionLevel};
 
     #[test]
     fn test_extract_mssql_auth_basic() {
@@ -269,6 +280,7 @@ mod tests {
                 db_name: "test_db".into(),
                 port: None, // default
                 migrations: None,
+                mssql_tls: SqlServerTlsMode::Required,
             },
             auth: Auth::SqlServer(SqlServerAuth::Basic {
                 username: "sa".into(),
@@ -278,5 +290,21 @@ mod tests {
 
         let config = __impl::sqlserver_config_from_datasource(&datasource).unwrap();
         assert_eq!(config.get_addr(), "localhost:1433");
+    }
+
+    #[test]
+    fn sqlserver_tls_modes_map_to_secure_explicit_options() {
+        assert_eq!(
+            __impl::sqlserver_tls_options(SqlServerTlsMode::Required),
+            (EncryptionLevel::Required, false)
+        );
+        assert_eq!(
+            __impl::sqlserver_tls_options(SqlServerTlsMode::TrustServerCertificate),
+            (EncryptionLevel::Required, true)
+        );
+        assert_eq!(
+            __impl::sqlserver_tls_options(SqlServerTlsMode::Disabled),
+            (EncryptionLevel::NotSupported, false)
+        );
     }
 }

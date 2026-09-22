@@ -22,6 +22,7 @@ sqlserver = { basic = { username = 'sa', password = 'SqlServer-10' } }
 host = 'localhost'
 port = 1434
 db_name = 'master'
+mssql_tls = 'disabled'
 
 
 [[canyon_sql.datasources]]

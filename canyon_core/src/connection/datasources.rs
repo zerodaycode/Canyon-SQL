@@ -186,6 +186,23 @@ pub enum SqlServerAuth {
     Basic { username: String, password: String },
 }
 
+/// TLS policy for connections managed by the SQL Server connector.
+#[cfg(feature = "mssql")]
+#[derive(Deserialize, Debug, Default, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SqlServerTlsMode {
+    /// Require encryption and validate the server certificate against the system trust store.
+    #[default]
+    #[serde(alias = "Required")]
+    Required,
+    /// Require encryption but accept the server certificate without validating it.
+    #[serde(alias = "TrustServerCertificate", alias = "trust-server-certificate")]
+    TrustServerCertificate,
+    /// Disable encryption. Intended only for explicitly configured local test environments.
+    #[serde(alias = "Disabled")]
+    Disabled,
+}
+
 #[cfg(feature = "mysql")]
 #[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum MySQLAuth {
@@ -199,6 +216,10 @@ pub struct DatasourceProperties {
     pub port: Option<u16>,
     pub db_name: String,
     pub migrations: Option<Migrations>,
+    /// SQL Server TLS policy. Missing values default to [`SqlServerTlsMode::Required`].
+    #[cfg(feature = "mssql")]
+    #[serde(default)]
+    pub mssql_tls: SqlServerTlsMode,
 }
 
 /// Represents the enabled or disabled migrations for a whole datasource.
@@ -214,5 +235,61 @@ pub enum Migrations {
 impl Migrations {
     pub fn has_migrations_enabled(&self) -> bool {
         matches!(self, Self::Enabled)
+    }
+}
+
+#[cfg(all(test, feature = "mssql"))]
+mod tests {
+    use super::{CanyonSqlConfig, SqlServerTlsMode};
+
+    fn parse_mssql_tls(value: Option<&str>) -> Result<SqlServerTlsMode, toml::de::Error> {
+        let tls = value
+            .map(|value| format!("mssql_tls = '{value}'"))
+            .unwrap_or_default();
+        let config = format!(
+            r#"
+                [canyon_sql]
+
+                [[canyon_sql.datasources]]
+                name = 'sqlserver'
+
+                [canyon_sql.datasources.auth]
+                sqlserver = {{ basic = {{ username = 'sa', password = 'password' }} }}
+
+                [canyon_sql.datasources.properties]
+                host = 'localhost'
+                db_name = 'master'
+                {tls}
+            "#
+        );
+
+        let parsed = toml::from_str::<CanyonSqlConfig>(&config)?;
+        Ok(parsed.canyon_sql.datasources[0].properties.mssql_tls)
+    }
+
+    #[test]
+    fn mssql_tls_defaults_to_required() {
+        assert_eq!(parse_mssql_tls(None).unwrap(), SqlServerTlsMode::Required);
+    }
+
+    #[test]
+    fn mssql_tls_deserializes_each_explicit_mode() {
+        assert_eq!(
+            parse_mssql_tls(Some("required")).unwrap(),
+            SqlServerTlsMode::Required
+        );
+        assert_eq!(
+            parse_mssql_tls(Some("trust_server_certificate")).unwrap(),
+            SqlServerTlsMode::TrustServerCertificate
+        );
+        assert_eq!(
+            parse_mssql_tls(Some("disabled")).unwrap(),
+            SqlServerTlsMode::Disabled
+        );
+    }
+
+    #[test]
+    fn mssql_tls_rejects_unknown_modes() {
+        assert!(parse_mssql_tls(Some("opportunistic")).is_err());
     }
 }

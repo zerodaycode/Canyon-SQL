@@ -206,6 +206,8 @@ mod tests {
                 db_name: "pg_db".into(),
                 port: Some(5433),
                 migrations: None,
+                #[cfg(feature = "mssql")]
+                mssql_tls: Default::default(),
             },
             auth: Auth::Postgres(PostgresAuth::Basic {
                 username: "pguser".into(),
@@ -248,6 +250,8 @@ mod tests {
                 db_name: "default_db".into(),
                 port: None,
                 migrations: None,
+                #[cfg(feature = "mssql")]
+                mssql_tls: Default::default(),
             },
             auth: Auth::Postgres(PostgresAuth::Basic {
                 username: "user".into(),
