@@ -32,7 +32,7 @@ fn test_migrations_postgresql_status_query() {
     assert!(results.is_ok());
 
     let res = results.unwrap();
-    let public_schema_info = res.get_postgres_rows();
+    let public_schema_info = res.get_postgres_rows().unwrap();
     let first_result = public_schema_info.first().unwrap();
 
     assert_eq!(first_result.columns().first().unwrap().name(), "table_name");

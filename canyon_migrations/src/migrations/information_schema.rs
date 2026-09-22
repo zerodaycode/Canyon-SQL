@@ -51,9 +51,13 @@ impl ColumnMetadataTypeValue {
                 match *v {
                     TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => Self::StringValue(
                         row.get_postgres_opt::<&str>(col.name())
+                            .expect("failed to read PostgreSQL schema metadata")
                             .map(|opt| opt.to_owned()),
                     ),
-                    TP_TYP::INT4 => Self::IntValue(row.get_postgres_opt::<i32>(col.name())),
+                    TP_TYP::INT4 => Self::IntValue(
+                        row.get_postgres_opt::<i32>(col.name())
+                            .expect("failed to read PostgreSQL schema metadata"),
+                    ),
                     _ => Self::NoneValue, // TODO watchout this one
                 }
             }
@@ -62,12 +66,14 @@ impl ColumnMetadataTypeValue {
                 TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => {
                     Self::StringValue(
                         row.get_mssql_opt::<&str>(col.name())
+                            .expect("failed to read SQL Server schema metadata")
                             .map(|opt| opt.to_owned()),
                     )
                 }
-                TIB_TY::Int2 | TIB_TY::Int4 | TIB_TY::Int8 | TIB_TY::Intn => {
-                    Self::IntValue(row.get_mssql_opt::<i32>(col.name()))
-                }
+                TIB_TY::Int2 | TIB_TY::Int4 | TIB_TY::Int8 | TIB_TY::Intn => Self::IntValue(
+                    row.get_mssql_opt::<i32>(col.name())
+                        .expect("failed to read SQL Server schema metadata"),
+                ),
                 _ => Self::NoneValue,
             },
             #[cfg(feature = "mysql")]

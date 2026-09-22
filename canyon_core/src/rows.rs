@@ -12,7 +12,8 @@ use tiberius::{self};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self};
 
-use crate::mapper::{CanyonResult, RowMapper};
+use crate::connection::database_type::DatabaseType;
+use crate::mapper::{CanyonResult, MappingError, RowMapper};
 use crate::row::Row;
 
 /// Lightweight wrapper over the collection of results of the different crates
@@ -33,26 +34,35 @@ pub enum CanyonRows {
 
 impl CanyonRows {
     #[cfg(feature = "postgres")]
-    pub fn get_postgres_rows(&self) -> &Vec<tokio_postgres::Row> {
+    pub fn get_postgres_rows(&self) -> CanyonResult<&[tokio_postgres::Row]> {
         match self {
-            Self::Postgres(v) => v,
-            _ => panic!("This branch will never ever should be reachable"),
+            Self::Postgres(v) => Ok(v),
+            _ => Err(MappingError::BackendMismatch {
+                expected: DatabaseType::PostgreSql,
+            }
+            .into()),
         }
     }
 
     #[cfg(feature = "mssql")]
-    pub fn get_tiberius_rows(&self) -> &Vec<tiberius::Row> {
+    pub fn get_tiberius_rows(&self) -> CanyonResult<&[tiberius::Row]> {
         match self {
-            Self::Tiberius(v) => v,
-            _ => panic!("This branch will never ever should be reachable"),
+            Self::Tiberius(v) => Ok(v),
+            _ => Err(MappingError::BackendMismatch {
+                expected: DatabaseType::SqlServer,
+            }
+            .into()),
         }
     }
 
     #[cfg(feature = "mysql")]
-    pub fn get_mysql_rows(&self) -> &Vec<mysql_async::Row> {
+    pub fn get_mysql_rows(&self) -> CanyonResult<&[mysql_async::Row]> {
         match self {
-            Self::MySQL(v) => v,
-            _ => panic!("This branch will never ever should be reachable"),
+            Self::MySQL(v) => Ok(v),
+            _ => Err(MappingError::BackendMismatch {
+                expected: DatabaseType::MySQL,
+            }
+            .into()),
         }
     }
 
@@ -184,6 +194,17 @@ mod tests {
 
         let error = rows.first::<FailingMapper>().unwrap_err();
         assert_eq!(error.to_string(), "could not map row");
+    }
+
+    #[cfg(feature = "postgres")]
+    #[test]
+    fn backend_specific_getter_returns_an_error_for_other_rows() {
+        let rows = CanyonRows::MySQL(vec![empty_mysql_row()]);
+
+        assert!(matches!(
+            rows.get_postgres_rows(),
+            Err(CanyonError::Mapping(MappingError::BackendMismatch { .. }))
+        ));
     }
 }
 

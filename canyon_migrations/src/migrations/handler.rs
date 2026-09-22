@@ -132,7 +132,11 @@ impl Migrations {
     /// and appending as a new [`ColumnMetadata`] element to the columns field.
     fn get_columns_metadata(res_row: &dyn Row, table: &mut MacroTableMetadata) {
         let mut entity_column = ColumnMetadata::default();
-        for column in res_row.columns().iter() {
+        for column in res_row
+            .columns()
+            .expect("failed to inspect migration result columns")
+            .iter()
+        {
             if column.name() != "table_name" {
                 Self::set_column_metadata(res_row, column, &mut entity_column);
             } // Discards the column "table_name", 'cause is already a field of [`TableMetadata<'a>`]
@@ -295,9 +299,19 @@ fn check_for_table_name(
 ) -> bool {
     match db_type {
         #[cfg(feature = "postgres")]
-        DatabaseType::PostgreSql => table.table_name == res_row.get_postgres::<&str>("table_name"),
+        DatabaseType::PostgreSql => {
+            table.table_name
+                == res_row
+                    .get_postgres::<&str>("table_name")
+                    .expect("failed to read PostgreSQL table name")
+        }
         #[cfg(feature = "mssql")]
-        DatabaseType::SqlServer => table.table_name == res_row.get_mssql::<&str>("table_name"),
+        DatabaseType::SqlServer => {
+            table.table_name
+                == res_row
+                    .get_mssql::<&str>("table_name")
+                    .expect("failed to read SQL Server table name")
+        }
         #[cfg(feature = "mysql")]
         DatabaseType::MySQL => todo!("Not implemented fetch database in mysql"),
     }
