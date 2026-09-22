@@ -1,7 +1,6 @@
-use std::error::Error;
-
 use crate::{
     connection::database_type::DatabaseType,
+    error::CanyonResult,
     query::{
         ColumnRef,
         bounds::{FieldIdentifier, FieldValueIdentifier},
@@ -46,7 +45,7 @@ impl<'a> DeleteQueryBuilder<'a> {
     }
 
     #[inline(always)]
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()
     }
 }
@@ -55,7 +54,7 @@ impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {}
 
 impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     #[inline(always)]
-    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()
     }
 
@@ -78,11 +77,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn and_values_in<'b, Z, Q>(
-        mut self,
-        column: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn and_values_in<Z, Q>(mut self, column: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -92,11 +87,7 @@ impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
     }
 
     #[inline]
-    fn or_values_in<'b, Z, Q>(
-        mut self,
-        column: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn or_values_in<Z, Q>(mut self, column: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,

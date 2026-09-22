@@ -1,5 +1,6 @@
 use crate::{
     connection::database_type::DatabaseType,
+    error::CanyonResult,
     query::{
         bounds::{FieldIdentifier, FieldValueIdentifier},
         operators::Operator,
@@ -15,7 +16,6 @@ use crate::{
     },
 };
 use std::borrow::Cow;
-use std::error::Error;
 
 /// Fluent builder for `SELECT` queries
 pub struct SelectQueryBuilder<'a> {
@@ -91,7 +91,7 @@ impl<'a> SelectQueryBuilder<'a> {
     }
 
     #[inline(always)]
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()
     }
 }
@@ -164,7 +164,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
 
 impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     #[inline(always)]
-    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()
     }
 
@@ -187,11 +187,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     #[inline]
-    fn and_values_in<'b, Z, Q>(
-        mut self,
-        r#and: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -202,11 +198,7 @@ impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 
     #[inline]
-    fn or_values_in<'b, Z, Q>(
-        mut self,
-        r#or: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,

@@ -3,13 +3,13 @@
 //! Each trait groups the operations available for a specific SQL statement,
 //! while [`QueryBuilderOps`] contains the behaviour shared by all builders.
 
+use crate::error::CanyonResult;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
 use crate::query::operators::Operator;
 use crate::query::parameters::QueryParameter;
 use crate::query::query::Query;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
-use std::error::Error;
 
 /// Operations supported by a delete query builder.
 ///
@@ -26,10 +26,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     ///
     /// The caller is therefore responsible for supplying matching parameters
     /// when the query is executed.
-    fn set<I: Into<ColumnRef<'a>>>(
-        self,
-        columns: Vec<I>,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set<I: Into<ColumnRef<'a>>>(self, columns: Vec<I>) -> CanyonResult<Self>
     where
         Self: Sized;
 
@@ -37,10 +34,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     ///
     /// Each tuple contains the target column identifier and the parameter value
     /// assigned to it.
-    fn set_values<Z, Q>(
-        self,
-        columns: &'a [(Z, Q)],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set_values<Z, Q>(self, columns: &'a [(Z, Q)]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier + Into<ColumnRef<'a>> + Clone,
         Q: QueryParameter,
@@ -59,7 +53,7 @@ pub trait InsertQueryBuilderOps<'a>: QueryBuilderOps<'a> {
     ///
     /// The generated placeholder count must match the number of configured
     /// insert columns when an explicit column list is present.
-    fn with_values<Q>(self, values: &'a [Q]) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn with_values<Q>(self, values: &'a [Q]) -> CanyonResult<Self>
     where
         Q: QueryParameter,
         Self: Sized;
@@ -162,7 +156,7 @@ pub trait QueryBuilderOps<'a> {
     ///
     /// The returned [`Query`] contains both the emitted SQL statement and the
     /// parameters collected while constructing it.
-    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>>;
+    fn build(self) -> CanyonResult<Query<'a>>;
 
     /// Adds a `WHERE` condition without collecting a parameter value.
     ///
@@ -189,11 +183,7 @@ pub trait QueryBuilderOps<'a> {
     ///
     /// One placeholder and one collected query parameter are generated for
     /// every element in `values`.
-    fn and_values_in<'b, Z, Q>(
-        self,
-        column: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn and_values_in<Z, Q>(self, column: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -203,11 +193,7 @@ pub trait QueryBuilderOps<'a> {
     ///
     /// One placeholder and one collected query parameter are generated for
     /// every element in `values`.
-    fn or_values_in<'b, Z, Q>(
-        self,
-        r#or: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn or_values_in<Z, Q>(self, r#or: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,

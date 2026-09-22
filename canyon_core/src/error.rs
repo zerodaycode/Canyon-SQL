@@ -211,6 +211,7 @@ pub enum QueryBuilderError {
     EmptySetClause,
     SetClauseAlreadyPresent,
     InvalidClauseOrder { clause: String },
+    Rendering(std::fmt::Error),
 }
 
 impl Display for QueryBuilderError {
@@ -227,11 +228,28 @@ impl Display for QueryBuilderError {
             Self::InvalidClauseOrder { clause } => {
                 write!(formatter, "the `{clause}` clause is in an invalid position")
             }
+            Self::Rendering(_) => formatter.write_str("failed to render the SQL query"),
         }
     }
 }
 
-impl Error for QueryBuilderError {}
+impl Error for QueryBuilderError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            Self::Rendering(source) => Some(source),
+            Self::EmptyInClause { .. }
+            | Self::EmptySetClause
+            | Self::SetClauseAlreadyPresent
+            | Self::InvalidClauseOrder { .. } => None,
+        }
+    }
+}
+
+impl From<std::fmt::Error> for QueryBuilderError {
+    fn from(error: std::fmt::Error) -> Self {
+        Self::Rendering(error)
+    }
+}
 
 /// Errors produced while converting a driver row into an application type.
 #[derive(Debug)]

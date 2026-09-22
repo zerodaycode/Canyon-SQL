@@ -7,6 +7,7 @@ pub use self::{delete::*, insert::*, select::*, update::*};
 use crate::query::querybuilder::syntax::emitter::BackendEmittable;
 use crate::{
     connection::database_type::DatabaseType,
+    error::CanyonResult,
     query::ColumnRef,
     query::querybuilder::syntax::emitter::types::helpers::Range,
     query::{
@@ -19,7 +20,6 @@ use crate::{
         },
     },
 };
-use std::error::Error;
 
 /// Type for construct more complex queries than the classical CRUD ones.
 pub struct QueryBuilder<'a, P: BackendEmittable<'a> + 'a> {
@@ -56,7 +56,7 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
         }
     }
 
-    pub fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    pub fn build(self) -> CanyonResult<Query<'a>> {
         __impl::check_invariants_over_condition_clauses(&self)?;
 
         let Self {
@@ -90,11 +90,7 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
         __impl::create_condition_clause(self, ConditionClauseKind::And, and.column(), operator);
     }
 
-    pub fn and_values_in<'b, Z, Q>(
-        &mut self,
-        field: Z,
-        values: &'a [Q],
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'b>>
+    pub fn and_values_in<Z, Q>(&mut self, field: Z, values: &'a [Q]) -> CanyonResult<()>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -110,11 +106,7 @@ impl<'a, P: BackendEmittable<'a> + 'a> QueryBuilder<'a, P> {
         __impl::add_values_in_for_and_or_or_clause(self, ConditionClauseKind::And, field, values)
     }
 
-    pub fn or_values_in<'b, Z, Q>(
-        &mut self,
-        r#or: Z,
-        values: &'a [Q],
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'b>>
+    pub fn or_values_in<Z, Q>(&mut self, r#or: Z, values: &'a [Q]) -> CanyonResult<()>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -152,6 +144,7 @@ mod thread_safety_tests {
 }
 
 mod __impl {
+    use crate::error::CanyonResult;
     use crate::query::bounds::FieldIdentifier;
     use crate::query::operators::Operator;
     use crate::query::parameters::QueryParameter;
@@ -161,14 +154,13 @@ mod __impl {
     use crate::query::querybuilder::syntax::emitter::BackendEmittable;
     use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::types::__validators;
-    use std::error::Error;
 
-    pub(crate) fn add_values_in_for_and_or_or_clause<'a, 'b, P, Z, Q>(
+    pub(crate) fn add_values_in_for_and_or_or_clause<'a, P, Z, Q>(
         _self: &mut QueryBuilder<'a, P>,
         _conjunction_clause_kind: ConditionClauseKind,
         field: Z,
         values: &'a [Q],
-    ) -> Result<(), Box<dyn Error + Send + Sync>>
+    ) -> CanyonResult<()>
     where
         Q: QueryParameter,
         Z: FieldIdentifier,
@@ -190,9 +182,9 @@ mod __impl {
 
     /// Quick standalone that acts as a façade for an orchestrator that just organizes a procedural way of testing
     /// that the constructed underlying query is syntactically correct
-    pub(crate) fn check_invariants_over_condition_clauses<'a, 'b, P: BackendEmittable<'a>>(
+    pub(crate) fn check_invariants_over_condition_clauses<'a, P: BackendEmittable<'a>>(
         _self: &QueryBuilder<'a, P>,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
+    ) -> CanyonResult<()> {
         __validators::check_where_clause_position(_self)
     }
 
@@ -228,6 +220,7 @@ mod __impl {
 
 mod __detail {
     use crate::connection::database_type::DatabaseType;
+    use crate::error::{CanyonResult, QueryBuilderError};
     use crate::query::querybuilder::syntax::ast::BaseAst;
 
     #[cfg(feature = "postgres")]
@@ -242,13 +235,12 @@ mod __detail {
     use crate::query::querybuilder::syntax::emitter::BackendEmittable;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
     use crate::query::querybuilder::syntax::writer::TokenWriter;
-    use std::error::Error;
 
     pub(super) fn sql<'a, P>(
         database_type: DatabaseType,
         ast: &P,
         base_ast: &mut BaseAst<'a>,
-    ) -> Result<String, Box<dyn Error + Send + Sync + 'a>>
+    ) -> CanyonResult<String>
     where
         P: BackendEmittable<'a> + 'a,
     {
@@ -298,7 +290,7 @@ mod __detail {
     pub(crate) fn run_render_phase<'a>(
         tokens: SqlTokens<'a>,
         db: DatabaseType,
-    ) -> Result<String, Box<dyn Error + Send + Sync + 'a>> {
+    ) -> CanyonResult<String> {
         let writer = TokenWriter::new();
         match db {
             #[cfg(feature = "postgres")]
@@ -308,24 +300,24 @@ mod __detail {
             #[cfg(feature = "mssql")]
             DatabaseType::SqlServer => writer.render::<MsSql>(tokens),
         }
-        .map_err(|e| e.into())
+        .map_err(|error| QueryBuilderError::from(error).into())
     }
 }
 
 mod __validators {
+    use crate::error::CanyonResult;
     use crate::query::parameters::QueryParameter;
     use crate::query::querybuilder::QueryBuilder;
     use crate::query::querybuilder::syntax::clause::ConditionClauseKind;
     use crate::query::querybuilder::syntax::emitter::BackendEmittable;
     use crate::query::querybuilder::types::__errors;
-    use std::error::Error;
     use std::fmt::Display;
 
     /// For now, it's mandatory because we need to ensure what's the placeholder index which is the element
     /// that should swap with the where clause if isn't put in an incorrect order, no implementation ready
-    pub(crate) fn check_where_clause_position<'a, 'b, P: BackendEmittable<'a>>(
+    pub(crate) fn check_where_clause_position<'a, P: BackendEmittable<'a>>(
         _self: &QueryBuilder<'a, P>,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
+    ) -> CanyonResult<()> {
         if let Some(condition_clause) = &_self.base_ast.conditions().first()
             && condition_clause.kind.ne(&ConditionClauseKind::Where)
         {
@@ -335,11 +327,11 @@ mod __validators {
         }
     }
 
-    pub(crate) fn check_not_empty_in_clause_values<'a, 'b, Q>(
+    pub(crate) fn check_not_empty_in_clause_values<'a, Q>(
         table_metadata: impl Display,
         column: &'a str,
         values: &'a [Q],
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'b>>
+    ) -> CanyonResult<()>
     where
         Q: QueryParameter,
     {
@@ -351,26 +343,22 @@ mod __validators {
 }
 
 mod __errors {
-    use std::error::Error;
+    use crate::error::{CanyonResult, QueryBuilderError};
     use std::fmt::Display;
-    use std::io::ErrorKind;
 
-    pub(crate) fn where_clause_position<'a>() -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
-        Err(std::io::Error::new(
-            // TODO: CanyonError
-            ErrorKind::Unsupported,
-            "Where clauses should be the first condition clause on a SQL sentence",
-        )
+    pub(crate) fn where_clause_position() -> CanyonResult<()> {
+        Err(QueryBuilderError::InvalidClauseOrder {
+            clause: "WHERE".to_owned(),
+        }
         .into())
     }
 
-    pub(crate) fn empty_in_clause<'a, 'b>(
-        table_metadata: impl Display,
-        column: &'a str,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'b>> {
-        Err(std::io::Error::new( // TODO: CanyonError
-            ErrorKind::Unsupported,
-            format!("An IN clause has been added with empty values for {table_metadata} on the column: {column}", )).into())
+    pub(crate) fn empty_in_clause(table_metadata: impl Display, column: &str) -> CanyonResult<()> {
+        Err(QueryBuilderError::EmptyInClause {
+            table: table_metadata.to_string(),
+            column: column.to_owned(),
+        }
+        .into())
     }
 }
 

@@ -1,5 +1,6 @@
 use crate::{
     connection::database_type::DatabaseType,
+    error::CanyonResult,
     query::{
         bounds::{FieldIdentifier, FieldValueIdentifier},
         operators::Operator,
@@ -12,7 +13,6 @@ use crate::{
         },
     },
 };
-use std::error::Error;
 
 /// Fluent builder for `UPDATE` statements
 pub struct UpdateQueryBuilder<'a> {
@@ -41,10 +41,7 @@ impl<'a> UpdateQueryBuilder<'a> {
 }
 
 impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
-    fn set<I: Into<ColumnRef<'a>>>(
-        mut self,
-        columns: Vec<I>,
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> CanyonResult<Self>
     where
         Self: Sized,
     {
@@ -53,10 +50,7 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         Ok(self)
     }
 
-    fn set_values<Z, Q>(
-        mut self,
-        columns: &'a [(Z, Q)],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'a>>
+    fn set_values<Z, Q>(mut self, columns: &'a [(Z, Q)]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier + Into<ColumnRef<'a>> + Clone,
         Q: QueryParameter,
@@ -76,7 +70,7 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 
 impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     #[inline(always)]
-    fn build(self) -> Result<Query<'a>, Box<dyn Error + Send + Sync + 'a>> {
+    fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()
     }
     #[inline]
@@ -97,11 +91,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
         self
     }
     #[inline]
-    fn and_values_in<'b, Z, Q>(
-        mut self,
-        r#and: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn and_values_in<Z, Q>(mut self, r#and: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -111,11 +101,7 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     }
 
     #[inline]
-    fn or_values_in<'b, Z, Q>(
-        mut self,
-        r#or: Z,
-        values: &'a [Q],
-    ) -> Result<Self, Box<dyn Error + Send + Sync + 'b>>
+    fn or_values_in<Z, Q>(mut self, r#or: Z, values: &'a [Q]) -> CanyonResult<Self>
     where
         Z: FieldIdentifier,
         Q: QueryParameter,
@@ -132,36 +118,23 @@ impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
 }
 
 mod __validators {
+    use crate::error::{CanyonResult, QueryBuilderError};
     use crate::query::querybuilder::UpdateQueryBuilder;
-    use std::error::Error;
-    use std::io::ErrorKind;
 
     /// Prevents `set_values` from replacing a previously configured `SET` clause.
     pub(super) fn set_clause_not_already_present<'a>(
         builder: &UpdateQueryBuilder<'a>,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+    ) -> CanyonResult<()> {
         if !builder._inner.ast.columns.is_empty() {
-            return Err(std::io::Error::new(
-                // TODO: CanyonError
-                ErrorKind::Unsupported,
-                "SET clause already present",
-            )
-            .into());
+            return Err(QueryBuilderError::SetClauseAlreadyPresent.into());
         }
         Ok(())
     }
 
     /// Rejects update statements that would produce an empty `SET` clause.
-    pub(super) fn set_clause_values_not_empty<T>(
-        values: &[T],
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub(super) fn set_clause_values_not_empty<T>(values: &[T]) -> CanyonResult<()> {
         if values.is_empty() {
-            return Err(std::io::Error::new(
-                // TODO: CanyonError
-                ErrorKind::Unsupported,
-                "Empty SET clause",
-            )
-            .into());
+            return Err(QueryBuilderError::EmptySetClause.into());
         }
         Ok(())
     }
