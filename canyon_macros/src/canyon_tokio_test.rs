@@ -26,7 +26,7 @@ pub(crate) fn generate_canyon_tokio_test_tokens(input: TokenStream) -> MacroResu
                             #(#body)*
                         }
 
-                        Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+                        Ok::<(), canyon_sql::CanyonError>(())
                     }
                     .await
                     .expect("error executing the `canyon_tokio_test` body");

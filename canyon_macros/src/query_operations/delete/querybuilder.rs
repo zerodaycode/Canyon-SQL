@@ -12,9 +12,8 @@ pub(crate) fn generate_delete_querybuilder_tokens(table_schema_data: &str) -> To
         /// entity but converted to the corresponding database convention,
         /// unless concrete values are set on the available parameters of the
         /// `canyon_macro(table_name = "table_name", schema = "schema")`
-        fn delete_query<'canyon, 'err>() ->
-            Result<canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon>, Box<dyn std::error::Error + Send + Sync + 'err>>
-         where 'canyon: 'err
+        fn delete_query<'canyon>() ->
+            canyon_sql::CanyonResult<canyon_sql::query::querybuilder::DeleteQueryBuilder<'canyon>>
         {
             let default_db_type = canyon_sql::core::Canyon::instance()?.get_default_db_type()?;
             Ok(canyon_sql::query::querybuilder::DeleteQueryBuilder::new(#table_schema_data, default_db_type))

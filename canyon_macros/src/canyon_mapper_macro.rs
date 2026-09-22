@@ -345,10 +345,7 @@ mod __details {
                     fn set_primary_key(
                         &mut self,
                         value: Self::PrimaryKey,
-                    ) -> Result<
-                        (),
-                        Box<dyn std::error::Error + Send + Sync>,
-                    > {
+                    ) -> canyon_sql::CanyonResult<()> {
                         #set_primary_key
                     }
 
@@ -400,11 +397,7 @@ mod __details {
             }
             None => {
                 quote! {
-                    Err(std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        "No primary key field is defined for this entity",
-                    )
-                    .into())
+                    Err(canyon_sql::error::QueryBuilderError::MissingPrimaryKey.into())
                 }
             }
         }

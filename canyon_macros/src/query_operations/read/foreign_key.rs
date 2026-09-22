@@ -308,7 +308,7 @@ mod __detail {
 
         quote! {
             async fn #method_name #method_generics_and_args
-                -> Result<#ret_ty<#return_ty>, Box<dyn std::error::Error + Send + Sync + 'a>>
+                -> canyon_sql::CanyonResult<#ret_ty<#return_ty>>
                 #where_clause
         }
     }

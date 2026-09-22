@@ -26,7 +26,7 @@ pub fn create_count_macro(schema_name: Option<Cow<str>>, table_name: &str) -> To
     let default_db_conn_and_type_tokens = consts::generate_default_db_conn_and_type_tokens();
 
     quote! {
-        async fn count() -> Result<i64, Box<dyn std::error::Error + Send + Sync>> {
+        async fn count() -> canyon_sql::CanyonResult<i64> {
             use canyon_sql::connection::DbConnection;
             use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
 
@@ -55,8 +55,7 @@ pub fn create_count_with_macro(schema_name: Option<Cow<str>>, table_name: &str) 
     let table_name = create_cow_borrowed_table_name(table_name);
 
     quote! {
-        async fn count_with<'a, I>(input: I)
-            -> Result<i64, Box<dyn std::error::Error + Send + Sync + 'a>>
+        async fn count_with<'a, I>(input: I) -> canyon_sql::CanyonResult<i64>
         where
             I: canyon_sql::connection::DbConnection + Send + 'a
         {

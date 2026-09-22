@@ -175,18 +175,18 @@ mod __detail {
 
     pub(super) fn generate_find_by_pk_signature(result_ty: &Ident) -> TokenStream {
         quote! {
-            async fn find_by_pk<'canyon_lt, 'err_lt>(
+            async fn find_by_pk<'canyon_lt>(
                 value: &'canyon_lt dyn canyon_sql::query::QueryParameter,
-            ) -> Result<Option<#result_ty>, Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            ) -> canyon_sql::CanyonResult<Option<#result_ty>>
         }
     }
 
     pub(super) fn generate_find_by_pk_with_signature(result_ty: &Ident) -> TokenStream {
         quote! {
-            async fn find_by_pk_with<'canyon_lt, 'err_lt, Input>(
+            async fn find_by_pk_with<'canyon_lt, Input>(
                 value: &'canyon_lt dyn canyon_sql::query::QueryParameter,
                 input: Input,
-            ) -> Result<Option<#result_ty>, Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            ) -> canyon_sql::CanyonResult<Option<#result_ty>>
             where
                 Input: canyon_sql::connection::DbConnection
                     + Send

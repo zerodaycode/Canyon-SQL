@@ -8,12 +8,10 @@ pub(crate) fn generate_insert_method_tokens(
     table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
     let insert_signature = quote! {
-        async fn insert<'a>(&mut self)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>
+        async fn insert<'a>(&mut self) -> canyon_sql::CanyonResult<()>
     };
     let insert_with_signature = quote! {
-        async fn insert_with<'a, I>(&mut self, input: I)
-            -> Result<(), Box<dyn std::error::Error + Send + Sync + 'a>>
+        async fn insert_with<'a, I>(&mut self, input: I) -> canyon_sql::CanyonResult<()>
         where
             I: canyon_sql::connection::DbConnection + Send + 'a
     };

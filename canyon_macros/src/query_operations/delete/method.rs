@@ -126,7 +126,7 @@ mod __signatures {
 
     pub(crate) fn get_delete_signature() -> TokenStream {
         quote! {
-            async fn delete(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>>
+            async fn delete(&self) -> canyon_sql::CanyonResult<()>
         }
     }
 

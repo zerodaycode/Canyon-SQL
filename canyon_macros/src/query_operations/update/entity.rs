@@ -114,9 +114,9 @@ mod __detail {
 
     pub(crate) fn generate_update_entity_signature() -> TokenStream {
         quote! {
-            async fn update_entity<'canyon_lt, 'err_lt, Entity>(
+            async fn update_entity<'canyon_lt, Entity>(
                 entity: &'canyon_lt Entity,
-            ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            ) -> canyon_sql::CanyonResult<()>
             where
                 Entity: canyon_sql::core::RowMapper
                     + canyon_sql::query::bounds::EntityRuntimeInfo
@@ -127,10 +127,10 @@ mod __detail {
 
     pub(crate) fn generate_update_entity_with_signature() -> TokenStream {
         quote! {
-            async fn update_entity_with<'canyon_lt, 'err_lt, Entity, Input>(
+            async fn update_entity_with<'canyon_lt, Entity, Input>(
                 entity: &'canyon_lt Entity,
                 input: Input,
-            ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'err_lt>>
+            ) -> canyon_sql::CanyonResult<()>
             where
                 Entity: canyon_sql::core::RowMapper
                     + canyon_sql::query::bounds::EntityRuntimeInfo

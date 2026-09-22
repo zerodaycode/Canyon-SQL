@@ -1,6 +1,6 @@
-use std::error::Error;
 use std::fmt::Display;
 
+use crate::error::CanyonResult;
 use crate::query::parameters::QueryParameter;
 use crate::query::querybuilder::syntax::column::ColumnRef;
 use crate::rows::FromSqlOwnedValue;
@@ -27,10 +27,7 @@ pub trait EntityRuntimeInfo {
 
     fn primary_key_value(&self) -> Option<&dyn QueryParameter>;
 
-    fn set_primary_key(
-        &mut self,
-        value: Self::PrimaryKey,
-    ) -> Result<(), Box<dyn Error + Send + Sync>>;
+    fn set_primary_key(&mut self, value: Self::PrimaryKey) -> CanyonResult<()>;
 
     fn primary_key_column() -> Option<ColumnRef<'static>>;
 }

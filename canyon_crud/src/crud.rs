@@ -1,97 +1,84 @@
 use canyon_core::{
     connection::{contracts::DbConnection, database_type::DatabaseType},
+    error::CanyonResult,
     mapper::RowMapper,
     query::{
         parameters::QueryParameter,
         querybuilder::{DeleteQueryBuilder, SelectQueryBuilder, UpdateQueryBuilder},
     },
 };
-use std::{error::Error, future::Future};
+use std::future::Future;
 
 pub trait ReadOperations<R>: Send
 where
     R: RowMapper,
     Vec<R>: FromIterator<R::Output>,
 {
-    fn find_all() -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send;
+    fn find_all() -> impl Future<Output = CanyonResult<Vec<R>>> + Send;
 
-    fn find_all_with<'connection, I>(
-        input: I,
-    ) -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send
+    fn find_all_with<'connection, I>(input: I) -> impl Future<Output = CanyonResult<Vec<R>>> + Send
     where
         I: DbConnection + Send + 'connection;
 
-    fn select_query<'a>() -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
+    fn select_query<'a>() -> CanyonResult<SelectQueryBuilder<'a>>;
 
-    fn select_query_with<'a>(
-        database_type: DatabaseType,
-    ) -> Result<SelectQueryBuilder<'a>, Box<dyn Error + Send + Sync + 'a>>;
+    fn select_query_with<'a>(database_type: DatabaseType) -> CanyonResult<SelectQueryBuilder<'a>>;
 
-    fn count() -> impl Future<Output = Result<i64, Box<dyn Error + Send + Sync>>> + Send;
+    fn count() -> impl Future<Output = CanyonResult<i64>> + Send;
 
-    fn count_with<'connection, I>(
-        input: I,
-    ) -> impl Future<Output = Result<i64, Box<dyn Error + Send + Sync + 'connection>>> + Send
+    fn count_with<'connection, I>(input: I) -> impl Future<Output = CanyonResult<i64>> + Send
     where
         I: DbConnection + Send + 'connection;
 
-    fn find_by_pk<'value, 'error>(
+    fn find_by_pk<'value>(
         value: &'value dyn QueryParameter,
-    ) -> impl Future<Output = Result<Option<R>, Box<dyn Error + Send + Sync + 'error>>> + Send;
+    ) -> impl Future<Output = CanyonResult<Option<R>>> + Send;
 
-    fn find_by_pk_with<'value, 'error, I>(
+    fn find_by_pk_with<'value, I>(
         value: &'value dyn QueryParameter,
         input: I,
-    ) -> impl Future<Output = Result<Option<R>, Box<dyn Error + Send + Sync + 'error>>> + Send
+    ) -> impl Future<Output = CanyonResult<Option<R>>> + Send
     where
         I: DbConnection + Send + 'value;
 }
 
 pub trait InsertOperations: Send {
-    fn insert<'entity, 'error>(
-        &'entity mut self,
-    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'error>>> + Send;
+    fn insert<'entity>(&'entity mut self) -> impl Future<Output = CanyonResult<()>> + Send;
 
     fn insert_with<'connection, I>(
         &mut self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'connection>>> + Send
+    ) -> impl Future<Output = CanyonResult<()>> + Send
     where
         I: DbConnection + Send + 'connection;
 }
 
 pub trait UpdateOperations: Send {
-    fn update(&self) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync>>> + Send;
+    fn update(&self) -> impl Future<Output = CanyonResult<u64>> + Send;
 
     fn update_with<'connection, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync + 'connection>>> + Send
+    ) -> impl Future<Output = CanyonResult<u64>> + Send
     where
         I: DbConnection + Send + 'connection;
 
-    fn update_query<'canyon, 'err>()
-    -> Result<UpdateQueryBuilder<'canyon>, Box<dyn Error + Send + Sync + 'err>>
-    where
-        'canyon: 'err;
+    fn update_query<'canyon>() -> CanyonResult<UpdateQueryBuilder<'canyon>>;
 
     fn update_query_with<'a>(database_type: DatabaseType) -> UpdateQueryBuilder<'a>;
 }
 
 pub trait DeleteOperations: Send {
-    fn delete(&self) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync>>> + Send;
+    fn delete(&self) -> impl Future<Output = CanyonResult<()>> + Send;
 
-    fn delete_with<'connection, 'error, I>(
+    fn delete_with<'connection, I>(
         &self,
         input: I,
-    ) -> impl Future<Output = Result<(), Box<dyn Error + Send + Sync + 'error>>> + Send
+    ) -> impl Future<Output = CanyonResult<()>> + Send
     where
         I: DbConnection + Send + 'connection;
 
-    fn delete_query<'canyon, 'err>()
-    -> Result<DeleteQueryBuilder<'canyon>, Box<dyn Error + Send + Sync + 'err>>
-    where
-        'canyon: 'err;
+    fn delete_query<'canyon>() -> CanyonResult<DeleteQueryBuilder<'canyon>>;
 
     fn delete_query_with<'a>(database_type: DatabaseType) -> DeleteQueryBuilder<'a>;
 }

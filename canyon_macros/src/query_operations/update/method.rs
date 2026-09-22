@@ -135,14 +135,13 @@ mod __signatures {
 
     pub(crate) fn get_update_signature() -> TokenStream {
         quote! {
-            async fn update(&self) -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send>>
+            async fn update(&self) -> canyon_sql::CanyonResult<u64>
         }
     }
 
     pub(crate) fn get_update_with_signature() -> TokenStream {
         quote! {
-            async fn update_with<'a, I>(&self, input: I)
-                -> Result<u64, Box<dyn std::error::Error + Sync + std::marker::Send + 'a>>
+            async fn update_with<'a, I>(&self, input: I) -> canyon_sql::CanyonResult<u64>
             where I: canyon_sql::connection::DbConnection + Send + 'a
         }
     }
