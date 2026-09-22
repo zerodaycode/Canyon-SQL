@@ -8,8 +8,6 @@
 /// and abort the execution.
 extern crate canyon_sql;
 
-use std::error::Error;
-
 mod crud;
 #[cfg(feature = "migrations")]
 mod migrations;

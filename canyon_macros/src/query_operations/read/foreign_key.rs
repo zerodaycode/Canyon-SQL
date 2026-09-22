@@ -189,11 +189,9 @@ mod __operations {
 
         quote! {
             value.foreign_key_value(#column)
-                .ok_or_else(|| format!(
-                    "Column: {:?} not found in type: {:?}",
-                    #column,
-                    #table,
-                ))?
+                .ok_or_else(|| canyon_sql::error::QueryBuilderError::MissingForeignKeyValue {
+                    column: format!("{}.{}", #table, #column),
+                })?
         }
     }
 }

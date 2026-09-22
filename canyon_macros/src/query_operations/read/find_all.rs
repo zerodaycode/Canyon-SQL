@@ -28,7 +28,7 @@ fn create_find_all_macro(
 
     quote! {
         async fn find_all()
-            -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
+            -> canyon_sql::CanyonResult<Vec<#mapper_ty>>
         {
             use canyon_sql::connection::DbConnection;
             use crate::canyon_sql::query::querybuilder::SelectQueryBuilderOps;
@@ -49,7 +49,7 @@ fn create_find_all_with_macro(
 ) -> TokenStream {
     quote! {
         async fn find_all_with<'a, I>(input: I)
-            -> Result<Vec<#mapper_ty>, Box<(dyn std::error::Error + Send + Sync)>>
+            -> canyon_sql::CanyonResult<Vec<#mapper_ty>>
         where
             I: canyon_sql::connection::DbConnection + Send + 'a
         {

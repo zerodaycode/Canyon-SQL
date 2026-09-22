@@ -304,6 +304,9 @@ pub enum QueryBuilderError {
     SetClauseAlreadyPresent,
     InvalidClauseOrder { clause: String },
     MissingPrimaryKey,
+    MissingPrimaryKeyValue,
+    MissingForeignKeyValue { column: String },
+    UnsupportedOperation { operation: String },
     Rendering(std::fmt::Error),
 }
 
@@ -324,6 +327,21 @@ impl Display for QueryBuilderError {
             Self::MissingPrimaryKey => {
                 formatter.write_str("the entity does not define a primary key")
             }
+            Self::MissingPrimaryKeyValue => {
+                formatter.write_str("the entity does not contain a primary-key value")
+            }
+            Self::MissingForeignKeyValue { column } => {
+                write!(
+                    formatter,
+                    "the entity does not contain foreign-key column `{column}`"
+                )
+            }
+            Self::UnsupportedOperation { operation } => {
+                write!(
+                    formatter,
+                    "the `{operation}` operation is not supported for this entity"
+                )
+            }
             Self::Rendering(_) => formatter.write_str("failed to render the SQL query"),
         }
     }
@@ -337,7 +355,10 @@ impl Error for QueryBuilderError {
             | Self::EmptySetClause
             | Self::SetClauseAlreadyPresent
             | Self::InvalidClauseOrder { .. }
-            | Self::MissingPrimaryKey => None,
+            | Self::MissingPrimaryKey
+            | Self::MissingPrimaryKeyValue
+            | Self::MissingForeignKeyValue { .. }
+            | Self::UnsupportedOperation { .. } => None,
         }
     }
 }

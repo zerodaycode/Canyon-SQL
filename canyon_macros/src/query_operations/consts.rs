@@ -11,14 +11,8 @@ pub const UNAVAILABLE_CRUD_OP_ON_INSTANCE: &str = "Operation is unavailable. T d
     (<op_type>_query method for the CrudOperations implementors";
 
 pub(crate) fn generate_no_pk_error() -> TokenStream {
-    let err_msg = UNAVAILABLE_CRUD_OP_ON_INSTANCE;
     quote! {
-        return Err(
-            std::io::Error::new(
-                std::io::ErrorKind::Unsupported,
-                #err_msg
-            ).into_inner().unwrap()
-        );
+        return Err(canyon_sql::error::QueryBuilderError::MissingPrimaryKey.into());
     }
 }
 
@@ -51,19 +45,13 @@ thread_local! {
 }
 
 pub const RAW_RET_TY: &str = "Vec < User >";
-pub const RES_RET_TY: &str =
-    "Result < Vec < User > , Box < (dyn std :: error :: Error + Send + Sync) >>";
-pub const RES_VOID_RET_TY: &str =
-    "Result < () , Box < (dyn std :: error :: Error + Send + Sync) >>";
-pub const RES_RET_TY_LT: &str =
-    "Result < Vec < User > , Box < (dyn std :: error :: Error + Send + Sync + 'a) >>";
-pub const RES_VOID_RET_TY_LT: &str =
-    "Result < () , Box < (dyn std :: error :: Error + Send + Sync + 'a) >>";
-pub const OPT_RET_TY_LT: &str =
-    "Result < Option < User > , Box < (dyn std :: error :: Error + Send + Sync + 'a) >>";
-pub const I64_RET_TY: &str = "Result < i64 , Box < (dyn std :: error :: Error + Send + Sync) >>";
-pub const I64_RET_TY_LT: &str =
-    "Result < i64 , Box < (dyn std :: error :: Error + Send + Sync + 'a) >>";
+pub const RES_RET_TY: &str = "canyon_sql :: CanyonResult < Vec < User > >";
+pub const RES_VOID_RET_TY: &str = "canyon_sql :: CanyonResult < () >";
+pub const RES_RET_TY_LT: &str = "canyon_sql :: CanyonResult < Vec < User > >";
+pub const RES_VOID_RET_TY_LT: &str = "canyon_sql :: CanyonResult < () >";
+pub const OPT_RET_TY_LT: &str = "canyon_sql :: CanyonResult < Option < User > >";
+pub const I64_RET_TY: &str = "canyon_sql :: CanyonResult < i64 >";
+pub const I64_RET_TY_LT: &str = "canyon_sql :: CanyonResult < i64 >";
 
 pub const MAPS_TO: &str = "into_results :: < User > ()";
 pub const LT_CONSTRAINT: &str = "< 'a ";

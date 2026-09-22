@@ -8,7 +8,7 @@ pub(crate) fn generate_insert_method_tokens(
     table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
     let insert_signature = quote! {
-        async fn insert<'a>(&mut self) -> canyon_sql::CanyonResult<()>
+        async fn insert(&mut self) -> canyon_sql::CanyonResult<()>
     };
     let insert_with_signature = quote! {
         async fn insert_with<'a, I>(&mut self, input: I) -> canyon_sql::CanyonResult<()>
@@ -134,14 +134,9 @@ mod __details {
 
     pub(crate) fn generate_unsupported_operation_err() -> TokenStream {
         quote! {
-            Err(
-                std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    "Can't use the 'Insert' family transactions as a method (that receives self as first parameter) \
-                    if your T type in CrudOperations is NOT the same type that implements RowMapper. \
-                    Consider to use instead the provided insert_entity or insert_entity_with functions."
-                ).into_inner().unwrap()
-            )
+            Err(canyon_sql::error::QueryBuilderError::UnsupportedOperation {
+                operation: "insert on a mapped repository type".to_owned(),
+            }.into())
         }
     }
 }

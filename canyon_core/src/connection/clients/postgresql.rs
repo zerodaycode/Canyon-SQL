@@ -1,7 +1,9 @@
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{Auth, DatasourceConfig, PostgresAuth};
-use crate::error::{CanyonResult, ConfigurationError, ConnectionError, QueryError};
+#[cfg(any(feature = "mssql", feature = "mysql"))]
+use crate::error::ConfigurationError;
+use crate::error::{CanyonResult, ConnectionError, QueryError};
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};

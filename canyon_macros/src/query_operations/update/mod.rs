@@ -36,13 +36,9 @@ mod __err {
 
     pub(crate) fn generate_no_pk_err() -> TokenStream {
         quote! {
-            Err(
-                std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    "The type has either zero fields or exactly one that is annotated with #[primary_key].\
-                     That's makes it ineligibly to be used in the update_entity family of operations."
-                ).into_inner().unwrap()
-            )
+            Err(canyon_sql::error::QueryBuilderError::UnsupportedOperation {
+                operation: "update".to_owned(),
+            }.into())
         }
     }
 }

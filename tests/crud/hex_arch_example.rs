@@ -217,20 +217,20 @@ impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryA
         let db_conn = &self.db_conn;
         let select_query =
             SelectQueryBuilder::new("league", db_conn.get_database_type()?).build()?;
-        db_conn.query(select_query, &[]).await
+        db_conn.query(select_query, &[]).await.map_err(Into::into)
     }
 
     async fn create<'a>(
         &self,
         league: &'a mut LeagueHex,
     ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
-        Self::insert_entity(league).await
+        Self::insert_entity(league).await.map_err(Into::into)
     }
 
     async fn get<'a, Pk: QueryParameter>(
         &self,
         id: &'a Pk,
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>> {
-        Self::find_by_pk(id).await
+        Self::find_by_pk(id).await.map_err(Into::into)
     }
 }

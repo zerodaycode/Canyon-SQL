@@ -64,22 +64,12 @@ mod __detail {
             let primary_key_name =
                 <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_name()
-                    .ok_or_else(|| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            "Cannot delete an entity without a primary key",
-                        )
-                    })?;
+                    .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKey)?;
 
             let primary_key_value =
                 <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_value(entity)
-                    .ok_or_else(|| {
-                        std::io::Error::new(
-                            std::io::ErrorKind::InvalidInput,
-                            "Cannot delete an entity without a primary-key value",
-                        )
-                    })?;
+                    .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKeyValue)?;
 
             let query =
                 canyon_sql::query::querybuilder::DeleteQueryBuilder::new(

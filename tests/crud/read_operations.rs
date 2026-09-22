@@ -7,7 +7,6 @@ use crate::constants::MYSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 // Integration tests for the CRUD operations available in `Canyon` that
 /// generates and executes *SELECT* statements
-use crate::Error;
 use crate::tests_models::league::*;
 
 #[cfg(feature = "postgres")]
@@ -21,15 +20,13 @@ use canyon_sql::crud::ReadOperations;
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_all() {
-    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
-        League::find_all().await;
+    let find_all_result: canyon_sql::CanyonResult<Vec<League>> = League::find_all().await;
 
     // Connection doesn't return an error
     assert!(!find_all_result.is_err());
     assert!(!find_all_result.unwrap().is_empty());
 
-    let find_all_players: Result<Vec<Player>, Box<dyn Error + Send + Sync>> =
-        Player::find_all().await;
+    let find_all_players: canyon_sql::CanyonResult<Vec<Player>> = Player::find_all().await;
     assert!(!find_all_players.unwrap().is_empty());
 }
 
@@ -39,7 +36,7 @@ fn test_crud_find_all() {
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_all_with_mssql() {
-    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
+    let find_all_result: canyon_sql::CanyonResult<Vec<League>> =
         League::find_all_with(SQL_SERVER_DS).await;
     // Connection doesn't return an error
     assert!(!find_all_result.is_err(), "{:?}", find_all_result);
@@ -49,7 +46,7 @@ fn test_crud_find_all_with_mssql() {
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_all_with_mysql() {
-    let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =
+    let find_all_result: canyon_sql::CanyonResult<Vec<League>> =
         League::find_all_with(MYSQL_DS).await;
 
     // Connection doesn't return an error
@@ -64,8 +61,7 @@ fn test_crud_find_all_with_mysql() {
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_by_pk() {
-    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
-        League::find_by_pk(&1).await;
+    let find_by_pk_result: canyon_sql::CanyonResult<Option<League>> = League::find_by_pk(&1).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
     let some_league = find_by_pk_result.unwrap().unwrap();
@@ -87,7 +83,7 @@ fn test_crud_find_by_pk() {
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_by_pk_with_mssql() {
-    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+    let find_by_pk_result: canyon_sql::CanyonResult<Option<League>> =
         League::find_by_pk_with(&27, SQL_SERVER_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
@@ -110,7 +106,7 @@ fn test_crud_find_by_pk_with_mssql() {
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_find_by_pk_with_mysql() {
-    let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> =
+    let find_by_pk_result: canyon_sql::CanyonResult<Option<League>> =
         League::find_by_pk_with(&27, MYSQL_DS).await;
     assert!(find_by_pk_result.as_ref().unwrap().is_some());
 

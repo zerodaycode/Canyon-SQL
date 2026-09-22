@@ -190,7 +190,9 @@ pub(crate) mod mysql_query_launcher {
 pub(crate) mod __impl {
     use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::{Auth, DatasourceConfig, MySQLAuth};
-    use crate::error::{CanyonResult, ConfigurationError, ConnectionError};
+    #[cfg(any(feature = "postgres", feature = "mssql"))]
+    use crate::error::ConfigurationError;
+    use crate::error::{CanyonResult, ConnectionError};
     use mysql_async::Pool;
 
     pub(crate) async fn load_mysql_config(datasource: &DatasourceConfig) -> CanyonResult<Pool> {

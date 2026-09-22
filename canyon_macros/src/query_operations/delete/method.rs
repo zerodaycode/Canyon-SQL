@@ -132,8 +132,8 @@ mod __signatures {
 
     pub(crate) fn get_delete_with_signature() -> TokenStream {
         quote! {
-            async fn delete_with<'canyon, 'err, I>(&self, input: I) -> Result<(), Box<(dyn std::error::Error + Send + Sync + 'err)>>
-                where I: canyon_sql::connection::DbConnection + Send + 'canyon
+            async fn delete_with<'connection, I>(&self, input: I) -> canyon_sql::CanyonResult<()>
+                where I: canyon_sql::connection::DbConnection + Send + 'connection
         }
     }
 }

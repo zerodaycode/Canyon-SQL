@@ -59,16 +59,7 @@ fn generate_mapped_find_by_pk_query(mapped_ty: &Ident, table_schema_data: &str) 
         let primary_key =
             <#mapped_ty as canyon_sql::query::bounds::EntityRuntimeInfo>
                 ::primary_key_name()
-                .ok_or_else(|| {
-                    std::io::Error::new(
-                        std::io::ErrorKind::InvalidInput,
-                        concat!(
-                            "Cannot find by primary key because mapped entity `",
-                            stringify!(#mapped_ty),
-                            "` has no primary key",
-                        ),
-                    )
-                })?;
+                .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKey)?;
 
         let stmt =
             canyon_sql::query::querybuilder::SelectQueryBuilder::new(
@@ -175,8 +166,8 @@ mod __detail {
 
     pub(super) fn generate_find_by_pk_signature(result_ty: &Ident) -> TokenStream {
         quote! {
-            async fn find_by_pk<'canyon_lt>(
-                value: &'canyon_lt dyn canyon_sql::query::QueryParameter,
+            async fn find_by_pk(
+                value: &dyn canyon_sql::query::QueryParameter,
             ) -> canyon_sql::CanyonResult<Option<#result_ty>>
         }
     }

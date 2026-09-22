@@ -27,13 +27,9 @@ mod __shared {
 
     pub(crate) fn no_fields_to_insert_err() -> TokenStream {
         quote! {
-            Err(
-                std::io::Error::new(
-                    std::io::ErrorKind::Unsupported,
-                    "The type has either zero fields or exactly one that is annotated with #[primary_key].\
-                     That's makes it ineligibly to be used in the INSERT family of operations."
-                ).into_inner().unwrap()
-            )
+            Err(canyon_sql::error::QueryBuilderError::UnsupportedOperation {
+                operation: "insert".to_owned(),
+            }.into())
         }
     }
 }

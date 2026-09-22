@@ -163,6 +163,9 @@ impl Parse for CanyonEntity {
             if !attr.path().is_ident("canyon_entity") {
                 continue;
             }
+            if matches!(&attr.meta, syn::Meta::Path(_)) {
+                continue;
+            }
 
             attr.parse_nested_meta(|meta| {
                 if meta.path.is_ident("table_name") {

@@ -30,8 +30,8 @@ where
     where
         I: DbConnection + Send + 'connection;
 
-    fn find_by_pk<'value>(
-        value: &'value dyn QueryParameter,
+    fn find_by_pk(
+        value: &dyn QueryParameter,
     ) -> impl Future<Output = CanyonResult<Option<R>>> + Send;
 
     fn find_by_pk_with<'value, I>(
@@ -43,7 +43,7 @@ where
 }
 
 pub trait InsertOperations: Send {
-    fn insert<'entity>(&'entity mut self) -> impl Future<Output = CanyonResult<()>> + Send;
+    fn insert(&mut self) -> impl Future<Output = CanyonResult<()>> + Send;
 
     fn insert_with<'connection, I>(
         &mut self,
