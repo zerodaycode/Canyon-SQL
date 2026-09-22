@@ -113,12 +113,53 @@ pub enum ConnectionError {
     },
     CanyonNotInitialized,
     ConnectionBusy,
+    InvalidPoolConfiguration {
+        backend: DatabaseType,
+    },
     #[cfg(feature = "postgres")]
     Postgres(Box<tokio_postgres::Error>),
+    #[cfg(feature = "postgres")]
+    PostgresPool(Box<bb8::RunError<tokio_postgres::Error>>),
     #[cfg(feature = "mysql")]
     MySql(Box<mysql_async::Error>),
     #[cfg(feature = "mssql")]
     SqlServer(Box<tiberius::error::Error>),
+    #[cfg(feature = "mssql")]
+    SqlServerManager(Box<bb8_tiberius::Error>),
+    #[cfg(feature = "mssql")]
+    SqlServerPool(Box<bb8::RunError<bb8_tiberius::Error>>),
+}
+
+impl ConnectionError {
+    #[cfg(feature = "postgres")]
+    pub fn postgres(source: tokio_postgres::Error) -> Self {
+        Self::Postgres(Box::new(source))
+    }
+
+    #[cfg(feature = "postgres")]
+    pub fn postgres_pool(source: bb8::RunError<tokio_postgres::Error>) -> Self {
+        Self::PostgresPool(Box::new(source))
+    }
+
+    #[cfg(feature = "mysql")]
+    pub fn mysql(source: mysql_async::Error) -> Self {
+        Self::MySql(Box::new(source))
+    }
+
+    #[cfg(feature = "mssql")]
+    pub fn sql_server(source: tiberius::error::Error) -> Self {
+        Self::SqlServer(Box::new(source))
+    }
+
+    #[cfg(feature = "mssql")]
+    pub fn sql_server_manager(source: bb8_tiberius::Error) -> Self {
+        Self::SqlServerManager(Box::new(source))
+    }
+
+    #[cfg(feature = "mssql")]
+    pub fn sql_server_pool(source: bb8::RunError<bb8_tiberius::Error>) -> Self {
+        Self::SqlServerPool(Box::new(source))
+    }
 }
 
 impl Display for ConnectionError {
@@ -134,12 +175,26 @@ impl Display for ConnectionError {
                 formatter.write_str("Canyon is not initialized; call `Canyon::init()` first")
             }
             Self::ConnectionBusy => formatter.write_str("database connection is busy"),
+            Self::InvalidPoolConfiguration { backend } => {
+                write!(
+                    formatter,
+                    "invalid connection pool configuration for {backend}"
+                )
+            }
             #[cfg(feature = "postgres")]
             Self::Postgres(_) => formatter.write_str("PostgreSQL connection failed"),
+            #[cfg(feature = "postgres")]
+            Self::PostgresPool(_) => formatter.write_str("PostgreSQL connection pool failed"),
             #[cfg(feature = "mysql")]
             Self::MySql(_) => formatter.write_str("MySQL connection failed"),
             #[cfg(feature = "mssql")]
             Self::SqlServer(_) => formatter.write_str("SQL Server connection failed"),
+            #[cfg(feature = "mssql")]
+            Self::SqlServerManager(_) => {
+                formatter.write_str("SQL Server connection manager failed")
+            }
+            #[cfg(feature = "mssql")]
+            Self::SqlServerPool(_) => formatter.write_str("SQL Server connection pool failed"),
         }
     }
 }
@@ -149,13 +204,20 @@ impl Error for ConnectionError {
         match self {
             #[cfg(feature = "postgres")]
             Self::Postgres(source) => Some(source.as_ref()),
+            #[cfg(feature = "postgres")]
+            Self::PostgresPool(source) => Some(source.as_ref()),
             #[cfg(feature = "mysql")]
             Self::MySql(source) => Some(source.as_ref()),
             #[cfg(feature = "mssql")]
             Self::SqlServer(source) => Some(source.as_ref()),
-            Self::DatasourceNotFound { .. } | Self::CanyonNotInitialized | Self::ConnectionBusy => {
-                None
-            }
+            #[cfg(feature = "mssql")]
+            Self::SqlServerManager(source) => Some(source.as_ref()),
+            #[cfg(feature = "mssql")]
+            Self::SqlServerPool(source) => Some(source.as_ref()),
+            Self::DatasourceNotFound { .. }
+            | Self::CanyonNotInitialized
+            | Self::ConnectionBusy
+            | Self::InvalidPoolConfiguration { .. } => None,
         }
     }
 }
@@ -168,10 +230,35 @@ pub enum QueryError {
     Postgres(Box<tokio_postgres::Error>),
     #[cfg(feature = "mysql")]
     MySql(Box<mysql_async::Error>),
+    #[cfg(feature = "mysql")]
+    MySqlValue(Box<mysql_common::value::convert::FromValueError>),
     #[cfg(feature = "mssql")]
     SqlServer(Box<tiberius::error::Error>),
     NoRows,
     NoColumns,
+    UnexpectedNull,
+}
+
+impl QueryError {
+    #[cfg(feature = "postgres")]
+    pub fn postgres(source: tokio_postgres::Error) -> Self {
+        Self::Postgres(Box::new(source))
+    }
+
+    #[cfg(feature = "mysql")]
+    pub fn mysql(source: mysql_async::Error) -> Self {
+        Self::MySql(Box::new(source))
+    }
+
+    #[cfg(feature = "mysql")]
+    pub fn mysql_value(source: mysql_common::value::convert::FromValueError) -> Self {
+        Self::MySqlValue(Box::new(source))
+    }
+
+    #[cfg(feature = "mssql")]
+    pub fn sql_server(source: tiberius::error::Error) -> Self {
+        Self::SqlServer(Box::new(source))
+    }
 }
 
 impl Display for QueryError {
@@ -181,10 +268,13 @@ impl Display for QueryError {
             Self::Postgres(_) => formatter.write_str("PostgreSQL query failed"),
             #[cfg(feature = "mysql")]
             Self::MySql(_) => formatter.write_str("MySQL query failed"),
+            #[cfg(feature = "mysql")]
+            Self::MySqlValue(_) => formatter.write_str("failed to convert a MySQL query value"),
             #[cfg(feature = "mssql")]
             Self::SqlServer(_) => formatter.write_str("SQL Server query failed"),
             Self::NoRows => formatter.write_str("the query returned no rows"),
             Self::NoColumns => formatter.write_str("the query returned a row without columns"),
+            Self::UnexpectedNull => formatter.write_str("the query returned an unexpected NULL"),
         }
     }
 }
@@ -196,9 +286,11 @@ impl Error for QueryError {
             Self::Postgres(source) => Some(source.as_ref()),
             #[cfg(feature = "mysql")]
             Self::MySql(source) => Some(source.as_ref()),
+            #[cfg(feature = "mysql")]
+            Self::MySqlValue(source) => Some(source.as_ref()),
             #[cfg(feature = "mssql")]
             Self::SqlServer(source) => Some(source.as_ref()),
-            Self::NoRows | Self::NoColumns => None,
+            Self::NoRows | Self::NoColumns | Self::UnexpectedNull => None,
         }
     }
 }
@@ -211,6 +303,7 @@ pub enum QueryBuilderError {
     EmptySetClause,
     SetClauseAlreadyPresent,
     InvalidClauseOrder { clause: String },
+    MissingPrimaryKey,
     Rendering(std::fmt::Error),
 }
 
@@ -228,6 +321,9 @@ impl Display for QueryBuilderError {
             Self::InvalidClauseOrder { clause } => {
                 write!(formatter, "the `{clause}` clause is in an invalid position")
             }
+            Self::MissingPrimaryKey => {
+                formatter.write_str("the entity does not define a primary key")
+            }
             Self::Rendering(_) => formatter.write_str("failed to render the SQL query"),
         }
     }
@@ -240,7 +336,8 @@ impl Error for QueryBuilderError {
             Self::EmptyInClause { .. }
             | Self::EmptySetClause
             | Self::SetClauseAlreadyPresent
-            | Self::InvalidClauseOrder { .. } => None,
+            | Self::InvalidClauseOrder { .. }
+            | Self::MissingPrimaryKey => None,
         }
     }
 }
@@ -265,6 +362,10 @@ pub enum MappingError {
         column: String,
         backend: DatabaseType,
     },
+    BackendMismatch {
+        expected: DatabaseType,
+    },
+    UnsupportedRowType,
     #[cfg(feature = "postgres")]
     Postgres {
         entity: String,
@@ -378,6 +479,13 @@ impl Display for MappingError {
                 formatter,
                 "column `{column}` for entity `{entity}` unexpectedly contained NULL in the {backend} row"
             ),
+            Self::BackendMismatch { expected } => {
+                write!(
+                    formatter,
+                    "row does not belong to the expected {expected} backend"
+                )
+            }
+            Self::UnsupportedRowType => formatter.write_str("unsupported database row type"),
             #[cfg(feature = "postgres")]
             Self::Postgres { entity, column, .. } => write!(
                 formatter,
@@ -407,7 +515,11 @@ impl Error for MappingError {
             Self::MySql { source, .. } => Some(source.as_ref()),
             #[cfg(feature = "mssql")]
             Self::SqlServer { source, .. } => Some(source.as_ref()),
-            Self::ColumnNotFound { .. } | Self::UnexpectedNull { .. } | Self::Custom { .. } => None,
+            Self::ColumnNotFound { .. }
+            | Self::UnexpectedNull { .. }
+            | Self::BackendMismatch { .. }
+            | Self::UnsupportedRowType
+            | Self::Custom { .. } => None,
         }
     }
 }

@@ -1,8 +1,8 @@
 use crate::connection::database_type::DatabaseType;
+use crate::error::CanyonResult;
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
-use std::error::Error;
 use std::future::Future;
 
 /// The `DbConnection` trait defines the core functionality required for interacting with a database connection.
@@ -40,7 +40,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<CanyonRows, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl Future<Output = CanyonResult<CanyonRows>> + Send;
 
     /// Executes a query and maps the result to a collection of rows of type `R`.
     ///
@@ -56,7 +56,7 @@ pub trait DbConnection {
         &self,
         stmt: S,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>> + Send
+    ) -> impl Future<Output = CanyonResult<Vec<R>>> + Send
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -76,7 +76,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<dyn Error + Send + Sync>>> + Send
+    ) -> impl Future<Output = CanyonResult<Option<R::Output>>> + Send
     where
         R: RowMapper;
 
@@ -94,7 +94,7 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<T, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl Future<Output = CanyonResult<T>> + Send;
 
     /// Executes a SQL statement and returns the number of affected rows.
     ///
@@ -108,11 +108,11 @@ pub trait DbConnection {
         &self,
         stmt: &str,
         params: &[&dyn QueryParameter],
-    ) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync>>> + Send;
+    ) -> impl Future<Output = CanyonResult<u64>> + Send;
 
     /// Retrieves the type of the database associated with the connection.
     ///
     /// # Returns
     /// A `Result` containing the [`DatabaseType`] on success or an error on failure.
-    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>>;
+    fn get_database_type(&self) -> CanyonResult<DatabaseType>;
 }

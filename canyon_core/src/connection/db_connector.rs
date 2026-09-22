@@ -7,10 +7,10 @@ use crate::connection::clients::postgresql::PostgresConnector;
 
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
+use crate::error::CanyonResult;
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
-use std::error::Error;
 
 /// The Canyon database connection handler. When the client's program
 /// starts, Canyon gets the information about the desired datasources,
@@ -30,7 +30,7 @@ crate::impl_db_connection_for_db_connector!(&DatabaseConnector);
 crate::impl_db_connection_for_db_connector!(&mut DatabaseConnector);
 
 impl DatabaseConnector {
-    pub async fn new(datasource: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn new(datasource: &DatasourceConfig) -> CanyonResult<Self> {
         // Add connection pooling at the client level for better performance
         match datasource.get_db_type() {
             #[cfg(feature = "postgres")]

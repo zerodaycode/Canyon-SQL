@@ -2,12 +2,12 @@ use crate::connection::clients::mssql::sqlserver_query_launcher::execute_query;
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
+use crate::error::{CanyonResult, ConfigurationError, ConnectionError, QueryError};
 use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
 use bb8::PooledConnection;
 use bb8_tiberius::ConnectionManager as TiberiusConnectionManager;
-use std::error::Error;
 use std::sync::Arc;
 use tiberius::Query;
 
@@ -17,13 +17,16 @@ type SqlServerConnectionPool = Arc<bb8::Pool<TiberiusConnectionManager>>;
 pub struct SqlServerConnector(SqlServerConnectionPool);
 
 impl SqlServerConnector {
-    pub async fn new(config: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn new(config: &DatasourceConfig) -> CanyonResult<Self> {
         Ok(Self(__impl::create_sqlserver_connector(config).await?))
     }
     pub async fn get_pooled(
         &self,
-    ) -> Result<PooledConnection<'_, TiberiusConnectionManager>, Box<dyn Error + Send + Sync>> {
-        Ok(self.0.get().await?)
+    ) -> CanyonResult<PooledConnection<'_, TiberiusConnectionManager>> {
+        self.0
+            .get()
+            .await
+            .map_err(|source| ConnectionError::sql_server_pool(source).into())
     }
 }
 
@@ -32,12 +35,13 @@ impl DbConnection for SqlServerConnector {
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<CanyonRows> {
         let mut conn = self.get_pooled().await?;
         let result = execute_query(stmt, params, &mut conn)
             .await?
             .into_results()
-            .await?
+            .await
+            .map_err(QueryError::sql_server)?
             .into_iter()
             .flatten()
             .collect();
@@ -45,32 +49,29 @@ impl DbConnection for SqlServerConnector {
         Ok(CanyonRows::Tiberius(result))
     }
 
-    async fn query<S, R>(
-        &self,
-        stmt: S,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
+    async fn query<S, R>(&self, stmt: S, params: &[&'_ dyn QueryParameter]) -> CanyonResult<Vec<R>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
         let mut conn = self.get_pooled().await?;
-        Ok(execute_query(stmt.as_ref(), params, &mut conn)
+        execute_query(stmt.as_ref(), params, &mut conn)
             .await?
             .into_results()
-            .await?
+            .await
+            .map_err(QueryError::sql_server)?
             .into_iter()
             .flatten()
-            .flat_map(|row| R::deserialize_sqlserver(&row))
-            .collect::<Vec<R>>())
+            .map(|row| R::deserialize_sqlserver(&row))
+            .collect()
     }
 
     async fn query_one<R>(
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
+    ) -> CanyonResult<Option<R::Output>>
     where
         R: RowMapper,
     {
@@ -79,7 +80,8 @@ impl DbConnection for SqlServerConnector {
         let result = execute_query(stmt, params, &mut conn)
             .await?
             .into_row()
-            .await?;
+            .await
+            .map_err(QueryError::sql_server)?;
 
         match result {
             Some(r) => Ok(Some(R::deserialize_sqlserver(&r)?)),
@@ -91,35 +93,29 @@ impl DbConnection for SqlServerConnector {
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<T, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<T> {
         let mut conn = self.get_pooled().await?;
         let row = crate::connection::clients::mssql::sqlserver_query_launcher::execute_query(
             stmt, params, &mut conn,
         )
         .await?
         .into_row()
-        .await?
-        .ok_or_else(|| {
-            format!(
-                "Failure executing 'query_one_for' while retrieving the first row with stmt: {:?}",
-                stmt
-            )
-        })?;
+        .await
+        .map_err(QueryError::sql_server)?
+        .ok_or(QueryError::NoRows)?;
 
-        Ok(row
-            .into_iter()
-            .map(T::from_sql_owned)
-            .collect::<Vec<_>>()
-            .remove(0)?
-            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first column value on the first row with stmt: {:?}", stmt))?
-        )
+        row.into_iter()
+            .next()
+            .ok_or(QueryError::NoColumns)
+            .and_then(|value| {
+                T::from_sql_owned(value)
+                    .map_err(QueryError::sql_server)
+                    .and_then(|value| value.ok_or(QueryError::UnexpectedNull))
+            })
+            .map_err(Into::into)
     }
 
-    async fn execute(
-        &self,
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
+    async fn execute(&self, stmt: &str, params: &[&'_ dyn QueryParameter]) -> CanyonResult<u64> {
         let mssql_query = crate::connection::clients::mssql::sqlserver_query_launcher::generate_mssql_query_client(stmt, params).await;
         let mut conn = self.get_pooled().await?;
 
@@ -127,10 +123,10 @@ impl DbConnection for SqlServerConnector {
             .execute(&mut conn)
             .await
             .map(|r| r.total())
-            .map_err(From::from)
+            .map_err(|source| QueryError::sql_server(source).into())
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+    fn get_database_type(&self) -> CanyonResult<DatabaseType> {
         Ok(DatabaseType::SqlServer)
     }
 }
@@ -143,9 +139,12 @@ pub(crate) mod sqlserver_query_launcher {
         stmt: &str,
         params: &[&dyn QueryParameter],
         conn: &'a mut bb8::PooledConnection<'_, bb8_tiberius::ConnectionManager>,
-    ) -> Result<QueryStream<'a>, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<QueryStream<'a>> {
         let mssql_query = generate_mssql_query_client(stmt, params).await;
-        mssql_query.query(conn).await.map_err(From::from)
+        mssql_query
+            .query(conn)
+            .await
+            .map_err(|source| QueryError::sql_server(source).into())
     }
 
     pub(crate) async fn generate_mssql_query_client<'a>(
@@ -194,18 +193,22 @@ pub(crate) mod __impl {
 
     pub(crate) async fn create_sqlserver_connector(
         datasource: &DatasourceConfig,
-    ) -> Result<Arc<Pool<TiberiusConnectionManager>>, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<Arc<Pool<TiberiusConnectionManager>>> {
         let sqlserver_config = sqlserver_config_from_datasource(datasource)?;
 
         let manager = TiberiusConnectionManager::new(sqlserver_config);
-        let pool = bb8::Pool::builder().max_size(10u32).build(manager).await?;
+        let pool = bb8::Pool::builder()
+            .max_size(10u32)
+            .build(manager)
+            .await
+            .map_err(ConnectionError::sql_server_manager)?;
 
         Ok(SqlServerConnectionPool::from(pool))
     }
 
     pub(crate) fn sqlserver_config_from_datasource(
         datasource: &DatasourceConfig,
-    ) -> Result<Config, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<Config> {
         let mut tiberius_config = tiberius::Config::new();
 
         tiberius_config.host(&datasource.properties.host);
@@ -233,9 +236,7 @@ pub(crate) mod __impl {
         }
     }
 
-    pub(crate) fn extract_mssql_auth(
-        auth: &Auth,
-    ) -> Result<tiberius::AuthMethod, Box<dyn Error + Send + Sync>> {
+    pub(crate) fn extract_mssql_auth(auth: &Auth) -> CanyonResult<tiberius::AuthMethod> {
         match auth {
             Auth::SqlServer(sql_server_auth) => match sql_server_auth {
                 SqlServerAuth::Basic { username, password } => {
@@ -243,7 +244,10 @@ pub(crate) mod __impl {
                 }
             },
             #[cfg(any(feature = "postgres", feature = "mysql"))]
-            _ => Err("Invalid auth configuration for a SqlServer datasource.".into()),
+            _ => Err(ConfigurationError::InvalidAuthentication {
+                backend: DatabaseType::SqlServer,
+            }
+            .into()),
         }
     }
 }

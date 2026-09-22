@@ -1,8 +1,8 @@
 use crate::connection::contracts::DbConnection;
+use crate::error::CanyonResult;
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
-use std::error::Error;
 use std::future::Future;
 
 /// The `Transaction` trait serves as a proxy for types implementing CRUD operations.
@@ -45,7 +45,7 @@ pub trait Transaction {
         stmt: S,
         params: &[&dyn QueryParameter],
         input: impl DbConnection + Send,
-    ) -> impl Future<Output = Result<Vec<R>, Box<dyn Error + Send + Sync>>>
+    ) -> impl Future<Output = CanyonResult<Vec<R>>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -58,7 +58,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<Option<R::Output>, Box<dyn Error + Send + Sync>>> + Send
+    ) -> impl Future<Output = CanyonResult<Option<R::Output>>> + Send
     where
         S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter]> + Send,
@@ -71,7 +71,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<F, Box<dyn Error + Send + Sync>>> + Send
+    ) -> impl Future<Output = CanyonResult<F>> + Send
     where
         S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,
@@ -86,7 +86,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<CanyonRows, Box<dyn Error + Send + Sync>>> + Send
+    ) -> impl Future<Output = CanyonResult<CanyonRows>> + Send
     where
         S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,
@@ -98,7 +98,7 @@ pub trait Transaction {
         stmt: S,
         params: Z,
         input: impl DbConnection + Send + 'a,
-    ) -> impl Future<Output = Result<u64, Box<dyn Error + Send + Sync>>> + Send
+    ) -> impl Future<Output = CanyonResult<u64>> + Send
     where
         S: AsRef<str> + Send + 'a,
         Z: AsRef<[&'a dyn QueryParameter]> + Send + 'a,

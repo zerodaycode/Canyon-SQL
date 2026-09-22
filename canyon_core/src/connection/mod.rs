@@ -31,8 +31,8 @@ pub mod db_connector;
 use crate::canyon::Canyon;
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
+use crate::error::{CanyonResult, ConnectionError};
 
-use std::error::Error;
 use std::sync::{Arc, OnceLock};
 
 use tokio::runtime::Runtime;
@@ -59,12 +59,10 @@ use crate::mapper::RowMapper;
 use crate::query::parameters::QueryParameter;
 use crate::rows::{CanyonRows, FromSqlOwnedValue};
 
-fn try_lock_connection<T>(
-    connection: &Mutex<T>,
-) -> Result<MutexGuard<'_, T>, Box<dyn Error + Send + Sync>> {
+fn try_lock_connection<T>(connection: &Mutex<T>) -> CanyonResult<MutexGuard<'_, T>> {
     connection
         .try_lock()
-        .map_err(|error| Box::new(error) as Box<dyn Error + Send + Sync>)
+        .map_err(|_| ConnectionError::ConnectionBusy.into())
 }
 
 // Apply the macro to implement DbConnection for &str and str
@@ -80,15 +78,11 @@ where
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<CanyonRows> {
         self.lock().await.query_rows(stmt, params).await
     }
 
-    async fn query<S, R>(
-        &self,
-        stmt: S,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
+    async fn query<S, R>(&self, stmt: S, params: &[&'_ dyn QueryParameter]) -> CanyonResult<Vec<R>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
@@ -101,7 +95,7 @@ where
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
+    ) -> CanyonResult<Option<R::Output>>
     where
         R: RowMapper,
     {
@@ -112,19 +106,15 @@ where
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<F, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<F> {
         self.lock().await.query_one_for::<F>(stmt, params).await
     }
 
-    async fn execute(
-        &self,
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
+    async fn execute(&self, stmt: &str, params: &[&'_ dyn QueryParameter]) -> CanyonResult<u64> {
         self.lock().await.execute(stmt, params).await
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+    fn get_database_type(&self) -> CanyonResult<DatabaseType> {
         try_lock_connection(self)?.get_database_type()
     }
 }

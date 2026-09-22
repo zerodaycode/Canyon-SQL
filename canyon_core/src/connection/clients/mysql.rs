@@ -2,6 +2,7 @@ use crate::connection::clients::mysql::mysql_query_launcher::{execute_query, gen
 use crate::connection::contracts::DbConnection;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::DatasourceConfig;
+use crate::error::{CanyonResult, ConnectionError, QueryError};
 use crate::mapper::RowMapper;
 use crate::rows::FromSqlOwnedValue;
 use crate::{query::parameters::QueryParameter, rows::CanyonRows};
@@ -9,13 +10,12 @@ use mysql_async::Row;
 use mysql_async::prelude::Query;
 use mysql_common::constants::ColumnType;
 use mysql_common::row;
-use std::error::Error;
 
 /// A connection with a MySQL database.
 pub struct MySQLConnector(mysql_async::Pool);
 
 impl MySQLConnector {
-    pub async fn new(config: &DatasourceConfig) -> Result<Self, Box<dyn Error + Send + Sync>> {
+    pub async fn new(config: &DatasourceConfig) -> CanyonResult<Self> {
         Ok(Self(__impl::load_mysql_config(config).await?))
     }
 }
@@ -25,32 +25,28 @@ impl DbConnection for MySQLConnector {
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<CanyonRows> {
         Ok(CanyonRows::MySQL(execute_query(stmt, params, self).await?))
     }
 
-    async fn query<S, R>(
-        &self,
-        stmt: S,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
+    async fn query<S, R>(&self, stmt: S, params: &[&'_ dyn QueryParameter]) -> CanyonResult<Vec<R>>
     where
         S: AsRef<str> + Send,
         R: RowMapper,
         Vec<R>: FromIterator<<R as RowMapper>::Output>,
     {
-        Ok(execute_query(stmt, params, self)
+        execute_query(stmt, params, self)
             .await?
             .iter()
-            .flat_map(R::deserialize_mysql)
-            .collect())
+            .map(R::deserialize_mysql)
+            .collect()
     }
 
     async fn query_one<R>(
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
+    ) -> CanyonResult<Option<R::Output>>
     where
         R: RowMapper,
     {
@@ -66,28 +62,29 @@ impl DbConnection for MySQLConnector {
         &self,
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<T, Box<dyn Error + Send + Sync>> {
-        Ok(execute_query(stmt, params, self)
+    ) -> CanyonResult<T> {
+        execute_query(stmt, params, self)
             .await?
             .first()
-            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first row with stmt: {:?}", stmt))?
-            .get::<T, usize>(0)
-            .ok_or_else(|| format!("Failure executing 'query_one_for' while retrieving the first column value on the first row with stmt: {:?}", stmt))?
-        )
+            .ok_or(QueryError::NoRows)?
+            .get_opt::<T, usize>(0)
+            .ok_or(QueryError::NoColumns)?
+            .map_err(|source| QueryError::mysql_value(source).into())
     }
 
-    async fn execute(
-        &self,
-        stmt: &str,
-        params: &[&'_ dyn QueryParameter],
-    ) -> Result<u64, Box<dyn Error + Send + Sync>> {
-        let mysql_connection = self.0.get_conn().await?;
+    async fn execute(&self, stmt: &str, params: &[&'_ dyn QueryParameter]) -> CanyonResult<u64> {
+        let mysql_connection = self.0.get_conn().await.map_err(ConnectionError::mysql)?;
         let mysql_stmt = generate_mysql_stmt(stmt, params)?;
 
-        Ok(mysql_stmt.stmt.run(mysql_connection).await?.affected_rows())
+        Ok(mysql_stmt
+            .stmt
+            .run(mysql_connection)
+            .await
+            .map_err(QueryError::mysql)?
+            .affected_rows())
     }
 
-    fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+    fn get_database_type(&self) -> CanyonResult<DatabaseType> {
         Ok(DatabaseType::MySQL)
     }
 }
@@ -107,20 +104,26 @@ pub(crate) mod mysql_query_launcher {
         stmt: S,
         params: &[&'_ dyn QueryParameter],
         connector: &MySQLConnector,
-    ) -> Result<Vec<Row>, Box<dyn Error + Send + Sync>>
+    ) -> CanyonResult<Vec<Row>>
     where
         S: AsRef<str> + Send,
     {
-        let mysql_connection = connector.0.get_conn().await?;
+        let mysql_connection = connector
+            .0
+            .get_conn()
+            .await
+            .map_err(ConnectionError::mysql)?;
         let mysql_stmt = generate_mysql_stmt(stmt.as_ref(), params)?;
 
         let returns_last_insert_id = mysql_stmt.returns_last_insert_id;
-        let mut query_result = mysql_stmt.stmt.run(mysql_connection).await?;
+        let mut query_result = mysql_stmt
+            .stmt
+            .run(mysql_connection)
+            .await
+            .map_err(QueryError::mysql)?;
 
         if returns_last_insert_id {
-            let last_insert_id = query_result
-                .last_insert_id()
-                .ok_or("MySQL did not return an identifier for the inserted row")?;
+            let last_insert_id = query_result.last_insert_id().ok_or(QueryError::NoRows)?;
 
             return Ok(vec![row::new_row(
                 vec![Value::UInt(last_insert_id)],
@@ -128,13 +131,16 @@ pub(crate) mod mysql_query_launcher {
             )]);
         }
 
-        Ok(query_result.collect::<Row>().await?)
+        query_result
+            .collect::<Row>()
+            .await
+            .map_err(|source| QueryError::mysql(source).into())
     }
 
     pub(crate) fn generate_mysql_stmt(
         stmt: &str,
         params: &[&'_ dyn QueryParameter],
-    ) -> Result<MySqlGeneratedStmt, Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<MySqlGeneratedStmt> {
         let params = params.iter().map(|param| param.as_mysql_param()).collect();
 
         Ok(MySqlGeneratedStmt {
@@ -182,18 +188,20 @@ pub(crate) mod mysql_query_launcher {
 }
 
 pub(crate) mod __impl {
+    use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::{Auth, DatasourceConfig, MySQLAuth};
+    use crate::error::{CanyonResult, ConfigurationError, ConnectionError};
     use mysql_async::Pool;
-    use std::error::Error;
 
-    pub(crate) async fn load_mysql_config(
-        datasource: &DatasourceConfig,
-    ) -> Result<Pool, Box<dyn Error + Send + Sync>> {
+    pub(crate) async fn load_mysql_config(datasource: &DatasourceConfig) -> CanyonResult<Pool> {
         let (user, password) = extract_mysql_auth(&datasource.auth)?;
 
         // TODO: pool constraints must be obtained from the datasource configuration.
-        let pool_constraints =
-            mysql_async::PoolConstraints::new(2, 10).ok_or("Failure launching the MySQL pool")?;
+        let pool_constraints = mysql_async::PoolConstraints::new(2, 10).ok_or(
+            ConnectionError::InvalidPoolConfiguration {
+                backend: DatabaseType::MySQL,
+            },
+        )?;
 
         let mysql_opts_builder = mysql_async::OptsBuilder::default()
             .pool_opts(mysql_async::PoolOpts::default().with_constraints(pool_constraints))
@@ -206,13 +214,14 @@ pub(crate) mod __impl {
         Ok(mysql_async::Pool::new(mysql_opts_builder))
     }
 
-    pub(crate) fn extract_mysql_auth(
-        auth: &Auth,
-    ) -> Result<(&str, &str), Box<dyn Error + Send + Sync>> {
+    pub(crate) fn extract_mysql_auth(auth: &Auth) -> CanyonResult<(&str, &str)> {
         match auth {
             Auth::MySQL(MySQLAuth::Basic { username, password }) => Ok((username, password)),
             #[cfg(any(feature = "postgres", feature = "mssql"))]
-            _ => Err("Invalid auth configuration for a MySQL datasource.".into()),
+            _ => Err(ConfigurationError::InvalidAuthentication {
+                backend: DatabaseType::MySQL,
+            }
+            .into()),
         }
     }
 }

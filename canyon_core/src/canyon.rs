@@ -1,10 +1,10 @@
-use crate::connection::conn_errors::DatasourceNotFound;
 use crate::connection::database_type::DatabaseType;
 use crate::connection::datasources::{CanyonSqlConfig, DatasourceConfig, Datasources};
 use crate::connection::{CANYON_INSTANCE, db_connector, get_canyon_tokio_runtime};
+use crate::error::{CanyonResult, ConfigurationError, ConnectionError};
 use db_connector::DatabaseConnector;
 use std::collections::HashMap;
-use std::{error::Error, fs};
+use std::fs;
 
 /// The `Canyon` struct provides the main entry point for interacting with the Canyon-SQL context.
 ///
@@ -22,7 +22,7 @@ use std::{error::Error, fs};
 /// # Examples
 /// ```ignore
 /// #[tokio::main]
-/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// async fn main() -> canyon_core::error::CanyonResult<()> {
 ///     // Initialize the Canyon context
 ///     let canyon = Canyon::init().await?;
 ///
@@ -65,15 +65,10 @@ impl Canyon {
     ///
     /// Returns an error if the `Canyon` instance has not yet been initialized.
     /// In that case, the user must call [`Canyon::init`] before accessing the singleton.
-    pub fn instance() -> Result<&'static Self, Box<dyn Error + Send + Sync>> {
-        Ok(CANYON_INSTANCE.get().ok_or_else(|| {
-            // TODO: just call Canyon::init()? Why should we raise this error?
-            // I guess that there's no point in making it fail for the user to manually start Canyon when we can handle everything
-            // internally
-            Box::new(std::io::Error::other(
-                "Canyon not initialized. Call `Canyon::init()` first.",
-            ))
-        })?)
+    pub fn instance() -> CanyonResult<&'static Self> {
+        CANYON_INSTANCE
+            .get()
+            .ok_or_else(|| ConnectionError::CanyonNotInitialized.into())
     }
 
     /// Initializes the global `Canyon` instance from a configuration file.
@@ -94,19 +89,25 @@ impl Canyon {
     ///
     /// ```ignore
     /// #[tokio::main]
-    /// async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    /// async fn main() -> canyon_core::error::CanyonResult<()> {
     ///     let canyon = Canyon::init().await?;
     ///     Ok(())
     /// }
     /// ```
-    pub async fn init() -> Result<&'static Self, Box<dyn Error + Send + Sync>> {
+    pub async fn init() -> CanyonResult<&'static Self> {
         if CANYON_INSTANCE.get().is_some() {
             return Canyon::instance(); // Already initialized, no need to do it again
         }
 
         let path = __impl::find_config_path()?;
-        let config_content = fs::read_to_string(&path)?;
-        let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)?.canyon_sql;
+        let config_content =
+            fs::read_to_string(&path).map_err(|source| ConfigurationError::Read {
+                path: path.clone(),
+                source,
+            })?;
+        let config: Datasources = toml::from_str::<CanyonSqlConfig>(&config_content)
+            .map_err(ConfigurationError::Deserialize)?
+            .canyon_sql;
 
         let mut connections: HashMap<&str, DatabaseConnector> = HashMap::new();
         let mut default_connection: Option<DatabaseConnector> = None;
@@ -143,42 +144,49 @@ impl Canyon {
     pub fn find_datasource_by_name_or_default(
         &self,
         name: &str,
-    ) -> Result<&DatasourceConfig, DatasourceNotFound> {
+    ) -> CanyonResult<&DatasourceConfig> {
         if name.is_empty() {
             self.datasources()
                 .first()
-                .ok_or_else(|| DatasourceNotFound::from(None))
+                .ok_or_else(|| ConnectionError::DatasourceNotFound { name: None }.into())
         } else {
             self.datasources()
                 .iter()
                 .find(|ds| ds.name == name)
-                .ok_or_else(|| DatasourceNotFound::from(Some(name)))
+                .ok_or_else(|| {
+                    ConnectionError::DatasourceNotFound {
+                        name: Some(name.to_owned()),
+                    }
+                    .into()
+                })
         }
     }
 
-    pub fn get_default_db_type(&self) -> Result<DatabaseType, DatasourceNotFound> {
+    pub fn get_default_db_type(&self) -> CanyonResult<DatabaseType> {
         self.default_db_type
-            .ok_or_else(|| DatasourceNotFound::from(None))
+            .ok_or_else(|| ConnectionError::DatasourceNotFound { name: None }.into())
     }
 
     // Retrieves a connector to the configured connection as the default connection by the user
     // (the first defined in the configuration file)
-    pub fn get_default_connection(&self) -> Result<&DatabaseConnector, DatasourceNotFound> {
+    pub fn get_default_connection(&self) -> CanyonResult<&DatabaseConnector> {
         self.default_connection
             .as_ref()
-            .ok_or_else(|| DatasourceNotFound::from(None))
+            .ok_or_else(|| ConnectionError::DatasourceNotFound { name: None }.into())
     }
 
     // Retrieve a read-only connection from the cache
-    pub fn get_connection(&self, name: &str) -> Result<&DatabaseConnector, DatasourceNotFound> {
+    pub fn get_connection(&self, name: &str) -> CanyonResult<&DatabaseConnector> {
         if name.is_empty() {
             return self.get_default_connection();
         }
 
-        let conn = self
-            .connections
-            .get(name)
-            .ok_or_else(|| DatasourceNotFound::from(Some(name)))?;
+        let conn =
+            self.connections
+                .get(name)
+                .ok_or_else(|| ConnectionError::DatasourceNotFound {
+                    name: Some(name.to_owned()),
+                })?;
 
         Ok(conn)
     }
@@ -188,13 +196,13 @@ mod __impl {
     use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::DatasourceConfig;
     use crate::connection::db_connector::DatabaseConnector;
+    use crate::error::{CanyonResult, ConfigurationError};
     use std::collections::HashMap;
-    use std::error::Error;
     use std::path::PathBuf;
     use walkdir::WalkDir;
 
     // Internal helper to locate the config file
-    pub(crate) fn find_config_path() -> Result<PathBuf, std::io::Error> {
+    pub(crate) fn find_config_path() -> CanyonResult<PathBuf> {
         WalkDir::new(".")
             .max_depth(2)
             .into_iter()
@@ -210,9 +218,7 @@ mod __impl {
                     None
                 }
             })
-            .ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::NotFound, "No Canyon config found")
-            })
+            .ok_or_else(|| ConfigurationError::NotFound.into())
     }
 
     pub(crate) async fn process_new_conn_by_datasource(
@@ -220,7 +226,7 @@ mod __impl {
         connections: &mut HashMap<&str, DatabaseConnector>,
         default: &mut Option<DatabaseConnector>,
         default_db_type: &mut Option<DatabaseType>,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    ) -> CanyonResult<()> {
         if default.is_none() {
             let cloned_ds_for_default = ds.clone();
             *default = Some(DatabaseConnector::new(&cloned_ds_for_default).await?); // Only cloning the smart pointer

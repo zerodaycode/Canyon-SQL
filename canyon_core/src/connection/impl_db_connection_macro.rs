@@ -9,7 +9,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn QueryParameter],
-            ) -> Result<CanyonRows, Box<dyn Error + Send + Sync>> {
+            ) -> $crate::error::CanyonResult<CanyonRows> {
                 match self {
                     #[cfg(feature = "postgres")]
                     DatabaseConnector::Postgres(client) => client.query_rows(stmt, params).await,
@@ -26,7 +26,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 &self,
                 stmt: S,
                 params: &[&'_ dyn QueryParameter],
-            ) -> Result<Vec<R>, Box<dyn Error + Send + Sync>>
+            ) -> $crate::error::CanyonResult<Vec<R>>
             where
                 S: AsRef<str> + Send,
                 R: RowMapper,
@@ -48,7 +48,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn QueryParameter],
-            ) -> Result<Option<R::Output>, Box<dyn Error + Send + Sync>>
+            ) -> $crate::error::CanyonResult<Option<R::Output>>
             where
                 R: RowMapper,
             {
@@ -72,7 +72,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn QueryParameter],
-            ) -> Result<T, Box<dyn Error + Send + Sync>> {
+            ) -> $crate::error::CanyonResult<T> {
                 match self {
                     #[cfg(feature = "postgres")]
                     DatabaseConnector::Postgres(client) => client.query_one_for(stmt, params).await,
@@ -91,7 +91,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn QueryParameter],
-            ) -> Result<u64, Box<dyn Error + Send + Sync>> {
+            ) -> $crate::error::CanyonResult<u64> {
                 match self {
                     #[cfg(feature = "postgres")]
                     DatabaseConnector::Postgres(client) => client.execute(stmt, params).await,
@@ -104,7 +104,7 @@ macro_rules! impl_db_connection_for_db_connector {
                 }
             }
 
-            fn get_database_type(&self) -> Result<DatabaseType, Box<dyn Error + Send + Sync>> {
+            fn get_database_type(&self) -> $crate::error::CanyonResult<DatabaseType> {
                 Ok(self.get_db_type())
             }
         }
@@ -119,7 +119,7 @@ macro_rules! impl_db_connection_for_str {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn $crate::query::parameters::QueryParameter],
-            ) -> Result<$crate::rows::CanyonRows, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> $crate::error::CanyonResult<$crate::rows::CanyonRows> {
                 let conn = $crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.query_rows(stmt, params).await
             }
@@ -128,7 +128,7 @@ macro_rules! impl_db_connection_for_str {
                 &self,
                 stmt: S,
                 params: &[&'_ dyn $crate::query::parameters::QueryParameter],
-            ) -> Result<Vec<R>, Box<dyn std::error::Error + Send + Sync>>
+            ) -> $crate::error::CanyonResult<Vec<R>>
             where
                 S: AsRef<str> + Send,
                 R: $crate::mapper::RowMapper,
@@ -142,7 +142,7 @@ macro_rules! impl_db_connection_for_str {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn $crate::query::parameters::QueryParameter],
-            ) -> Result<Option<R::Output>, Box<dyn std::error::Error + Send + Sync>>
+            ) -> $crate::error::CanyonResult<Option<R::Output>>
             where
                 R: $crate::mapper::RowMapper,
             {
@@ -154,7 +154,7 @@ macro_rules! impl_db_connection_for_str {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn $crate::query::parameters::QueryParameter],
-            ) -> Result<T, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> $crate::error::CanyonResult<T> {
                 let conn = $crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.query_one_for(stmt, params).await
             }
@@ -163,17 +163,14 @@ macro_rules! impl_db_connection_for_str {
                 &self,
                 stmt: &str,
                 params: &[&'_ dyn $crate::query::parameters::QueryParameter],
-            ) -> Result<u64, Box<dyn std::error::Error + Send + Sync>> {
+            ) -> $crate::error::CanyonResult<u64> {
                 let conn = $crate::connection::Canyon::instance()?.get_connection(self)?;
                 conn.execute(stmt, params).await
             }
 
             fn get_database_type(
                 &self,
-            ) -> Result<
-                $crate::connection::database_type::DatabaseType,
-                Box<dyn std::error::Error + Send + Sync>,
-            > {
+            ) -> $crate::error::CanyonResult<$crate::connection::database_type::DatabaseType> {
                 Ok($crate::connection::Canyon::instance()?
                     .find_datasource_by_name_or_default(self)?
                     .get_db_type())

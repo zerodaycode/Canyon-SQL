@@ -1,7 +1,8 @@
 use super::datasources::Auth;
 use crate::canyon::Canyon;
+use crate::error::CanyonResult;
 use serde::Deserialize;
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
 
 /// Represents the supported database backends in **Canyon-SQL**.
 ///
@@ -52,9 +53,7 @@ impl From<&Auth> for DatabaseType {
 /// The default implementation for [`DatabaseType`] returns the database type for the first
 /// datasource configured
 impl DatabaseType {
-    pub fn default_type() -> Result<Self, Box<dyn Error + Send + Sync>> {
-        Canyon::instance()?
-            .get_default_db_type()
-            .map_err(|err| Box::new(err) as Box<dyn Error + Send + Sync>)
+    pub fn default_type() -> CanyonResult<Self> {
+        Canyon::instance()?.get_default_db_type()
     }
 }
