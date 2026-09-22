@@ -76,6 +76,17 @@ fn test_crud_find_by_pk() {
     );
 }
 
+/// PostgreSQL must represent an empty result as `Ok(None)` instead of deriving
+/// control flow from the driver's error text.
+#[cfg(feature = "postgres")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_crud_find_by_pk_returns_none_when_postgres_has_no_rows() {
+    let find_by_pk_result: canyon_sql::CanyonResult<Option<League>> =
+        League::find_by_pk(&i32::MIN).await;
+
+    assert_eq!(find_by_pk_result.unwrap(), None);
+}
+
 /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
 /// defined with the #[primary_key] attribute over some field of the type.
 ///
