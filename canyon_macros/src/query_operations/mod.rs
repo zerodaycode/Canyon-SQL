@@ -123,34 +123,88 @@ pub fn impl_delete_operations_trait_for_struct(
     })
 }
 
-/// Generates the runtime entity CRUD implementation.
-///
-/// This contract is completely separate from `Crud`: its methods
-/// receive the entity to persist instead of operating on `self`.
-pub fn impl_crud_entity_operations_trait_for_struct(
+/// Generates every runtime entity CRUD implementation.
+pub fn impl_entity_crud_traits_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
+    let insert = impl_entity_insert_trait_for_struct(macro_data, table_schema_data)?;
+    let update = impl_entity_update_trait_for_struct(macro_data, table_schema_data)?;
+    let delete = impl_entity_delete_trait_for_struct(macro_data, table_schema_data)?;
+
+    Ok(quote! {
+        #insert
+        #update
+        #delete
+    })
+}
+
+/// Generates runtime insertion for an externally supplied entity.
+pub fn impl_entity_insert_trait_for_struct(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &str,
 ) -> syn::Result<TokenStream> {
     let ty = macro_data.ty;
     let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
-    let entity_ty = compute_crud_ops_mapping_target_type_with_generics(
-        ty,
-        &ty_generics,
-        macro_data.retrieve_mapping_target_type().as_ref(),
-    );
+    let entity_ty = runtime_entity_ty(macro_data, &ty_generics);
     let insert_operations = generate_insert_entity_function_tokens(table_schema_data)?;
-    let update_operations = generate_update_entity_tokens(table_schema_data)?;
-    let delete_operations = generate_delete_entity_tokens(table_schema_data)?;
 
     Ok(quote! {
-        impl #impl_generics canyon_sql::crud::EntityCrud for #ty #ty_generics #where_clause {
+        impl #impl_generics canyon_sql::crud::EntityInsert for #ty #ty_generics #where_clause {
             type Entity = #entity_ty;
 
             #insert_operations
+        }
+    })
+}
+
+/// Generates runtime updates for an externally supplied entity.
+pub fn impl_entity_update_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
+    let ty = macro_data.ty;
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+    let entity_ty = runtime_entity_ty(macro_data, &ty_generics);
+    let update_operations = generate_update_entity_tokens(table_schema_data)?;
+
+    Ok(quote! {
+        impl #impl_generics canyon_sql::crud::EntityUpdate for #ty #ty_generics #where_clause {
+            type Entity = #entity_ty;
+
             #update_operations
+        }
+    })
+}
+
+/// Generates runtime deletion for an externally supplied entity.
+pub fn impl_entity_delete_trait_for_struct(
+    macro_data: &MacroTokens<'_>,
+    table_schema_data: &str,
+) -> syn::Result<TokenStream> {
+    let ty = macro_data.ty;
+    let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+    let entity_ty = runtime_entity_ty(macro_data, &ty_generics);
+    let delete_operations = generate_delete_entity_tokens(table_schema_data)?;
+
+    Ok(quote! {
+        impl #impl_generics canyon_sql::crud::EntityDelete for #ty #ty_generics #where_clause {
+            type Entity = #entity_ty;
+
             #delete_operations
         }
     })
+}
+
+fn runtime_entity_ty(
+    macro_data: &MacroTokens<'_>,
+    ty_generics: &syn::TypeGenerics<'_>,
+) -> TokenStream {
+    compute_crud_ops_mapping_target_type_with_generics(
+        macro_data.ty,
+        ty_generics,
+        macro_data.retrieve_mapping_target_type().as_ref(),
+    )
 }
 
 fn impl_transaction_trait_for_struct(macro_data: &MacroTokens<'_>) -> TokenStream {

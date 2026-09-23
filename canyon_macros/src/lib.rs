@@ -24,9 +24,11 @@ use crate::{
     canyon_tokio_test::generate_canyon_tokio_test_tokens,
     foreignkeyable_macro::foreignkeyable_tokens,
     query_operations::{
-        impl_crud_entity_operations_trait_for_struct, impl_crud_operations_trait_for_struct,
-        impl_delete_operations_trait_for_struct, impl_insert_operations_trait_for_struct,
-        impl_read_operations_trait_for_struct, impl_update_operations_trait_for_struct,
+        impl_crud_operations_trait_for_struct, impl_delete_operations_trait_for_struct,
+        impl_entity_crud_traits_for_struct, impl_entity_delete_trait_for_struct,
+        impl_entity_insert_trait_for_struct, impl_entity_update_trait_for_struct,
+        impl_insert_operations_trait_for_struct, impl_read_operations_trait_for_struct,
+        impl_update_operations_trait_for_struct,
     },
     utils::{function_parser::FunctionParser, helpers, macro_tokens::MacroTokens},
 };
@@ -177,7 +179,25 @@ pub fn delete(input: CompilerTokenStream) -> CompilerTokenStream {
 /// the entity to persist as an argument instead of operating on `self`.
 #[proc_macro_derive(EntityCrud, attributes(canyon_crud))]
 pub fn entity_crud(input: CompilerTokenStream) -> CompilerTokenStream {
-    derive_operations(input, impl_crud_entity_operations_trait_for_struct)
+    derive_operations(input, impl_entity_crud_traits_for_struct)
+}
+
+/// Derives runtime insertion for an entity supplied to a repository adapter.
+#[proc_macro_derive(EntityInsert, attributes(canyon_crud))]
+pub fn entity_insert(input: CompilerTokenStream) -> CompilerTokenStream {
+    derive_operations(input, impl_entity_insert_trait_for_struct)
+}
+
+/// Derives runtime updates for an entity supplied to a repository adapter.
+#[proc_macro_derive(EntityUpdate, attributes(canyon_crud))]
+pub fn entity_update(input: CompilerTokenStream) -> CompilerTokenStream {
+    derive_operations(input, impl_entity_update_trait_for_struct)
+}
+
+/// Derives runtime deletion for an entity supplied to a repository adapter.
+#[proc_macro_derive(EntityDelete, attributes(canyon_crud))]
+pub fn entity_delete(input: CompilerTokenStream) -> CompilerTokenStream {
+    derive_operations(input, impl_entity_delete_trait_for_struct)
 }
 
 /// Derives the metadata required to navigate foreign-key relationships.

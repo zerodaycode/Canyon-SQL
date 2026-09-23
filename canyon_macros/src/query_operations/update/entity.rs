@@ -37,7 +37,7 @@ mod __detail {
             #default_db_conn_and_type
             #update_execution
 
-            Ok(())
+            Ok(affected_rows)
         }
     }
 
@@ -49,7 +49,7 @@ mod __detail {
 
             #update_execution
 
-            Ok(())
+            Ok(affected_rows)
         }
     }
 
@@ -62,21 +62,21 @@ mod __detail {
             };
 
             let primary_key_name =
-                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <<Self as canyon_sql::crud::EntityUpdate>::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_name()
                     .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKey)?;
 
             let primary_key_value =
-                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <<Self as canyon_sql::crud::EntityUpdate>::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_value(entity)
                     .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKeyValue)?;
 
             let update_columns =
-                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <<Self as canyon_sql::crud::EntityUpdate>::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::field_columns();
 
             let mut update_values =
-                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <<Self as canyon_sql::crud::EntityUpdate>::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::field_values(entity);
 
             update_values.push(primary_key_value);
@@ -93,7 +93,7 @@ mod __detail {
                 )
                 .build()?;
 
-            #connection
+            let affected_rows = #connection
                 .execute(
                     query.as_ref(),
                     &update_values,
@@ -105,21 +105,21 @@ mod __detail {
     pub(crate) fn generate_update_entity_signature() -> TokenStream {
         quote! {
             async fn update_entity<'canyon_lt>(
-                entity: &'canyon_lt Self::Entity,
-            ) -> canyon_sql::CanyonResult<()>
+                entity: &'canyon_lt <Self as canyon_sql::crud::EntityUpdate>::Entity,
+            ) -> canyon_sql::CanyonResult<u64>
             where
-                Self::Entity: 'canyon_lt
+                <Self as canyon_sql::crud::EntityUpdate>::Entity: 'canyon_lt
         }
     }
 
     pub(crate) fn generate_update_entity_with_signature() -> TokenStream {
         quote! {
             async fn update_entity_with<'canyon_lt, Input>(
-                entity: &'canyon_lt Self::Entity,
+                entity: &'canyon_lt <Self as canyon_sql::crud::EntityUpdate>::Entity,
                 input: Input,
-            ) -> canyon_sql::CanyonResult<()>
+            ) -> canyon_sql::CanyonResult<u64>
             where
-                Self::Entity: 'canyon_lt,
+                <Self as canyon_sql::crud::EntityUpdate>::Entity: 'canyon_lt,
                 Input: canyon_sql::connection::DbConnection
                     + Send
                     + 'canyon_lt

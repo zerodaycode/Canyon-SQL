@@ -6,9 +6,10 @@ use canyon_sql::{
     connection::DatabaseConnector,
     connection::DbConnection,
     core::Canyon,
-    crud::EntityCrud,
-    crud::Read,
-    macros::{CanyonMapper, EntityCrud, Read, canyon_entity},
+    crud::{EntityCrud, EntityDelete, EntityInsert, EntityUpdate, Read},
+    macros::{
+        CanyonMapper, EntityCrud, EntityDelete, EntityInsert, EntityUpdate, Read, canyon_entity,
+    },
     query::{QueryParameter, querybuilder::SelectQueryBuilder},
 };
 
@@ -105,7 +106,7 @@ fn test_hex_arch_update_entity_ops() {
     let mut updt = find_new_league.unwrap();
     updt.ext_id = 5;
     let r = LeagueHexRepositoryAdapter::<DatabaseConnector>::update_entity(&updt).await;
-    assert!(r.is_ok());
+    assert_eq!(r.unwrap(), 1);
 
     let updated = league_service.get(&other_league.id).await.unwrap();
     assert_eq!(updated.unwrap().ext_id, 5);
@@ -213,11 +214,20 @@ pub struct LeagueHexRepositoryAdapter<T: DbConnection + Send + Sync> {
     db_conn: T,
 }
 
+#[allow(dead_code)]
+#[derive(EntityInsert, EntityUpdate, EntityDelete)]
+#[canyon_crud(maps_to=LeagueHex)]
+#[canyon_entity(table_name = "league")]
+struct SplitLeagueHexRepositoryAdapter {
+    marker: (),
+}
+
 #[test]
 fn entity_crud_is_bound_to_its_mapped_entity() {
     fn assert_entity_binding<T: EntityCrud<Entity = LeagueHex>>() {}
 
     assert_entity_binding::<LeagueHexRepositoryAdapter<DatabaseConnector>>();
+    assert_entity_binding::<SplitLeagueHexRepositoryAdapter>();
 }
 
 impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryAdapter<T> {

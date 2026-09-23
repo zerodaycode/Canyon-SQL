@@ -62,12 +62,12 @@ mod __detail {
             };
 
             let primary_key_name =
-                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <<Self as canyon_sql::crud::EntityDelete>::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_name()
                     .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKey)?;
 
             let primary_key_value =
-                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <<Self as canyon_sql::crud::EntityDelete>::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_value(entity)
                     .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKeyValue)?;
 
@@ -94,21 +94,21 @@ mod __detail {
     pub(crate) fn generate_delete_entity_signature() -> TokenStream {
         quote! {
             async fn delete_entity<'canyon_lt>(
-                entity: &'canyon_lt Self::Entity,
+                entity: &'canyon_lt <Self as canyon_sql::crud::EntityDelete>::Entity,
             ) -> canyon_sql::CanyonResult<()>
             where
-                Self::Entity: 'canyon_lt
+                <Self as canyon_sql::crud::EntityDelete>::Entity: 'canyon_lt
         }
     }
 
     pub(crate) fn generate_delete_entity_with_signature() -> TokenStream {
         quote! {
             async fn delete_entity_with<'canyon_lt, Input>(
-                entity: &'canyon_lt Self::Entity,
+                entity: &'canyon_lt <Self as canyon_sql::crud::EntityDelete>::Entity,
                 input: Input,
             ) -> canyon_sql::CanyonResult<()>
             where
-                Self::Entity: 'canyon_lt,
+                <Self as canyon_sql::crud::EntityDelete>::Entity: 'canyon_lt,
                 Input: canyon_sql::connection::DbConnection
                     + Send
                     + 'canyon_lt
