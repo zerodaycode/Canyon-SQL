@@ -65,7 +65,7 @@ mod __detail {
             };
 
             let columns =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::field_columns();
 
             if columns.is_empty() {
@@ -73,7 +73,7 @@ mod __detail {
             }
 
             let values =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::field_values(entity);
 
             let statement =
@@ -84,7 +84,7 @@ mod __detail {
                 .with_known_columns(columns);
 
             if let Some(primary_key_column) =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_column()
             {
                 let statement = statement
@@ -95,7 +95,7 @@ mod __detail {
 
                 let primary_key = #connection
                     .query_one_for::<
-                        <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                        <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                             ::PrimaryKey
                     >(
                         statement.sql(),
@@ -103,7 +103,7 @@ mod __detail {
                     )
                     .await?;
 
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::set_primary_key(entity, primary_key)?;
             } else {
                 let statement = statement.build()?;
@@ -117,28 +117,22 @@ mod __detail {
 
     pub(crate) fn generate_insert_entity_signature() -> TokenStream {
         quote! {
-            async fn insert_entity<'canyon_lt, Entity>(
-                entity: &'canyon_lt mut Entity,
+            async fn insert_entity<'canyon_lt>(
+                entity: &'canyon_lt mut Self::Entity,
             ) -> canyon_sql::CanyonResult<()>
             where
-                Entity: canyon_sql::core::RowMapper
-                    + canyon_sql::query::bounds::EntityRuntimeInfo
-                    + Sync
-                    + 'canyon_lt
+                Self::Entity: 'canyon_lt
         }
     }
 
     pub(crate) fn generate_insert_entity_with_signature() -> TokenStream {
         quote! {
-            async fn insert_entity_with<'canyon_lt, Entity, Input>(
-                entity: &'canyon_lt mut Entity,
+            async fn insert_entity_with<'canyon_lt, Input>(
+                entity: &'canyon_lt mut Self::Entity,
                 input: Input,
             ) -> canyon_sql::CanyonResult<()>
             where
-                Entity: canyon_sql::core::RowMapper
-                    + canyon_sql::query::bounds::EntityRuntimeInfo
-                    + Sync
-                    + 'canyon_lt,
+                Self::Entity: 'canyon_lt,
                 Input: canyon_sql::connection::DbConnection
                     + Send
                     + 'canyon_lt

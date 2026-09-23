@@ -133,12 +133,19 @@ pub fn impl_crud_entity_operations_trait_for_struct(
 ) -> syn::Result<TokenStream> {
     let ty = macro_data.ty;
     let (impl_generics, ty_generics, where_clause) = macro_data.generics.split_for_impl();
+    let entity_ty = compute_crud_ops_mapping_target_type_with_generics(
+        ty,
+        &ty_generics,
+        macro_data.retrieve_mapping_target_type().as_ref(),
+    );
     let insert_operations = generate_insert_entity_function_tokens(table_schema_data)?;
     let update_operations = generate_update_entity_tokens(table_schema_data)?;
     let delete_operations = generate_delete_entity_tokens(table_schema_data)?;
 
     Ok(quote! {
         impl #impl_generics canyon_sql::crud::EntityCrud for #ty #ty_generics #where_clause {
+            type Entity = #entity_ty;
+
             #insert_operations
             #update_operations
             #delete_operations

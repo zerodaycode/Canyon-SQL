@@ -212,6 +212,14 @@ pub trait LeagueHexRepository {
 pub struct LeagueHexRepositoryAdapter<T: DbConnection + Send + Sync> {
     db_conn: T,
 }
+
+#[test]
+fn entity_crud_is_bound_to_its_mapped_entity() {
+    fn assert_entity_binding<T: EntityCrud<Entity = LeagueHex>>() {}
+
+    assert_entity_binding::<LeagueHexRepositoryAdapter<DatabaseConnector>>();
+}
+
 impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryAdapter<T> {
     async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>> {
         let db_conn = &self.db_conn;

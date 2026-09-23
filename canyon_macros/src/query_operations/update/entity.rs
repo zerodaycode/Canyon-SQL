@@ -62,21 +62,21 @@ mod __detail {
             };
 
             let primary_key_name =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_name()
                     .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKey)?;
 
             let primary_key_value =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::primary_key_value(entity)
                     .ok_or(canyon_sql::error::QueryBuilderError::MissingPrimaryKeyValue)?;
 
             let update_columns =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::field_columns();
 
             let mut update_values =
-                <Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
+                <Self::Entity as canyon_sql::query::bounds::EntityRuntimeInfo>
                     ::field_values(entity);
 
             update_values.push(primary_key_value);
@@ -104,28 +104,22 @@ mod __detail {
 
     pub(crate) fn generate_update_entity_signature() -> TokenStream {
         quote! {
-            async fn update_entity<'canyon_lt, Entity>(
-                entity: &'canyon_lt Entity,
+            async fn update_entity<'canyon_lt>(
+                entity: &'canyon_lt Self::Entity,
             ) -> canyon_sql::CanyonResult<()>
             where
-                Entity: canyon_sql::core::RowMapper
-                    + canyon_sql::query::bounds::EntityRuntimeInfo
-                    + Sync
-                    + 'canyon_lt
+                Self::Entity: 'canyon_lt
         }
     }
 
     pub(crate) fn generate_update_entity_with_signature() -> TokenStream {
         quote! {
-            async fn update_entity_with<'canyon_lt, Entity, Input>(
-                entity: &'canyon_lt Entity,
+            async fn update_entity_with<'canyon_lt, Input>(
+                entity: &'canyon_lt Self::Entity,
                 input: Input,
             ) -> canyon_sql::CanyonResult<()>
             where
-                Entity: canyon_sql::core::RowMapper
-                    + canyon_sql::query::bounds::EntityRuntimeInfo
-                    + Sync
-                    + 'canyon_lt,
+                Self::Entity: 'canyon_lt,
                 Input: canyon_sql::connection::DbConnection
                     + Send
                     + 'canyon_lt
