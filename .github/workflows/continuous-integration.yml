@@ -2,9 +2,9 @@ name: Continuous Integration
 
 on:
   push:
-    branches: ['main', 'development']
+    branches: ['main', 'develop*']
   pull_request:
-    branches: ['main', 'development']
+    branches: ['main', 'develop*']
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,19 +23,19 @@ jobs:
         - { rust: stable,            os: windows-latest }
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
-      - name: docker-compose
+      - name: Start database services
         if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: docker compose -f ./docker/docker-compose.yml up -d 
+        run: docker compose -f ./docker/docker-compose.yml up --detach --wait --wait-timeout 180
 
       - name: Caching cargo dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
 
-      - uses: hecrj/setup-rust-action@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          rust-version: ${{ matrix.rust }}
+          toolchain: ${{ matrix.rust }}
 
       - name: Load data for MSSQL tests
         if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -52,7 +52,11 @@ jobs:
           cargo test --verbose --workspace --doc --target=x86_64-pc-windows-msvc --all-features --no-fail-fast -- --show-output
 
       - name: Run only UNIT tests for MacOS
-        if: ${{ matrix.os == 'MacOS-latest' }}
+        if: ${{ matrix.os == 'macos-latest' }}
         run: |
           cargo test --verbose --workspace --lib --all-features --no-fail-fast -- --show-output
           cargo test --verbose --workspace --doc --all-features --no-fail-fast -- --show-output
+
+      - name: Stop database services
+        if: ${{ always() && matrix.os == 'ubuntu-latest' }}
+        run: docker compose -f ./docker/docker-compose.yml down --volumes

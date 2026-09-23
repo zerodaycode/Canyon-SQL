@@ -2,9 +2,9 @@ name: Code quality and sanity
 
 on:
   push:
-    branches: [main, dev, develop]
+    branches: [main, 'develop*']
   pull_request:
-    branches: [main, dev, develop]
+    branches: [main, 'develop*']
 
 jobs:
   clippy:
@@ -13,13 +13,13 @@ jobs:
     env:
       RUSTFLAGS: -Dwarnings
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
 
-      - uses: hecrj/setup-rust-action@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
       - run: cargo clippy --workspace --all-targets --all-features
@@ -28,13 +28,13 @@ jobs:
     name: Verify code formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
 
-      - uses: hecrj/setup-rust-action@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
 
@@ -48,14 +48,12 @@ jobs:
       matrix:
         crate: [canyon_core, canyon_crud, canyon_macros, canyon_entities, canyon_migrations]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v7
 
       - name: Caching project dependencies
         id: project-cache
         uses: Swatinem/rust-cache@v2
 
-      - uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: nightly
+      - uses: dtolnay/rust-toolchain@nightly
 
       - run: cargo rustdoc --target=x86_64-unknown-linux-gnu -p ${{ matrix.crate }} --all-features -- -D warnings
