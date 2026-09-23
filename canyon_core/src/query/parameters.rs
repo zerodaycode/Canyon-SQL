@@ -1,6 +1,5 @@
 #[cfg(feature = "mysql")]
 use mysql_async::{self, Value, prelude::ToValue};
-use std::any::Any;
 use std::fmt::Debug;
 #[cfg(feature = "mssql")]
 use tiberius::{self, ColumnData, IntoSql};
@@ -13,8 +12,6 @@ use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 /// Defines a trait for represent type bounds against the allowed
 /// data types supported by Canyon to be used as query parameters.
 pub trait QueryParameter: Debug + Send + Sync {
-    fn as_any(&self) -> &dyn Any;
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync);
     #[cfg(feature = "mssql")]
@@ -41,10 +38,6 @@ impl<'b> IntoSql<'b> for &'b dyn QueryParameter {
 //TODO Pending to review and see if it is necessary to apply something similar to the previous implementation.
 
 impl QueryParameter for bool {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -60,10 +53,6 @@ impl QueryParameter for bool {
 }
 
 impl QueryParameter for i16 {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -78,11 +67,7 @@ impl QueryParameter for i16 {
     }
 }
 
-impl QueryParameter for Option<&'static i16> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
+impl QueryParameter for Option<&i16> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -98,10 +83,6 @@ impl QueryParameter for Option<&'static i16> {
 }
 
 impl QueryParameter for i32 {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -117,10 +98,6 @@ impl QueryParameter for i32 {
 }
 
 impl QueryParameter for Option<i32> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -136,10 +113,6 @@ impl QueryParameter for Option<i32> {
 }
 
 impl QueryParameter for u32 {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -156,10 +129,6 @@ impl QueryParameter for u32 {
 }
 
 impl QueryParameter for Option<u32> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -175,10 +144,6 @@ impl QueryParameter for Option<u32> {
 }
 
 impl QueryParameter for f32 {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -194,10 +159,6 @@ impl QueryParameter for f32 {
 }
 
 impl QueryParameter for Option<f32> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -213,10 +174,6 @@ impl QueryParameter for Option<f32> {
 }
 
 impl QueryParameter for f64 {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -232,10 +189,6 @@ impl QueryParameter for f64 {
 }
 
 impl QueryParameter for Option<f64> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -251,10 +204,6 @@ impl QueryParameter for Option<f64> {
 }
 
 impl QueryParameter for i64 {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -270,10 +219,6 @@ impl QueryParameter for i64 {
 }
 
 impl QueryParameter for Option<i64> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -289,10 +234,6 @@ impl QueryParameter for Option<i64> {
 }
 
 impl QueryParameter for String {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -308,10 +249,6 @@ impl QueryParameter for String {
 }
 
 impl QueryParameter for Option<String> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -329,11 +266,7 @@ impl QueryParameter for Option<String> {
     }
 }
 
-impl QueryParameter for Option<&'static String> {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
+impl QueryParameter for Option<&String> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -351,11 +284,7 @@ impl QueryParameter for Option<&'static String> {
     }
 }
 
-impl QueryParameter for &'static str {
-    fn as_any(&self) -> &dyn Any {
-        self
-    }
-
+impl QueryParameter for &str {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -370,11 +299,7 @@ impl QueryParameter for &'static str {
     }
 }
 
-impl QueryParameter for Option<&'static str> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
+impl QueryParameter for Option<&str> {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -393,10 +318,6 @@ impl QueryParameter for Option<&'static str> {
 }
 
 impl QueryParameter for NaiveDate {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -412,10 +333,6 @@ impl QueryParameter for NaiveDate {
 }
 
 impl QueryParameter for Option<NaiveDate> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -431,10 +348,6 @@ impl QueryParameter for Option<NaiveDate> {
 }
 
 impl QueryParameter for NaiveTime {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -450,10 +363,6 @@ impl QueryParameter for NaiveTime {
 }
 
 impl QueryParameter for Option<NaiveTime> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -469,10 +378,6 @@ impl QueryParameter for Option<NaiveTime> {
 }
 
 impl QueryParameter for NaiveDateTime {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -488,10 +393,6 @@ impl QueryParameter for NaiveDateTime {
 }
 
 impl QueryParameter for Option<NaiveDateTime> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -507,10 +408,6 @@ impl QueryParameter for Option<NaiveDateTime> {
 }
 
 impl QueryParameter for DateTime<FixedOffset> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -526,10 +423,6 @@ impl QueryParameter for DateTime<FixedOffset> {
 }
 
 impl QueryParameter for Option<DateTime<FixedOffset>> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -545,10 +438,6 @@ impl QueryParameter for Option<DateTime<FixedOffset>> {
 }
 
 impl QueryParameter for DateTime<Utc> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -564,10 +453,6 @@ impl QueryParameter for DateTime<Utc> {
 }
 
 impl QueryParameter for Option<DateTime<Utc>> {
-    fn as_any(&'_ self) -> &'_ dyn Any {
-        self
-    }
-
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
         self
@@ -582,17 +467,59 @@ impl QueryParameter for Option<DateTime<Utc>> {
     }
 }
 
+#[cfg(test)]
+mod borrowed_parameter_tests {
+    use super::QueryParameter;
+    use crate::query::query::Query;
+
+    #[test]
+    fn query_accepts_parameters_borrowed_from_local_values() {
+        let text = String::from("runtime value");
+        let number = 42_i16;
+        let borrowed_str = text.as_str();
+        let optional_str = Some(text.as_str());
+        let optional_string = Some(&text);
+        let optional_i16 = Some(&number);
+
+        let query = Query::new(
+            "SELECT 1".to_owned(),
+            vec![
+                &borrowed_str as &dyn QueryParameter,
+                &optional_str,
+                &optional_string,
+                &optional_i16,
+            ],
+        );
+
+        assert_eq!(query.params().len(), 4);
+
+        #[cfg(feature = "postgres")]
+        for parameter in query.params() {
+            let _ = parameter.as_postgres_param();
+        }
+
+        #[cfg(feature = "mssql")]
+        for parameter in query.params() {
+            let _ = parameter.as_sqlserver_param();
+        }
+
+        #[cfg(feature = "mysql")]
+        for parameter in query.params() {
+            let _ = parameter.as_mysql_param();
+        }
+    }
+}
+
 #[cfg(all(test, feature = "mssql"))]
 mod mssql_tests {
     use super::QueryParameter;
     use tiberius::ColumnData;
 
-    static VALUE: i16 = 42;
-
     #[test]
     fn optional_i16_parameter_preserves_some_and_none() {
-        let some: Option<&'static i16> = Some(&VALUE);
-        let none: Option<&'static i16> = None;
+        let value = 42;
+        let some = Some(&value);
+        let none: Option<&i16> = None;
 
         assert!(matches!(
             some.as_sqlserver_param(),
@@ -641,12 +568,11 @@ mod postgres_tests {
     use super::QueryParameter;
     use tokio_postgres::types::{IsNull, Type, private::BytesMut};
 
-    static VALUE: i16 = 42;
-
     #[test]
     fn optional_i16_parameter_preserves_some_and_none() {
-        let some: Option<&'static i16> = Some(&VALUE);
-        let none: Option<&'static i16> = None;
+        let value = 42_i16;
+        let some = Some(&value);
+        let none: Option<&i16> = None;
         let mut some_bytes = BytesMut::new();
         let mut none_bytes = BytesMut::new();
 
@@ -660,7 +586,7 @@ mod postgres_tests {
             .unwrap();
 
         assert!(matches!(some_nullability, IsNull::No));
-        assert_eq!(some_bytes.as_ref(), VALUE.to_be_bytes());
+        assert_eq!(some_bytes.as_ref(), value.to_be_bytes());
         assert!(matches!(none_nullability, IsNull::Yes));
         assert!(none_bytes.is_empty());
     }
@@ -672,12 +598,11 @@ mod mysql_tests {
     use chrono::{DateTime, FixedOffset, TimeZone, Utc};
     use mysql_async::Value;
 
-    static I16_VALUE: i16 = 42;
-
     #[test]
     fn optional_i16_parameter_preserves_some_and_none() {
-        let some: Option<&'static i16> = Some(&I16_VALUE);
-        let none: Option<&'static i16> = None;
+        let value = 42;
+        let some = Some(&value);
+        let none: Option<&i16> = None;
 
         assert_eq!(some.as_mysql_param(), Value::Int(42));
         assert_eq!(none.as_mysql_param(), Value::NULL);
