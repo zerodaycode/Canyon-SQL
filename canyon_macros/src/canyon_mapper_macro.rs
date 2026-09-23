@@ -1,31 +1,25 @@
 #![allow(unused_imports)]
 
 use proc_macro::TokenStream as CompilerTokenStream;
-use proc_macro2::{Ident, Span, TokenStream};
+use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use regex::Regex;
-use syn::{DeriveInput, Type, Visibility};
+use syn::{DeriveInput, GenericArgument, PathArguments, Type, Visibility};
 
 use crate::utils::macro_tokens::MacroTokens;
-#[cfg(feature = "mssql")]
-use quote::ToTokens;
 
 use crate::MacroResult;
-
-#[cfg(feature = "mssql")]
-const BY_VALUE_CONVERSION_TARGETS: [&str; 1] = ["String"];
 
 pub fn canyon_mapper_tokens(input: CompilerTokenStream) -> MacroResult {
     let ast = syn::parse::<DeriveInput>(input)?;
     let macro_data = MacroTokens::new(&ast)?;
 
-    Ok(canyon_mapper_impl_tokens(macro_data))
+    canyon_mapper_impl_tokens(macro_data)
 }
 
 /// Generates the [`canyon_sql::core::RowMapper`] and
 /// [`canyon_sql::query::bounds::EntityRuntimeInfo`] implementations for an
 /// entity annotated with `CanyonMapper`.
-fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
+fn canyon_mapper_impl_tokens(ast: MacroTokens) -> MacroResult {
     let ty = ast.ty;
     let ty_str = ty.to_string();
     let fields = ast.fields();
@@ -50,7 +44,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
 
     #[cfg(feature = "mssql")]
     {
-        let field_mappings = create_sqlserver_fields_mapping(&ty_str, &fields);
+        let field_mappings = create_sqlserver_fields_mapping(&ty_str, &fields)?;
 
         mapper_methods.extend(quote! {
             fn deserialize_sqlserver(
@@ -80,7 +74,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
 
     let entity_runtime_info = __details::entity_runtime_info_macro::tokens(&ast);
 
-    quote! {
+    Ok(quote! {
         use crate::canyon_sql::crud::CrudOperations;
 
         impl #impl_generics canyon_sql::core::RowMapper
@@ -93,7 +87,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> TokenStream {
         }
 
         #entity_runtime_info
-    }
+    })
 }
 
 #[cfg(feature = "postgres")]
@@ -145,18 +139,20 @@ fn create_mysql_fields_mapping<'a>(
 fn create_sqlserver_fields_mapping<'a>(
     entity_name: &'a str,
     fields: &'a [(Visibility, Ident, Type)],
-) -> impl Iterator<Item = TokenStream> + use<'a> {
-    fields.iter().map(move |(_, ident, field_type)| {
-        let column_name = ident.to_string();
+) -> syn::Result<Vec<TokenStream>> {
+    fields
+        .iter()
+        .map(move |(_, ident, field_type)| {
+            let column_name = ident.to_string();
 
-        let target_type = get_field_type_as_string(field_type);
-        let deserialization =
-            create_tiberius_field_deserialization(entity_name, &target_type, &column_name);
+            let deserialization =
+                create_tiberius_field_deserialization(entity_name, field_type, &column_name)?;
 
-        quote! {
-            #ident: #deserialization
-        }
-    })
+            Ok(quote! {
+                #ident: #deserialization
+            })
+        })
+        .collect()
 }
 
 /// Builds the conversion required by Tiberius for fields whose borrowed SQL
@@ -167,10 +163,11 @@ fn create_sqlserver_fields_mapping<'a>(
 #[cfg(feature = "mssql")]
 fn create_tiberius_field_deserialization(
     entity_name: &str,
-    target_type: &str,
+    target_type: &Type,
     column_name: &str,
-) -> TokenStream {
-    let is_optional = target_type.contains("Option");
+) -> syn::Result<TokenStream> {
+    let (deserializing_type, is_optional, convert_to_owned) =
+        sqlserver_deserialization_type(target_type)?;
 
     let require_value = if is_optional {
         quote! {}
@@ -184,12 +181,7 @@ fn create_tiberius_field_deserialization(
         }
     };
 
-    let deserializing_type = get_deserializing_type(target_type);
-
-    let convert_to_owned = if BY_VALUE_CONVERSION_TARGETS
-        .iter()
-        .any(|candidate| target_type.contains(candidate))
-    {
+    let convert_to_owned = if convert_to_owned {
         if is_optional {
             quote! { .map(ToOwned::to_owned) }
         } else {
@@ -199,7 +191,7 @@ fn create_tiberius_field_deserialization(
         quote! {}
     };
 
-    quote! {
+    Ok(quote! {
         row.try_get::<#deserializing_type, &str>(#column_name)
             .map_err(|source| canyon_sql::core::MappingError::sql_server(
                 #entity_name,
@@ -208,79 +200,113 @@ fn create_tiberius_field_deserialization(
             ))?
             #require_value
             #convert_to_owned
-    }
+    })
 }
 
 #[cfg(feature = "mssql")]
-fn extract_deserializing_type_name(target_type: &str) -> String {
-    static TYPE_REGEX: std::sync::OnceLock<Regex> = std::sync::OnceLock::new();
+fn sqlserver_deserialization_type(target_type: &Type) -> syn::Result<(TokenStream, bool, bool)> {
+    let optional_inner = option_inner_type(target_type)?;
+    let (inner_type, is_optional) = optional_inner
+        .map(|inner| (inner, true))
+        .unwrap_or((target_type, false));
 
-    let regex = TYPE_REGEX.get_or_init(|| {
-        Regex::new(r"(?:Option\s*<\s*)?(?P<type>&?\w+)(?:\s*>)?")
-            .expect("the Tiberius type extraction regex must be valid")
-    });
-
-    regex
-        .captures(target_type)
-        .map(|captures| captures["type"].to_owned())
-        .unwrap_or_else(|| {
-            panic!("Unable to determine the SQL Server deserialization type for `{target_type}`")
-        })
-}
-
-#[cfg(feature = "mssql")]
-fn get_deserializing_type(target_type: &str) -> TokenStream {
-    let extracted_type = extract_deserializing_type_name(target_type);
-
-    if BY_VALUE_CONVERSION_TARGETS.contains(&extracted_type.as_str()) {
+    let convert_to_owned = type_path_ends_with(inner_type, "String");
+    let deserializing_type = if convert_to_owned {
         quote! { &str }
-    } else if extracted_type.contains("Date") || extracted_type.contains("Time") {
-        let ident = Ident::new(&extracted_type, Span::call_site());
-        quote! { canyon_sql::date_time::#ident }
     } else {
-        let ident = Ident::new(&extracted_type, Span::call_site());
-        quote! { #ident }
-    }
+        quote! { #inner_type }
+    };
+
+    Ok((deserializing_type, is_optional, convert_to_owned))
 }
 
 #[cfg(feature = "mssql")]
-fn get_field_type_as_string(field_type: &Type) -> String {
-    field_type.to_token_stream().to_string()
+fn option_inner_type(target_type: &Type) -> syn::Result<Option<&Type>> {
+    let Type::Path(type_path) = target_type else {
+        return Ok(None);
+    };
+    let Some(segment) = type_path.path.segments.last() else {
+        return Ok(None);
+    };
+
+    if segment.ident != "Option" {
+        return Ok(None);
+    }
+
+    let PathArguments::AngleBracketed(arguments) = &segment.arguments else {
+        return Err(syn::Error::new_spanned(
+            target_type,
+            "Option fields must declare exactly one inner type",
+        ));
+    };
+
+    let mut type_arguments = arguments.args.iter().filter_map(|argument| match argument {
+        GenericArgument::Type(inner_type) => Some(inner_type),
+        _ => None,
+    });
+    let inner_type = type_arguments.next();
+
+    if arguments.args.len() != 1 || inner_type.is_none() || type_arguments.next().is_some() {
+        return Err(syn::Error::new_spanned(
+            target_type,
+            "Option fields must declare exactly one inner type",
+        ));
+    }
+
+    Ok(inner_type)
+}
+
+#[cfg(feature = "mssql")]
+fn type_path_ends_with(target_type: &Type, expected: &str) -> bool {
+    matches!(
+        target_type,
+        Type::Path(type_path)
+            if type_path
+                .path
+                .segments
+                .last()
+                .is_some_and(|segment| segment.ident == expected)
+    )
 }
 
 #[cfg(all(test, feature = "mssql"))]
 mod mapper_macro_tests {
-    use super::{extract_deserializing_type_name, get_deserializing_type};
+    use super::sqlserver_deserialization_type;
+    use syn::Type;
 
-    #[test]
-    fn extracts_the_inner_tiberius_deserialization_type_name() {
-        assert_eq!("String", extract_deserializing_type_name("String"));
-        assert_eq!("String", extract_deserializing_type_name("Option<String>"));
-        assert_eq!("i64", extract_deserializing_type_name("i64"));
-        assert_eq!("DateTime", extract_deserializing_type_name("DateTime"));
-        assert_eq!(
-            "NaiveDateTime",
-            extract_deserializing_type_name("NaiveDateTime")
-        );
+    fn parse_type(source: &str) -> Type {
+        syn::parse_str(source).unwrap()
     }
 
     #[test]
-    fn maps_canyon_types_to_tiberius_deserialization_tokens() {
-        assert_eq!("& str", get_deserializing_type("String").to_string());
-        assert_eq!(
-            "& str",
-            get_deserializing_type("Option<String>").to_string()
-        );
-        assert_eq!("i64", get_deserializing_type("i64").to_string());
+    fn maps_owned_strings_to_tiberius_borrowed_strings() {
+        let (ty, optional, owned) = sqlserver_deserialization_type(&parse_type("String")).unwrap();
+        assert_eq!("& str", ty.to_string());
+        assert!(!optional);
+        assert!(owned);
 
-        assert_eq!(
-            "canyon_sql :: date_time :: DateTime",
-            get_deserializing_type("DateTime").to_string()
-        );
-        assert_eq!(
-            "canyon_sql :: date_time :: NaiveDateTime",
-            get_deserializing_type("NaiveDateTime").to_string()
-        );
+        let (ty, optional, owned) =
+            sqlserver_deserialization_type(&parse_type("std::option::Option<std::string::String>"))
+                .unwrap();
+        assert_eq!("& str", ty.to_string());
+        assert!(optional);
+        assert!(owned);
+    }
+
+    #[test]
+    fn preserves_qualified_and_generic_field_types() {
+        let (ty, optional, owned) =
+            sqlserver_deserialization_type(&parse_type("Option<chrono::DateTime<chrono::Utc>>"))
+                .unwrap();
+        assert_eq!("chrono :: DateTime < chrono :: Utc >", ty.to_string());
+        assert!(optional);
+        assert!(!owned);
+
+        let (ty, optional, owned) =
+            sqlserver_deserialization_type(&parse_type("domain::UserId")).unwrap();
+        assert_eq!("domain :: UserId", ty.to_string());
+        assert!(!optional);
+        assert!(!owned);
     }
 }
 

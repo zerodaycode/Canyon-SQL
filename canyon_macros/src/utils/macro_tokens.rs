@@ -26,6 +26,13 @@ impl<'a> MacroTokens<'a> {
     pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
         // TODO: impl syn::parse instead
         if let syn::Data::Struct(ref s) = ast.data {
+            if !matches!(s.fields, Fields::Named(_)) {
+                return Err(syn::Error::new_spanned(
+                    &ast.ident,
+                    "Canyon derives require a struct with named fields",
+                ));
+            }
+
             let attrs = &ast.attrs;
 
             let primary_key_attribute = __details::find_primary_key_field_annotation(&s.fields)
@@ -169,6 +176,25 @@ impl<'a> MacroTokens<'a> {
         });
 
         foreign_key_annotations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MacroTokens;
+    use syn::DeriveInput;
+
+    #[test]
+    fn rejects_unnamed_and_unit_structs_with_a_diagnostic() {
+        for source in ["struct Tuple(i64);", "struct Unit;"] {
+            let ast = syn::parse_str::<DeriveInput>(source).unwrap();
+            let error = MacroTokens::new(&ast).err().unwrap();
+
+            assert_eq!(
+                error.to_string(),
+                "Canyon derives require a struct with named fields"
+            );
+        }
     }
 }
 

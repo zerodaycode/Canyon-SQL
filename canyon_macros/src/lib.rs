@@ -1,5 +1,4 @@
 extern crate proc_macro;
-extern crate regex;
 
 #[cfg(feature = "migrations")]
 use canyon_macro::main_with_queries;
