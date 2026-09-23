@@ -118,7 +118,10 @@ impl DbConnection for SqlServerConnector {
     }
 
     async fn execute(&self, stmt: &str, params: &[&'_ dyn QueryParameter]) -> CanyonResult<u64> {
-        let mssql_query = crate::connection::clients::mssql::sqlserver_query_launcher::generate_mssql_query_client(stmt, params).await;
+        let mssql_query =
+            crate::connection::clients::mssql::sqlserver_query_launcher::generate_mssql_query_client(
+                stmt, params,
+            );
         let mut conn = self.get_pooled().await?;
 
         mssql_query
@@ -142,35 +145,23 @@ pub(crate) mod sqlserver_query_launcher {
         params: &[&dyn QueryParameter],
         conn: &'a mut bb8::PooledConnection<'_, bb8_tiberius::ConnectionManager>,
     ) -> CanyonResult<QueryStream<'a>> {
-        let mssql_query = generate_mssql_query_client(stmt, params).await;
+        let mssql_query = generate_mssql_query_client(stmt, params);
         mssql_query
             .query(conn)
             .await
             .map_err(|source| QueryError::sql_server(source).into())
     }
 
-    pub(crate) async fn generate_mssql_query_client<'a>(
+    /// Builds a Tiberius query without modifying the supplied SQL.
+    ///
+    /// Statements produced by Canyon's query builder already use SQL Server's
+    /// identifier, placeholder and `OUTPUT INSERTED` syntax. Callers providing
+    /// raw statements are likewise responsible for supplying SQL Server SQL.
+    pub(crate) fn generate_mssql_query_client<'a>(
         stmt: &str,
         params: &[&'a dyn QueryParameter],
     ) -> Query<'a> {
-        let mut stmt = String::from(stmt);
-
-        if stmt.contains("RETURNING") {
-            // TODO: when the InsertQuerybuilder with a api on the builder for the returning clause
-            let c = stmt.clone();
-            let temp = c.split_once("RETURNING").unwrap();
-            let temp2 = temp.0.split_once("VALUES").unwrap();
-
-            stmt = format!(
-                "{} OUTPUT inserted.{} VALUES {}",
-                temp2.0.trim(),
-                temp.1.trim(),
-                temp2.1.trim()
-            );
-        }
-
-        let stmt = stmt.replace('$', "@P"); // TODO: this should be solved by the querybuilder
-        generate_query_and_bind_params(stmt, params)
+        generate_query_and_bind_params(stmt.to_owned(), params)
     }
 
     // Query and parameters are generated in this procedure together to avoid lifetime errors

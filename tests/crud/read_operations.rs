@@ -13,6 +13,8 @@ use crate::tests_models::league::*;
 use crate::tests_models::player::*;
 
 use canyon_sql::crud::ReadOperations;
+#[cfg(feature = "mssql")]
+use canyon_sql::{connection::DbConnection, core::Canyon};
 
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
 /// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
@@ -108,6 +110,20 @@ fn test_crud_find_by_pk_with_mssql() {
         some_league.image_url,
         "http://static.lolesports.com/leagues/1646396098648_CollegeChampionshiplogo.png"
     );
+}
+
+/// Raw SQL sent to SQL Server must not be rewritten as though it had been
+/// generated for PostgreSQL. Dollar signs and SQL keywords inside literals
+/// are application data, not placeholder or `RETURNING` syntax.
+#[cfg(feature = "mssql")]
+#[canyon_sql::macros::canyon_tokio_test]
+fn test_mssql_raw_sql_preserves_dollar_signs_and_returning_literals() {
+    let connection = Canyon::instance()?.get_connection(SQL_SERVER_DS)?;
+    let value: String = connection
+        .query_one_for("SELECT CAST('$1 RETURNING' AS NVARCHAR(32));", &[])
+        .await?;
+
+    assert_eq!(value, "$1 RETURNING");
 }
 
 /// Tests the behaviour of a SELECT * FROM {table_name} WHERE <pk> = <pk_value>, where the pk is
