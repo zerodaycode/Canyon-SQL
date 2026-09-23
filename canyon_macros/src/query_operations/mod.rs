@@ -61,7 +61,7 @@ pub fn impl_read_operations_trait_for_struct(
     );
 
     let methods = generate_read_operations_tokens(macro_data, table_schema_data)?;
-    let foreign_key_operations = generate_find_by_fk_ops(macro_data, table_schema_data);
+    let foreign_key_operations = generate_find_by_fk_ops(macro_data, table_schema_data)?;
 
     Ok(quote! {
         impl #impl_generics
