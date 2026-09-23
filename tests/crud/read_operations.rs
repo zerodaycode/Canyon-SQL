@@ -12,12 +12,12 @@ use crate::tests_models::league::*;
 #[cfg(feature = "postgres")]
 use crate::tests_models::player::*;
 
-use canyon_sql::crud::ReadOperations;
+use canyon_sql::crud::Read;
 #[cfg(feature = "mssql")]
 use canyon_sql::{connection::DbConnection, core::Canyon};
 
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
-/// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
+/// `::find_all()` associated function derived with the `Crud` derive proc-macro
 /// and using the *default datasource*
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
@@ -33,7 +33,7 @@ fn test_crud_find_all() {
 }
 
 /// Tests the behaviour of a SELECT * FROM {table_name} within Canyon, through the
-/// `::find_all()` associated function derived with the `CanyonCrud` derive proc-macro
+/// `::find_all()` associated function derived with the `Crud` derive proc-macro
 /// and using the specified datasource
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]

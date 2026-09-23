@@ -41,21 +41,18 @@ use canyon_entities::{
 
 type MacroResult = syn::Result<TokenStream>;
 
-type OperationsGenerator = for<'a> fn(&MacroTokens<'a>, &str) -> MacroResult;
+type DeriveGenerator = for<'a> fn(&MacroTokens<'a>, &str) -> MacroResult;
 
 fn derive_operations(
     input: CompilerTokenStream,
-    generator: OperationsGenerator,
+    generator: DeriveGenerator,
 ) -> CompilerTokenStream {
     derive_operations_tokens(input, generator)
         .unwrap_or_else(Error::into_compile_error)
         .into()
 }
 
-fn derive_operations_tokens(
-    input: CompilerTokenStream,
-    generator: OperationsGenerator,
-) -> MacroResult {
+fn derive_operations_tokens(input: CompilerTokenStream, generator: DeriveGenerator) -> MacroResult {
     let ast = syn::parse::<DeriveInput>(input)?;
     let macro_data = MacroTokens::new(&ast)?;
 
@@ -142,8 +139,8 @@ pub fn canyon_entity(meta: CompilerTokenStream, input: CompilerTokenStream) -> C
 ///
 /// This convenience derive generates the read, insert, update and delete
 /// implementations for the annotated type.
-#[proc_macro_derive(CanyonCrud, attributes(canyon_crud))]
-pub fn canyon_crud(input: CompilerTokenStream) -> CompilerTokenStream {
+#[proc_macro_derive(Crud, attributes(canyon_crud))]
+pub fn crud(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_crud_operations_trait_for_struct)
 }
 
@@ -151,26 +148,26 @@ pub fn canyon_crud(input: CompilerTokenStream) -> CompilerTokenStream {
 ///
 /// This includes operations such as `find_all`, `find_by_pk`, `count` and
 /// `select_query`.
-#[proc_macro_derive(CanyonRead, attributes(canyon_crud))]
-pub fn canyon_read(input: CompilerTokenStream) -> CompilerTokenStream {
+#[proc_macro_derive(Read, attributes(canyon_crud))]
+pub fn read(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_read_operations_trait_for_struct)
 }
 
 /// Derives insert operations for instances of the annotated type.
-#[proc_macro_derive(CanyonInsert, attributes(canyon_crud))]
-pub fn canyon_insert(input: CompilerTokenStream) -> CompilerTokenStream {
+#[proc_macro_derive(Insert, attributes(canyon_crud))]
+pub fn insert(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_insert_operations_trait_for_struct)
 }
 
 /// Derives update operations for instances of the annotated type.
-#[proc_macro_derive(CanyonUpdate, attributes(canyon_crud))]
-pub fn canyon_update(input: CompilerTokenStream) -> CompilerTokenStream {
+#[proc_macro_derive(Update, attributes(canyon_crud))]
+pub fn update(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_update_operations_trait_for_struct)
 }
 
 /// Derives delete operations for instances of the annotated type.
-#[proc_macro_derive(CanyonDelete, attributes(canyon_crud))]
-pub fn canyon_delete(input: CompilerTokenStream) -> CompilerTokenStream {
+#[proc_macro_derive(Delete, attributes(canyon_crud))]
+pub fn delete(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_delete_operations_trait_for_struct)
 }
 
@@ -178,8 +175,8 @@ pub fn canyon_delete(input: CompilerTokenStream) -> CompilerTokenStream {
 ///
 /// This is intended for repository adapters whose generated operations receive
 /// the entity to persist as an argument instead of operating on `self`.
-#[proc_macro_derive(CanyonEntityCrud, attributes(canyon_crud))]
-pub fn canyon_entity_crud(input: CompilerTokenStream) -> CompilerTokenStream {
+#[proc_macro_derive(EntityCrud, attributes(canyon_crud))]
+pub fn entity_crud(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_crud_entity_operations_trait_for_struct)
 }
 

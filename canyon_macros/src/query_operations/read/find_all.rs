@@ -54,7 +54,7 @@ fn create_find_all_with_macro(
             I: canyon_sql::connection::DbConnection + Send + 'a
         {
             use canyon_sql::connection::DbConnection;
-            use canyon_sql::crud::ReadOperations;
+            use canyon_sql::crud::Read;
             use crate::canyon_sql::query::querybuilder::SelectQueryBuilderOps;
 
             let db_type = input.get_database_type()?;

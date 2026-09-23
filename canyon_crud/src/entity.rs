@@ -7,7 +7,7 @@ use canyon_core::query::bounds::EntityRuntimeInfo;
 ///
 /// It is intended for repository adapters and layered architectures where the persistence type is
 /// not the entity being persisted.
-pub trait EntityCrudOperations: Send {
+pub trait EntityCrud: Send {
     fn insert_entity<'entity, T>(entity: &'entity mut T) -> impl Future<Output = CanyonResult<()>>
     where
         T: RowMapper + EntityRuntimeInfo + Sync + 'entity;

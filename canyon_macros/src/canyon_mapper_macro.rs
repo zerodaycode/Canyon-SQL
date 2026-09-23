@@ -75,7 +75,7 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> MacroResult {
     let entity_runtime_info = __details::entity_runtime_info_macro::tokens(&ast);
 
     Ok(quote! {
-        use crate::canyon_sql::crud::CrudOperations;
+        use crate::canyon_sql::crud::Crud;
 
         impl #impl_generics canyon_sql::core::RowMapper
             for #ty #ty_generics

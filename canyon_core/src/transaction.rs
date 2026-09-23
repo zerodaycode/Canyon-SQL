@@ -9,7 +9,7 @@ use std::future::Future;
 ///
 /// This trait provides a set of static methods that mirror the functionality of CRUD operations,
 /// allowing implementors to be coerced into `<#ty as Transaction>::...` usage patterns.
-/// It is primarily used by the generated macros of `CrudOperations` to simplify interaction
+/// It is primarily used by the generated `Crud` macro to simplify interaction
 /// with database entities by abstracting common operations such as querying rows, executing
 /// statements, and retrieving single results.
 ///
@@ -25,7 +25,7 @@ use std::future::Future;
 ///
 /// # Examples
 /// ```ignore
-/// async fn perform_query<E: CrudOperations + Send>(entity: E) {
+/// async fn perform_query<E: Crud<Entity> + Send>(entity: E) {
 ///     let result = <E as Transaction>::query("SELECT * FROM users", &[], entity).await;
 ///     match result {
 ///         Ok(rows) => println!("Retrieved {} rows", rows.len()),

@@ -51,7 +51,7 @@ pub mod core {
 /// exposing them through the public API
 pub mod crud {
     pub use canyon_crud::crud::*;
-    pub use canyon_crud::entity::EntityCrudOperations;
+    pub use canyon_crud::entity::EntityCrud;
 }
 
 /// Re-exports the query elements from the `crud`crate

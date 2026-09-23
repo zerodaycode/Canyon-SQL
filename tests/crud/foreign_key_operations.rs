@@ -15,7 +15,7 @@ use crate::constants::SQL_SERVER_DS;
 use crate::tests_models::league::*;
 use crate::tests_models::tournament::*;
 
-use canyon_sql::crud::ReadOperations;
+use canyon_sql::crud::Read;
 
 /// Given an entity `T` which has some field declaring a foreign key relation
 /// with some another entity `U`, for example, performs a search to find

@@ -22,9 +22,8 @@ mod doc_comments;
 
 /// Generates every static CRUD implementation.
 ///
-/// `CrudOperations` itself is provided by its blanket implementation once the
-/// type implements `ReadOperations`, `InsertOperations`, `UpdateOperations`
-/// and `DeleteOperations`.
+/// `Crud` itself is provided by its blanket implementation once the type
+/// implements `Read`, `Insert`, `Update` and `Delete`.
 pub fn impl_crud_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
     table_schema_data: &str,
@@ -65,7 +64,7 @@ pub fn impl_read_operations_trait_for_struct(
 
     Ok(quote! {
         impl #impl_generics
-            canyon_sql::crud::ReadOperations<#mapper_ty> for #ty #ty_generics #where_clause {
+            canyon_sql::crud::Read<#mapper_ty> for #ty #ty_generics #where_clause {
             #methods
         }
 
@@ -84,7 +83,7 @@ pub fn impl_insert_operations_trait_for_struct(
     let methods = generate_insert_method_tokens(macro_data, table_schema_data)?;
 
     Ok(quote! {
-        impl #impl_generics canyon_sql::crud::InsertOperations for #ty #ty_generics #where_clause {
+        impl #impl_generics canyon_sql::crud::Insert for #ty #ty_generics #where_clause {
             #methods
         }
     })
@@ -101,7 +100,7 @@ pub fn impl_update_operations_trait_for_struct(
     let methods = generate_update_method_tokens(macro_data, table_schema_data)?;
 
     Ok(quote! {
-        impl #impl_generics canyon_sql::crud::UpdateOperations for #ty #ty_generics #where_clause {
+        impl #impl_generics canyon_sql::crud::Update for #ty #ty_generics #where_clause {
             #methods
         }
     })
@@ -118,7 +117,7 @@ pub fn impl_delete_operations_trait_for_struct(
     let methods = generate_delete_method_tokens(macro_data, table_schema_data)?;
 
     Ok(quote! {
-        impl #impl_generics canyon_sql::crud::DeleteOperations for #ty #ty_generics #where_clause {
+        impl #impl_generics canyon_sql::crud::Delete for #ty #ty_generics #where_clause {
             #methods
         }
     })
@@ -126,7 +125,7 @@ pub fn impl_delete_operations_trait_for_struct(
 
 /// Generates the runtime entity CRUD implementation.
 ///
-/// This contract is completely separate from `CrudOperations`: its methods
+/// This contract is completely separate from `Crud`: its methods
 /// receive the entity to persist instead of operating on `self`.
 pub fn impl_crud_entity_operations_trait_for_struct(
     macro_data: &MacroTokens<'_>,
@@ -139,7 +138,7 @@ pub fn impl_crud_entity_operations_trait_for_struct(
     let delete_operations = generate_delete_entity_tokens(table_schema_data)?;
 
     Ok(quote! {
-        impl #impl_generics canyon_sql::crud::EntityCrudOperations for #ty #ty_generics #where_clause {
+        impl #impl_generics canyon_sql::crud::EntityCrud for #ty #ty_generics #where_clause {
             #insert_operations
             #update_operations
             #delete_operations

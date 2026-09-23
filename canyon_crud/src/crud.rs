@@ -9,7 +9,7 @@ use canyon_core::{
 };
 use std::future::Future;
 
-pub trait ReadOperations<R>: Send
+pub trait Read<R>: Send
 where
     R: RowMapper,
     Vec<R>: FromIterator<R::Output>,
@@ -42,7 +42,7 @@ where
         I: DbConnection + Send + 'value;
 }
 
-pub trait InsertOperations: Send {
+pub trait Insert: Send {
     fn insert(&mut self) -> impl Future<Output = CanyonResult<()>> + Send;
 
     fn insert_with<'connection, I>(
@@ -53,7 +53,7 @@ pub trait InsertOperations: Send {
         I: DbConnection + Send + 'connection;
 }
 
-pub trait UpdateOperations: Send {
+pub trait Update: Send {
     fn update(&self) -> impl Future<Output = CanyonResult<u64>> + Send;
 
     fn update_with<'connection, I>(
@@ -68,7 +68,7 @@ pub trait UpdateOperations: Send {
     fn update_query_with<'a>(database_type: DatabaseType) -> UpdateQueryBuilder<'a>;
 }
 
-pub trait DeleteOperations: Send {
+pub trait Delete: Send {
     fn delete(&self) -> impl Future<Output = CanyonResult<()>> + Send;
 
     fn delete_with<'connection, I>(
@@ -83,17 +83,16 @@ pub trait DeleteOperations: Send {
     fn delete_query_with<'a>(database_type: DatabaseType) -> DeleteQueryBuilder<'a>;
 }
 
-pub trait CrudOperations<R>:
-    ReadOperations<R> + InsertOperations + UpdateOperations + DeleteOperations
+pub trait Crud<R>: Read<R> + Insert + Update + Delete
 where
     R: RowMapper,
     Vec<R>: FromIterator<R::Output>,
 {
 }
 
-impl<T, R> CrudOperations<R> for T
+impl<T, R> Crud<R> for T
 where
-    T: ReadOperations<R> + InsertOperations + UpdateOperations + DeleteOperations,
+    T: Read<R> + Insert + Update + Delete,
     R: RowMapper,
     Vec<R>: FromIterator<R::Output>,
 {

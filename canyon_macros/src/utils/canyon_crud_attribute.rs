@@ -5,12 +5,12 @@ use syn::parse::{Parse, ParseStream};
 /// Type that helps to parse the: `#[canyon_crud(maps_to = Ident)]` proc macro attribute
 ///
 /// The ident value of the `maps_to` argument brings a type that is the target type for which
-/// `CrudOperations` will write the queries as the implementor of [`RowMapper`]
-pub(crate) struct CanyonCrudAttribute {
+/// `Crud` will write the queries as the implementor of [`RowMapper`]
+pub(crate) struct CrudAttribute {
     pub maps_to: Option<Ident>,
 }
 
-impl Parse for CanyonCrudAttribute {
+impl Parse for CrudAttribute {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let arg_name: Ident = input.parse()?;
         if arg_name != "maps_to" {

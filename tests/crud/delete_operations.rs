@@ -10,7 +10,7 @@ use crate::constants::SQL_SERVER_DS;
 
 use crate::tests_models::league::*;
 
-use canyon_sql::crud::{DeleteOperations, InsertOperations, ReadOperations};
+use canyon_sql::crud::{Delete, Insert, Read};
 
 /// Deletes a row from the database that is mapped into some instance of a `T` entity.
 ///

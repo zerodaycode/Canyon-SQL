@@ -7,7 +7,7 @@ use crate::constants::MYSQL_DS;
 use crate::constants::SQL_SERVER_DS;
 
 use crate::tests_models::league::*;
-use canyon_sql::crud::{InsertOperations, ReadOperations};
+use canyon_sql::crud::{Insert, Read};
 
 /// Inserts a new record on the database, given an entity that is
 /// annotated with `#[canyon_entity]` macro over a *T* type.

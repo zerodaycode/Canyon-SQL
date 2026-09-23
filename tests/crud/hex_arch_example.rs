@@ -6,9 +6,9 @@ use canyon_sql::{
     connection::DatabaseConnector,
     connection::DbConnection,
     core::Canyon,
-    crud::EntityCrudOperations,
-    crud::ReadOperations,
-    macros::{CanyonEntityCrud, CanyonMapper, CanyonRead, canyon_entity},
+    crud::EntityCrud,
+    crud::Read,
+    macros::{CanyonMapper, EntityCrud, Read, canyon_entity},
     query::{QueryParameter, querybuilder::SelectQueryBuilder},
 };
 
@@ -206,7 +206,7 @@ pub trait LeagueHexRepository {
     ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>>;
 } // As a domain boundary for the infrastructure side of the hexagon
 
-#[derive(CanyonRead, CanyonEntityCrud)]
+#[derive(Read, EntityCrud)]
 #[canyon_crud(maps_to=LeagueHex)]
 #[canyon_entity(table_name = "league")]
 pub struct LeagueHexRepositoryAdapter<T: DbConnection + Send + Sync> {

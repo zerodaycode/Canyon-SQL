@@ -23,7 +23,7 @@ use canyon_sql::query::operators::{
 /// with the SQL filters
 ///
 use canyon_sql::{
-    crud::{DeleteOperations, ReadOperations, UpdateOperations},
+    crud::{Delete, Read, Update},
     query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
 };
 

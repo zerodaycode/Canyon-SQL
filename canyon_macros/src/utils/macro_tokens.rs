@@ -1,5 +1,5 @@
 use crate::utils::{
-    canyon_crud_attribute::CanyonCrudAttribute, primary_key_attribute::PrimaryKeyAttribute,
+    canyon_crud_attribute::CrudAttribute, primary_key_attribute::PrimaryKeyAttribute,
 };
 use canyon_entities::{
     field_annotation::EntityFieldAnnotation, helpers::default_database_table_name_from_entity_name,
@@ -18,7 +18,7 @@ pub struct MacroTokens<'a> {
     pub attrs: &'a Vec<Attribute>,
     pub fields: &'a Fields,
     // -------- the new fields that must help to avoid recalculations every time that the user compiles
-    pub(crate) canyon_crud_attribute: Option<CanyonCrudAttribute>, // Type level
+    pub(crate) canyon_crud_attribute: Option<CrudAttribute>, // Type level
     pub(crate) primary_key_attribute: Option<PrimaryKeyAttribute<'a>>, // Field level, quick access without iterations
 }
 
@@ -41,7 +41,7 @@ impl<'a> MacroTokens<'a> {
             let mut canyon_crud_attribute = None;
             for attr in attrs {
                 if attr.path().is_ident("canyon_crud") {
-                    canyon_crud_attribute = Some(attr.parse_args::<CanyonCrudAttribute>()?);
+                    canyon_crud_attribute = Some(attr.parse_args::<CrudAttribute>()?);
                 }
             }
 
@@ -55,7 +55,7 @@ impl<'a> MacroTokens<'a> {
                 primary_key_attribute,
             })
         } else {
-            __details::raise_canyon_crud_only_for_structs_err()
+            __details::raise_crud_only_for_structs_err()
         }
     }
 
@@ -224,11 +224,10 @@ mod __details {
             .is_none_or(|annotation| matches!(annotation, EntityFieldAnnotation::PrimaryKey(true)))
     }
 
-    pub(crate) fn raise_canyon_crud_only_for_structs_err<'a>() -> Result<MacroTokens<'a>, syn::Error>
-    {
+    pub(crate) fn raise_crud_only_for_structs_err<'a>() -> Result<MacroTokens<'a>, syn::Error> {
         Err(syn::Error::new(
             Span::call_site(),
-            "CanyonCrud may only be implemented for structs",
+            "Crud may only be implemented for structs",
         ))
     }
 }
