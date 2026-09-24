@@ -143,16 +143,22 @@ fn test_crud_search_by_foreign_key() {
         .expect("No result found for the given parameter");
 
     // We can get the parent entity for the retrieved child instance
-    let parent_entity: Option<League> = some_tournament
+    let league: League = some_tournament
         .find_league()
         .await
-        .expect("Result variant of the query is err");
+        .expect("failed to find the PostgreSQL tournament's league")
+        .expect("the seeded PostgreSQL tournament must have a league");
+    assert_eq!(some_tournament.league, league.id);
 
-    if let Some(league) = parent_entity {
-        assert_eq!(some_tournament.league, league.id)
-    } else {
-        assert_eq!(parent_entity, None)
-    }
+    let mut tournament_without_league = some_tournament;
+    tournament_without_league.league = i32::MAX;
+    assert!(
+        tournament_without_league
+            .find_league()
+            .await
+            .expect("failed to check a missing PostgreSQL league")
+            .is_none()
+    );
 }
 
 /// Same as the search by foreign key, but with the specified datasource
@@ -165,20 +171,22 @@ fn test_crud_search_by_foreign_key_with_mssql() {
         .expect("No result found for the given parameter");
 
     // We can get the parent entity for the retrieved child instance
-    let parent_entity: Option<League> = some_tournament
+    let league: League = some_tournament
         .find_league_with(SQL_SERVER_DS)
         .await
-        .expect("Result variant of the query is err");
+        .expect("failed to find the SQL Server tournament's league")
+        .expect("the seeded SQL Server tournament must have a league");
+    assert_eq!(some_tournament.league, league.id);
 
-    // These are tests, and we could unwrap the result contained in the option, because
-    // it always should exist that search for the data inserted when the docker starts.
-    // But, just for change the style a little bit and offer more options about how to
-    // handle things done with Canyon
-    if let Some(league) = parent_entity {
-        assert_eq!(some_tournament.league, league.id)
-    } else {
-        assert_eq!(parent_entity, None)
-    }
+    let mut tournament_without_league = some_tournament;
+    tournament_without_league.league = i32::MAX;
+    assert!(
+        tournament_without_league
+            .find_league_with(SQL_SERVER_DS)
+            .await
+            .expect("failed to check a missing SQL Server league")
+            .is_none()
+    );
 }
 
 /// Same as the search by foreign key, but with the specified datasource
@@ -191,20 +199,22 @@ fn test_crud_search_by_foreign_key_with_mysql() {
         .expect("No result found for the given parameter");
 
     // We can get the parent entity for the retrieved child instance
-    let parent_entity: Option<League> = some_tournament
+    let league: League = some_tournament
         .find_league_with(MYSQL_DS)
         .await
-        .expect("Result variant of the query is err");
+        .expect("failed to find the MySQL tournament's league")
+        .expect("the seeded MySQL tournament must have a league");
+    assert_eq!(some_tournament.league, league.id);
 
-    // These are tests, and we could unwrap the result contained in the option, because
-    // it always should exist that search for the data inserted when the docker starts.
-    // But, just for change the style a little bit and offer more options about how to
-    // handle things done with Canyon
-    if let Some(league) = parent_entity {
-        assert_eq!(some_tournament.league, league.id)
-    } else {
-        assert_eq!(parent_entity, None)
-    }
+    let mut tournament_without_league = some_tournament;
+    tournament_without_league.league = i32::MAX;
+    assert!(
+        tournament_without_league
+            .find_league_with(MYSQL_DS)
+            .await
+            .expect("failed to check a missing MySQL league")
+            .is_none()
+    );
 }
 
 /// Given an entity `U` that is know as the "parent" side of the relation with another
@@ -215,7 +225,7 @@ fn test_crud_search_by_foreign_key_with_mysql() {
 #[cfg(feature = "postgres")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key() {
-    let some_league: League = League::find_by_pk(&1)
+    let mut some_league: League = League::find_by_pk(&1)
         .await
         .expect("Result variant of the query is err")
         .expect("No result found for the given parameter");
@@ -225,10 +235,16 @@ fn test_crud_search_reverse_side_foreign_key() {
         .await
         .expect("Result variant of the query is err");
 
-    assert!(!child_tournaments.is_empty());
-    child_tournaments
-        .iter()
-        .for_each(|t| assert_eq!(t.league, some_league.id));
+    assert!(child_tournaments.iter().any(|t| t.id == 1));
+    assert!(child_tournaments.iter().all(|t| t.league == some_league.id));
+
+    some_league.id = i32::MAX;
+    assert!(
+        Tournament::find_all_by_league(&some_league)
+            .await
+            .expect("failed to check an empty reverse PostgreSQL relationship")
+            .is_empty()
+    );
 }
 
 /// Same as the search by the reverse side of a foreign key relation
@@ -236,7 +252,7 @@ fn test_crud_search_reverse_side_foreign_key() {
 #[cfg(feature = "mssql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key_with_mssql() {
-    let some_league: League = League::find_by_pk_with(&1, SQL_SERVER_DS)
+    let mut some_league: League = League::find_by_pk_with(&1, SQL_SERVER_DS)
         .await
         .expect("Result variant of the query is err")
         .expect("No result found for the given parameter");
@@ -247,10 +263,16 @@ fn test_crud_search_reverse_side_foreign_key_with_mssql() {
             .await
             .expect("Result variant of the query is err");
 
-    assert!(!child_tournaments.is_empty());
-    child_tournaments
-        .iter()
-        .for_each(|t| assert_eq!(t.league, some_league.id));
+    assert!(child_tournaments.iter().any(|t| t.id == 1));
+    assert!(child_tournaments.iter().all(|t| t.league == some_league.id));
+
+    some_league.id = i32::MAX;
+    assert!(
+        Tournament::find_all_by_league_with(&some_league, SQL_SERVER_DS)
+            .await
+            .expect("failed to check an empty reverse SQL Server relationship")
+            .is_empty()
+    );
 }
 
 /// Same as the search by the reverse side of a foreign key relation
@@ -258,7 +280,7 @@ fn test_crud_search_reverse_side_foreign_key_with_mssql() {
 #[cfg(feature = "mysql")]
 #[canyon_sql::macros::canyon_tokio_test]
 fn test_crud_search_reverse_side_foreign_key_with_mysql() {
-    let some_league: League = League::find_by_pk_with(&1, MYSQL_DS)
+    let mut some_league: League = League::find_by_pk_with(&1, MYSQL_DS)
         .await
         .expect("Result variant of the query is err")
         .expect("No result found for the given parameter");
@@ -269,10 +291,16 @@ fn test_crud_search_reverse_side_foreign_key_with_mysql() {
             .await
             .expect("Result variant of the query is err");
 
-    assert!(!child_tournaments.is_empty());
-    child_tournaments
-        .iter()
-        .for_each(|t| assert_eq!(t.league, some_league.id));
+    assert!(child_tournaments.iter().any(|t| t.id == 1));
+    assert!(child_tournaments.iter().all(|t| t.league == some_league.id));
+
+    some_league.id = i32::MAX;
+    assert!(
+        Tournament::find_all_by_league_with(&some_league, MYSQL_DS)
+            .await
+            .expect("failed to check an empty reverse MySQL relationship")
+            .is_empty()
+    );
 }
 
 /// Exercises the complete relationship API against PostgreSQL while also
