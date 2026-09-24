@@ -72,6 +72,11 @@ pub enum ConfigurationError {
     InvalidAuthentication {
         backend: DatabaseType,
     },
+    InvalidPoolConfiguration {
+        backend: DatabaseType,
+        min_size: u32,
+        max_size: u32,
+    },
 }
 
 impl Display for ConfigurationError {
@@ -90,6 +95,14 @@ impl Display for ConfigurationError {
                     "invalid authentication configuration for {backend}"
                 )
             }
+            Self::InvalidPoolConfiguration {
+                backend,
+                min_size,
+                max_size,
+            } => write!(
+                formatter,
+                "invalid connection pool configuration for {backend}: min_size ({min_size}) must not exceed max_size ({max_size}), and max_size must be greater than zero"
+            ),
         }
     }
 }
@@ -99,7 +112,9 @@ impl Error for ConfigurationError {
         match self {
             Self::Read { source, .. } => Some(source),
             Self::Deserialize(source) => Some(source),
-            Self::NotFound | Self::InvalidAuthentication { .. } => None,
+            Self::NotFound
+            | Self::InvalidAuthentication { .. }
+            | Self::InvalidPoolConfiguration { .. } => None,
         }
     }
 }
@@ -113,9 +128,6 @@ pub enum ConnectionError {
     },
     CanyonNotInitialized,
     ConnectionBusy,
-    InvalidPoolConfiguration {
-        backend: DatabaseType,
-    },
     #[cfg(feature = "postgres")]
     Postgres(Box<tokio_postgres::Error>),
     #[cfg(feature = "postgres")]
@@ -175,12 +187,6 @@ impl Display for ConnectionError {
                 formatter.write_str("Canyon is not initialized; call `Canyon::init()` first")
             }
             Self::ConnectionBusy => formatter.write_str("database connection is busy"),
-            Self::InvalidPoolConfiguration { backend } => {
-                write!(
-                    formatter,
-                    "invalid connection pool configuration for {backend}"
-                )
-            }
             #[cfg(feature = "postgres")]
             Self::Postgres(_) => formatter.write_str("PostgreSQL connection failed"),
             #[cfg(feature = "postgres")]
@@ -214,10 +220,9 @@ impl Error for ConnectionError {
             Self::SqlServerManager(source) => Some(source.as_ref()),
             #[cfg(feature = "mssql")]
             Self::SqlServerPool(source) => Some(source.as_ref()),
-            Self::DatasourceNotFound { .. }
-            | Self::CanyonNotInitialized
-            | Self::ConnectionBusy
-            | Self::InvalidPoolConfiguration { .. } => None,
+            Self::DatasourceNotFound { .. } | Self::CanyonNotInitialized | Self::ConnectionBusy => {
+                None
+            }
         }
     }
 }
@@ -305,7 +310,6 @@ pub enum QueryBuilderError {
     InvalidClauseOrder { clause: String },
     MissingPrimaryKey,
     MissingPrimaryKeyValue,
-    MissingForeignKeyValue { column: String },
     UnsupportedOperation { operation: String },
     Rendering(std::fmt::Error),
 }
@@ -330,12 +334,6 @@ impl Display for QueryBuilderError {
             Self::MissingPrimaryKeyValue => {
                 formatter.write_str("the entity does not contain a primary-key value")
             }
-            Self::MissingForeignKeyValue { column } => {
-                write!(
-                    formatter,
-                    "the entity does not contain foreign-key column `{column}`"
-                )
-            }
             Self::UnsupportedOperation { operation } => {
                 write!(
                     formatter,
@@ -357,7 +355,6 @@ impl Error for QueryBuilderError {
             | Self::InvalidClauseOrder { .. }
             | Self::MissingPrimaryKey
             | Self::MissingPrimaryKeyValue
-            | Self::MissingForeignKeyValue { .. }
             | Self::UnsupportedOperation { .. } => None,
         }
     }

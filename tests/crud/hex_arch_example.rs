@@ -1,8 +1,7 @@
 #![cfg(feature = "postgres")]
 
-use std::error::Error;
-
 use canyon_sql::{
+    CanyonResult,
     connection::DatabaseConnector,
     connection::DbConnection,
     core::Canyon,
@@ -159,52 +158,34 @@ pub struct LeagueHex {
 }
 
 pub trait LeagueHexService {
-    async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>>;
-    async fn create<'a>(
-        &self,
-        league: &'a mut LeagueHex,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>>;
+    async fn find_all(&self) -> CanyonResult<Vec<LeagueHex>>;
+    async fn create(&self, league: &mut LeagueHex) -> CanyonResult<()>;
 
-    async fn get<'a, Pk: QueryParameter>(
-        &self,
-        id: &'a Pk,
-    ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>>;
+    async fn get<Pk: QueryParameter>(&self, id: &Pk) -> CanyonResult<Option<LeagueHex>>;
 } // As a domain boundary for the application side of the hexagon
 
 pub struct LeagueHexServiceAdapter<T: LeagueHexRepository> {
     league_repository: T,
 }
 impl<T: LeagueHexRepository> LeagueHexService for LeagueHexServiceAdapter<T> {
-    async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>> {
+    async fn find_all(&self) -> CanyonResult<Vec<LeagueHex>> {
         self.league_repository.find_all().await
     }
 
-    async fn create<'a>(
-        &self,
-        league: &'a mut LeagueHex,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
+    async fn create(&self, league: &mut LeagueHex) -> CanyonResult<()> {
         self.league_repository.create(league).await
     }
 
-    async fn get<'a, Pk: QueryParameter>(
-        &self,
-        id: &'a Pk,
-    ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>> {
+    async fn get<Pk: QueryParameter>(&self, id: &Pk) -> CanyonResult<Option<LeagueHex>> {
         self.league_repository.get(id).await
     }
 }
 
 pub trait LeagueHexRepository {
-    async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>>;
-    async fn create<'a>(
-        &self,
-        league: &'a mut LeagueHex,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>>;
+    async fn find_all(&self) -> CanyonResult<Vec<LeagueHex>>;
+    async fn create(&self, league: &mut LeagueHex) -> CanyonResult<()>;
 
-    async fn get<'a, Pk: QueryParameter>(
-        &self,
-        id: &'a Pk,
-    ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>>;
+    async fn get<Pk: QueryParameter>(&self, id: &Pk) -> CanyonResult<Option<LeagueHex>>;
 } // As a domain boundary for the infrastructure side of the hexagon
 
 #[derive(Read, EntityCrud)]
@@ -231,24 +212,18 @@ fn entity_crud_is_bound_to_its_mapped_entity() {
 }
 
 impl<T: DbConnection + Send + Sync> LeagueHexRepository for LeagueHexRepositoryAdapter<T> {
-    async fn find_all(&self) -> Result<Vec<LeagueHex>, Box<dyn Error + Send + Sync>> {
+    async fn find_all(&self) -> CanyonResult<Vec<LeagueHex>> {
         let db_conn = &self.db_conn;
         let select_query =
             SelectQueryBuilder::new("league", db_conn.get_database_type()?).build()?;
-        db_conn.query(select_query, &[]).await.map_err(Into::into)
+        db_conn.query(select_query, &[]).await
     }
 
-    async fn create<'a>(
-        &self,
-        league: &'a mut LeagueHex,
-    ) -> Result<(), Box<dyn Error + Send + Sync + 'a>> {
-        Self::insert_entity(league).await.map_err(Into::into)
+    async fn create(&self, league: &mut LeagueHex) -> CanyonResult<()> {
+        Self::insert_entity(league).await
     }
 
-    async fn get<'a, Pk: QueryParameter>(
-        &self,
-        id: &'a Pk,
-    ) -> Result<Option<LeagueHex>, Box<dyn Error + Send + Sync + 'a>> {
-        Self::find_by_pk(id).await.map_err(Into::into)
+    async fn get<Pk: QueryParameter>(&self, id: &Pk) -> CanyonResult<Option<LeagueHex>> {
+        Self::find_by_pk(id).await
     }
 }

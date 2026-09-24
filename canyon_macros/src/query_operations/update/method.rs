@@ -11,7 +11,10 @@ pub(crate) fn generate_update_method_tokens(
     let mut update_ops_tokens = TokenStream::new();
 
     if let Some(primary_key) = macro_data.get_primary_key_field_annotation() {
-        let update_columns = helpers::get_struct_fields_as_table_column_pairs_pk_parsed(macro_data);
+        let update_columns = helpers::get_struct_fields_as_table_column_pairs_pk_parsed(
+            macro_data,
+            table_schema_data,
+        );
         let update_values = __details::generate_update_values(macro_data, primary_key.ident);
 
         let query =
@@ -54,7 +57,7 @@ mod __details {
         quote! {
             #update_signature {
                 use canyon_sql::connection::DbConnection;
-                use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
+                use canyon_sql::query::querybuilder::{QueryBuilderExt, UpdateQueryBuilderExt};
 
                 #default_db_conn_and_type_tokens
 
@@ -74,7 +77,7 @@ mod __details {
         quote! {
             #update_with_signature {
                 use canyon_sql::connection::DbConnection;
-                use canyon_sql::query::querybuilder::{QueryBuilderOps, UpdateQueryBuilderOps};
+                use canyon_sql::query::querybuilder::{QueryBuilderExt, UpdateQueryBuilderExt};
                 let db_type = input.get_database_type()?;
                 let query = #query;
                 let update_values: &[&dyn canyon_sql::query::QueryParameter] = &[#(#update_values),*];
@@ -90,7 +93,7 @@ mod __details {
     ) -> TokenStream {
         quote! {
             canyon_sql::query::querybuilder::UpdateQueryBuilder::new(
-                #table_schema_data, // TODO: construct a const value
+                #table_schema_data,
                 db_type,
             )
                 .set(vec![#(#update_columns),*])?

@@ -7,9 +7,7 @@ use crate::rows::FromSqlOwnedValue;
 use crate::transaction::Transaction;
 use std::fmt::Debug;
 
-// TODO: query should implement ToStatement (as the drivers underneath Canyon) or similar
-// to be usable directly in the input of Transaction and DbConnenction
-/// Holds a sql sentence details
+/// An emitted SQL statement together with its bound parameters.
 #[derive(Debug)]
 pub struct Query<'a> {
     sql: String,
@@ -23,18 +21,17 @@ impl AsRef<str> for Query<'_> {
 }
 
 impl<'a> Query<'a> {
-    /// Constructs a new [`Self`] but receiving the number of expected query parameters, allowing
-    /// to pre-allocate the underlying linear collection that holds the arguments to the exact capacity,
-    /// potentially saving re-allocations when the query is created
+    /// Creates a query from emitted SQL and its ordered parameters.
     pub fn new(sql: String, params: Vec<&'a dyn QueryParameter>) -> Query<'a> {
         Self { sql, params }
     }
 
-    /// Returns the SQL sentence of the query
+    /// Returns the emitted SQL statement.
     pub const fn sql(&self) -> &str {
         self.sql.as_str()
     }
 
+    /// Returns the parameters in placeholder order.
     pub const fn params(&self) -> &[&'a dyn QueryParameter] {
         self.params.as_slice()
     }
@@ -56,6 +53,7 @@ impl<'a> Query<'a> {
         <T as Transaction>::query_one_for(&self.sql, &self.params, default_conn).await
     }
 
+    /// Executes a scalar query using the supplied connection.
     pub async fn launch_one_for_with<T: Transaction, F: FromSqlOwnedValue, I: DbConnection>(
         self,
         input: I,

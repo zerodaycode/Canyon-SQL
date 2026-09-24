@@ -12,9 +12,9 @@ use crate::connection::database_type::DatabaseType;
 use crate::error::{CanyonResult, MappingError};
 use std::{any::Any, borrow::Cow};
 
-/// Generic abstraction to represent any of the Row types
-/// from the client crates
+/// Type-erased database row shared by Canyon's supported client crates.
 pub trait Row {
+    /// Exposes the concrete row for checked backend-specific downcasting.
     fn as_any(&self) -> &dyn Any;
 }
 
@@ -39,38 +39,49 @@ impl Row for mysql_async::Row {
     }
 }
 
-pub trait RowOperations {
+/// Fallible, backend-specific accessors for a type-erased [`Row`].
+///
+/// Every accessor preserves missing-column, unexpected-`NULL`, conversion and
+/// backend-mismatch failures as typed [`MappingError`] values.
+pub trait RowExt {
+    /// Reads a non-null PostgreSQL column.
     #[cfg(feature = "postgres")]
     fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> CanyonResult<Output>
     where
         Output: tokio_postgres::types::FromSql<'a>;
+    /// Reads a non-null SQL Server column.
     #[cfg(feature = "mssql")]
     fn get_mssql<'a, Output>(&'a self, col_name: &'a str) -> CanyonResult<Output>
     where
         Output: tiberius::FromSql<'a>;
+    /// Reads a non-null MySQL column.
     #[cfg(feature = "mysql")]
     fn get_mysql<Output>(&self, col_name: &str) -> CanyonResult<Output>
     where
         Output: mysql_async::prelude::FromValue;
 
+    /// Reads a nullable PostgreSQL column.
     #[cfg(feature = "postgres")]
     fn get_postgres_opt<'a, Output>(&'a self, col_name: &'a str) -> CanyonResult<Option<Output>>
     where
         Output: tokio_postgres::types::FromSql<'a>;
+    /// Reads a nullable SQL Server column.
     #[cfg(feature = "mssql")]
     fn get_mssql_opt<'a, Output>(&'a self, col_name: &'a str) -> CanyonResult<Option<Output>>
     where
         Output: tiberius::FromSql<'a>;
 
+    /// Reads a nullable MySQL column.
     #[cfg(feature = "mysql")]
     fn get_mysql_opt<Output>(&self, col_name: &str) -> CanyonResult<Option<Output>>
     where
         Output: mysql_async::prelude::FromValue;
 
+    /// Returns metadata for every column present in this row.
     fn columns(&self) -> CanyonResult<Vec<Column<'_>>>;
 }
 
-impl RowOperations for &dyn Row {
+impl RowExt for &dyn Row {
     #[cfg(feature = "postgres")]
     fn get_postgres<'a, Output>(&'a self, col_name: &'a str) -> CanyonResult<Output>
     where
@@ -206,7 +217,7 @@ impl RowOperations for &dyn Row {
 
 #[cfg(all(test, feature = "mysql"))]
 mod tests {
-    use super::{Row, RowOperations};
+    use super::{Row, RowExt};
     use crate::error::{CanyonError, MappingError};
     use mysql_async::{Column, Row as MySqlRow, Value};
     use mysql_common::{constants::ColumnType, row};

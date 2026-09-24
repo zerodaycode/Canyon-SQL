@@ -122,7 +122,7 @@ async fn create_postgres_connector(
 ) -> CanyonResult<Arc<Pool<PgManager>>> {
     let (user, password) = __impl::extract_postgres_auth(&datasource.auth)?;
     let config = __impl::set_tokio_postgres_configs(datasource, user, password);
-    let conn_pool = __impl::create_postgres_connection_pool(config).await?;
+    let conn_pool = __impl::create_postgres_connection_pool(config, datasource).await?;
 
     Ok(PostgresConnectionPool::from(conn_pool))
 }
@@ -166,10 +166,13 @@ mod __impl {
 
     pub(crate) async fn create_postgres_connection_pool(
         config: Config,
+        datasource: &DatasourceConfig,
     ) -> CanyonResult<Pool<PgManager>> {
+        let pool_config = datasource.pool_config()?;
         let manager = PgManager::new(config, NoTls);
         let pool = bb8::Pool::builder()
-            .max_size(10u32)
+            .min_idle(pool_config.min_size)
+            .max_size(pool_config.max_size)
             .build(manager)
             .await
             .map_err(ConnectionError::postgres)?;
@@ -205,6 +208,7 @@ mod tests {
                 db_name: "pg_db".into(),
                 port: Some(5433),
                 migrations: None,
+                pool: Default::default(),
                 #[cfg(feature = "mssql")]
                 mssql_tls: Default::default(),
             },
@@ -249,6 +253,7 @@ mod tests {
                 db_name: "default_db".into(),
                 port: None,
                 migrations: None,
+                pool: Default::default(),
                 #[cfg(feature = "mssql")]
                 mssql_tls: Default::default(),
             },

@@ -22,9 +22,9 @@ pub struct SelectAst<'a> {
     pub order_by: Option<OrderByClause<'a>>,
     pub having: Option<HavingClause<'a>>,
     pub group_by: Option<Vec<ColumnRef<'a>>>,
-    // TODO: replace the primitive value with a dedicated domain type.
+    /// Maximum number of rows returned by the query.
     pub limit: Option<u64>,
-    // TODO: replace the primitive value with a dedicated domain type.
+    /// Number of rows skipped before results are returned.
     pub offset: Option<u64>,
 }
 

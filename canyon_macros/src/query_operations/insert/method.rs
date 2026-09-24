@@ -21,9 +21,8 @@ pub(crate) fn generate_insert_method_tokens(
     let insert_values;
 
     if macro_data.retrieve_mapping_target_type().is_some() {
-        let raised_err = __details::generate_unsupported_operation_err();
-        insert_body = raised_err.clone(); // TODO: Can't we do it better?
-        insert_with_body = raised_err;
+        insert_body = __details::generate_unsupported_operation_err();
+        insert_with_body = __details::generate_unsupported_operation_err();
         insert_values = quote! {};
     } else {
         insert_values = __details::generate_insert_fn_values_slice_expr(macro_data);
@@ -56,8 +55,11 @@ mod __details {
         is_with_method: bool,
     ) -> TokenStream {
         let pk_ident_and_type = macro_data.get_primary_key_ident_and_type();
-        let insert_columns =
-            helpers::get_struct_fields_as_column_ref_token_stream(macro_data, true);
+        let insert_columns = helpers::get_struct_fields_as_column_ref_token_stream(
+            macro_data,
+            true,
+            table_schema_data,
+        );
 
         let connection_initializer = if is_with_method {
             quote! { input }
@@ -71,7 +73,7 @@ mod __details {
         let mut insert_body_tokens = TokenStream::new();
         insert_body_tokens.extend(quote! {
             use canyon_sql::connection::DbConnection;
-            use canyon_sql::query::querybuilder::{InsertQueryBuilderOps, QueryBuilderOps};
+            use canyon_sql::query::querybuilder::{InsertQueryBuilderExt, QueryBuilderExt};
 
             let db_conn = #connection_initializer;
             let insert_columns = #insert_columns;
@@ -83,9 +85,7 @@ mod __details {
         });
 
         if let Some((pk_ident, pk_type)) = pk_ident_and_type.as_ref() {
-            let primary_key = macro_data
-                .get_primary_key_annotation()
-                .expect("Primary key annotation must exist when primary key ident and type exist");
+            let primary_key = pk_ident.to_string();
 
             let returning_columns = helpers::get_fields_as_iterable_of_column_refs(vec![(
                 pk_ident.to_string(),

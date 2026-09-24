@@ -9,7 +9,8 @@ pub fn generate_find_all_operations_tokens(
     table_schema_data: &str,
     macro_data: &MacroTokens,
 ) -> TokenStream {
-    let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);
+    let columns =
+        helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false, table_schema_data);
     let find_all = create_find_all_macro(mapper_ty, table_schema_data, &columns);
     let find_all_with = create_find_all_with_macro(mapper_ty, table_schema_data, &columns);
 
@@ -31,7 +32,7 @@ fn create_find_all_macro(
             -> canyon_sql::CanyonResult<Vec<#mapper_ty>>
         {
             use canyon_sql::connection::DbConnection;
-            use crate::canyon_sql::query::querybuilder::SelectQueryBuilderOps;
+            use canyon_sql::query::querybuilder::SelectQueryBuilderExt;
 
             #default_db_conn_and_type_tokens
             let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, db_type)
@@ -55,7 +56,7 @@ fn create_find_all_with_macro(
         {
             use canyon_sql::connection::DbConnection;
             use canyon_sql::crud::Read;
-            use crate::canyon_sql::query::querybuilder::SelectQueryBuilderOps;
+            use canyon_sql::query::querybuilder::SelectQueryBuilderExt;
 
             let db_type = input.get_database_type()?;
             let stmt = canyon_sql::query::querybuilder::SelectQueryBuilder::new(#table_schema_data, db_type)

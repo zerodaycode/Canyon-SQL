@@ -6,7 +6,7 @@ use tiberius::{self, ColumnData, IntoSql};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self, types::ToSql};
 
-// TODO: cfg feature for this re-exports, as date-time or something
+// Chrono is part of Canyon's shared value model for every backend.
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, NaiveTime, Utc};
 
 /// Defines a trait for represent type bounds against the allowed
@@ -34,8 +34,6 @@ impl<'b> IntoSql<'b> for &'b dyn QueryParameter {
         self.as_sqlserver_param()
     }
 }
-
-//TODO Pending to review and see if it is necessary to apply something similar to the previous implementation.
 
 impl QueryParameter for bool {
     #[cfg(feature = "postgres")]

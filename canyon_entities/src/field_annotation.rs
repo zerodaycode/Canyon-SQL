@@ -1,13 +1,29 @@
 use proc_macro2::Ident;
-use std::convert::TryFrom;
-use syn::{Attribute, Expr, Lit, MetaNameValue, Token, punctuated::Punctuated};
+use quote::ToTokens;
+use std::{convert::TryFrom, fmt};
+use syn::{
+    Attribute, Expr, Lit, MetaNameValue, Path, PathArguments, Token, punctuated::Punctuated,
+};
 
 /// The available annotations for a field that belongs to any struct
 /// annotated with `#[canyon_entity]`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub enum EntityFieldAnnotation {
+    /// Primary-key metadata, including whether the value is generated automatically.
     PrimaryKey(bool),
-    ForeignKey(String, String),
+    /// A typed reference to the related entity and one of its fields.
+    ForeignKey {
+        /// Rust entity type that owns the referenced field.
+        entity: Path,
+        /// Referenced Rust field. Its identifier is also the mapped database column.
+        field: Ident,
+    },
+}
+
+impl fmt::Debug for EntityFieldAnnotation {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.get_as_string())
+    }
 }
 
 impl EntityFieldAnnotation {
@@ -18,8 +34,9 @@ impl EntityFieldAnnotation {
             Self::PrimaryKey(autoincremental) => {
                 format!("Annotation: PrimaryKey, Autoincremental: {autoincremental}")
             }
-            Self::ForeignKey(table, column) => {
-                format!("Annotation: ForeignKey, Table: {table}, Column: {column}")
+            Self::ForeignKey { entity, field } => {
+                let entity = entity.to_token_stream().to_string().replace(' ', "");
+                format!("Annotation: ForeignKey, Reference: {entity}::{field}")
             }
         }
     }
@@ -59,31 +76,31 @@ impl EntityFieldAnnotation {
             syn::Error::new_spanned(ident, format!("Error generating the Foreign Key: {error}"))
         })?;
 
-        let mut table = None;
-        let mut column = None;
+        let mut reference = None;
 
         for arg in &args {
             match arg_key(arg)?.as_str() {
-                "table" => table = Some(parse_string_value(arg)?),
-                "column" => column = Some(parse_string_value(arg)?),
+                "references" if reference.is_none() => {
+                    reference = Some(parse_foreign_key_reference(arg)?);
+                }
+                "references" => {
+                    return Err(syn::Error::new_spanned(
+                        &arg.path,
+                        "Duplicate `references` argument on the Foreign Key annotation",
+                    ));
+                }
                 unknown => return Err(unknown_argument(arg, unknown)),
             }
         }
 
-        Ok(Self::ForeignKey(
-            table.ok_or_else(|| {
-                syn::Error::new_spanned(
-                    ident,
-                    "Missing `table` argument on the Foreign Key annotation",
-                )
-            })?,
-            column.ok_or_else(|| {
-                syn::Error::new_spanned(
-                    ident,
-                    "Missing `column` argument on the Foreign Key annotation",
-                )
-            })?,
-        ))
+        let (entity, field) = reference.ok_or_else(|| {
+            syn::Error::new_spanned(
+                ident,
+                "Missing `references` argument on the Foreign Key annotation",
+            )
+        })?;
+
+        Ok(Self::ForeignKey { entity, field })
     }
 }
 
@@ -131,6 +148,47 @@ fn parse_string_value(arg: &MetaNameValue) -> syn::Result<String> {
             "Expected literal expression",
         )),
     }
+}
+
+fn parse_foreign_key_reference(arg: &MetaNameValue) -> syn::Result<(Path, Ident)> {
+    let Expr::Path(reference) = &arg.value else {
+        return Err(syn::Error::new_spanned(
+            &arg.value,
+            "Expected a typed foreign-key reference such as `Team::id`",
+        ));
+    };
+
+    if reference.qself.is_some() {
+        return Err(syn::Error::new_spanned(
+            &arg.value,
+            "Qualified self types are not supported in foreign-key references",
+        ));
+    }
+
+    let mut entity = reference.path.clone();
+    let field = entity
+        .segments
+        .pop()
+        .map(|pair| pair.into_value())
+        .ok_or_else(|| {
+            syn::Error::new_spanned(
+                &arg.value,
+                "A foreign-key reference must contain an entity and a field",
+            )
+        })?;
+
+    if entity.segments.trailing_punct() {
+        entity.segments.pop_punct();
+    }
+
+    if entity.segments.is_empty() || !matches!(field.arguments, PathArguments::None) {
+        return Err(syn::Error::new_spanned(
+            &arg.value,
+            "A foreign-key reference must have the form `Entity::field`",
+        ));
+    }
+
+    Ok((entity, field.ident))
 }
 
 fn parse_bool_value(arg: &MetaNameValue) -> syn::Result<bool> {
@@ -256,34 +314,37 @@ mod tests {
     #[test]
     fn parses_foreign_key() {
         let field: Field = parse_quote! {
-            #[foreign_key(table = "users", column = "id")]
+            #[foreign_key(references = User::id)]
             user_id: i32
         };
 
         let annotation = annotation_from(field_attribute(&field)).unwrap();
 
         match annotation {
-            EntityFieldAnnotation::ForeignKey(table, column) => {
-                assert_eq!(table, "users");
-                assert_eq!(column, "id");
+            EntityFieldAnnotation::ForeignKey { entity, field } => {
+                assert_eq!(entity.to_token_stream().to_string(), "User");
+                assert_eq!(field, "id");
             }
             EntityFieldAnnotation::PrimaryKey(_) => panic!("expected foreign key annotation"),
         }
     }
 
     #[test]
-    fn parses_foreign_key_arguments_in_any_order() {
+    fn parses_qualified_foreign_key_reference() {
         let field: Field = parse_quote! {
-            #[foreign_key(column = "id", table = "users")]
+            #[foreign_key(references = crate::models::User::external_id)]
             user_id: i32
         };
 
         let annotation = annotation_from(field_attribute(&field)).unwrap();
 
         match annotation {
-            EntityFieldAnnotation::ForeignKey(table, column) => {
-                assert_eq!(table, "users");
-                assert_eq!(column, "id");
+            EntityFieldAnnotation::ForeignKey { entity, field } => {
+                assert_eq!(
+                    entity.to_token_stream().to_string(),
+                    "crate :: models :: User"
+                );
+                assert_eq!(field, "external_id");
             }
             EntityFieldAnnotation::PrimaryKey(_) => panic!("expected foreign key annotation"),
         }
@@ -306,41 +367,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_foreign_key_with_missing_table_argument() {
+    fn rejects_foreign_key_without_references_argument() {
         let field: Field = parse_quote! {
-            #[foreign_key(column = "id")]
-            user_id: i32
-        };
-
-        let error = annotation_from(field_attribute(&field)).unwrap_err();
-
-        assert!(
-            error
-                .to_string()
-                .contains("Missing `table` argument on the Foreign Key annotation")
-        );
-    }
-
-    #[test]
-    fn rejects_foreign_key_with_missing_column_argument() {
-        let field: Field = parse_quote! {
-            #[foreign_key(table = "users")]
-            user_id: i32
-        };
-
-        let error = annotation_from(field_attribute(&field)).unwrap_err();
-
-        assert!(
-            error
-                .to_string()
-                .contains("Missing `column` argument on the Foreign Key annotation")
-        );
-    }
-
-    #[test]
-    fn rejects_foreign_key_with_unknown_argument() {
-        let field: Field = parse_quote! {
-            #[foreign_key(table = "users", column = "id", cascade = "true")]
+            #[foreign_key(cascade = true)]
             user_id: i32
         };
 
@@ -354,15 +383,67 @@ mod tests {
     }
 
     #[test]
-    fn rejects_foreign_key_with_non_string_table_value() {
+    fn rejects_foreign_key_reference_without_a_field() {
         let field: Field = parse_quote! {
-            #[foreign_key(table = users, column = "id")]
+            #[foreign_key(references = User)]
             user_id: i32
         };
 
         let error = annotation_from(field_attribute(&field)).unwrap_err();
 
-        assert!(error.to_string().contains("Expected literal expression"));
+        assert!(
+            error
+                .to_string()
+                .contains("A foreign-key reference must have the form `Entity::field`")
+        );
+    }
+
+    #[test]
+    fn rejects_duplicate_foreign_key_references() {
+        let field: Field = parse_quote! {
+            #[foreign_key(references = User::id, references = Account::id)]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Duplicate `references` argument")
+        );
+    }
+
+    #[test]
+    fn rejects_string_foreign_key_references() {
+        let field: Field = parse_quote! {
+            #[foreign_key(references = "User::id")]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Expected a typed foreign-key reference such as `Team::id`")
+        );
+    }
+
+    #[test]
+    fn rejects_the_old_foreign_key_shape() {
+        let field: Field = parse_quote! {
+            #[foreign_key(entity = "User", table = "users", column = "id")]
+            user_id: i32
+        };
+
+        let error = annotation_from(field_attribute(&field)).unwrap_err();
+
+        assert!(
+            error
+                .to_string()
+                .contains("Unknown annotation argument `entity`")
+        );
     }
 
     #[test]
@@ -389,11 +470,14 @@ mod tests {
 
     #[test]
     fn formats_foreign_key_annotation_as_string() {
-        let annotation = EntityFieldAnnotation::ForeignKey("users".into(), "id".into());
+        let annotation = EntityFieldAnnotation::ForeignKey {
+            entity: parse_quote!(crate::models::User),
+            field: parse_quote!(id),
+        };
 
         assert_eq!(
             annotation.get_as_string(),
-            "Annotation: ForeignKey, Table: users, Column: id"
+            "Annotation: ForeignKey, Reference: crate::models::User::id"
         );
     }
 }

@@ -24,7 +24,7 @@ use canyon_sql::query::operators::{
 ///
 use canyon_sql::{
     crud::{Delete, Read, Update},
-    query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps, UpdateQueryBuilderOps},
+    query::querybuilder::{QueryBuilderExt, SelectQueryBuilderExt, UpdateQueryBuilderExt},
 };
 
 use crate::tests_models::league::*;
@@ -49,7 +49,7 @@ fn test_generated_sql_by_the_select_querybuilder() {
         .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
 
     assert_eq!(
-        select_with_joins?.build().unwrap().sql(), // TODO: That .unwrap instead of '?' because the lt issues associated with the &'a Z on .and
+        select_with_joins?.build()?.sql(),
         "SELECT * FROM \"league\" INNER JOIN \"tournament\" ON \"league\".\"id\" = \"tournament\".\"league\" LEFT JOIN \"player\" ON \"tournament\".\"id\" = \"player\".\"id\" WHERE \"league\".\"id\" > $1 AND \"league\".\"name\" = $2 AND \"name\" IN ($3, $4);"
     )
 }

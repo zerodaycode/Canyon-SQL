@@ -7,7 +7,7 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            QueryBuilder, QueryBuilderOps, SelectQueryBuilderOps,
+            QueryBuilder, QueryBuilderExt, SelectQueryBuilderExt,
             syntax::{
                 ast::select::SelectAst, column::ColumnRef, join::JoinKind, order::OrderByClause,
                 table_metadata::TableMetadata,
@@ -96,7 +96,7 @@ impl<'a> SelectQueryBuilder<'a> {
     }
 }
 
-impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
+impl<'a> SelectQueryBuilderExt<'a> for SelectQueryBuilder<'a> {
     fn with_columns<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> Self {
         self._inner
             .ast
@@ -162,7 +162,7 @@ impl<'a> SelectQueryBuilderOps<'a> for SelectQueryBuilder<'a> {
     }
 }
 
-impl<'a> QueryBuilderOps<'a> for SelectQueryBuilder<'a> {
+impl<'a> QueryBuilderExt<'a> for SelectQueryBuilder<'a> {
     #[inline(always)]
     fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()

@@ -31,8 +31,7 @@ pub struct JoinClause<'a> {
     pub target_table: TableMetadata<'a>,
     pub left: ColumnRef<'a>,
     pub operator: Operator,
-    pub right: ColumnRef<'a>, // e.g. "t2.t1_id" // TODO: this is always the base or the previous (at least, in one of the sides)
-                              // so we could look in the vector for the previous clause and auto-add the join
+    pub right: ColumnRef<'a>,
 }
 
 impl<'a> JoinClause<'a> {

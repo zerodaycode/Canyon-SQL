@@ -36,7 +36,7 @@ If you want to contribute in some section of the documentation [canyon-book repo
 - **Async** by default. Almost every functionality provided is ready to be consumed concurrently.
 - Use of multiple datasources. You can query multiple databases at the same time, even different ones! This means that you will be able to query concurrently a `PostgreSQL` database and a `SqlServer` or `MySql` one in the same project.
 - Is macro based. With a few annotations and a configuration file, you are ready to write your data access.
-- Allows **migrations**. `Canyon-SQL` comes with a *god-mode* that will manage every table on your database for you. You can modify in `Canyon` code your tables internally, altering columns, setting up constraints... Also, in the future, we have plans to allow you to manipulate the whole server, like creating databases, altering configurations... everything, but in a programmatically approach with `Canyon`!
+- Includes an **experimental migrations feature**. It is incomplete, is not enabled by default and is not yet recommended for production use.
 
 ## Supported databases
 
@@ -50,6 +50,48 @@ Every crate listed above is an `async` based crate, in line with the guidelines 
 
 There are plans to include more databases engines.
 
+## Datasource configuration
+
+Each datasource is configured in `canyon.toml`. Connection-pool limits are shared by all
+supported backends and may be overridden per datasource:
+
+```toml
+[canyon_sql]
+
+[[canyon_sql.datasources]]
+name = "main"
+
+[canyon_sql.datasources.auth]
+postgres = { basic = { username = "postgres", password = "postgres" } }
+
+[canyon_sql.datasources.properties]
+host = "localhost"
+port = 5432
+db_name = "app"
+
+[canyon_sql.datasources.properties.pool]
+min_size = 2
+max_size = 10
+```
+
+When the `pool` section is omitted, Canyon uses `min_size = 2` and `max_size = 10`.
+`max_size` must be greater than zero and cannot be smaller than `min_size`; invalid values
+produce a typed `CanyonError::Configuration` error during initialization.
+
+## Typed relationships
+
+Declare a foreign key by referencing the related Canyon entity and its field:
+
+```rust
+#[foreign_key(references = Team::id)]
+team_id: i64,
+```
+
+Canyon obtains the physical table and schema from `Team`'s `#[canyon_entity(...)]`
+metadata. The annotation generates `find_team`, `find_team_with`,
+`find_all_by_team` and `find_all_by_team_with` without duplicating table names or
+using string-based Rust type paths.
+
 ## Better by example
 
 Let's take a look to see how the `Canyon` code looks like!
@@ -57,7 +99,7 @@ Let's take a look to see how the `Canyon` code looks like!
 ### The classical SELECT * FROM {table_name}
 
 ```rust
-let find_all_result: Result<Vec<League>, Box<dyn Error + Send + Sync>> =  League::find_all().await;
+let find_all_result: CanyonResult<Vec<League>> = League::find_all().await;
 
 // Connection doesn't return an error
 assert!(find_all_result.is_ok());
@@ -68,7 +110,7 @@ assert!(!find_all_result.unwrap().is_empty());
 ### :mag_right: Performing a search over the primary key column
 
 ```rust
-let find_by_pk_result: Result<Option<League>, Box<dyn Error + Send + Sync>> = League::find_by_pk(&1).await;
+let find_by_pk_result: CanyonResult<Option<League>> = League::find_by_pk(&1).await;
 
 assert!(find_by_pk_result.as_ref().unwrap().is_some());
 
@@ -88,30 +130,28 @@ Note the leading reference on the `find_by_pk(...)` parameter. This associated f
 
 ### :wrench: Building more complex queries
 
-To exemplify the capabilities of `Canyon`, we will use `SelectQueryBuilder<T>`, which implements the `QueryBuilder<T>` trait
-to build a more complex where, filtering data and joining tables.
+The typed select builder can combine filters and joins while retaining bound parameters separately
+from the generated SQL.
 
 ```rust
-let mut select_with_joins = LeagueTournament::select_query();
-    select_with_joins
-        .inner_join("tournament", "league.id", "tournament.league_id")
-        .left_join("team", "tournament.id", "player.tournament_id")
-        .r#where(LeagueFieldValue::id(&7), Operator::Gt)
-        .and(LeagueFieldValue::name(&"KOREA"), Operator::Eq)
-        .and_values_in(LeagueField::name, &["LCK", "STRANGER THINGS"]);
-    // NOTE: We don't have in the docker the generated relationships
-    // with the joins, so for now, we are just going to check that the
-    // generated SQL by the SelectQueryBuilder<T> is the spected
-    assert_eq!(
-        select_with_joins.read_sql(),
-        "SELECT * FROM league INNER JOIN tournament ON league.id = tournament.league_id LEFT JOIN team ON tournament.id = player.tournament_id WHERE id > $1 AND name = $2  AND name IN ($2, $3) "
+let name = LeagueFieldValue::name("KOREA".to_owned());
+let query = League::select_query()?
+    .inner_join(
+        TournamentTable::DbName,
+        LeagueField::id,
+        TournamentField::league,
     )
+    .where_value(&LeagueFieldValue::id(7), Operator::Gt)
+    .and(&name, Operator::Eq)
+    .build()?;
+
+println!("{}", query.sql());
 ```
 
 > [!NOTE]
 >
 > For now, when you use joins, you will need to create a new model with the columns in both tables (in case that you desire the data in such columns), but just follows the usual process with the CanyonMapper.
-It will try to retrieve the data for every field declared. If you don't declare a field that is in the open clause, in this case (*), that field won't be retrieved. No problem. But if you have fields that aren't mapable with some column in the database, the program will panic.
+It will try to retrieve data for every declared field. Extra database columns are ignored, while missing columns, unexpected `NULL` values and incompatible types are returned as typed mapping errors.
 
 ## More examples
 
@@ -169,5 +209,3 @@ Could not find openssl via pkg-config:
 `Cargo` may try to discover the `OpenSSL` package via `pkg-config`. If you find this error, you can
 `sudo apt install pkg-config` on *apt* based systems. For other systems, you must read your package manager
 docs and install it.
-
-

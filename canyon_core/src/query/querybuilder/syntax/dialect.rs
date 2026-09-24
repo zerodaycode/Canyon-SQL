@@ -10,7 +10,6 @@ use std::fmt::Display;
 pub trait SqlDialect {
     const DB: DatabaseType;
     const SUPPORTS_RETURNING: bool = true;
-    const _SUPPORTS_LIMIT_OFFSET: bool = true; // TODO: pending to implement
     const IDENT_QUOTING: IdentQuotingStyle = IdentQuotingStyle::DoubleQuote;
     const PLACEHOLDER_SYMBOL: PlaceholderSymbol = PlaceholderSymbol::DollarNumbered;
     const PLACEHOLDER_DATA_TYPE: PlaceholderDatatype = PlaceholderDatatype::Varchar;

@@ -57,8 +57,8 @@ mod __detail {
         quote! {
             use canyon_sql::connection::DbConnection;
             use canyon_sql::query::querybuilder::{
-                QueryBuilderOps,
-                UpdateQueryBuilderOps,
+                QueryBuilderExt,
+                UpdateQueryBuilderExt,
             };
 
             let primary_key_name =

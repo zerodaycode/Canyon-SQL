@@ -60,8 +60,8 @@ mod __detail {
         quote! {
             use canyon_sql::connection::DbConnection;
             use canyon_sql::query::querybuilder::{
-                InsertQueryBuilderOps,
-                QueryBuilderOps,
+                InsertQueryBuilderExt,
+                QueryBuilderExt,
             };
 
             let columns =

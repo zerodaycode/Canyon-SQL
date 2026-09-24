@@ -1,9 +1,7 @@
 use crate::utils::{
     canyon_crud_attribute::CrudAttribute, primary_key_attribute::PrimaryKeyAttribute,
 };
-use canyon_entities::{
-    field_annotation::EntityFieldAnnotation, helpers::default_database_table_name_from_entity_name,
-};
+use canyon_entities::field_annotation::EntityFieldAnnotation;
 use proc_macro2::Ident;
 use std::convert::TryFrom;
 use syn::{Attribute, DeriveInput, Field, Fields, Generics, Type, Visibility};
@@ -17,14 +15,12 @@ pub struct MacroTokens<'a> {
     pub generics: &'a Generics,
     pub attrs: &'a Vec<Attribute>,
     pub fields: &'a Fields,
-    // -------- the new fields that must help to avoid recalculations every time that the user compiles
-    pub(crate) canyon_crud_attribute: Option<CrudAttribute>, // Type level
-    pub(crate) primary_key_attribute: Option<PrimaryKeyAttribute<'a>>, // Field level, quick access without iterations
+    pub(crate) canyon_crud_attribute: Option<CrudAttribute>,
+    pub(crate) primary_key_attribute: Option<PrimaryKeyAttribute<'a>>,
 }
 
 impl<'a> MacroTokens<'a> {
     pub fn new(ast: &'a DeriveInput) -> Result<Self, syn::Error> {
-        // TODO: impl syn::parse instead
         if let syn::Data::Struct(ref s) = ast.data {
             if !matches!(s.fields, Fields::Named(_)) {
                 return Err(syn::Error::new_spanned(
@@ -89,14 +85,15 @@ impl<'a> MacroTokens<'a> {
             .collect::<Vec<_>>()
     }
 
-    pub fn get_struct_fields_as_table_column_pairs(&self) -> Vec<(String, String)> {
-        let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
-
+    pub fn get_struct_fields_as_table_column_pairs(
+        &self,
+        table_name: &str,
+    ) -> Vec<(String, String)> {
         self.fields
             .iter()
             .map(|field| {
                 let column_name = field.ident.as_ref().unwrap().to_string();
-                (table_name.clone(), column_name)
+                (table_name.to_owned(), column_name)
             })
             .collect()
     }
@@ -113,9 +110,10 @@ impl<'a> MacroTokens<'a> {
         })
     }
 
-    pub fn get_struct_fields_as_table_column_pairs_skipping_pk(&self) -> Vec<(String, String)> {
-        let table_name = default_database_table_name_from_entity_name(&self.ty.to_string());
-
+    pub fn get_struct_fields_as_table_column_pairs_skipping_pk(
+        &self,
+        table_name: &str,
+    ) -> Vec<(String, String)> {
         self.get_columns_skipping_pk()
             .map(|field| {
                 let column_name = field
@@ -124,7 +122,7 @@ impl<'a> MacroTokens<'a> {
                     .expect("Struct fields must be named")
                     .to_string();
 
-                (table_name.clone(), column_name)
+                (table_name.to_owned(), column_name)
             })
             .collect()
     }
@@ -159,23 +157,24 @@ impl<'a> MacroTokens<'a> {
     }
 
     /// Utility for find the `foreign_key` attributes (if exists)
-    pub fn get_fk_annotations(&self) -> Vec<(&Ident, EntityFieldAnnotation)> {
+    pub fn get_fk_annotations(&self) -> syn::Result<Vec<(&Ident, EntityFieldAnnotation)>> {
         let mut foreign_key_annotations = Vec::new();
 
-        self.fields.iter().for_each(|field| {
+        for field in self.fields {
             let attrs = field
                 .attrs
                 .iter()
                 .filter(|attr| attr.path().segments[0].clone().ident == "foreign_key");
-            attrs.for_each(|attr| {
-                let fk_parse = EntityFieldAnnotation::try_from(&attr);
-                if let Ok(fk_annotation) = fk_parse {
-                    foreign_key_annotations.push((field.ident.as_ref().unwrap(), fk_annotation))
-                }
-            });
-        });
+            for attr in attrs {
+                let fk_annotation = EntityFieldAnnotation::try_from(&attr)?;
+                let field_ident = field.ident.as_ref().ok_or_else(|| {
+                    syn::Error::new_spanned(field, "Canyon derives require named fields")
+                })?;
+                foreign_key_annotations.push((field_ident, fk_annotation));
+            }
+        }
 
-        foreign_key_annotations
+        Ok(foreign_key_annotations)
     }
 }
 

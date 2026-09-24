@@ -24,6 +24,9 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> MacroResult {
     let ty_str = ty.to_string();
     let fields = ast.fields();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
+    let table = crate::utils::helpers::table_schema_parser(&ast)
+        .map_err(|tokens| syn::Error::new_spanned(tokens, "failed to parse Canyon table metadata"))?
+        .sql();
 
     let mut mapper_methods = TokenStream::new();
 
@@ -72,11 +75,9 @@ fn canyon_mapper_impl_tokens(ast: MacroTokens) -> MacroResult {
         });
     }
 
-    let entity_runtime_info = __details::entity_runtime_info_macro::tokens(&ast);
+    let entity_runtime_info = __details::entity_runtime_info_macro::tokens(&ast, &table);
 
     Ok(quote! {
-        use crate::canyon_sql::crud::Crud;
-
         impl #impl_generics canyon_sql::core::RowMapper
             for #ty #ty_generics
             #where_clause
@@ -271,8 +272,9 @@ fn type_path_ends_with(target_type: &Type, expected: &str) -> bool {
 
 #[cfg(all(test, feature = "mssql"))]
 mod mapper_macro_tests {
-    use super::sqlserver_deserialization_type;
-    use syn::Type;
+    use super::{canyon_mapper_impl_tokens, sqlserver_deserialization_type};
+    use crate::utils::macro_tokens::MacroTokens;
+    use syn::{DeriveInput, Type};
 
     fn parse_type(source: &str) -> Type {
         syn::parse_str(source).unwrap()
@@ -308,6 +310,24 @@ mod mapper_macro_tests {
         assert!(!optional);
         assert!(!owned);
     }
+
+    #[test]
+    fn entity_runtime_metadata_uses_the_configured_schema_and_table() {
+        let ast = syn::parse_str::<DeriveInput>(
+            r#"
+                #[canyon_entity(schema = "inventory", table_name = "teams")]
+                struct Team { id: i64 }
+            "#,
+        )
+        .unwrap();
+        let macro_data = MacroTokens::new(&ast).unwrap();
+        let tokens = canyon_mapper_impl_tokens(macro_data)
+            .unwrap()
+            .to_string()
+            .replace(' ', "");
+
+        assert!(tokens.contains("constTABLE:&'staticstr=\"inventory.teams\""));
+    }
 }
 
 mod __details {
@@ -322,7 +342,7 @@ mod __details {
         /// Insertable fields deliberately exclude the primary key. Primary-key
         /// metadata and access are exposed separately so callers can handle
         /// entities with and without generated keys.
-        pub(crate) fn tokens(ast: &MacroTokens) -> TokenStream {
+        pub(crate) fn tokens(ast: &MacroTokens, table: &str) -> TokenStream {
             let ty = ast.ty;
             let ty_str = ty.to_string();
             let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
@@ -336,8 +356,8 @@ mod __details {
                 .iter()
                 .map(|ident| quote! { &self.#ident });
 
-            let field_columns = helpers::get_struct_fields_as_column_ref_token_stream(ast, true);
-
+            let field_columns =
+                helpers::get_struct_fields_as_column_ref_token_stream(ast, true, table);
             let primary_key_name = primary_key_name_tokens(ast);
             let primary_key_value = primary_key_value_tokens(&primary_key_ident);
             let primary_key_type = primary_key_associated_type_tokens(&primary_key_type);
@@ -346,6 +366,7 @@ mod __details {
             quote! {
                 impl #impl_generics canyon_sql::query::bounds::EntityRuntimeInfo for #ty #ty_generics #where_clause {
                     type PrimaryKey = #primary_key_type;
+                    const TABLE: &'static str = #table;
 
                     fn field_values(
                         &self,

@@ -47,11 +47,10 @@ impl CanyonEntity {
             .collect::<Vec<_>>()
     }
 
-    /// Generates as many variants for the enum as fields has the type
-    /// which this enum is related to.
+    /// Generates one value-carrying enum variant per entity field.
     ///
-    /// Makes a variant `#field_name(#ty)` where `#ty` it's a trait object
-    /// of type `canyon_core::QueryParameter` TODO: correct the comment when refactored
+    /// Each generated variant has the form `FieldName(FieldType)` and retains
+    /// the concrete Rust type declared by the entity.
     pub fn get_fields_as_enum_variants_with_value(&self) -> Vec<TokenStream> {
         self.fields
             .iter()

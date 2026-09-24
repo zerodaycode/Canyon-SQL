@@ -25,7 +25,11 @@ pub fn generate_find_by_pk_operations_tokens(
                 return Ok(generate_unsupported_find_by_pk_operations(ty));
             };
 
-            let columns = helpers::get_struct_fields_as_column_ref_token_stream(macro_data, false);
+            let columns = helpers::get_struct_fields_as_column_ref_token_stream(
+                macro_data,
+                false,
+                table_schema_data,
+            );
 
             let query = generate_static_find_by_pk_query(table_schema_data, &columns, &primary_key);
 
@@ -93,8 +97,8 @@ fn generate_find_by_pk(result_ty: &Ident, query: &TokenStream) -> TokenStream {
     let body = quote! {
         use canyon_sql::connection::DbConnection;
         use canyon_sql::query::querybuilder::{
-            QueryBuilderOps,
-            SelectQueryBuilderOps,
+            QueryBuilderExt,
+            SelectQueryBuilderExt,
         };
 
         let input = {
@@ -123,8 +127,8 @@ fn generate_find_by_pk_with(result_ty: &Ident, query: &TokenStream) -> TokenStre
     let body = quote! {
         use canyon_sql::connection::DbConnection;
         use canyon_sql::query::querybuilder::{
-            QueryBuilderOps,
-            SelectQueryBuilderOps,
+            QueryBuilderExt,
+            SelectQueryBuilderExt,
         };
 
         let db_type =

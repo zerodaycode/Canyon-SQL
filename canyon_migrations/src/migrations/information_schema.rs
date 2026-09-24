@@ -4,7 +4,7 @@ use canyon_core::connection::tiberius::ColumnType as TIB_TY;
 use canyon_core::connection::tokio_postgres::types::Type as TP_TYP;
 use canyon_core::{
     column::{Column, ColumnType},
-    row::{Row, RowOperations},
+    row::{Row, RowExt},
 };
 
 /// Model that represents the database entities that belongs to the current schema.

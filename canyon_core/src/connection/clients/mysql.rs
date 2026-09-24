@@ -190,20 +190,20 @@ pub(crate) mod mysql_query_launcher {
 pub(crate) mod __impl {
     use crate::connection::database_type::DatabaseType;
     use crate::connection::datasources::{Auth, DatasourceConfig, MySQLAuth};
-    #[cfg(any(feature = "postgres", feature = "mssql"))]
-    use crate::error::ConfigurationError;
-    use crate::error::{CanyonResult, ConnectionError};
+    use crate::error::{CanyonResult, ConfigurationError};
     use mysql_async::Pool;
 
     pub(crate) async fn load_mysql_config(datasource: &DatasourceConfig) -> CanyonResult<Pool> {
         let (user, password) = extract_mysql_auth(&datasource.auth)?;
 
-        // TODO: pool constraints must be obtained from the datasource configuration.
-        let pool_constraints = mysql_async::PoolConstraints::new(2, 10).ok_or(
-            ConnectionError::InvalidPoolConfiguration {
-                backend: DatabaseType::MySQL,
-            },
-        )?;
+        let pool = datasource.pool_config()?;
+        let pool_constraints =
+            mysql_async::PoolConstraints::new(pool.min_size as usize, pool.max_size as usize)
+                .ok_or(ConfigurationError::InvalidPoolConfiguration {
+                    backend: DatabaseType::MySQL,
+                    min_size: pool.min_size,
+                    max_size: pool.max_size,
+                })?;
 
         let mysql_opts_builder = mysql_async::OptsBuilder::default()
             .pool_opts(mysql_async::PoolOpts::default().with_constraints(pool_constraints))

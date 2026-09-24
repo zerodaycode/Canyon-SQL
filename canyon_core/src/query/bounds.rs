@@ -11,7 +11,11 @@ use crate::rows::FromSqlOwnedValue;
 /// Field collections exclude the primary key because they currently represent
 /// the values and columns used by entity insertion.
 pub trait EntityRuntimeInfo {
+    /// Rust type used by the entity's primary-key field.
     type PrimaryKey: FromSqlOwnedValue;
+
+    /// Schema-qualified physical table mapped by this entity.
+    const TABLE: &'static str;
 
     /// Returns the insertable field values in declaration order.
     ///
@@ -23,12 +27,16 @@ pub trait EntityRuntimeInfo {
     /// The primary-key column is excluded.
     fn field_columns() -> Vec<ColumnRef<'static>>;
 
+    /// Returns the mapped primary-key column name, when the entity declares one.
     fn primary_key_name() -> Option<&'static str>;
 
+    /// Returns this entity's primary-key value, when the entity declares one.
     fn primary_key_value(&self) -> Option<&dyn QueryParameter>;
 
+    /// Assigns a primary-key value after a successful insert.
     fn set_primary_key(&mut self, value: Self::PrimaryKey) -> CanyonResult<()>;
 
+    /// Returns the primary-key column qualified with the entity table name.
     fn primary_key_column() -> Option<ColumnRef<'static>>;
 }
 
@@ -37,6 +45,7 @@ pub trait EntityRuntimeInfo {
 /// Consider renaming this trait if it coexists with the concrete
 /// `TableMetadata` syntax type.
 pub trait EntityTable: Display {
+    /// Returns the physical database table represented by this value.
     fn table_name<'a>(&self) -> &'a str;
 }
 
@@ -45,8 +54,10 @@ pub trait EntityTable: Display {
 /// Implementations are normally generated as an enum with one variant per
 /// mapped field.
 pub trait FieldIdentifier: Display {
+    /// Returns the mapped database column name.
     fn as_str(&self) -> &'static str;
 
+    /// Converts this field identifier into a typed column reference.
     fn as_column_ref(&self) -> ColumnRef<'static> {
         ColumnRef::from(self.as_str())
     }
@@ -55,16 +66,9 @@ pub trait FieldIdentifier: Display {
 /// Provides a mapped column together with the parameter value used by a query
 /// condition.
 pub trait FieldValueIdentifier {
+    /// Returns the mapped database column associated with this value.
     fn column(&self) -> ColumnRef<'_>;
 
+    /// Returns the value as a database query parameter.
     fn value(&self) -> &dyn QueryParameter;
-}
-
-/// Provides access to the local field participating in a foreign-key relation.
-///
-/// `Related` identifies the entity on the referenced side of the relation,
-/// allowing generated code to select the correct implementation when several
-/// relationships exist.
-pub trait ForeignKeyable<Related> {
-    fn foreign_key_value(&self, column: &str) -> Option<&dyn QueryParameter>;
 }

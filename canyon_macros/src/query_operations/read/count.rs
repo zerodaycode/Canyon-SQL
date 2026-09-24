@@ -28,7 +28,7 @@ pub fn create_count_macro(schema_name: Option<Cow<str>>, table_name: &str) -> To
     quote! {
         async fn count() -> canyon_sql::CanyonResult<i64> {
             use canyon_sql::connection::DbConnection;
-            use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
+            use canyon_sql::query::querybuilder::{QueryBuilderExt, SelectQueryBuilderExt};
 
             #default_db_conn_and_type_tokens
 
@@ -60,7 +60,7 @@ pub fn create_count_with_macro(schema_name: Option<Cow<str>>, table_name: &str) 
             I: canyon_sql::connection::DbConnection + Send + 'a
         {
             use canyon_sql::connection::DbConnection;
-            use canyon_sql::query::querybuilder::{QueryBuilderOps, SelectQueryBuilderOps};
+            use canyon_sql::query::querybuilder::{QueryBuilderExt, SelectQueryBuilderExt};
 
             let db_type = input.get_database_type()?;
             let query = canyon_sql::query::querybuilder::SelectQueryBuilder::new_from_parts(

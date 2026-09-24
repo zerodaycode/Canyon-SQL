@@ -11,6 +11,10 @@ host = 'localhost'
 port = 5438
 db_name = 'postgres'
 
+[canyon_sql.datasources.properties.pool]
+min_size = 2
+max_size = 10
+
 
 [[canyon_sql.datasources]]
 name = 'sqlserver_docker'
@@ -24,6 +28,10 @@ port = 1434
 db_name = 'master'
 mssql_tls = 'disabled'
 
+[canyon_sql.datasources.properties.pool]
+min_size = 2
+max_size = 10
+
 
 [[canyon_sql.datasources]]
 name = 'mysql_docker'
@@ -35,3 +43,7 @@ mysql = { basic = { username = 'root', password = 'root' } }
 host = 'localhost'
 port = 3307
 db_name = 'public'
+
+[canyon_sql.datasources.properties.pool]
+min_size = 2
+max_size = 10

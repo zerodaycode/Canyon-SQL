@@ -188,10 +188,12 @@ pub(crate) mod __impl {
         datasource: &DatasourceConfig,
     ) -> CanyonResult<Arc<Pool<TiberiusConnectionManager>>> {
         let sqlserver_config = sqlserver_config_from_datasource(datasource)?;
+        let pool_config = datasource.pool_config()?;
 
         let manager = TiberiusConnectionManager::new(sqlserver_config);
         let pool = bb8::Pool::builder()
-            .max_size(10u32)
+            .min_idle(pool_config.min_size)
+            .max_size(pool_config.max_size)
             .build(manager)
             .await
             .map_err(ConnectionError::sql_server_manager)?;
@@ -277,6 +279,7 @@ mod tests {
                 db_name: "test_db".into(),
                 port: None, // default
                 migrations: None,
+                pool: Default::default(),
                 mssql_tls: SqlServerTlsMode::Required,
             },
             auth: Auth::SqlServer(SqlServerAuth::Basic {

@@ -29,7 +29,7 @@ pub fn generate_canyon_entity_tokens(
 
     CANYON_REGISTER_ENTITIES
         .lock()
-        .expect("Error acquiring Mutex guard on Canyon Entity macro")
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
         .push(register_entity);
 
     if let Some(error) = parsed_attrs.error {

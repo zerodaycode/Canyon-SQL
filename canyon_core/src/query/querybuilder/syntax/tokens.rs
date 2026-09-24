@@ -140,12 +140,12 @@ impl<'a> Extend<SqlToken<'a>> for &'a mut SqlTokens<'a> {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum SqlToken<'a> {
-    Keyword(Keyword), // SELECT, WHERE, AND, OR, FROM, UPDATE, DELETE // TODO: model them as ctc
-    Ident(Cow<'a, str>), // a raw literal value
-    Number(NumberKind), // a raw literal numeric value
-    Symbol(Symbol),   // =, ( ) , .
-    Operator(Operator), // Operator::Eq, Operator::GtEq...
-    Placeholder,      // $1, ? , @P1
+    Keyword(Keyword),
+    Ident(Cow<'a, str>),
+    Number(NumberKind),
+    Symbol(Symbol),
+    Operator(Operator),
+    Placeholder,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -162,8 +162,8 @@ mod __impl_sql_token {
             match quoting {
                 IdentQuoting::Backtick => SqlToken::Symbol(Symbol::Backtick),
                 IdentQuoting::DoubleQuote => SqlToken::Symbol(Symbol::DoubleQuote),
-                IdentQuoting::OpeningBracket => SqlToken::Symbol(Symbol::LBracket), // Note: we use LBracket for both [ and ] since they are used in pairs
-                IdentQuoting::ClosingBracket => SqlToken::Symbol(Symbol::RBracket), // Note: we use LBracket for both [ and ] since they are used in pairs
+                IdentQuoting::OpeningBracket => SqlToken::Symbol(Symbol::LBracket),
+                IdentQuoting::ClosingBracket => SqlToken::Symbol(Symbol::RBracket),
             }
         }
     }

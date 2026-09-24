@@ -1,3 +1,7 @@
+//! Derive and attribute macros exposed by Canyon-SQL.
+
+#![deny(missing_docs)]
+
 extern crate proc_macro;
 
 #[cfg(feature = "migrations")]
@@ -9,7 +13,6 @@ mod canyon_entity_macro;
 
 mod canyon_mapper_macro;
 mod canyon_tokio_test;
-mod foreignkeyable_macro;
 mod query_operations;
 mod utils;
 
@@ -22,7 +25,6 @@ use crate::{
     canyon_entity_macro::{CanyonEntityAttributeArgs, generate_canyon_entity_tokens},
     canyon_mapper_macro::canyon_mapper_tokens,
     canyon_tokio_test::generate_canyon_tokio_test_tokens,
-    foreignkeyable_macro::foreignkeyable_tokens,
     query_operations::{
         impl_crud_operations_trait_for_struct, impl_delete_operations_trait_for_struct,
         impl_entity_crud_traits_for_struct, impl_entity_delete_trait_for_struct,
@@ -149,7 +151,8 @@ pub fn crud(input: CompilerTokenStream) -> CompilerTokenStream {
 /// Derives read operations for the annotated type.
 ///
 /// This includes operations such as `find_all`, `find_by_pk`, `count` and
-/// `select_query`.
+/// `select_query`. Fields annotated with `foreign_key` also receive inherent
+/// relationship lookup methods; no generated trait needs to be imported.
 #[proc_macro_derive(Read, attributes(canyon_crud))]
 pub fn read(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_read_operations_trait_for_struct)
@@ -198,14 +201,6 @@ pub fn entity_update(input: CompilerTokenStream) -> CompilerTokenStream {
 #[proc_macro_derive(EntityDelete, attributes(canyon_crud))]
 pub fn entity_delete(input: CompilerTokenStream) -> CompilerTokenStream {
     derive_operations(input, impl_entity_delete_trait_for_struct)
-}
-
-/// Derives the metadata required to navigate foreign-key relationships.
-#[proc_macro_derive(ForeignKeyable)]
-pub fn implement_foreignkeyable_for_type(input: CompilerTokenStream) -> CompilerTokenStream {
-    foreignkeyable_tokens(input)
-        .unwrap_or_else(Error::into_compile_error)
-        .into()
 }
 
 /// Derives database-row deserialization for the annotated type.

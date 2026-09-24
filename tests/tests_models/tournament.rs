@@ -10,6 +10,6 @@ pub struct Tournament {
     slug: String,
     start_date: NaiveDate,
     end_date: NaiveDate,
-    #[foreign_key(table = "league", column = "id")]
+    #[foreign_key(references = League::id)]
     league: i32,
 }

@@ -7,7 +7,7 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            QueryBuilder, QueryBuilderOps, UpdateQueryBuilderOps,
+            QueryBuilder, QueryBuilderExt, UpdateQueryBuilderExt,
             syntax::{ast::update::UpdateAst, column::ColumnRef},
             types::TableMetadata,
         },
@@ -40,7 +40,7 @@ impl<'a> UpdateQueryBuilder<'a> {
     }
 }
 
-impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
+impl<'a> UpdateQueryBuilderExt<'a> for UpdateQueryBuilder<'a> {
     fn set<I: Into<ColumnRef<'a>>>(mut self, columns: Vec<I>) -> CanyonResult<Self>
     where
         Self: Sized,
@@ -68,7 +68,7 @@ impl<'a> UpdateQueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
     }
 }
 
-impl<'a> QueryBuilderOps<'a> for UpdateQueryBuilder<'a> {
+impl<'a> QueryBuilderExt<'a> for UpdateQueryBuilder<'a> {
     #[inline(always)]
     fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()

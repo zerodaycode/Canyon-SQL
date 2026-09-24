@@ -4,7 +4,7 @@ pub(crate) use canyon_entities::helpers::default_database_table_name_from_entity
 use proc_macro2::{Ident, TokenStream};
 use quote::{ToTokens, quote};
 use std::borrow::Cow;
-use syn::{Attribute, Field, Fields, TypeGenerics, Visibility};
+use syn::{Attribute, Field, TypeGenerics};
 
 #[derive(Copy, Clone)]
 pub(crate) enum CanyonMethodKind {
@@ -31,20 +31,25 @@ impl ToTokens for ReturnTypeTokens {
 pub(crate) fn get_struct_fields_as_column_ref_token_stream(
     macro_tokens: &MacroTokens,
     skip_primary_key: bool,
+    table_schema_data: &str,
 ) -> TokenStream {
+    let table_metadata = TableMetadata::from(table_schema_data);
+    let table_name = table_metadata.name.as_ref();
     let struct_fields = if skip_primary_key {
-        macro_tokens.get_struct_fields_as_table_column_pairs_skipping_pk()
+        macro_tokens.get_struct_fields_as_table_column_pairs_skipping_pk(table_name)
     } else {
-        macro_tokens.get_struct_fields_as_table_column_pairs()
+        macro_tokens.get_struct_fields_as_table_column_pairs(table_name)
     };
     get_fields_as_iterable_of_column_refs(struct_fields)
 }
 
 pub(crate) fn get_struct_fields_as_table_column_pairs_pk_parsed(
     macro_tokens: &MacroTokens,
+    table_schema_data: &str,
 ) -> Vec<TokenStream> {
-    let struct_fields_without_pk =
-        macro_tokens.get_struct_fields_as_table_column_pairs_skipping_pk();
+    let table_metadata = TableMetadata::from(table_schema_data);
+    let struct_fields_without_pk = macro_tokens
+        .get_struct_fields_as_table_column_pairs_skipping_pk(table_metadata.name.as_ref());
     get_fields_as_vec_of_column_refs(struct_fields_without_pk)
 }
 
@@ -88,13 +93,6 @@ pub fn compute_crud_ops_mapping_target_type_with_generics(
     } else {
         quote! { #row_mapper_ty #row_mapper_ty_generics }
     }
-}
-
-pub fn filter_fields(fields: &Fields) -> Vec<(Visibility, Ident)> {
-    fields
-        .iter()
-        .map(|field| (field.vis.clone(), field.ident.as_ref().unwrap().clone()))
-        .collect::<Vec<_>>()
 }
 
 pub fn field_has_target_attribute(field: &Field, target_attribute: &str) -> bool {
@@ -231,6 +229,46 @@ mod __impl {
 mod tests_for_parse_struct_field_attributes {
     use super::*;
     use syn::{ItemStruct, parse_str};
+
+    #[test]
+    fn generated_column_refs_use_the_physical_table_without_the_schema() {
+        let input: syn::DeriveInput = parse_str(
+            r#"
+            #[canyon_entity(table_name = "tournament_entries", schema = "archive")]
+            struct TournamentEntry {
+                #[primary_key]
+                id: i32,
+                details_id: i64,
+            }
+            "#,
+        )
+        .unwrap();
+        let macro_data = MacroTokens::new(&input).unwrap();
+        let table = table_schema_parser(&macro_data).unwrap().sql();
+        assert_eq!(table, "archive.tournament_entries");
+
+        let all_columns = get_struct_fields_as_column_ref_token_stream(&macro_data, false, &table)
+            .to_string()
+            .replace(' ', "");
+        assert!(all_columns.contains("ColumnRef::new(\"tournament_entries\",\"id\")"));
+        assert!(all_columns.contains("ColumnRef::new(\"tournament_entries\",\"details_id\")"));
+
+        let insert_columns =
+            get_struct_fields_as_column_ref_token_stream(&macro_data, true, &table)
+                .to_string()
+                .replace(' ', "");
+        assert!(!insert_columns.contains("\"id\""));
+        assert!(insert_columns.contains("ColumnRef::new(\"tournament_entries\",\"details_id\")"));
+
+        let update_columns = get_struct_fields_as_table_column_pairs_pk_parsed(&macro_data, &table)
+            .into_iter()
+            .map(|tokens| tokens.to_string().replace(' ', ""))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            update_columns,
+            vec!["canyon_sql::query::ColumnRef::new(\"tournament_entries\",\"details_id\")"]
+        );
+    }
 
     #[test]
     fn detects_target_attribute_correctly() {

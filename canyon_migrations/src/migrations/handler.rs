@@ -11,7 +11,7 @@ use canyon_core::canyon::Canyon;
 use canyon_core::{
     column::Column,
     connection::db_connector::DatabaseConnector,
-    row::{Row, RowOperations},
+    row::{Row, RowExt},
     rows::CanyonRows,
     transaction::Transaction,
 };

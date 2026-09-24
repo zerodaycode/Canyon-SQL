@@ -9,4 +9,8 @@ postgresql = { basic = { username = 'postgres', password = 'postgres'}}
 [canyon_sql.datasources.properties]
 host = 'localhost'
 port = 5438
-db_name = 'postgres' 
+db_name = 'postgres'
+
+[canyon_sql.datasources.properties.pool]
+min_size = 2
+max_size = 10

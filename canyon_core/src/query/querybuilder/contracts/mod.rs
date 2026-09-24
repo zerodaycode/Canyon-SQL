@@ -1,7 +1,7 @@
 //! Defines the operation traits exposed by Canyon-SQL query builders.
 //!
 //! Each trait groups the operations available for a specific SQL statement,
-//! while [`QueryBuilderOps`] contains the behaviour shared by all builders.
+//! while [`QueryBuilderExt`] contains the behaviour shared by all builders.
 
 use crate::error::CanyonResult;
 use crate::query::bounds::{FieldIdentifier, FieldValueIdentifier};
@@ -14,11 +14,11 @@ use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
 /// Operations supported by a delete query builder.
 ///
 /// Delete queries currently require no statement-specific operations beyond
-/// those provided by [`QueryBuilderOps`].
-pub trait DeleteQueryBuilderOps<'a>: QueryBuilderOps<'a> {}
+/// those provided by [`QueryBuilderExt`].
+pub trait DeleteQueryBuilderExt<'a>: QueryBuilderExt<'a> {}
 
 /// Operations supported by an update query builder.
-pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
+pub trait UpdateQueryBuilderExt<'a>: QueryBuilderExt<'a> {
     /// Defines the columns assigned by the generated `SET` clause.
     ///
     /// This method only registers column references. It does not collect the
@@ -42,7 +42,7 @@ pub trait UpdateQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 }
 
 /// Operations supported by an insert query builder.
-pub trait InsertQueryBuilderOps<'a>: QueryBuilderOps<'a> {
+pub trait InsertQueryBuilderExt<'a>: QueryBuilderExt<'a> {
     /// Defines the columns targeted by the insert statement.
     ///
     /// When omitted, the generated statement does not include an explicit
@@ -66,7 +66,7 @@ pub trait InsertQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 }
 
 /// Operations supported by a select query builder.
-pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
+pub trait SelectQueryBuilderExt<'a>: QueryBuilderExt<'a> {
     /// Defines the columns projected by the select statement.
     ///
     /// When omitted, the query projects all columns using `SELECT *`.
@@ -144,14 +144,14 @@ pub trait SelectQueryBuilderOps<'a>: QueryBuilderOps<'a> {
 /// Common operations supported by every query builder.
 ///
 /// Statement-specific builders expose this shared filtering and build API,
-/// while traits such as [`SelectQueryBuilderOps`], [`InsertQueryBuilderOps`],
-/// and [`UpdateQueryBuilderOps`] add operations that only apply to their
+/// while traits such as [`SelectQueryBuilderExt`], [`InsertQueryBuilderExt`],
+/// and [`UpdateQueryBuilderExt`] add operations that only apply to their
 /// corresponding SQL statement.
 ///
 /// Implementations collect structured query data and parameters. SQL generation
 /// is deferred until [`Self::build`] consumes the builder and emits a [`Query`]
 /// for the configured database dialect.
-pub trait QueryBuilderOps<'a> {
+pub trait QueryBuilderExt<'a> {
     /// Consumes the builder and generates the final query.
     ///
     /// The returned [`Query`] contains both the emitted SQL statement and the

@@ -1,0 +1,10 @@
+[package]
+name = "canyon_compile_tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+canyon_sql = { path = "../..", features = ["postgres"] }

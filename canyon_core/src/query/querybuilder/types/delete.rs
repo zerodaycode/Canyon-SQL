@@ -8,7 +8,7 @@ use crate::{
         parameters::QueryParameter,
         query::Query,
         querybuilder::{
-            DeleteQueryBuilderOps, QueryBuilder, QueryBuilderOps, syntax::ast::delete::DeleteAst,
+            DeleteQueryBuilderExt, QueryBuilder, QueryBuilderExt, syntax::ast::delete::DeleteAst,
             types::TableMetadata,
         },
     },
@@ -50,9 +50,9 @@ impl<'a> DeleteQueryBuilder<'a> {
     }
 }
 
-impl<'a> DeleteQueryBuilderOps<'a> for DeleteQueryBuilder<'a> {}
+impl<'a> DeleteQueryBuilderExt<'a> for DeleteQueryBuilder<'a> {}
 
-impl<'a> QueryBuilderOps<'a> for DeleteQueryBuilder<'a> {
+impl<'a> QueryBuilderExt<'a> for DeleteQueryBuilder<'a> {
     #[inline(always)]
     fn build(self) -> CanyonResult<Query<'a>> {
         self._inner.build()

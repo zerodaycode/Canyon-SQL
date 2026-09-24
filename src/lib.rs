@@ -1,8 +1,11 @@
 //! The root crate of the `Canyon-SQL` project.
-///
-/// Here it's where all the available functionalities and features
-/// reaches the top most level, grouping them and making them visible
-/// through this crate, building the *public API* of the library
+//!
+//! Here it's where all the available functionalities and features
+//! reach the top level, grouping them and making them visible
+//! through this crate as the library's public API.
+
+#![deny(missing_docs)]
+
 extern crate canyon_core;
 extern crate canyon_crud;
 extern crate canyon_macros;
@@ -39,6 +42,7 @@ pub mod connection {
     pub use canyon_core::connection::db_connector::DatabaseConnector;
 }
 
+/// Core runtime, mapping, row and error types.
 pub mod core {
     pub use canyon_core::canyon::Canyon;
     pub use canyon_core::error::*;
