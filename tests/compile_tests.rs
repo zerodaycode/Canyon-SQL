@@ -54,6 +54,11 @@ fn generated_relationship_methods_are_inherent() {
 }
 
 #[test]
+fn multiple_fields_derives_can_share_a_module() {
+    assert_compiles("multiple_fields_same_module");
+}
+
+#[test]
 fn runtime_entity_operations_can_be_derived_selectively() {
     assert_compiles("selective_entity_operations");
 }

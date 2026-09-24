@@ -121,7 +121,7 @@ The first active datasource is the default for operations without `_with`. For e
 #[canyon_entity(table_name = "tournament_entries", schema = "public")]
 ```
 
-`Fields` generates typed field and field-value helpers for queries; `CanyonMapper` maps database rows into the struct; `Crud` generates the complete read/write set. Import the corresponding traits from `canyon_sql::crud` to call their methods.
+`Fields` currently generates three types per model: `TeamTable` for table metadata, `TeamField` for column names, and `TeamFieldValue` for a column paired with a value of its Rust type. These enums are the supported query-builder API today. A future Canyon version may replace them with typed column descriptors; that is a possible direction, not a scheduled removal. `CanyonMapper` maps database rows into the struct, while `Crud` generates the complete read/write set. Import the corresponding traits from `canyon_sql::crud` to call their methods.
 
 | Operation | Default datasource | Named datasource | Result |
 | --- | --- | --- | --- |
@@ -173,22 +173,17 @@ For a join, map the result into a struct containing the columns you intend to re
 
 ## 🔗 Relationships
 
-Declare the relationship on the child model by pointing to a field of the parent Canyon entity. Keep models in separate Rust modules: the `Fields` derive currently generates module-scoped helper imports.
+Declare the relationship on the child model by pointing to a field of the parent Canyon entity. Multiple models can use `Fields` in the same Rust module:
 
 ```rust
-mod players {
-    use super::Team;
-    use canyon_sql::macros::{canyon_entity, CanyonMapper, Crud, Fields};
-
-    #[derive(Debug, Fields, Crud, CanyonMapper)]
-    #[canyon_entity(table_name = "players")]
-    pub struct Player {
-        #[primary_key]
-        id: i64,
-        #[foreign_key(references = Team::id)]
-        team_id: i64,
-        name: String,
-    }
+#[derive(Debug, Fields, Crud, CanyonMapper)]
+#[canyon_entity(table_name = "players")]
+struct Player {
+    #[primary_key]
+    id: i64,
+    #[foreign_key(references = Team::id)]
+    team_id: i64,
+    name: String,
 }
 ```
 

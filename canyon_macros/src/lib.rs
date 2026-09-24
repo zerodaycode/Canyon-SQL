@@ -227,8 +227,8 @@ fn querybuilder_fields_tokens(input: CompilerTokenStream) -> MacroResult {
     let field_values = generate_enum_with_fields_values(&entity);
 
     Ok(quote! {
-        use canyon_sql::query::bounds::EntityTable;
-        use canyon_sql::query::bounds::FieldIdentifier;
+        use canyon_sql::query::bounds::EntityTable as _;
+        use canyon_sql::query::bounds::FieldIdentifier as _;
 
         #struct_metadata
         #fields
