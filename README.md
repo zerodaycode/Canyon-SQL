@@ -1,6 +1,6 @@
 # Canyon-SQL
 
-An async Rust ORM and query builder for PostgreSQL, MySQL and SQL Server. Canyon keeps the everyday path short—map a struct, choose a datasource, and work with typed rows—while leaving room for explicit queries when a simple CRUD operation is not enough.
+Canyon-SQL is an async Rust ORM and query builder for PostgreSQL, MySQL, and SQL Server. It grew around a simple frustration: the same table knowledge tends to be repeated in a model, a row mapper, a repository, and a collection of SQL strings. Canyon lets a Rust struct carry that knowledge and generates the routine work around it.
 
 [![Crates.io](https://img.shields.io/crates/v/canyon_sql.svg)](https://crates.io/crates/canyon_sql)
 [![CI](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/continuous-integration.yml)
@@ -8,20 +8,18 @@ An async Rust ORM and query builder for PostgreSQL, MySQL and SQL Server. Canyon
 [![Coverage](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml/badge.svg)](https://github.com/zerodaycode/Canyon-SQL/actions/workflows/code-coverage.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-> [!IMPORTANT]
-> Canyon-SQL is still evolving. The `migrations` feature is **experimental and incomplete**; do not rely on it to manage production schemas. Create your tables with your usual schema-management tool for now.
+> [!TIP]
+> Looking for the full reference? The [Canyon book](https://zerodaycode.github.io/canyon-book/) is where configuration, generated methods, query building, relationships, and backend behavior are documented. The book is being refreshed to match the current API.
 
-## 🧭 What Canyon gives you
+## 🧭 How Canyon fits into an application
 
-- **One Rust model for familiar operations.** Derive `Fields`, `CanyonMapper` and `Crud` to read, insert, update and delete rows. The individual `Read`, `Insert`, `Update` and `Delete` derives are available when a model needs fewer operations.
-- **Three async SQL backends.** Enable `postgres`, `mysql`, `mssql`, or a combination. Each configured datasource has its own connection pool; the first enabled datasource in the configuration is the default.
-- **A typed query builder.** Compose filters and joins, inspect the generated SQL, and execute queries with values bound as parameters.
-- **Relationships from Rust field annotations.** `#[foreign_key(references = Team::id)]` generates direct and reverse lookup methods, including variants that target a named datasource.
-- **Errors you can handle.** Public operations return `CanyonResult<T>`, with `CanyonError` families for configuration, connections, queries, query building and mapping.
+You define an entity with `#[canyon_entity]` and derive the capabilities it needs. `CanyonMapper` turns database rows into that Rust type. `Crud` supplies the familiar read, insert, update, and delete operations; `Read`, `Insert`, `Update`, and `Delete` can also be derived separately. When a generated operation is too simple, `Fields` and the query builder give you typed column names and bound values. You can always use a connection directly for SQL that is best written by hand.
 
-## 🚀 Get started
+A project may configure several named datasources, even across different database engines. The first active one is the default; `_with` methods let you choose another by name or pass a compatible connection. Operations return `CanyonResult<T>`, with typed errors for configuration, connections, queries, query building, and mapping. A missing row is an `Option::None`, not a swallowed error.
 
-Add Canyon and a Tokio runtime to your application. **At least one SQL backend feature is required**; there is no default backend. This example uses PostgreSQL:
+## 🚀 Read your first table
+
+Choose at least one backend feature. Canyon has no default SQL backend; this example uses PostgreSQL and a Tokio runtime:
 
 ```toml
 [dependencies]
@@ -29,7 +27,7 @@ canyon_sql = { version = "0.5.1", features = ["postgres"] }
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-Create `canyon.toml` in the directory from which you run the application:
+The same crate can be built with `mysql`, `mssql`, or a combination of the three. Next, create a `canyon.toml` beside the directory where you run the application:
 
 ```toml
 [canyon_sql]
@@ -46,7 +44,9 @@ port = 5432
 db_name = "app"
 ```
 
-Canyon looks for a file named `canyon*.toml` within two directory levels of the current working directory. Keep only one matching configuration in that area to avoid ambiguity. These credentials are illustrative; keep real secrets out of version control. The database and table must already exist—for the PostgreSQL example, the table could be:
+These credentials are illustrative; keep real ones out of version control. Canyon discovers a `canyon*.toml` file from the current working directory and nearby subdirectories. Keep only one matching file there so startup does not pick an unintended configuration.
+
+The example assumes the table exists. For PostgreSQL, you could create it with:
 
 ```sql
 CREATE TABLE teams (
@@ -55,7 +55,7 @@ CREATE TABLE teams (
 );
 ```
 
-Then map a Rust struct to that table and initialize Canyon before querying:
+Now give that table a Rust model. The explicit `Canyon::init().await?` call lets the application handle startup failures as typed errors:
 
 ```rust
 use canyon_sql::{
@@ -85,139 +85,48 @@ async fn main() -> CanyonResult<()> {
 }
 ```
 
-`#[primary_key]` marks an auto-incrementing key by default. An `insert()` updates that field with the generated value. For keys supplied by the application, use `#[primary_key(autoincremental = false)]`.
+`#[primary_key]` tells Canyon which field identifies a row. A numeric key is treated as database-generated by default; `insert(&mut self)` writes the new key back to the struct. If the application supplies the key, use `#[primary_key(autoincremental = false)]`. Existing tables with a different name can be mapped with `table_name` and `schema` on `#[canyon_entity]`.
 
-You can also use `#[canyon_sql::main]` on `fn main()` to let Canyon initialize its runtime and connections for you. The explicit `Canyon::init().await?` form above makes startup failures available as `CanyonError` instead of panicking inside the macro.
+## 🔎 When a simple read is not enough
 
-## 🗄️ Datasources and backends
-
-Select the backend features you need in `Cargo.toml`: `postgres`, `mysql`, and/or `mssql`. When more than one is enabled, put multiple `[[canyon_sql.datasources]]` blocks in `canyon.toml`. The `name` field is how your code selects a non-default connection. Use these authentication keys:
-
-| Backend feature | Authentication key | Driver |
-| --- | --- | --- |
-| `postgres` | `postgresql` (or `postgres`) | `tokio-postgres` |
-| `mysql` | `mysql` | `mysql_async` |
-| `mssql` | `sqlserver` (or `mssql`) | `tiberius` |
-
-The same `host`, `port` and `db_name` properties apply to all three. Optional pool limits can be set per datasource:
-
-```toml
-[canyon_sql.datasources.properties.pool]
-min_size = 2
-max_size = 10
-```
-
-Those are also the defaults when the pool section is absent. `max_size` must be positive and at least `min_size`; invalid limits produce a configuration error during initialization. Datasources whose backend feature is not compiled in are ignored, so a shared config can describe several backends while a binary enables only the ones it uses.
-
-SQL Server also accepts `mssql_tls = "required"` (the default), `"trust_server_certificate"`, or `"disabled"` under `[canyon_sql.datasources.properties]`. The repository's local Docker fixture uses `"disabled"`; use a properly validated TLS connection outside local development.
-
-The first active datasource is the default for operations without `_with`. For example, `Team::find_all().await?` uses that default, while `Team::find_all_with("analytics").await?` selects the datasource named `analytics`. The `_with` methods also accept an existing compatible connection, which is useful when working inside a transaction.
-
-## 🧱 Model and CRUD operations
-
-`#[canyon_entity]` maps a struct to a table. You can set `table_name` and `schema` explicitly when the physical name differs from the Rust name:
-
-```rust
-#[canyon_entity(table_name = "tournament_entries", schema = "public")]
-```
-
-`Fields` currently generates three types per model: `TeamTable` for table metadata, `TeamField` for column names, and `TeamFieldValue` for a column paired with a value of its Rust type. These enums are the supported query-builder API today. A future Canyon version may replace them with typed column descriptors; that is a possible direction, not a scheduled removal. `CanyonMapper` maps database rows into the struct, while `Crud` generates the complete read/write set. Import the corresponding traits from `canyon_sql::crud` to call their methods.
-
-| Operation | Default datasource | Named datasource | Result |
-| --- | --- | --- | --- |
-| Read all | `Team::find_all()` | `Team::find_all_with("main")` | `CanyonResult<Vec<Team>>` |
-| Read by key | `Team::find_by_pk(&id)` | `Team::find_by_pk_with(&id, "main")` | `CanyonResult<Option<Team>>` |
-| Count | `Team::count()` | `Team::count_with("main")` | `CanyonResult<i64>` |
-| Insert | `team.insert()` | `team.insert_with("main")` | `CanyonResult<()>` |
-| Update | `team.update()` | `team.update_with("main")` | `CanyonResult<u64>` |
-| Delete | `team.delete()` | `team.delete_with("main")` | `CanyonResult<()>` |
-
-All operations above are async. `find_by_pk` returns `Ok(None)` when the row is absent; `update` returns the affected-row count. For a generated primary key, start with its default value and pass a mutable model to `insert()`:
-
-```rust
-use canyon_sql::crud::{Insert, Read};
-
-let mut team = Team { id: 0, name: "Red".to_owned() };
-team.insert().await?;
-let saved: Option<Team> = Team::find_by_pk(&team.id).await?;
-```
-
-If you need to separate mapped data from operation-bearing types, Canyon also exposes the runtime-facing `EntityInsert`, `EntityUpdate` and `EntityDelete` derives and traits. See the [selective-operation example](tests/ui/src/bin/selective_entity_operations.rs) for that more advanced pattern.
-
-## 🔎 Queries beyond CRUD
-
-The select, update and delete builders give you more control without hand-writing the common SQL path. Here is a filtered select using the `Team` model above:
+`Team::find_all()` reads the table. `Team::find_by_pk(&id)` returns `CanyonResult<Option<Team>>`, and `Team::count()` returns a count. A filter can instead be built with the field helpers generated by `Fields`:
 
 ```rust
 use canyon_sql::{
     crud::Read,
-    query::{
-        operators::Operator,
-        querybuilder::QueryBuilderExt,
-    },
+    query::{operators::Operator, querybuilder::QueryBuilderExt},
 };
 
-let id = TeamFieldValue::id(10);
-let name = TeamFieldValue::name("Red".to_owned());
+let name = TeamFieldValue::name("Blue".to_owned());
 let teams: Vec<Team> = Team::select_query()?
-    .where_value(&id, Operator::Gt)
-    .and(&name, Operator::Eq)
+    .where_value(&name, Operator::Eq)
     .build()?
     .launch_default()
     .await?;
 ```
 
-The generated statement can be inspected with `.build()?.sql()`. Values passed through field-value helpers remain bound parameters. The builder also supports joins, ordering and other clauses; the [query-builder integration tests](tests/crud/querybuilder_operations.rs) show the supported combinations and backend-specific SQL.
+The value remains a bound parameter, while Canyon renders identifiers and placeholders for the selected backend. `Fields` currently generates `TeamTable`, `TeamField`, and `TeamFieldValue`; these enums are the supported API today. A future major version may use typed column descriptors instead, but no replacement is scheduled. The builder also supports joins, ordering, conditional updates, and deletes.
 
-For a join, map the result into a struct containing the columns you intend to read. Extra returned columns are ignored; missing columns, unexpected `NULL`s and incompatible values are reported as mapping errors.
-
-## 🔗 Relationships
-
-Declare the relationship on the child model by pointing to a field of the parent Canyon entity. Multiple models can use `Fields` in the same Rust module:
+Relationships start with the Rust field that stores the foreign key:
 
 ```rust
-#[derive(Debug, Fields, Crud, CanyonMapper)]
-#[canyon_entity(table_name = "players")]
-struct Player {
-    #[primary_key]
-    id: i64,
-    #[foreign_key(references = Team::id)]
-    team_id: i64,
-    name: String,
-}
+#[foreign_key(references = Team::id)]
+team_id: i64,
 ```
 
-This produces `player.find_team()` and `Player::find_all_by_team(&team)`, plus `find_team_with("main")` and `find_all_by_team_with(&team, "main")`. The direct lookup returns `CanyonResult<Option<Team>>`; the reverse lookup returns `CanyonResult<Vec<Player>>`. No match is `None` or an empty vector, respectively—not an error.
+On a child model such as `Player`, this generates `player.find_team()` and `Player::find_all_by_team(&team)`, as well as `_with` variants. The annotation does not create a SQL foreign-key constraint; define that in your database schema. Custom physical table and schema names come from the related entity's metadata rather than another string in the foreign-key annotation.
 
-Canyon derives the method name from the foreign-key field (here `team_id`) and takes the referenced entity's physical table and schema from its `#[canyon_entity(...)]` metadata. References can use qualified Rust paths and a non-primary-key parent field. The [relationship integration tests](tests/crud/foreign_key_operations.rs) exercise custom and compound table names across all three backends.
+## ⚠️ What is still evolving
 
-## ⚠️ Errors and current limits
+Canyon maps tables; the ordinary CRUD path does not create or migrate them. The `migrations` Cargo feature exists but is **experimental and incomplete**. Do not rely on it for production schema changes.
 
-`CanyonResult<T>` is `Result<T, CanyonError>`. The top-level error families are `Configuration`, `Connection`, `Query`, `QueryBuilder` and `Mapping`; backend errors retain their original source for diagnosis. A missing row is represented by `Ok(None)` in singular read operations, so it stays distinct from a failed query.
+The public API is still evolving. Pin the crate version when stability matters, and consult the [changelog](CHANGELOG.md) when upgrading. The [integration tests](tests/) are also concrete examples of what the current code supports.
 
-The `migrations` Cargo feature is deliberately **experimental**. It is incomplete and not part of the recommended application setup. We will document and stabilize it separately; until then, manage schema changes outside Canyon.
-
-The API is still evolving toward its next release. If a behavior matters to your deployment, pin the crate version and check the [changelog](CHANGELOG.md) when upgrading.
-
-## 🧪 Working on Canyon
-
-The integration suite uses PostgreSQL, MySQL and SQL Server. Start the local services, initialize SQL Server's test schema and data, then run the suite:
-
-```sh
-docker compose -f docker/docker-compose.yml up -d --wait
-cargo test -p tests --test canyon_integration_tests --all-features initialize_sql_server_docker_instance -- --ignored --test-threads=1
-cargo test --workspace --all-features --no-fail-fast -- --test-threads=1
-```
-
-The PostgreSQL and MySQL containers seed their fixtures at startup; the ignored SQL Server initializer supplies its fixtures separately. The integration configuration is in [`tests/canyon.toml`](tests/canyon.toml). You can run formatting and isolated library checks without the database containers:
+If you are working on Canyon itself, you can run formatting and library tests without the database containers:
 
 ```sh
 cargo fmt --all -- --check
 cargo test --workspace --lib --all-features
 ```
 
-If the build cannot find OpenSSL or `pkg-config`, install the corresponding development packages for your platform and rerun Cargo. On Debian-based systems these are typically `libssl-dev` and `pkg-config`.
-
-## 📚 Keep exploring
-
-The [Canyon book](https://zerodaycode.github.io/canyon-book/) is the longer-form guide; it is being updated. The [integration tests](tests/) are the most precise examples of the current API, and [CONTRIBUTING.md](CONTRIBUTING.md) explains how to propose a fix or feature. Issues and pull requests are welcome at the [project repository](https://github.com/zerodaycode/Canyon-SQL).
+The full integration suite needs PostgreSQL, MySQL, and SQL Server fixtures; its setup is described in the book. Contributions are welcome—start with [CONTRIBUTING.md](CONTRIBUTING.md).
