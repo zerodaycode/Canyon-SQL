@@ -11,16 +11,22 @@ env:
 
 jobs:
   multiplatform-tests:
-    name: Testing on Rust ${{ matrix.rust }} for ${{ matrix.os }}
+    name: Testing on Rust ${{ matrix.rust }} for ${{ matrix.os }}${{ matrix.dbs && format(' ({0} dbs)', matrix.dbs) || '' }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
         - { rust: stable,            os: ubuntu-latest }
+        # Oldest database versions we support (the others use docker-compose.yml's defaults)
+        - { rust: stable,            os: ubuntu-latest, dbs: floor, pg: '14', mssql: 2017-latest, mysql: 8.0.16 }
         # - { rust: nightly,           os: ubuntu-latest }
         - { rust: stable,            os: macos-latest }
         - { rust: stable,            os: windows-latest }
+    env:
+      CANYON_PG_TAG: ${{ matrix.pg }}
+      CANYON_MSSQL_TAG: ${{ matrix.mssql }}
+      CANYON_MYSQL_TAG: ${{ matrix.mysql }}
 
     steps:
       - uses: actions/checkout@v7

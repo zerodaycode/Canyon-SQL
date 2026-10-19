@@ -13,4 +13,6 @@ mod crud;
 mod migrations;
 
 mod constants;
+#[cfg(any(feature = "postgres", feature = "mssql", feature = "mysql"))]
+mod support;
 mod tests_models;
