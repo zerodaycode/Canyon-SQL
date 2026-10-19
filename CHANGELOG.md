@@ -14,6 +14,15 @@ Year format is defined as: `YYYY-m-d`
 - `ColumnType` and `SqlType` in `canyon_sql::core`: the column type each Rust field type maps to
 - `QueryParameter` for `Option<i16>` and `Option<bool>`
 
+### Changed
+
+- `canyon_core::column::NativeColumnType` is `#[non_exhaustive]` (its variants depend on the enabled features): a `match` needs a `_` arm
+
+### Deprecated
+
+- `canyon_core::column::ColumnType`: renamed to `NativeColumnType`, so `ColumnType` is only the field type trait. Variant imports (`use ...::ColumnType::*`) need the new name
+- `canyon_core::column::ColType`: unused, will be removed
+
 ## [0.5.0 - 2023 - 12 - 10]
 
 ### Feature

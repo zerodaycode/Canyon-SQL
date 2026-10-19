@@ -3,7 +3,7 @@ use canyon_core::connection::tiberius::ColumnType as TIB_TY;
 #[cfg(feature = "postgres")]
 use canyon_core::connection::tokio_postgres::types::Type as TP_TYP;
 use canyon_core::{
-    column::{Column, ColumnType},
+    column::{Column, NativeColumnType},
     row::{Row, RowOperations},
 };
 
@@ -47,7 +47,7 @@ impl ColumnMetadataTypeValue {
     pub fn get_value(row: &dyn Row, col: &Column) -> Self {
         match col.column_type() {
             #[cfg(feature = "postgres")]
-            ColumnType::Postgres(v) => {
+            NativeColumnType::Postgres(v) => {
                 match *v {
                     TP_TYP::NAME | TP_TYP::VARCHAR | TP_TYP::TEXT => Self::StringValue(
                         row.get_postgres_opt::<&str>(col.name())
@@ -62,7 +62,7 @@ impl ColumnMetadataTypeValue {
                 }
             }
             #[cfg(feature = "mssql")]
-            ColumnType::SqlServer(v) => match v {
+            NativeColumnType::SqlServer(v) => match v {
                 TIB_TY::NChar | TIB_TY::NVarchar | TIB_TY::BigChar | TIB_TY::BigVarChar => {
                     Self::StringValue(
                         row.get_mssql_opt::<&str>(col.name())
@@ -77,7 +77,8 @@ impl ColumnMetadataTypeValue {
                 _ => Self::NoneValue,
             },
             #[cfg(feature = "mysql")]
-            ColumnType::MySQL(_) => todo!(),
+            NativeColumnType::MySQL(_) => todo!(),
+            _ => Self::NoneValue,
         }
     }
 }

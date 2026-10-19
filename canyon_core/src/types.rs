@@ -88,7 +88,7 @@ impl SqlType {
 
 /// Maps a Rust type to the [`SqlType`] of its column.
 ///
-/// Not to be confused with [`crate::column::ColumnType`], the driver's type of a
+/// Not to be confused with [`crate::column::NativeColumnType`], the driver's type of a
 /// column in a result row.
 ///
 /// ```

@@ -7,7 +7,7 @@ use tiberius::{self};
 #[cfg(feature = "postgres")]
 use tokio_postgres::{self};
 
-use crate::column::{Column, ColumnType};
+use crate::column::{Column, NativeColumnType};
 use crate::connection::database_type::DatabaseType;
 use crate::error::{CanyonResult, MappingError};
 use std::{any::Any, borrow::Cow};
@@ -169,7 +169,7 @@ impl RowOperations for &dyn Row {
                 row.columns().iter().for_each(|c| {
                     cols.push(Column {
                         name: std::borrow::Cow::from(c.name()),
-                        type_: crate::column::ColumnType::Postgres(c.type_().to_owned()),
+                        type_: NativeColumnType::Postgres(c.type_().to_owned()),
                     })
                 });
                 return Ok(cols);
@@ -181,7 +181,7 @@ impl RowOperations for &dyn Row {
                 row.columns().iter().for_each(|c| {
                     cols.push(Column {
                         name: Cow::from(c.name()),
-                        type_: ColumnType::SqlServer(c.column_type()),
+                        type_: NativeColumnType::SqlServer(c.column_type()),
                     })
                 });
                 return Ok(cols);
@@ -193,7 +193,7 @@ impl RowOperations for &dyn Row {
                 mysql_row.columns_ref().iter().for_each(|c| {
                     cols.push(Column {
                         name: c.name_str(),
-                        type_: ColumnType::MySQL(c.column_type()),
+                        type_: NativeColumnType::MySQL(c.column_type()),
                     })
                 });
                 return Ok(cols);
