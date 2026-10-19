@@ -1,6 +1,8 @@
 // The new engine: no public API promise until it replaces `migrations`
 #[doc(hidden)]
 pub mod dialect;
+#[doc(hidden)]
+pub mod introspect;
 /// Holds the data needed by Canyon when the user
 /// application it's running.
 ///

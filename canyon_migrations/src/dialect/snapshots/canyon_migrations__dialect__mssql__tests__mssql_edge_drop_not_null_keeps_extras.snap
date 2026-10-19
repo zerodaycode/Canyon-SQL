@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render::<MsSql>(&op, &actual, \"dbo\")"
+---
+ALTER TABLE [player] ALTER COLUMN [name] nvarchar(100) COLLATE Latin1_General_BIN NULL
+  params: []
+  transactional: true

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "stamp" ALTER COLUMN "ts" TYPE timestamp(3) USING "ts"::timestamp(3)
+  params: []
+  transactional: true

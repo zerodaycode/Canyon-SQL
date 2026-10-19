@@ -32,6 +32,34 @@ impl ColumnDefault {
     }
 }
 
+/// What a column has besides its type, nullability and default. Canyon doesn't manage
+/// any of it, but a statement that rewrites the column (MySQL `MODIFY`, SQL Server
+/// `ALTER COLUMN` and table rebuild, PostgreSQL `ALTER COLUMN TYPE`) has to write it
+/// again or the database drops it. Read from the database only.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+#[non_exhaustive]
+pub struct ColumnExtra {
+    /// As the catalog names it. PostgreSQL only reports one that isn't the type's default.
+    pub collation: Option<CatalogSql>,
+    /// MySQL `COMMENT`. Data, not SQL: written back as an escaped literal.
+    pub comment: Option<String>,
+    /// MySQL `ON UPDATE` expression.
+    pub on_update: Option<CatalogSql>,
+    /// Computed from other columns (`GENERATED ALWAYS AS`, SQL Server computed column).
+    /// Canyon refuses to rewrite one: MySQL would turn it into a plain column.
+    pub generated: bool,
+    /// MySQL `INVISIBLE`.
+    pub invisible: bool,
+}
+
+impl ColumnExtra {
+    /// Nothing besides the type, nullability and default.
+    pub fn is_empty(&self) -> bool {
+        *self == Self::default()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ColumnDef {
@@ -40,6 +68,9 @@ pub struct ColumnDef {
     pub nullable: bool,
     /// Read from the database only; Canyon doesn't manage defaults yet.
     pub default: Option<ColumnDefault>,
+    /// Read from the database only; left out of the JSON when empty.
+    #[serde(default, skip_serializing_if = "ColumnExtra::is_empty")]
+    pub extra: ColumnExtra,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -169,6 +200,7 @@ impl TableDefBuilder {
                 ty: Logical::Known(ty),
                 nullable,
                 default: None,
+                extra: ColumnExtra::default(),
             });
         }
         if let Some((cols, generated)) = &self.pk {
@@ -365,6 +397,26 @@ mod tests {
             serde_json::from_str::<SchemaModel>(&twice).is_err(),
             "duplicate table"
         );
+    }
+
+    #[test]
+    fn column_extra_stays_out_of_json_when_empty() {
+        let column = player().columns[0].clone();
+        let json = serde_json::to_string(&column).unwrap();
+        assert!(!json.contains("extra"), "{json}");
+        assert_eq!(serde_json::from_str::<ColumnDef>(&json).unwrap(), column);
+    }
+
+    #[test]
+    fn column_extra_sql_never_comes_from_json() {
+        for json in [
+            r#"{"collation":"x; DROP TABLE t"}"#,
+            r#"{"on_update":"0; DROP TABLE t"}"#,
+        ] {
+            assert!(serde_json::from_str::<ColumnExtra>(json).is_err(), "{json}");
+        }
+        let comment = serde_json::from_str::<ColumnExtra>(r#"{"comment":"it's"}"#).unwrap();
+        assert_eq!(comment.comment.as_deref(), Some("it's"));
     }
 
     #[test]

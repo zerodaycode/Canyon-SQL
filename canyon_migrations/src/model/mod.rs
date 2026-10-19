@@ -8,7 +8,7 @@ mod types;
 pub use error::ModelError;
 pub use ident::{Ident, MAX_IDENT_LEN, QualifiedName};
 pub use schema::{
-    ColumnDef, ColumnDefault, ForeignKey, Generated, PrimaryKey, SchemaModel, TableDef,
-    TableDefBuilder,
+    ColumnDef, ColumnDefault, ColumnExtra, ForeignKey, Generated, PrimaryKey, SchemaModel,
+    TableDef, TableDefBuilder,
 };
 pub use types::{CatalogSql, Compat, Length, Logical, NativeType, compat};

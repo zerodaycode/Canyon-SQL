@@ -172,6 +172,9 @@ pub struct Ctx<'a> {
     pub server: ServerVersion,
     /// The connection's default schema (MySQL: its database), for ops on unqualified names.
     pub default_schema: &'a str,
+    /// MySQL's `NO_BACKSLASH_ESCAPES` sql_mode, as introspection read it: a comment is
+    /// escaped for it. Assumed the same on every pooled connection.
+    pub no_backslash_escapes: bool,
     pub actual: &'a SchemaModel,
 }
 

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "player" ALTER COLUMN "name" TYPE varchar(200) COLLATE pg_catalog."C" USING "name"::varchar(200)
+  params: []
+  transactional: true

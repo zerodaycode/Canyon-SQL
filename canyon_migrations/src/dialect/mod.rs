@@ -6,7 +6,7 @@ mod writer;
 #[cfg(feature = "mssql")]
 mod mssql;
 #[cfg(feature = "mysql")]
-mod mysql;
+pub(crate) mod mysql;
 #[cfg(feature = "postgres")]
 mod pg;
 
@@ -16,7 +16,8 @@ pub(crate) mod fixtures;
 pub use naming::{fk_name, pk_name};
 pub use writer::{DdlWriter, TypeSql};
 
-use crate::model::{ColumnDef, ColumnDefault, ForeignKey, Ident, Logical, NativeType, PrimaryKey};
+use crate::model::{CatalogSql, ColumnDef, ColumnDefault, ForeignKey, Ident, Logical};
+use crate::model::{NativeType, PrimaryKey};
 use crate::model::{QualifiedName, TableDef};
 use crate::op::{Ctx, Op, Statement};
 use canyon_core::query::querybuilder::syntax::dialect::SqlDialect;
@@ -61,6 +62,8 @@ pub enum LowerError {
     NotForThisDialect(&'static str),
     MissingActual(String),
     DesiredTypeUnknown(String),
+    /// The column is computed from others; Canyon doesn't rewrite it.
+    GeneratedColumn(String),
     UnsupportedType(SqlType),
 }
 
@@ -70,6 +73,10 @@ impl fmt::Display for LowerError {
             Self::NotForThisDialect(op) => write!(f, "`{op}` is not used by this database"),
             Self::MissingActual(what) => write!(f, "{what} is not in the database model"),
             Self::DesiredTypeUnknown(column) => write!(f, "column `{column}` has no Canyon type"),
+            Self::GeneratedColumn(column) => write!(
+                f,
+                "column `{column}` is generated from other columns: Canyon doesn't change it"
+            ),
             Self::UnsupportedType(ty) => {
                 write!(f, "{ty:?} has no column type on this database yet")
             }
@@ -119,6 +126,75 @@ pub(crate) fn actual_column<'a>(
         .find(|c| &c.name == column)
         .ok_or_else(missing)?;
     Ok((t, c))
+}
+
+/// `actual` as a statement that changes its type to `new_type` has to write it again:
+/// - the collation only for text (SQL Server refuses `COLLATE` on an `int`);
+/// - a `CURRENT_TIMESTAMP` default and `ON UPDATE` moved to a timestamp's new precision
+///   (MySQL wants one precision in the whole column), `ON UPDATE` dropped on any other
+///   type (MySQL allows it only on timestamps);
+/// - the comment and the rest as they are.
+pub(crate) fn restated(actual: &ColumnDef, new_type: SqlType) -> ColumnDef {
+    let precision = match new_type {
+        SqlType::Timestamp { precision } => Some(precision),
+        _ => None,
+    };
+    let mut column = actual.clone();
+    column.ty = Logical::Known(new_type);
+    if !matches!(new_type, SqlType::Text { .. }) {
+        column.extra.collation = None;
+    }
+    column.extra.on_update = actual
+        .extra
+        .on_update
+        .as_ref()
+        .and(precision)
+        .map(current_timestamp);
+    if let (Some(ColumnDefault::Expr { constraint, sql }), Some(precision)) =
+        (&actual.default, precision)
+        && is_current_timestamp(sql.as_str())
+    {
+        column.default = Some(ColumnDefault::Expr {
+            constraint: constraint.clone(),
+            sql: current_timestamp(precision),
+        });
+    }
+    column
+}
+
+/// `CURRENT_TIMESTAMP` or `CURRENT_TIMESTAMP(n)`, as the catalogs report it.
+pub(crate) fn is_current_timestamp(sql: &str) -> bool {
+    const KEYWORD: &str = "CURRENT_TIMESTAMP";
+    let Some(rest) = sql
+        .get(..KEYWORD.len())
+        .filter(|head| head.eq_ignore_ascii_case(KEYWORD))
+        .map(|_| &sql[KEYWORD.len()..])
+    else {
+        return false;
+    };
+    rest.is_empty()
+        || rest
+            .strip_prefix('(')
+            .and_then(|r| r.strip_suffix(')'))
+            .is_some_and(|digits| digits.bytes().all(|b| b.is_ascii_digit()))
+}
+
+/// `CURRENT_TIMESTAMP` with `precision` fractional digits, written the way MySQL reports it.
+fn current_timestamp(precision: u8) -> CatalogSql {
+    CatalogSql::new(match precision {
+        0 => "CURRENT_TIMESTAMP".to_owned(),
+        p => format!("CURRENT_TIMESTAMP({p})"),
+    })
+}
+
+/// Rewriting a generated column would turn it into a plain one (MySQL) or fail (SQL Server).
+#[cfg(any(feature = "mssql", feature = "mysql"))]
+pub(crate) fn rewritable(column: &ColumnDef) -> Result<(), LowerError> {
+    if column.extra.generated {
+        Err(LowerError::GeneratedColumn(column.name.to_string()))
+    } else {
+        Ok(())
+    }
 }
 
 pub(crate) fn add_primary_key<D: DdlDialect>(
@@ -202,5 +278,95 @@ pub(crate) fn renamed_constraints<'a>(
     RenamedConstraints {
         primary_key,
         foreign_keys,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{CatalogSql, ColumnExtra, TableDef};
+
+    fn stamp(default: &str, on_update: Option<&str>) -> ColumnDef {
+        let mut column = TableDef::builder("T", "t")
+            .column("ts", SqlType::Timestamp { precision: 6 }, true)
+            .build()
+            .unwrap()
+            .columns
+            .remove(0);
+        column.default = Some(ColumnDefault::Expr {
+            constraint: None,
+            sql: CatalogSql::new(default),
+        });
+        column.extra = ColumnExtra {
+            collation: Some(CatalogSql::new("latin1_bin")),
+            comment: Some("kept".into()),
+            on_update: on_update.map(CatalogSql::new),
+            ..ColumnExtra::default()
+        };
+        column
+    }
+
+    fn default_sql(c: &ColumnDef) -> Option<&str> {
+        match &c.default {
+            Some(ColumnDefault::Expr { sql, .. }) => Some(sql.as_str()),
+            _ => None,
+        }
+    }
+
+    #[test]
+    fn a_new_timestamp_precision_moves_current_timestamp_along() {
+        let actual = stamp("CURRENT_TIMESTAMP(6)", Some("CURRENT_TIMESTAMP(6)"));
+        let to3 = restated(&actual, SqlType::Timestamp { precision: 3 });
+        assert_eq!(default_sql(&to3), Some("CURRENT_TIMESTAMP(3)"));
+        assert_eq!(
+            to3.extra.on_update.unwrap().as_str(),
+            "CURRENT_TIMESTAMP(3)"
+        );
+        let to0 = restated(&actual, SqlType::Timestamp { precision: 0 });
+        assert_eq!(default_sql(&to0), Some("CURRENT_TIMESTAMP"));
+        let legacy = stamp("CURRENT_TIMESTAMP", Some("CURRENT_TIMESTAMP"));
+        let to6 = restated(&legacy, SqlType::Timestamp { precision: 6 });
+        assert_eq!(default_sql(&to6), Some("CURRENT_TIMESTAMP(6)"));
+        assert_eq!(
+            to6.extra.on_update.unwrap().as_str(),
+            "CURRENT_TIMESTAMP(6)"
+        );
+    }
+
+    #[test]
+    fn other_types_keep_what_they_can_hold() {
+        let actual = stamp("CURRENT_TIMESTAMP(6)", Some("CURRENT_TIMESTAMP(6)"));
+        let text = restated(&actual, SqlType::Text { max_len: Some(40) });
+        assert_eq!(
+            default_sql(&text),
+            Some("CURRENT_TIMESTAMP(6)"),
+            "the dialect decides"
+        );
+        assert_eq!(text.extra.on_update, None);
+        assert!(text.extra.collation.is_some());
+        let int = restated(&actual, SqlType::BigInt);
+        assert_eq!(int.extra.collation, None);
+        assert_eq!(int.extra.comment.as_deref(), Some("kept"));
+        assert_eq!(int.ty, Logical::Known(SqlType::BigInt));
+        let plain = stamp("now()", None);
+        let to3 = restated(&plain, SqlType::Timestamp { precision: 3 });
+        assert_eq!(default_sql(&to3), Some("now()"));
+        assert_eq!(to3.extra.on_update, None);
+    }
+
+    #[test]
+    fn current_timestamp_forms() {
+        for (sql, expected) in [
+            ("CURRENT_TIMESTAMP", true),
+            ("CURRENT_TIMESTAMP(6)", true),
+            ("current_timestamp(3)", true),
+            ("CURRENT_TIMESTAMP()", true),
+            ("CURRENT_TIMESTAMP(6) + INTERVAL 1 DAY", false),
+            ("now(6)", false),
+            ("CURRENT_TIMESTAMPX", false),
+            ("", false),
+        ] {
+            assert_eq!(is_current_timestamp(sql), expected, "{sql}");
+        }
     }
 }

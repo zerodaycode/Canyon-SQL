@@ -2,7 +2,7 @@
 
 use super::{DdlDialect, DdlWriter, LowerError, TypeSql};
 use super::{add_foreign_key, add_primary_key, desired_type, drop_constraint, fk_name, one};
-use super::{pk_name, renamed_constraints};
+use super::{known, pk_name, renamed_constraints, restated};
 use crate::model::{ColumnDef, Ident, Length, Logical, NativeType, QualifiedName, TableDef};
 use crate::op::{Ctx, Op, Param, Statement};
 use canyon_core::query::querybuilder::syntax::dialect::PgDialect;
@@ -114,7 +114,8 @@ impl DdlDialect for PgDialect {
                     .ident(column);
                 one(w)
             }
-            // Only the type: nullability is SetNotNull / DropNotNull
+            // Only the type: nullability is SetNotNull / DropNotNull. Without COLLATE the
+            // column gets the new type's default collation
             Op::AlterColumnType { table, column } => {
                 let ty = desired_type::<Self>(column)?;
                 let mut w = W::new();
@@ -123,11 +124,13 @@ impl DdlDialect for PgDialect {
                     .raw(" ALTER COLUMN ")
                     .ident(&column.name)
                     .raw(" TYPE ")
-                    .ty(&ty)
-                    .raw(" USING ")
-                    .ident(&column.name)
-                    .raw("::")
                     .ty(&ty);
+                if let Some(actual) = ctx.actual_column(table, &column.name)
+                    && let Some(collation) = restated(actual, known(column)?).extra.collation
+                {
+                    w.raw(" COLLATE ").catalog_sql(&collation);
+                }
+                w.raw(" USING ").ident(&column.name).raw("::").ty(&ty);
                 one(w)
             }
             Op::SetNotNull { table, column } | Op::DropNotNull { table, column } => {
@@ -293,7 +296,9 @@ mod tests {
 
     #[test]
     fn edge_case_snapshots() {
-        for (name, op, actual) in edge_cases("integer", "character varying(100)") {
+        for (name, op, actual) in
+            edge_cases("integer", "character varying(100)", r#"pg_catalog."C""#)
+        {
             insta::assert_snapshot!(
                 format!("pg_edge_{name}"),
                 render::<PgDialect>(&op, &actual, "public")

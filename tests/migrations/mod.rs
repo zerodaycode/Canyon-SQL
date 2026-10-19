@@ -8,6 +8,8 @@ use canyon_sql::core::Transaction;
 use canyon_sql::migrations::handler::Migrations;
 use std::ops::DerefMut;
 
+mod introspection;
+
 /// Brings the information of the `PostgreSQL` requested schema
 #[cfg(all(feature = "postgres", feature = "migrations"))]
 #[canyon_sql::macros::canyon_tokio_test]

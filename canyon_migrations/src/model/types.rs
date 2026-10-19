@@ -17,8 +17,6 @@ pub enum Length {
 pub struct CatalogSql(String);
 
 impl CatalogSql {
-    // Built by introspection (reading catalogs comes next) and by tests
-    #[allow(dead_code)]
     pub(crate) fn new(sql: impl Into<String>) -> Self {
         Self(sql.into())
     }
@@ -49,8 +47,6 @@ pub struct NativeType {
     pub raw: CatalogSql,
 }
 
-// Built by introspection (reading catalogs comes next) and by tests
-#[allow(dead_code)]
 impl NativeType {
     pub(crate) fn new(
         name: &str,
@@ -66,6 +62,7 @@ impl NativeType {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn named(name: &str, raw: &str) -> Self {
         Self::new(name, None, None, raw)
     }

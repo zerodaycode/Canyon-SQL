@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "stamp" ALTER COLUMN "ts" TYPE varchar(40) USING "ts"::varchar(40)
+  params: []
+  transactional: true

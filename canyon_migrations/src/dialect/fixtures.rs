@@ -49,6 +49,7 @@ pub fn ctx<'a>(actual: &'a SchemaModel, default_schema: &'a str) -> Ctx<'a> {
             patch: 0,
         },
         default_schema,
+        no_backslash_escapes: false,
         actual,
     }
 }
@@ -105,6 +106,7 @@ pub fn all_ops() -> Vec<(&'static str, Op)> {
         ty: Logical::Known(SqlType::BigInt),
         nullable: true,
         default: None,
+        extra: ColumnExtra::default(),
     };
     let pk = PrimaryKey {
         name: None,
@@ -256,7 +258,12 @@ pub fn rebuild_op() -> Op {
 
 /// The cases the happy-path fixtures miss: defaults where they get in the way, names
 /// that need quoting, schemas. Each dialect snapshots all of them.
-pub fn edge_cases(raw_int: &str, raw_text: &str) -> Vec<(&'static str, Op, SchemaModel)> {
+/// `collation` is a text collation as the dialect's catalog reports it.
+pub fn edge_cases(
+    raw_int: &str,
+    raw_text: &str,
+    collation: &str,
+) -> Vec<(&'static str, Op, SchemaModel)> {
     let model = |t: TableDef| SchemaModel::from_tables(vec![t]).unwrap();
     let with_default = |col: usize, default: ColumnDefault| {
         let mut t = actual_player(raw_int, raw_text, None);
@@ -293,6 +300,7 @@ pub fn edge_cases(raw_int: &str, raw_text: &str) -> Vec<(&'static str, Op, Schem
                     ty: Logical::Known(SqlType::BigInt),
                     nullable: false, // the desired side; the column is still NULL
                     default: None,
+                    extra: ColumnExtra::default(),
                 },
             },
             model(actual_player(raw_int, raw_text, None)),
@@ -333,5 +341,160 @@ pub fn edge_cases(raw_int: &str, raw_text: &str) -> Vec<(&'static str, Op, Schem
             },
             SchemaModel::default(),
         ),
+        (
+            "drop_not_null_keeps_extras",
+            Op::DropNotNull {
+                table: q("player"),
+                column: id("name"),
+            },
+            model(with_extras(
+                actual_player(raw_int, raw_text, None),
+                collation,
+            )),
+        ),
+        (
+            "alter_type_to_text_keeps_collation",
+            Op::AlterColumnType {
+                table: q("player"),
+                column: desired("name", SqlType::Text { max_len: Some(200) }),
+            },
+            model(with_extras(
+                actual_player(raw_int, raw_text, None),
+                collation,
+            )),
+        ),
+        (
+            "alter_type_to_int_drops_collation",
+            Op::AlterColumnType {
+                table: q("player"),
+                column: desired("name", SqlType::BigInt),
+            },
+            model(with_extras(
+                actual_player(raw_int, raw_text, None),
+                collation,
+            )),
+        ),
+        (
+            "generated_column_is_not_rewritten",
+            Op::SetNotNull {
+                table: q("player"),
+                column: id("age"),
+            },
+            model({
+                let mut t = actual_player(raw_int, raw_text, None);
+                t.columns[2].extra.generated = true;
+                t
+            }),
+        ),
+        (
+            "rebuild_keeps_collation",
+            rebuild_op_from(with_extras(player(), collation)),
+            SchemaModel::default(),
+        ),
+        (
+            "rebuild_renamed_keeps_collation",
+            {
+                let mut from = with_extras(player(), collation);
+                from.columns[1].name = id("nick");
+                from.primary_key.as_mut().unwrap().generated = None;
+                let to = player();
+                let column_map = to
+                    .columns
+                    .iter()
+                    .map(|c| {
+                        let old = if c.name.as_str() == "name" {
+                            id("nick")
+                        } else {
+                            c.name.clone()
+                        };
+                        (old, c.name.clone())
+                    })
+                    .collect();
+                Op::RebuildTable {
+                    from,
+                    to,
+                    column_map,
+                }
+            },
+            SchemaModel::default(),
+        ),
+        (
+            "rebuild_to_int_drops_collation",
+            match rebuild_op_from(with_extras(player(), collation)) {
+                Op::RebuildTable {
+                    from,
+                    mut to,
+                    column_map,
+                } => {
+                    to.columns[1].ty = Logical::Known(SqlType::BigInt);
+                    Op::RebuildTable {
+                        from,
+                        to,
+                        column_map,
+                    }
+                }
+                _ => unreachable!(),
+            },
+            SchemaModel::default(),
+        ),
+        (
+            "set_not_null_keeps_on_update",
+            Op::SetNotNull {
+                table: q("stamp"),
+                column: id("ts"),
+            },
+            model(stamp()),
+        ),
+        (
+            "alter_timestamp_precision_moves_current_timestamp",
+            Op::AlterColumnType {
+                table: q("stamp"),
+                column: desired("ts", SqlType::Timestamp { precision: 3 }),
+            },
+            model(stamp()),
+        ),
+        (
+            "alter_timestamp_to_text_keeps_the_default",
+            Op::AlterColumnType {
+                table: q("stamp"),
+                column: desired("ts", SqlType::Text { max_len: Some(40) }),
+            },
+            model(stamp()),
+        ),
     ]
+}
+
+/// `name` with what a catalog reports besides its type: `collation` as the dialect's
+/// catalog names it, and a comment.
+fn with_extras(mut t: TableDef, collation: &str) -> TableDef {
+    t.columns[1].extra = ColumnExtra {
+        collation: Some(CatalogSql::new(collation)),
+        comment: Some("it's \\ x".into()),
+        ..ColumnExtra::default()
+    };
+    t
+}
+
+/// `stamp (ts datetime(6) NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6))`
+/// as MySQL reports it (only MySQL has ON UPDATE; the others snapshot it all the same).
+fn stamp() -> TableDef {
+    let mut t = TableDef::builder("Stamp", "stamp")
+        .column("ts", SqlType::Timestamp { precision: 6 }, true)
+        .build()
+        .unwrap();
+    t.entity = None;
+    let ts = &mut t.columns[0];
+    ts.default = Some(expr("CURRENT_TIMESTAMP(6)"));
+    ts.extra.on_update = Some(CatalogSql::new("CURRENT_TIMESTAMP(6)"));
+    t
+}
+
+fn desired(name: &str, ty: SqlType) -> ColumnDef {
+    ColumnDef {
+        name: id(name),
+        ty: Logical::Known(ty),
+        nullable: false,
+        default: None,
+        extra: ColumnExtra::default(),
+    }
 }

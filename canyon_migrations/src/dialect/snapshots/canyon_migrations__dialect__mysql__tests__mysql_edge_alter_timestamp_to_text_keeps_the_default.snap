@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual, \"canyon\")"
+---
+ALTER TABLE `stamp` MODIFY COLUMN `ts` varchar(40) NULL DEFAULT (CURRENT_TIMESTAMP(6))
+  params: []
+  transactional: false

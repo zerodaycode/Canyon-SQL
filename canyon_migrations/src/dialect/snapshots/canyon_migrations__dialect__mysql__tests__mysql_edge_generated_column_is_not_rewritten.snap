@@ -1,0 +1,5 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual, \"canyon\")"
+---
+ERROR GeneratedColumn("age")

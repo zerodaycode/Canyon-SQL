@@ -123,6 +123,24 @@ impl<D: DdlDialect> DdlWriter<D> {
     }
 }
 
+#[cfg(feature = "mysql")]
+impl DdlWriter<canyon_core::query::querybuilder::syntax::dialect::MySql> {
+    /// A MySQL `COMMENT` string: it takes no hex literal (error 1064), so quotes are
+    /// doubled, and backslashes too unless `NO_BACKSLASH_ESCAPES` makes them plain.
+    pub(crate) fn comment(&mut self, value: &str, no_backslash_escapes: bool) -> &mut Self {
+        self.sql.push('\'');
+        for c in value.chars() {
+            match c {
+                '\'' => self.sql.push_str("''"),
+                '\\' if !no_backslash_escapes => self.sql.push_str("\\\\"),
+                c => self.sql.push(c),
+            }
+        }
+        self.sql.push('\'');
+        self
+    }
+}
+
 // Compares the three dialects, so it needs all of them
 #[cfg(all(test, feature = "postgres", feature = "mssql", feature = "mysql"))]
 mod tests {

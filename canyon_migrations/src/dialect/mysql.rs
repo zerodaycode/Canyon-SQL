@@ -1,10 +1,11 @@
 //! MySQL: DDL commits implicitly, so statements run one by one, outside a transaction.
 //! A schema is a database.
 
-use super::renamed_constraints;
 use super::{DdlDialect, DdlWriter, LowerError, TypeSql};
 use super::{actual_column, actual_type, add_foreign_key, desired_type, fk_name, one};
-use crate::model::{ColumnDef, ColumnDefault, ForeignKey, Ident, Length, Logical, NativeType};
+use super::{is_current_timestamp, known, renamed_constraints, restated, rewritable};
+use crate::model::NativeType;
+use crate::model::{ColumnDef, ColumnDefault, ForeignKey, Ident, Length, Logical};
 use crate::model::{QualifiedName, TableDef};
 use crate::op::{Ctx, Op, Statement};
 use canyon_core::query::querybuilder::syntax::dialect::MySql;
@@ -64,7 +65,8 @@ impl DdlDialect for MySql {
         out
     }
 
-    // MySQL wants expression defaults in parentheses
+    // MySQL wants expression defaults in parentheses (`modify` writes CURRENT_TIMESTAMP
+    // bare on a timestamp column)
     fn default_sql(w: &mut W, default: &ColumnDefault) {
         match default {
             ColumnDefault::Expr { sql, .. } => w.raw("(").catalog_sql(sql).raw(")"),
@@ -132,22 +134,26 @@ impl DdlDialect for MySql {
             // Only the type: the column keeps the nullability it has now
             Op::AlterColumnType { table, column } => {
                 let (actual_table, actual) = actual_column(ctx, table, &column.name)?;
+                rewritable(actual)?;
                 let ty = desired_type::<Self>(column)?;
                 let identity = actual_table.is_identity(&actual.name);
-                one(modify(table, actual, &ty, actual.nullable, identity))
+                let column = restated(actual, known(column)?);
+                one(modify(table, &column, &ty, actual.nullable, identity, ctx))
             }
             Op::SetNotNull { table, column } | Op::DropNotNull { table, column } => {
                 let (actual_table, actual) = actual_column(ctx, table, column)?;
+                rewritable(actual)?;
                 let ty = actual_type::<Self>(actual)?;
                 let nullable = matches!(op, Op::DropNotNull { .. });
                 let identity = actual_table.is_identity(column);
-                one(modify(table, actual, &ty, nullable, identity))
+                one(modify(table, actual, &ty, nullable, identity, ctx))
             }
             Op::AddIdentity { table, column } | Op::DropIdentity { table, column } => {
                 let (_, actual) = actual_column(ctx, table, column)?;
+                rewritable(actual)?;
                 let ty = actual_type::<Self>(actual)?;
                 let identity = matches!(op, Op::AddIdentity { .. });
-                one(modify(table, actual, &ty, false, identity))
+                one(modify(table, actual, &ty, false, identity, ctx))
             }
             Op::AddPrimaryKey { table, key } => {
                 let mut w = W::new();
@@ -236,31 +242,74 @@ fn column_def(w: &mut W, column: &ColumnDef, identity: bool) -> Result<(), Lower
     Ok(())
 }
 
-// MODIFY restates the whole column: the default and AUTO_INCREMENT are written again (an
-// AUTO_INCREMENT column can't have a default). COMMENT, ON UPDATE and COLLATE aren't read
-// from the catalog yet, so MODIFY drops them
+// MODIFY restates the whole column: the default, AUTO_INCREMENT (an AUTO_INCREMENT column
+// can't have a default) and the column's `extra` are written again, or MySQL drops them.
+// `column` already has the type it gets (see `restated`)
 fn modify(
     table: &QualifiedName,
     column: &ColumnDef,
     ty: &TypeSql,
     nullable: bool,
     identity: bool,
+    ctx: &Ctx<'_>,
 ) -> W {
+    let extra = &column.extra;
     let mut w = W::new();
     w.raw("ALTER TABLE ")
         .qualified(table)
         .raw(" MODIFY COLUMN ")
         .ident(&column.name)
         .raw(" ")
-        .ty(ty)
-        .raw(if nullable { " NULL" } else { " NOT NULL" });
+        .ty(ty);
+    if let Some(collation) = &extra.collation {
+        w.raw(" COLLATE ").catalog_sql(collation);
+    }
+    w.raw(if nullable { " NULL" } else { " NOT NULL" });
     if identity {
         w.raw(" AUTO_INCREMENT");
-    } else if let Some(default) = &column.default {
-        w.raw(" DEFAULT ");
-        MySql::default_sql(&mut w, default);
+    } else {
+        match &column.default {
+            // In parentheses they're stored as expressions (`now(6)`, `0x01`): bare where
+            // MySQL takes them, so they read back the same
+            Some(ColumnDefault::Expr { sql, .. })
+                if (is_current_timestamp(sql.as_str()) && is_timestamp(&column.ty))
+                    || is_bit_value(sql.as_str()) =>
+            {
+                w.raw(" DEFAULT ").catalog_sql(sql);
+            }
+            Some(default) => {
+                w.raw(" DEFAULT ");
+                MySql::default_sql(&mut w, default);
+            }
+            None => {}
+        }
+        if let Some(on_update) = &extra.on_update {
+            w.raw(" ON UPDATE ").catalog_sql(on_update);
+        }
+    }
+    if extra.invisible {
+        w.raw(" INVISIBLE");
+    }
+    if let Some(comment) = &extra.comment {
+        w.raw(" COMMENT ")
+            .comment(comment, ctx.no_backslash_escapes);
     }
     w
+}
+
+/// A `bit` value as MySQL reports it: `b'101'`.
+pub(crate) fn is_bit_value(sql: &str) -> bool {
+    sql.strip_prefix("b'")
+        .and_then(|v| v.strip_suffix('\''))
+        .is_some_and(|digits| !digits.is_empty() && digits.bytes().all(|b| b == b'0' || b == b'1'))
+}
+
+/// DATETIME or TIMESTAMP, the only types a bare `CURRENT_TIMESTAMP` default fits.
+fn is_timestamp(ty: &Logical) -> bool {
+    match ty {
+        Logical::Known(ty) => matches!(ty, SqlType::Timestamp { .. }),
+        Logical::Other(native) => matches!(native.name.as_str(), "datetime" | "timestamp"),
+    }
 }
 
 fn create_table(table: &TableDef) -> Result<W, LowerError> {
@@ -305,7 +354,7 @@ mod tests {
 
     #[test]
     fn edge_case_snapshots() {
-        for (name, op, actual) in edge_cases("int", "varchar(100)") {
+        for (name, op, actual) in edge_cases("int", "varchar(100)", "latin1_bin") {
             insta::assert_snapshot!(
                 format!("mysql_edge_{name}"),
                 render::<MySql>(&op, &actual, "canyon")
@@ -331,6 +380,49 @@ mod tests {
     fn text_literals_are_hex() {
         assert_eq!(MySql::text_literal("a'\\"), "_utf8mb4 X'61275C'");
         assert_eq!(MySql::text_literal(""), "_utf8mb4 X''");
+    }
+
+    #[test]
+    fn bit_values() {
+        for (sql, expected) in [
+            ("b'1'", true),
+            ("b'0101'", true),
+            ("b''", false),
+            ("b'2'", false),
+            ("b'1'); DROP TABLE x; -- ", false),
+            ("0x01", false),
+        ] {
+            assert_eq!(is_bit_value(sql), expected, "{sql}");
+        }
+    }
+
+    #[test]
+    fn comments_are_escaped_for_the_sql_mode() {
+        let comment = |value: &str, nbe: bool| {
+            let mut w = W::new();
+            w.comment(value, nbe);
+            w.finish().sql
+        };
+        assert_eq!(comment(r"it's \ x", false), r"'it''s \\ x'");
+        assert_eq!(comment(r"\'", false), r"'\\'''");
+        assert_eq!(comment(r"it's \ x", true), r"'it''s \ x'");
+        assert_eq!(comment(r"\'", true), r"'\'''");
+        assert_eq!(comment("", false), "''");
+    }
+
+    #[test]
+    fn generated_columns_are_not_rewritten() {
+        let mut t = actual_player("int", "varchar(100)", None);
+        t.columns[2].extra.generated = true;
+        let actual = SchemaModel::from_tables(vec![t]).unwrap();
+        let op = Op::SetNotNull {
+            table: q("player"),
+            column: id("age"),
+        };
+        assert_eq!(
+            MySql::lower(&op, &ctx(&actual, "canyon")),
+            Err(LowerError::GeneratedColumn("age".into()))
+        );
     }
 
     #[test]

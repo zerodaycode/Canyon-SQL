@@ -7,6 +7,11 @@ publish = false
 [dev-dependencies]
 canyon_sql = { path = ".." }
 
+# The new migrations engine, not in the facade yet. Optional, so only `migrations` builds
+# it, with the backend features `canyon_sql` turns on (a dev-dependency can't be optional)
+[dependencies]
+canyon_migrations = { workspace = true, optional = true }
+
 [[test]]
 name = "canyon_integration_tests"
 path = "canyon_integration_tests.rs"
@@ -15,4 +20,4 @@ path = "canyon_integration_tests.rs"
 postgres = ["canyon_sql/postgres"]
 mssql = ["canyon_sql/mssql"]
 mysql = ["canyon_sql/mysql"]
-migrations = ["canyon_sql/migrations"]
+migrations = ["canyon_sql/migrations", "dep:canyon_migrations"]

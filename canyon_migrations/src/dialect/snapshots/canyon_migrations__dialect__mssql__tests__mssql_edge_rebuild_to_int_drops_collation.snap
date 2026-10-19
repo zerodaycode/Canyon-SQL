@@ -1,0 +1,19 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render::<MsSql>(&op, &actual, \"dbo\")"
+---
+CREATE TABLE [player__canyon_rebuild] ([id] int IDENTITY(1,1) NOT NULL, [name] bigint NOT NULL, [age] int NULL, [league] int NULL)
+  params: []
+  transactional: true
+SET IDENTITY_INSERT [player__canyon_rebuild] ON; INSERT INTO [player__canyon_rebuild] ([id], [name], [age], [league]) SELECT [id], [name], [age], [league] FROM [player]; SET IDENTITY_INSERT [player__canyon_rebuild] OFF
+  params: []
+  transactional: true
+DROP TABLE [player]
+  params: []
+  transactional: true
+EXEC sp_rename @P1, @P2
+  params: [Text("[player__canyon_rebuild]"), Text("player")]
+  transactional: true
+ALTER TABLE [player] ADD CONSTRAINT [player_pkey] PRIMARY KEY ([id])
+  params: []
+  transactional: true

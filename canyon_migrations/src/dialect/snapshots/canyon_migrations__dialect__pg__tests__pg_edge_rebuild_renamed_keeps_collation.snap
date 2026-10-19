@@ -1,0 +1,5 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ERROR NotForThisDialect("RebuildTable")

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual, \"canyon\")"
+---
+ALTER TABLE `player` MODIFY COLUMN `name` varchar(100) COLLATE latin1_bin NULL COMMENT 'it''s \\ x'
+  params: []
+  transactional: false

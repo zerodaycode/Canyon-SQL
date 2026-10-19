@@ -6,7 +6,8 @@
 
 use super::{DdlDialect, DdlWriter, LowerError, TypeSql};
 use super::{actual_column, actual_type, add_foreign_key, add_primary_key, desired_type};
-use super::{drop_constraint, fk_name, one, pk_name, renamed_constraints};
+use super::{drop_constraint, fk_name, known, one, pk_name, renamed_constraints};
+use super::{restated, rewritable};
 use crate::model::{ColumnDef, ColumnDefault, Ident, Length, Logical, NativeType};
 use crate::model::{QualifiedName, TableDef};
 use crate::op::{Ctx, Op, Param, Statement};
@@ -120,18 +121,25 @@ impl DdlDialect for MsSql {
             // Only the type: the column keeps the nullability it has now
             Op::AlterColumnType { table, column } => {
                 let (_, actual) = actual_column(ctx, table, &column.name)?;
+                rewritable(actual)?;
                 let ty = desired_type::<Self>(column)?;
-                let change = alter_column(table, &column.name, &ty, actual.nullable);
+                let change = alter_column(
+                    table,
+                    &restated(actual, known(column)?),
+                    &ty,
+                    actual.nullable,
+                );
                 Ok(around_default(table, actual, change))
             }
             Op::SetNotNull { table, column } | Op::DropNotNull { table, column } => {
                 let (_, actual) = actual_column(ctx, table, column)?;
+                rewritable(actual)?;
                 let ty = actual_type::<Self>(actual)?;
                 let nullable = matches!(op, Op::DropNotNull { .. });
                 Ok(around_default(
                     table,
                     actual,
-                    alter_column(table, column, &ty, nullable),
+                    alter_column(table, actual, &ty, nullable),
                 ))
             }
             Op::AddPrimaryKey { table, key } => one(add_primary_key::<Self>(table, key)),
@@ -187,6 +195,10 @@ impl DdlDialect for MsSql {
 fn column_def(w: &mut W, column: &ColumnDef, identity: bool) -> Result<(), LowerError> {
     let ty = desired_type::<MsSql>(column)?;
     w.ident(&column.name).raw(" ").ty(&ty);
+    // Only a column read from the database has one (a rebuild's copy)
+    if let Some(collation) = &column.extra.collation {
+        w.raw(" COLLATE ").catalog_sql(collation);
+    }
     if identity {
         w.raw(" IDENTITY(1,1)");
     }
@@ -244,16 +256,25 @@ fn sp_rename(object: String, new_name: &str, kind: Option<&'static str>) -> Stat
     w.finish()
 }
 
-// No COLLATE: a text column falls back to the database collation (not read yet)
-fn alter_column(table: &QualifiedName, column: &Ident, ty: &TypeSql, nullable: bool) -> Statement {
+// Without COLLATE a text column falls back to the database collation, so the column's
+// own is written again. `column` already has the type it gets (see `restated`)
+fn alter_column(
+    table: &QualifiedName,
+    column: &ColumnDef,
+    ty: &TypeSql,
+    nullable: bool,
+) -> Statement {
     let mut w = W::new();
     w.raw("ALTER TABLE ")
         .qualified(table)
         .raw(" ALTER COLUMN ")
-        .ident(column)
+        .ident(&column.name)
         .raw(" ")
-        .ty(ty)
-        .raw(if nullable { " NULL" } else { " NOT NULL" });
+        .ty(ty);
+    if let Some(collation) = &column.extra.collation {
+        w.raw(" COLLATE ").catalog_sql(collation);
+    }
+    w.raw(if nullable { " NULL" } else { " NOT NULL" });
     w.finish()
 }
 
@@ -297,7 +318,24 @@ fn rebuild(
         schema: to.name.schema.clone(),
         name: Ident::from_catalog(&format!("{}__canyon_rebuild", to.name.name)),
     };
-    let mut out = vec![create_table(to, &temp, false)?.finish()];
+    // A computed column would come back as a plain one
+    if let Some(column) = from.columns.iter().find(|c| c.extra.generated) {
+        rewritable(column)?;
+    }
+    // The copy keeps each column's collation, like it keeps the defaults below, as far as
+    // its type can hold one
+    let mut target = to.clone();
+    for (old, new) in column_map {
+        if let (Some(old), Some(column)) = (
+            from.column(old.as_str()),
+            target.columns.iter_mut().find(|c| &c.name == new),
+        ) && column.extra.collation.is_none()
+            && let Logical::Known(ty) = column.ty
+        {
+            column.extra.collation = restated(old, ty).extra.collation;
+        }
+    }
+    let mut out = vec![create_table(&target, &temp, false)?.finish()];
 
     // ON, the copy and OFF in one statement: a SET doesn't outlive its sp_executesql call
     let (old_cols, new_cols): (Vec<Ident>, Vec<Ident>) = column_map.iter().cloned().unzip();
@@ -372,7 +410,7 @@ mod tests {
 
     #[test]
     fn edge_case_snapshots() {
-        for (name, op, actual) in edge_cases("int", "nvarchar(100)") {
+        for (name, op, actual) in edge_cases("int", "nvarchar(100)", "Latin1_General_BIN") {
             insta::assert_snapshot!(
                 format!("mssql_edge_{name}"),
                 render::<MsSql>(&op, &actual, "dbo")
