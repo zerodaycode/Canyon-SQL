@@ -52,6 +52,21 @@ impl QueryParameter for bool {
     }
 }
 
+impl QueryParameter for Option<bool> {
+    #[cfg(feature = "postgres")]
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+    #[cfg(feature = "mssql")]
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::Bit(*self)
+    }
+    #[cfg(feature = "mysql")]
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
+    }
+}
+
 impl QueryParameter for i16 {
     #[cfg(feature = "postgres")]
     fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
@@ -60,6 +75,21 @@ impl QueryParameter for i16 {
     #[cfg(feature = "mssql")]
     fn as_sqlserver_param(&self) -> ColumnData<'_> {
         ColumnData::I16(Option::from(*self))
+    }
+    #[cfg(feature = "mysql")]
+    fn as_mysql_param(&self) -> Value {
+        self.to_value()
+    }
+}
+
+impl QueryParameter for Option<i16> {
+    #[cfg(feature = "postgres")]
+    fn as_postgres_param(&self) -> &(dyn ToSql + Sync) {
+        self
+    }
+    #[cfg(feature = "mssql")]
+    fn as_sqlserver_param(&self) -> ColumnData<'_> {
+        ColumnData::I16(*self)
     }
     #[cfg(feature = "mysql")]
     fn as_mysql_param(&self) -> Value {
@@ -529,6 +559,26 @@ mod mssql_tests {
     }
 
     #[test]
+    fn owned_optional_i16_and_bool_preserve_some_and_none() {
+        assert!(matches!(
+            Some(42_i16).as_sqlserver_param(),
+            ColumnData::I16(Some(42))
+        ));
+        assert!(matches!(
+            None::<i16>.as_sqlserver_param(),
+            ColumnData::I16(None)
+        ));
+        assert!(matches!(
+            Some(true).as_sqlserver_param(),
+            ColumnData::Bit(Some(true))
+        ));
+        assert!(matches!(
+            None::<bool>.as_sqlserver_param(),
+            ColumnData::Bit(None)
+        ));
+    }
+
+    #[test]
     fn u32_parameter_uses_lossless_sql_server_bigint() {
         let first_value_beyond_i32 = i32::MAX as u32 + 1;
 
@@ -590,6 +640,30 @@ mod postgres_tests {
         assert!(matches!(none_nullability, IsNull::Yes));
         assert!(none_bytes.is_empty());
     }
+
+    // Writes `param` as a value of `ty` and returns the bytes, `None` for NULL
+    fn encode(param: &dyn QueryParameter, ty: &Type) -> Option<Vec<u8>> {
+        let mut bytes = BytesMut::new();
+        match param
+            .as_postgres_param()
+            .to_sql_checked(ty, &mut bytes)
+            .unwrap()
+        {
+            IsNull::No => Some(bytes.to_vec()),
+            IsNull::Yes => None,
+        }
+    }
+
+    #[test]
+    fn owned_optional_i16_and_bool_preserve_some_and_none() {
+        assert_eq!(
+            encode(&Some(42_i16), &Type::INT2),
+            Some(42_i16.to_be_bytes().to_vec())
+        );
+        assert_eq!(encode(&None::<i16>, &Type::INT2), None);
+        assert_eq!(encode(&Some(true), &Type::BOOL), Some(vec![1]));
+        assert_eq!(encode(&None::<bool>, &Type::BOOL), None);
+    }
 }
 
 #[cfg(all(test, feature = "mysql"))]
@@ -606,6 +680,14 @@ mod mysql_tests {
 
         assert_eq!(some.as_mysql_param(), Value::Int(42));
         assert_eq!(none.as_mysql_param(), Value::NULL);
+    }
+
+    #[test]
+    fn owned_optional_i16_and_bool_preserve_some_and_none() {
+        assert_eq!(Some(42_i16).as_mysql_param(), Value::Int(42));
+        assert_eq!(None::<i16>.as_mysql_param(), Value::NULL);
+        assert_eq!(Some(true).as_mysql_param(), Value::Int(1));
+        assert_eq!(None::<bool>.as_mysql_param(), Value::NULL);
     }
 
     #[test]

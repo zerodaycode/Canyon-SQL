@@ -41,3 +41,5 @@ pub mod row;
 pub mod rows;
 #[cfg(any(feature = "postgres", feature = "mysql", feature = "mssql"))]
 pub mod transaction;
+#[cfg(any(feature = "postgres", feature = "mysql", feature = "mssql"))]
+pub mod types;

@@ -9,6 +9,11 @@ Year format is defined as: `YYYY-m-d`
 
 ## [Unreleased]
 
+### Added
+
+- `ColumnType` and `SqlType` in `canyon_sql::core`: the column type each Rust field type maps to
+- `QueryParameter` for `Option<i16>` and `Option<bool>`
+
 ## [0.5.0 - 2023 - 12 - 10]
 
 ### Feature

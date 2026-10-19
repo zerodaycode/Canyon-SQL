@@ -45,6 +45,7 @@ pub mod core {
     pub use canyon_core::mapper::*;
     pub use canyon_core::rows::CanyonRows;
     pub use canyon_core::transaction::Transaction;
+    pub use canyon_core::types::{ColumnType, SqlType};
 }
 
 /// Crud module serves to reexport the public elements of the `canyon_crud` crate,

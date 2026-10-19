@@ -16,3 +16,5 @@ mod constants;
 #[cfg(any(feature = "postgres", feature = "mssql", feature = "mysql"))]
 mod support;
 mod tests_models;
+#[cfg(any(feature = "postgres", feature = "mssql", feature = "mysql"))]
+mod types;

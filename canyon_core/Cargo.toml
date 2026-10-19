@@ -33,3 +33,6 @@ bb8 = "0.9.1"
 postgres = ["tokio-postgres"]
 mssql = ["tiberius", "async-std"]
 mysql = ["mysql_async", "mysql_common"]
+
+[dev-dependencies]
+serde_json = "1"
