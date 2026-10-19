@@ -1,0 +1,13 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual(), \"public\")"
+---
+ALTER TABLE "player" RENAME TO "players"
+  params: []
+  transactional: true
+ALTER TABLE "players" RENAME CONSTRAINT "player_pkey" TO "players_pkey"
+  params: []
+  transactional: true
+ALTER TABLE "players" RENAME CONSTRAINT "player_league_fkey" TO "players_league_fkey"
+  params: []
+  transactional: true

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual, \"canyon\")"
+---
+ALTER TABLE `player` MODIFY COLUMN `age` int NOT NULL DEFAULT _utf8mb4 X'69742773205C202D2D203B20646F6E65'
+  params: []
+  transactional: false

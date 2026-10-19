@@ -1,3 +1,6 @@
+// The new engine: no public API promise until it replaces `migrations`
+#[doc(hidden)]
+pub mod dialect;
 /// Holds the data needed by Canyon when the user
 /// application it's running.
 ///
@@ -10,6 +13,10 @@
 /// Takes care about the queries that Canyon has to execute
 /// in order to perform the migrations
 pub mod migrations;
+#[doc(hidden)]
+pub mod model;
+#[doc(hidden)]
+pub mod op;
 
 extern crate canyon_crud;
 extern crate canyon_entities;

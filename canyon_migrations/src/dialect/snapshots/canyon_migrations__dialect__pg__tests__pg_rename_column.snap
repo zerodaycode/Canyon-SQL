@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: render(&op)
+---
+ALTER TABLE "player" RENAME COLUMN "name" TO "full_name"
+  params: []
+  transactional: true

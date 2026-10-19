@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render_with(&op, None)"
+---
+ALTER SCHEMA [s] TRANSFER [dbo].[player]
+  params: []
+  transactional: true

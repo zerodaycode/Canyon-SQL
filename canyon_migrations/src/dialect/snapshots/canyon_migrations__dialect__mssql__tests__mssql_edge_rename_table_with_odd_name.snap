@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render::<MsSql>(&op, &actual, \"dbo\")"
+---
+EXEC sp_rename @P1, @P2
+  params: [Text("[we.ird]]`\"]"), Text("players")]
+  transactional: true

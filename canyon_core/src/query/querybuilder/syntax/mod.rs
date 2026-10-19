@@ -1,7 +1,9 @@
 pub(crate) mod ast;
 pub(crate) mod clause;
 pub(crate) mod column;
-pub(crate) mod dialect;
+// Used by `canyon_migrations` to build DDL; no public API promise yet
+#[doc(hidden)]
+pub mod dialect;
 pub(crate) mod emitter;
 pub(crate) mod having;
 pub(crate) mod join;

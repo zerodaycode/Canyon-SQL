@@ -1,0 +1,5 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render_with(&op, None)"
+---
+ERROR NotForThisDialect("AddIdentity")

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "player" ALTER COLUMN "age" TYPE bigint USING "age"::bigint
+  params: []
+  transactional: true

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: render(&op)
+---
+CREATE TABLE "player" ("id" integer GENERATED ALWAYS AS IDENTITY NOT NULL, "name" varchar(100) NOT NULL, "age" integer NULL, "league" integer NULL, CONSTRAINT "player_pkey" PRIMARY KEY ("id"))
+  params: []
+  transactional: true

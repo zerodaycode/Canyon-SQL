@@ -1,0 +1,13 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render::<MsSql>(&op, &actual(None), \"dbo\")"
+---
+EXEC sp_rename @P1, @P2
+  params: [Text("[player]"), Text("players")]
+  transactional: true
+EXEC sp_rename @P1, @P2, 'OBJECT'
+  params: [Text("[player_pkey]"), Text("players_pkey")]
+  transactional: true
+EXEC sp_rename @P1, @P2, 'OBJECT'
+  params: [Text("[player_league_fkey]"), Text("players_league_fkey")]
+  transactional: true

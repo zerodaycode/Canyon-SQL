@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: render(&op)
+---
+CREATE SCHEMA IF NOT EXISTS "s"
+  params: []
+  transactional: true

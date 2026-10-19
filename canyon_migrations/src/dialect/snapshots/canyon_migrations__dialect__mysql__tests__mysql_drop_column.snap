@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: render(&op)
+---
+ALTER TABLE `player` DROP COLUMN `age`
+  params: []
+  transactional: false

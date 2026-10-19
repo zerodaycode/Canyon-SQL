@@ -93,6 +93,26 @@ impl IdentQuotingStyle {
             Self::Bracket => IdentQuoting::ClosingBracket,
         }
     }
+
+    /// The identifier with this style's closing delimiter doubled, ready to go between
+    /// the delimiters. Borrowed when there is nothing to escape.
+    pub fn escape<'a>(
+        self,
+        ident: impl Into<std::borrow::Cow<'a, str>>,
+    ) -> std::borrow::Cow<'a, str> {
+        let ident = ident.into();
+        let close = self.closing().to_string();
+        if ident.contains(&close) {
+            std::borrow::Cow::Owned(ident.replace(&close, &close.repeat(2)))
+        } else {
+            ident
+        }
+    }
+
+    /// The identifier between this style's delimiters, with the closing one doubled.
+    pub fn quote(self, ident: &str) -> String {
+        format!("{}{}{}", self.opening(), self.escape(ident), self.closing())
+    }
 }
 
 impl Display for IdentQuoting {
@@ -155,5 +175,18 @@ impl Display for PlaceholderDatatype {
             Self::Char => "CHAR",
         };
         write!(f, "{}", datatype)
+    }
+}
+
+#[cfg(test)]
+mod quote_tests {
+    use super::IdentQuotingStyle;
+
+    #[test]
+    fn quote_wraps_and_escapes_the_closing_delimiter() {
+        assert_eq!(IdentQuotingStyle::DoubleQuote.quote("a\"b"), "\"a\"\"b\"");
+        assert_eq!(IdentQuotingStyle::Backtick.quote("a`b"), "`a``b`");
+        assert_eq!(IdentQuotingStyle::Bracket.quote("a]b"), "[a]]b]");
+        assert_eq!(IdentQuotingStyle::Bracket.quote("plain"), "[plain]");
     }
 }

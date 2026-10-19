@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "s"."player" ADD CONSTRAINT "player_league_fkey" FOREIGN KEY ("league") REFERENCES "league" ("id")
+  params: []
+  transactional: true

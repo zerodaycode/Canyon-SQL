@@ -2,7 +2,7 @@
 
 use crate::query::querybuilder::syntax::clause::ConditionClause;
 use crate::query::querybuilder::syntax::column::{ColumnRef, Qualification};
-use crate::query::querybuilder::syntax::dialect::{IdentQuotingStyle, SqlDialect};
+use crate::query::querybuilder::syntax::dialect::SqlDialect;
 use crate::query::querybuilder::syntax::symbol::Symbol;
 use crate::query::querybuilder::syntax::symbol::Symbol::Comma;
 use crate::query::querybuilder::syntax::table_metadata::TableMetadata;
@@ -56,19 +56,7 @@ where
     S: Into<Cow<'a, str>>,
 {
     let q = D::IDENT_QUOTING;
-    let element = element.into();
-    let escaped = match q {
-        IdentQuotingStyle::DoubleQuote if element.contains('"') => {
-            Cow::Owned(element.replace('"', "\"\""))
-        }
-        IdentQuotingStyle::Backtick if element.contains('`') => {
-            Cow::Owned(element.replace('`', "``"))
-        }
-        IdentQuotingStyle::Bracket if element.contains(']') => {
-            Cow::Owned(element.replace(']', "]]"))
-        }
-        _ => element,
-    };
+    let escaped = q.escape(element);
 
     tokens.symbol(q.opening().into());
     tokens.ident(escaped);

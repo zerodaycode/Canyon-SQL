@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "we.ird]`""" RENAME TO "players"
+  params: []
+  transactional: true

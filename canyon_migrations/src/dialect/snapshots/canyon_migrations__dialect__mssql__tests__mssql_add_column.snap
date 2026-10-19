@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render_with(&op, None)"
+---
+ALTER TABLE [player] ADD [age] bigint NULL
+  params: []
+  transactional: true

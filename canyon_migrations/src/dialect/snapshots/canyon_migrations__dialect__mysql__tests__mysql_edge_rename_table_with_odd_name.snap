@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual, \"canyon\")"
+---
+RENAME TABLE `we.ird]``"` TO `players`
+  params: []
+  transactional: false

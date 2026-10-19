@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual, \"canyon\")"
+---
+ALTER TABLE `s`.`player` ADD CONSTRAINT `player_league_fkey` FOREIGN KEY (`league`) REFERENCES `canyon`.`league` (`id`)
+  params: []
+  transactional: false

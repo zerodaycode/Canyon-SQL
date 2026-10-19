@@ -1,0 +1,13 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: "render::<MySql>(&op, &actual(None), \"canyon\")"
+---
+RENAME TABLE `player` TO `players`
+  params: []
+  transactional: false
+ALTER TABLE `players` DROP FOREIGN KEY `player_league_fkey`
+  params: []
+  transactional: false
+ALTER TABLE `players` ADD CONSTRAINT `players_league_fkey` FOREIGN KEY (`league`) REFERENCES `league` (`id`)
+  params: []
+  transactional: false

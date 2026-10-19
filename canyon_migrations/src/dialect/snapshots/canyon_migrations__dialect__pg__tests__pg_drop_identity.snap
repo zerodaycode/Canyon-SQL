@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: render(&op)
+---
+ALTER TABLE "player" ALTER COLUMN "id" DROP IDENTITY
+  params: []
+  transactional: true

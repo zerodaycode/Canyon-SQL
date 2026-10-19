@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: render(&op)
+---
+RENAME TABLE `s`.`player` TO `canyon`.`player`
+  params: []
+  transactional: false

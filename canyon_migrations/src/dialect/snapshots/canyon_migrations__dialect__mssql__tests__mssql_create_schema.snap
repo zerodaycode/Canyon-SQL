@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render::<MsSql>(&op, &actual(None), \"dbo\")"
+---
+DECLARE @canyon_sql nvarchar(max) = N'CREATE SCHEMA ' + QUOTENAME(@P1); IF SCHEMA_ID(@P2) IS NULL EXEC(@canyon_sql)
+  params: [Text("s"), Text("s")]
+  transactional: true

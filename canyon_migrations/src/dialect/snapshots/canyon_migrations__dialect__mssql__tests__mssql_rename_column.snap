@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render::<MsSql>(&op, &actual(None), \"dbo\")"
+---
+EXEC sp_rename @P1, @P2, 'COLUMN'
+  params: [Text("[player].[name]"), Text("full_name")]
+  transactional: true

@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: render(&op)
+---
+CREATE TABLE `player` (`id` int NOT NULL AUTO_INCREMENT, `name` varchar(100) NOT NULL, `age` int NULL, `league` int NULL, PRIMARY KEY (`id`))
+  params: []
+  transactional: false

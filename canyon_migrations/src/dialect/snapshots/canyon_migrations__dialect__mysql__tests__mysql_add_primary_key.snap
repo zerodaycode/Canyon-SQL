@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: render(&op)
+---
+ALTER TABLE `player` ADD PRIMARY KEY (`id`)
+  params: []
+  transactional: false

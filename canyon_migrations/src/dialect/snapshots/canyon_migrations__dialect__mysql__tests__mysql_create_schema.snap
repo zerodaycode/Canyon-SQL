@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/mysql.rs
+expression: render(&op)
+---
+CREATE DATABASE IF NOT EXISTS `s`
+  params: []
+  transactional: false

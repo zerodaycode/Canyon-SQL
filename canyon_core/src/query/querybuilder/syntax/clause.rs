@@ -57,7 +57,7 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
                 if let Some(ref range) = self.value_indexes
                     && range.is_range()
                 {
-                    __impl::output_range_of_placeholders::<D>(range, &mut out);
+                    __impl::output_range_of_placeholders(range, &mut out);
                 } else {
                     out.placeholder();
                 }
@@ -69,15 +69,11 @@ impl<'a, D: SqlDialect> ToSqlTokens<'a, D> for ConditionClause<'a> {
 }
 
 mod __impl {
-    use crate::query::querybuilder::syntax::dialect::SqlDialect;
     use crate::query::querybuilder::syntax::emitter::types::helpers::Range;
     use crate::query::querybuilder::syntax::symbol::Symbol;
     use crate::query::querybuilder::syntax::tokens::SqlTokens;
 
-    pub(crate) fn output_range_of_placeholders<D: SqlDialect>(
-        range: &Range,
-        out: &mut SqlTokens<'_>,
-    ) {
+    pub(crate) fn output_range_of_placeholders(range: &Range, out: &mut SqlTokens<'_>) {
         out.symbol(Symbol::LParen);
         let mut indexes = range.into_iter().peekable();
         while indexes.next().is_some() {

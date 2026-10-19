@@ -1,0 +1,13 @@
+---
+source: canyon_migrations/src/dialect/mssql.rs
+expression: "render_with(&op, default.clone())"
+---
+ALTER TABLE [player] DROP CONSTRAINT [DF_player_age]
+  params: []
+  transactional: true
+ALTER TABLE [player] ALTER COLUMN [age] int NOT NULL
+  params: []
+  transactional: true
+ALTER TABLE [player] ADD CONSTRAINT [DF_player_age] DEFAULT ((0)) FOR [age]
+  params: []
+  transactional: true

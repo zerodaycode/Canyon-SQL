@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: render(&op)
+---
+ALTER TABLE "player" ADD CONSTRAINT "player_pkey" PRIMARY KEY ("id")
+  params: []
+  transactional: true

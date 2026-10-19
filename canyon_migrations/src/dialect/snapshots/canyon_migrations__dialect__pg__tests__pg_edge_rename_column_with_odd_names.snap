@@ -1,0 +1,7 @@
+---
+source: canyon_migrations/src/dialect/pg.rs
+expression: "render::<PgDialect>(&op, &actual, \"public\")"
+---
+ALTER TABLE "my.s"."we.ird" RENAME COLUMN "c]1" TO "c2"
+  params: []
+  transactional: true
